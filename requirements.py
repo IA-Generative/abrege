@@ -1,0 +1,15 @@
+uvicorn==0.27.0
+langchain==0.1.6
+python-dotenv==1.0.1
+fastapi==0.109.2
+pytest==6.2.5
+openai==1.12.0
+protobuf==3.20.3
+python-multipart==0.0.7
+pydantic==2.6.1
+pydantic-settings==2.1.0
+langchain-community==0.0.20
+langchain-experimental==0.0.51
+langchain-mistralai==0.0.4
+langchain-openai==0.0.6
+unidecode==1.3.8
