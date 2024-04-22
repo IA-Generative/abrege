@@ -45,10 +45,11 @@ def build_weight(list_sentence: list[str], eval) -> dict[(str, str), float]:
     Compute similarity between each pair of sentences
     """
     result = {}
+    evaluations = model.encode(list_sentence, normalize_embeddings=True, convert_to_numpy=False, convert_to_tensor=True)
 
     for i, sentence1 in enumerate(list_sentence):
-        for sentence2 in list_sentence[i+1:]:
-            result[(sentence1, sentence2)] = eval(sentence1, sentence2)
+        for j, sentence2 in enumerate(list_sentence[i+1:]):
+            result[(sentence1, sentence2)] = float(torch.dot(evaluations[i], evaluations[j]))
 
     return result
 
@@ -75,7 +76,7 @@ def cosine_evaluation(sent1: str, sent2: str) -> float:
 def text_rank(text: str):
     
     """
-    En cours d'implémantation
+    Yield the top sentences of the text, if not to close
 
     Parameters
     --------------
