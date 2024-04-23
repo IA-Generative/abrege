@@ -33,8 +33,6 @@ class Model:
 
     @staticmethod
     def from_hugging_hub(model_path: str) -> "Model":
-        from sentence_transformers import SentenceTransformer
-
         model = Model()
         model._model = SentenceTransformer(model_path)
         return model
