@@ -200,7 +200,7 @@ def text_rank_iterator(list_sentences: list[str], embedding_model: Model):
         i += 1
 
 
-def build_text_prompt(text: str, size: int, embedding_model: Model = None) -> str:
+def build_text_prompt(text: str, size: int, embedding_model: Model) -> str:
     """
     Build from the text the extractive summary using TextRank algorithm that fit size
 
@@ -210,7 +210,7 @@ def build_text_prompt(text: str, size: int, embedding_model: Model = None) -> st
         Original text to summarize
     size : int
         maximal size of the return string
-    embedding_model : Mode = None
+    embedding_model : Model
         embedding_model use to compute cosine similarity, default model if none
 
     Returns
