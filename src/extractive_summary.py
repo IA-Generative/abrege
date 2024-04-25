@@ -1,55 +1,66 @@
-from threading import Thread
+import sys
+import concurrent.futures
 import torch
 import nltk
 import networkx as nx
 from line_profiler import profile
 
 
-class ThreadWithReturnValue(Thread):
+def openai_encode_multithreading(
+    model, lc: list[str], max_batch_size=32
+) -> list[list[int]]:
+    """Encode the list of sentence using multithreading
 
-    def __init__(
-        self, group=None, target=None, name=None, args=(), kwargs={}, Verbose=None
-    ):
-        Thread.__init__(self, group, target, name, args, kwargs)
-        self._return = None
+    Parameters
+    ------------
+    model
+        OpenAI embedding model function used to embed sentences
+    lc: list[str]
+        list of chunks of text to embed
+    max_batch_size : int = 32
+        maximal size of a batch than can be embedded by the model
 
-    def run(self):
-        if self._target is not None:
-            self._return = self._target(*self._args, **self._kwargs)
+    Returns
+    -----------
+    list[list[int]]
+        a list of embedded vectors
+    """
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        future_embdedding = [
+            executor.submit(model, lc[c_count : c_count + max_batch_size])
+            for c_count in range(0, len(lc), max_batch_size)
+        ]
 
-    def join(self, *args):
-        Thread.join(self, *args)
-        return self._return
-
-
-def thread_encode(model, list_sentence):
-    thread = ThreadWithReturnValue(target=model, args=[list_sentence])
-    return thread
-
-
-def openai_encode_multithreading(model, list_sentences, max_batch_size=32):
-    sc = 0
-    thread_list = []
-
-    while sc < len(list_sentences):
-        thread_list.append(
-            thread_encode(model, list_sentences[sc : sc + max_batch_size])
-        )
-        thread_list[-1].start()
-        thread_list[-1].run()
-        sc += max_batch_size
-
-    res = []
-    for t in thread_list:
-        res += t.join()
-
-    return res
+        result = []
+        for future in concurrent.futures.as_completed(future_embdedding):
+            try:
+                result += future.result()
+            except Exception as err:
+                print(err)
+                sys.exit(1)
+        return result
 
 
-class Model:
-    """A small wrapper around the real model
+class EmbeddingModel:
+    """A small wrapper around the real model, to use in text_rank and k-means
 
-    to make your own with your model, please use this class
+    Attributes
+    -----------
+    _model : Any
+        model to wrap
+    model_class : str {'hugging_hub', 'openai_ef'}
+        the class of the model (to know how to encode data)
+
+    Examples
+    -----------
+    >>> llm = OpenAIEmbeddingFunction(
+        api_key = your_api_key
+        api_base = your_api_base
+    )
+    >>> embedding_model = EmbeddingModel(llm, model_class="openai_ef")
+    >>> sentence_transformer = SentenceTransformer("some_path")
+    >>> embdedding_model = EmbeddingModel(sentence_transformer, "hugging_hub")
+
     """
 
     _device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -72,10 +83,10 @@ class Model:
                 embeddings = openai_encode_multithreading(self._model, list_sentences)
                 return torch.tensor(embeddings, device=self._device)
 
-    def from_hugging_hub(model_path: str) -> "Model":
+    def from_hugging_hub_sentence_transformer(model_path: str) -> "EmbeddingModel":
         from sentence_transformers import SentenceTransformer
 
-        return Model(SentenceTransformer(model_path), "hugging_hub")
+        return EmbeddingModel(SentenceTransformer(model_path), "hugging_hub")
 
 
 def split_sentences(text: str) -> list[str]:
@@ -139,7 +150,7 @@ def build_graph(
 
 
 @profile
-def text_rank_iterator(list_sentences: list[str], embedding_model: Model):
+def text_rank_iterator(list_sentences: list[str], embedding_model: EmbeddingModel):
     """
     Yield the top sentences of the models, according to the embdeddings delivred
     by embeddding_model
@@ -148,7 +159,7 @@ def text_rank_iterator(list_sentences: list[str], embedding_model: Model):
     --------------
     list_sentences : list[str]
         list of sentences to extract best from
-    embedding_model: Model
+    embedding_model: EmbeddingModel
         model to use for embdeddings of sentences
 
     Yield
@@ -200,7 +211,7 @@ def text_rank_iterator(list_sentences: list[str], embedding_model: Model):
         i += 1
 
 
-def build_text_prompt(text: str, size: int, embedding_model: Model) -> str:
+def build_text_prompt(text: str, size: int, embedding_model: EmbeddingModel) -> str:
     """
     Build from the text the extractive summary using TextRank algorithm that fit size
 
@@ -210,7 +221,7 @@ def build_text_prompt(text: str, size: int, embedding_model: Model) -> str:
         Original text to summarize
     size : int
         maximal size of the return string
-    embedding_model : Model
+    embedding_model : EmbeddingModel
         embedding_model use to compute cosine similarity, default model if none
 
     Returns
@@ -220,7 +231,9 @@ def build_text_prompt(text: str, size: int, embedding_model: Model) -> str:
     """
 
     if embedding_model is None:
-        embedding_model = Model.from_hugging_hub("dangvantuan/sentence-camembert-base")
+        embedding_model = EmbeddingModel.from_hugging_hub_sentence_transformer(
+            "dangvantuan/sentence-camembert-base"
+        )
 
     list_sentences = split_sentences(text)
 

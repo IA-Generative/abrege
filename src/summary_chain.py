@@ -11,22 +11,7 @@ from langchain.chains.llm import LLMChain
 from langchain.chains.summarize import load_summarize_chain
 from langchain_core.documents.base import Document
 from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
-from textrank import build_text_prompt, Model
-
-load_dotenv()
-OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
-OPENAI_API_BASE = os.environ["OPENAI_API_BASE"]
-OPENAI_EMBEDDING_API_KEY = os.environ["OPENAI_EMBEDDING_API_KEY"]
-OPENAI_EMBEDDING_API_BASE = os.environ["OPENAI_EMBEDDING_API_BASE"]
-
-llm = ChatOpenAI(api_key=OPENAI_API_KEY, openai_api_base=OPENAI_API_BASE, temperature=0)
-
-openai_ef = OpenAIEmbeddingFunction(
-    api_key=OPENAI_EMBEDDING_API_KEY,
-    api_base=OPENAI_EMBEDDING_API_BASE,
-)
-
-embedding_model = Model(openai_ef, "openai_ef")
+from extractive_summary import EmbeddingModel, build_text_prompt
 
 
 summarize_template = """
@@ -71,7 +56,7 @@ refine_prompt = PromptTemplate.from_template(refine_template)
 def summarize_chain_builder(
     llm=None,
     llm_context_window_size: int = 3000,
-    embedding_model: Model = None,
+    embedding_model: EmbeddingModel = None,
     language: str = "english",
     method: str = "text_rank",
 ):
@@ -112,7 +97,7 @@ def summarize_chain_builder(
         openai_ef = OpenAIEmbeddingFunction(
             api_key=OPENAI_EMBEDDING_API_KEY, api_base=OPENAI_EMBEDDING_API_BASE
         )
-        embedding_model = Model(openai_ef, "openai_ef")
+        embedding_model = EmbeddingModel(openai_ef, "openai_ef")
 
     match method:
         case "text_rank":
