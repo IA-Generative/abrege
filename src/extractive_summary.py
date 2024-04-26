@@ -86,6 +86,10 @@ class EmbeddingModel:
                 embeddings = openai_encode_multithreading(self._model, list_sentences)
                 return torch.tensor(embeddings, device=self._device)
 
+            case "HuggingFaceEmbeddings":
+                embeddings = self._model.embed_documents(list_sentences)
+                return torch.tensor(embeddings, device=self._device)
+
     @staticmethod
     def from_hugging_hub_sentence_transformer(model_path: str) -> "EmbeddingModel":
         from sentence_transformers import SentenceTransformer
