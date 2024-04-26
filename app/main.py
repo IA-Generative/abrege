@@ -1,7 +1,4 @@
-from fastapi import FastAPI
 import os, sys, logging, random, asyncio, uvicorn, time
-from pathlib import Path
-
 from typing import Union
 import logging
 
@@ -15,6 +12,7 @@ from pathlib import Path
 from datetime import datetime
 from collections import Counter
 from typing import Dict, List
+from urllib.parse import urlparse, urlsplit
 
 from fastapi import FastAPI, HTTPException, status, Security, UploadFile
 from fastapi.security.api_key import APIKeyHeader
@@ -23,8 +21,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from langchain.chains.question_answering import load_qa_chain
 from langchain_community.vectorstores.chroma import Chroma
 from langchain_openai import ChatOpenAI
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_openai import ChatOpenAI
 
 from fastapi import FastAPI
+
+sys.path.append("./src")
+from summary_chain import summarize_chain_builder, EmbeddingModel
+
+import nltk
+
+nltk.download("punkt")
 
 
 origins = [
@@ -42,29 +49,16 @@ async def lifespan(_: FastAPI):
     """
     Load the resources used by the API (models, data)
     """
-    import nltk
-
-    nltk.download("punkt")
-
-    from langchain_community.embeddings import HuggingFaceEmbeddings
 
     embeddings = HuggingFaceEmbeddings(
         model_name="OrdalieTech/Solon-embeddings-base-0.1"
     )  # plus de 13 min
     logger.info(f"Embedding model {repr(embeddings)} available")
-    import sys
-
-    sys.path.append("./src")
-    from summary_chain import summarize_chain_builder, EmbeddingModel
 
     embedding_model = EmbeddingModel(embeddings, "HuggingFaceEmbeddings")
 
-    import os
-
-    OPENAI_API_BASE = os.environ.get["OPENAI_API_BASE"]
+    OPENAI_API_BASE = os.environ["OPENAI_API_BASE"]
     OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
-
-    from langchain_openai import ChatOpenAI
 
     llm = ChatOpenAI(
         api_key=OPENAI_API_KEY,
@@ -126,7 +120,6 @@ def read_item(url: str):
 
 @app.get("/url/{url}")
 def read_item(url: str):
-    from urllib.parse import urlparse, urlsplit
 
     parsed_url = urlparse(url)
     if not (parsed_url.scheme and parsed_url.netloc):
