@@ -5,13 +5,17 @@ from langchain_core.runnables import chain
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain.chains import MapReduceDocumentsChain, ReduceDocumentsChain
-from langchain_text_splitters import CharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain.chains.combine_documents.stuff import StuffDocumentsChain
 from langchain.chains.llm import LLMChain
 from langchain.chains.summarize import load_summarize_chain
 from langchain_core.documents.base import Document
 from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
-from extractive_summary import EmbeddingModel, build_text_prompt
+from extractive_summary import (
+    EmbeddingModel,
+    build_text_prompt,
+    build_text_prompt_kmeans,
+)
 
 
 summarize_template = """
@@ -68,13 +72,13 @@ def summarize_chain_builder(
         chat model that will be tasked to execute the abstractive summary
         default to miom api if None
     llm_context_window_size : int = 5000
-        context window size (in term of len(text), not tokens) for which the llm can best exploit the context
+        context window size (in terms of len(text), not tokens) for which the llm can best exploit the context
     embedding_model: Model = None
-        model chosen for embeddings, please instanciate it with the custom class Model
+        model chosen for embeddings, please use an instance of EmbeddingModel it with the custom class Model
         default to miom api if None
     language : str = "french"
         language to use to write the summary
-    method : str = {'refine', 'map_reduce', 'text_rank'}
+    method : str = {'refine', 'map_reduce', 'text_rank', 'k-means'}
         method to build the summary
 
     Returns
@@ -128,7 +132,7 @@ def summarize_chain_builder(
                     output_key="output_text",
                 )
 
-                text_splitter = CharacterTextSplitter.from_tiktoken_encoder(
+                text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
                     chunk_size=1000, chunk_overlap=50
                 )
                 split_texts = text_splitter.split_text(text)
@@ -162,7 +166,7 @@ def summarize_chain_builder(
                     document_variable_name="docs",
                     return_intermediate_steps=False,
                 )
-                text_splitter = CharacterTextSplitter.from_tiktoken_encoder(
+                text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
                     chunk_size=1000, chunk_overlap=50
                 )
                 split_text = text_splitter.split_text(text)
@@ -172,9 +176,21 @@ def summarize_chain_builder(
                 result = map_reduce_chain.invoke(split_docs)
                 return result["output_text"]
 
+        case "k-means":
+
+            @chain
+            def custom_chain(text: str):
+                extractive_summary = build_text_prompt_kmeans(text, 10, embedding_model)
+                prompt1 = summarize_prompt.invoke(
+                    {"text": extractive_summary, "language": language}
+                )
+                output = llm.invoke(prompt1)
+                output_parser = StrOutputParser()
+                return output_parser.invoke(output)
+
         case _:
             raise ValueError(
-                f"method should be one of 'text_rank', 'refine' or 'map_reduce', got {method}"
+                f"method should be one of 'text_rank', 'refine', 'k-means' or 'map_reduce', got {method}"
             )
 
     return custom_chain
