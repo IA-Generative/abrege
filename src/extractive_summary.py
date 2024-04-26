@@ -1,3 +1,4 @@
+from typing import Literal
 import sys
 from sklearn.cluster import KMeans
 from sklearn.metrics import pairwise_distances_argmin_min
@@ -5,7 +6,6 @@ import concurrent.futures
 import torch
 import nltk
 import networkx as nx
-from line_profiler import profile
 from langchain_text_splitters.character import RecursiveCharacterTextSplitter
 
 
@@ -173,7 +173,6 @@ def build_graph(
     return graph
 
 
-@profile
 def text_rank_iterator(list_sentences: list[str], embedding_model: EmbeddingModel):
     """
     Yield the top sentences of the models, according to the embeddings computed
@@ -235,7 +234,7 @@ def text_rank_iterator(list_sentences: list[str], embedding_model: EmbeddingMode
         i += 1
 
 
-def chunk_splitter(text: str, chunk_size: int = 300) -> list[str]:
+def split_chunk(text: str, chunk_size: int = 300) -> list[str]:
     """split the text into chunk with a small overlap
 
     Parameters
@@ -258,7 +257,12 @@ def chunk_splitter(text: str, chunk_size: int = 300) -> list[str]:
 
 
 def build_text_prompt_kmeans(
-    text: str, n_clusters: int, embedding_model: EmbeddingModel
+    text: str,
+    size: int,
+    embedding_model: EmbeddingModel,
+    n_clusters: int = 10,
+    *,
+    chunk_type: Literal["sentences", "chunks"] = "chunks",
 ) -> str:
     """Build an extractive summary using k-means algorithm
     for each cluster, extract the closet chunk to the center and add it to the summary
@@ -267,10 +271,15 @@ def build_text_prompt_kmeans(
     ----------
     text : str
         text to compute summary
-    n_clusters : int
-        number of cluster (and thus sentences in the summary) to compute
+    size : int
+        size of the text (in term of tokens) to compute
     embedding_model : EmbeddingModel
         model to use to compute embeddings of chunk
+    n_clusters : int = 10
+        number cluster to build (size of chunk = size // nb_chunks)
+    chunk_type : Literal['sentences', 'chunks'], optional
+        the type of chunks to construct clusters around
+        default to chunks
 
     Returns
     -------
@@ -280,7 +289,7 @@ def build_text_prompt_kmeans(
     # First we have to split the text, for the moment, split aroud setences
     # Maybe it would be better to split around chunk with some overlap to have better control
     # on context and size of the summary
-    list_chunk = chunk_splitter(text)
+    list_chunk = split_chunk(text, chunk_size=(size // n_clusters))
 
     # Then we embed each sentences using the model
     embeddings = embedding_model.encode(list_chunk).cpu().numpy()
@@ -316,7 +325,14 @@ def build_text_prompt_kmeans(
     return res
 
 
-def build_text_prompt(text: str, size: int, embedding_model: EmbeddingModel) -> str:
+def build_text_prompt(
+    text: str,
+    size: int,
+    embedding_model: EmbeddingModel,
+    *,
+    chunk_type: Literal["sentences", "chunks"] = "sentences",
+    chunk_size: int = 300,
+) -> str:
     """
     Build from the text the extractive summary using TextRank algorithm that fit size
 
@@ -328,6 +344,12 @@ def build_text_prompt(text: str, size: int, embedding_model: EmbeddingModel) -> 
         maximal size of the return string
     embedding_model : EmbeddingModel
         embedding_model use to compute cosine similarity, default model if none
+    chunk_type : Literal["sentences, "chunks"], optional
+        the type of chunks to split the text and rank betweens
+        default to sentence
+    chunk_size : int, optional
+        the size of chunks if chunk_type = 'chunks'
+        default to 300
 
     Returns
     ----------
@@ -340,19 +362,22 @@ def build_text_prompt(text: str, size: int, embedding_model: EmbeddingModel) -> 
             "dangvantuan/sentence-camembert-base"
         )
 
-    list_sentences = split_sentences(text)
+    if chunk_type == "sentences":
+        list_chunks = split_sentences(text)
+    elif chunk_type == "chunks":
+        list_chunks = split_chunk(text, chunk_size)
 
-    sentence_idx_iterator = iter(text_rank_iterator(list_sentences, embedding_model))
+    sentence_idx_iterator = iter(text_rank_iterator(list_chunks, embedding_model))
 
     sentence_len = 0
     sentence_result = []
     try:
         while True:
             idx_next = next(sentence_idx_iterator)
-            if sentence_len + len(list_sentences[idx_next]) > size:
+            if sentence_len + len(list_chunks[idx_next]) > size:
                 break
 
-            sentence_len += len(list_sentences[idx_next])
+            sentence_len += len(list_chunks[idx_next])
             sentence_result.append(idx_next)
     except StopIteration:
         pass
@@ -362,7 +387,7 @@ def build_text_prompt(text: str, size: int, embedding_model: EmbeddingModel) -> 
 
     result_text = ""
     for idx_sentence in sentence_result:
-        result_text += list_sentences[idx_sentence]
+        result_text += list_chunks[idx_sentence]
 
     return result_text
 
