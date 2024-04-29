@@ -23,10 +23,11 @@ from langchain_community.vectorstores.chroma import Chroma
 from langchain_openai import ChatOpenAI
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
+from dotenv import load_dotenv
 
 from fastapi import FastAPI
 
-sys.path.append("./src")
+sys.path.append("../src")
 from summary_chain import summarize_chain_builder, EmbeddingModel
 
 import nltk
@@ -51,11 +52,13 @@ async def lifespan(_: FastAPI):
     """
 
     embeddings = HuggingFaceEmbeddings(
-        model_name="OrdalieTech/Solon-embeddings-base-0.1"
+        model_name=os.environ["EMBEDDING_MODEL_PATH"]
     )  # plus de 13 min
     logger.info(f"Embedding model {repr(embeddings)} available")
 
-    embedding_model = EmbeddingModel(embeddings, "HuggingFaceEmbeddings")
+    embedding_model = EmbeddingModel(embeddings, "hugging_hub")
+
+    load_dotenv()
 
     OPENAI_API_BASE = os.environ["OPENAI_API_BASE"]
     OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
@@ -73,6 +76,10 @@ async def lifespan(_: FastAPI):
 
     context["chain"] = custom_chain
 
+    context["llm"] = llm
+
+    context["embedding_model"] = embedding_model
+
     logger.info("======== Lifespan initialization done =========")
 
     yield
@@ -82,7 +89,7 @@ async def lifespan(_: FastAPI):
 
 logger = logging.getLogger()
 
-description = Path("./README.md").read_text()
+description = Path("../README.md").read_text()
 
 
 API_KEY_HEADER = APIKeyHeader(name="x-api-key", auto_error=False)
@@ -119,7 +126,16 @@ def read_item(url: str):
 
 
 @app.get("/url/{url}")
-def read_item(url: str):
+def read_item(url: str, method: str = None):
+
+    if method is None:
+        custom_chain = context["chain"]
+    else:
+        custom_chain = summarize_chain_builder(
+            llm=context["chain"],
+            embedding_model=context["embedding_model"],
+            method=method,
+        )
 
     parsed_url = urlparse(url)
     if not (parsed_url.scheme and parsed_url.netloc):
@@ -135,7 +151,24 @@ def read_item(url: str):
         loader = SeleniumURLLoader(urls=[url])
     data: list = loader.load()
 
-    res = [context["chain"].invoke(doc.page_content) for doc in data]
+    res = [custom_chain.invoke(doc.page_content) for doc in data]
+
+    return "\n\n".join(res)
+
+
+@app.get("/text_summary")
+def summarize_text(text: str, method: str = None):
+
+    if method is None:
+        res = [context["chain"].invoke(text)]
+
+    else:
+        custom_chain = summarize_chain_builder(
+            llm=context["llm"],
+            embedding_model=context["embedding_model"],
+            method=method,
+        )
+        res = [custom_chain.invoke(text)]
 
     return "\n\n".join(res)
 
