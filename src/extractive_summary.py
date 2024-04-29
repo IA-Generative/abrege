@@ -6,7 +6,8 @@ import concurrent.futures
 import torch
 import nltk
 import networkx as nx
-from langchain_text_splitters.character import RecursiveCharacterTextSplitter
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+import tiktoken
 
 
 def openai_encode_multithreading(
@@ -44,6 +45,12 @@ def openai_encode_multithreading(
         return result
 
 
+ModelType = Literal[
+    "HuggingFaceEmbeddings",
+    "OpenAIEmbeddingFunction",
+]
+
+
 class EmbeddingModel:
     """A small wrapper around the real model, to use in text_rank and k-means
 
@@ -68,26 +75,19 @@ class EmbeddingModel:
 
     _device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    def __init__(self, model, model_class: str):
+    def __init__(self, model, model_class: ModelType):
         self._model = model
         self.model_class = model_class
 
-    def encode(self, list_sentences: list[str]) -> torch.Tensor:
+    def encode(self, list_chunk: list[str]) -> torch.Tensor:
         match self.model_class:
-            case "hugging_hub":
-                return self._model.encode(
-                    list_sentences,
-                    normalize_embeddings=True,
-                    convert_to_numpy=False,
-                    convert_to_tensor=True,
-                )
 
             case "openai_ef":
-                embeddings = openai_encode_multithreading(self._model, list_sentences)
+                embeddings = openai_encode_multithreading(self._model, list_chunk)
                 return torch.tensor(embeddings, device=self._device)
 
             case "HuggingFaceEmbeddings":
-                embeddings = self._model.embed_documents(list_sentences)
+                embeddings = self._model.embed_documents(list_chunk)
                 return torch.tensor(embeddings, device=self._device)
 
     @staticmethod
@@ -114,14 +114,14 @@ def split_sentences(text: str) -> list[str]:
 
 
 def build_weight(
-    list_sentence: list[str], model: EmbeddingModel
+    list_chunk: list[str], model: EmbeddingModel
 ) -> dict[(int, int), float]:
     """Compute the weight (cosine similarity) of the graph
 
     Parameters
     ----------
-    list_sentence : list[str]
-        list of sentence to compute similarity between
+    list_chunk : list[str]
+        list of chunk of text (can be either sentences or just chunk)
     model : EmbeddingModel
         model used to embed sentences
 
@@ -132,29 +132,29 @@ def build_weight(
     """
 
     result = {}
-    evaluations = model.encode(list_sentence)
+    evaluations = model.encode(list_chunk)
 
     T_evaluations = torch.transpose(evaluations, 0, 1)
 
     matrix_cosine = torch.matmul(evaluations, T_evaluations)
     matrix_cosine = matrix_cosine.tolist()
 
-    for i in range(len(list_sentence)):
-        for j in range(i + 1, len(list_sentence)):
+    for i in range(len(list_chunk)):
+        for j in range(i + 1, len(list_chunk)):
             result[(i, j)] = float(matrix_cosine[i][j])
 
     return result
 
 
 def build_graph(
-    list_sentence: list[str], dict_weight: dict[(int, int), float]
+    list_chunk: list[str], dict_weight: dict[(int, int), float]
 ) -> nx.Graph:
     """
     Compute the similarity graph
     Parameters
     --------------
-    list_sentence : list[str]
-        list of sentences
+    list_chunk : list[str]
+        list of chunk of text (can be either sentences or just chunk)
     dict_weight : dict[(int, int), float]
         a mapping of pair of sentence (index in original text) and cosine similarity
 
@@ -165,7 +165,7 @@ def build_graph(
     """
 
     graph = nx.Graph()
-    graph.add_nodes_from(range(len(list_sentence)))
+    graph.add_nodes_from(range(len(list_chunk)))
 
     for (idx_sent1, idx_sent2), weight in dict_weight.items():
         graph.add_edge(idx_sent1, idx_sent2, weight=weight)
@@ -173,15 +173,16 @@ def build_graph(
     return graph
 
 
-def text_rank_iterator(list_sentences: list[str], embedding_model: EmbeddingModel):
+def text_rank_iterator(list_chunk: list[str], embedding_model: EmbeddingModel):
     """
     Yield the top sentences of the models, according to the embeddings computed
     by embedding_model
 
     Parameters
     --------------
-    list_sentences : list[str]
-        list of sentences to extract best from
+    list_chunk : list[str]
+        list of chunk of text (can be either sentences or just chunk)
+
     embedding_model: EmbeddingModel
         model to use for embeddings of sentences
 
@@ -192,10 +193,10 @@ def text_rank_iterator(list_sentences: list[str], embedding_model: EmbeddingMode
     """
 
     # Next build a similarity relation between each pair of sentences
-    dict_weight = build_weight(list_sentences, embedding_model)
+    dict_weight = build_weight(list_chunk, embedding_model)
 
     # Build the graph
-    graph = build_graph(list_sentences, dict_weight)
+    graph = build_graph(list_chunk, dict_weight)
 
     # And apply the text rank algorithm
     try:
@@ -289,7 +290,10 @@ def build_text_prompt_kmeans(
     # First we have to split the text, for the moment, split aroud setences
     # Maybe it would be better to split around chunk with some overlap to have better control
     # on context and size of the summary
-    list_chunk = split_chunk(text, chunk_size=(size // n_clusters))
+    if chunk_type == "chunks":
+        list_chunk = split_chunk(text, size // n_clusters)
+    elif chunk_type == "sentences":
+        list_chunk = split_sentences(text)
 
     # Then we embed each sentences using the model
     embeddings = embedding_model.encode(list_chunk).cpu().numpy()
@@ -341,7 +345,8 @@ def build_text_prompt(
     text: str
         Original text to summarize
     size : int
-        maximal size of the return string
+        maximal size of the return string, in term of token
+        (token are counted by tiktoken.get_encoding('cl100k_base'))
     embedding_model : EmbeddingModel
         embedding_model use to compute cosine similarity, default model if none
     chunk_type : Literal["sentences, "chunks"], optional
@@ -371,13 +376,15 @@ def build_text_prompt(
 
     sentence_len = 0
     sentence_result = []
+    enc = tiktoken.get_encoding("cl100k_base")
     try:
         while True:
             idx_next = next(sentence_idx_iterator)
-            if sentence_len + len(list_chunks[idx_next]) > size:
+            num_token_next = len(enc.encode(list_chunks[idx_next]))
+            if sentence_len + num_token_next > size:
                 break
 
-            sentence_len += len(list_chunks[idx_next])
+            sentence_len += num_token_next
             sentence_result.append(idx_next)
     except StopIteration:
         pass

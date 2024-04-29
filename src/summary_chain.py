@@ -1,4 +1,5 @@
 import os
+from typing import Literal
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.runnables import chain
@@ -57,12 +58,16 @@ refine_template = (
 refine_prompt = PromptTemplate.from_template(refine_template)
 
 
+MethodType = Literal["text_rank", "map_reduce", "refine", "k-means"]
+
+
 def summarize_chain_builder(
     llm=None,
     llm_context_window_size: int = 3000,
     embedding_model: EmbeddingModel = None,
     language: str = "english",
-    method: str = "text_rank",
+    method: MethodType = "text_rank",
+    **kwargs,
 ):
     """Build a custom summarizing chain with your models, using the selected method for summarization
 
@@ -78,7 +83,7 @@ def summarize_chain_builder(
         default to miom api if None
     language : str = "french"
         language to use to write the summary
-    method : str = {'refine', 'map_reduce', 'text_rank', 'k-means'}
+    method : Literal['text_rank', 'map_reduce', 'refine', 'kmeans'] = 'text_rank'
         method to build the summary
 
     Returns
@@ -101,7 +106,7 @@ def summarize_chain_builder(
         openai_ef = OpenAIEmbeddingFunction(
             api_key=OPENAI_EMBEDDING_API_KEY, api_base=OPENAI_EMBEDDING_API_BASE
         )
-        embedding_model = EmbeddingModel(openai_ef, "openai_ef")
+        embedding_model = EmbeddingModel(openai_ef, "OpenAIEmbeddingFunction")
 
     match method:
         case "text_rank":
@@ -109,7 +114,7 @@ def summarize_chain_builder(
             @chain
             def custom_chain(text):
                 extractive_summary = build_text_prompt(
-                    text, llm_context_window_size, embedding_model
+                    text, llm_context_window_size, embedding_model, **kwargs
                 )
                 prompt1 = summarize_prompt.invoke(
                     {"text": extractive_summary, "language": language}
@@ -180,7 +185,9 @@ def summarize_chain_builder(
 
             @chain
             def custom_chain(text: str):
-                extractive_summary = build_text_prompt_kmeans(text, 10, embedding_model)
+                extractive_summary = build_text_prompt_kmeans(
+                    text, 10, embedding_model, **kwargs
+                )
                 prompt1 = summarize_prompt.invoke(
                     {"text": extractive_summary, "language": language}
                 )

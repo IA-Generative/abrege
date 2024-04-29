@@ -1,7 +1,7 @@
 import os, sys, logging, random, asyncio, uvicorn, time
 from typing import Union
 import logging
-
+from typing import Literal
 import os
 import sys
 import json
@@ -50,15 +50,14 @@ async def lifespan(_: FastAPI):
     """
     Load the resources used by the API (models, data)
     """
+    load_dotenv()
 
     embeddings = HuggingFaceEmbeddings(
         model_name=os.environ["EMBEDDING_MODEL_PATH"]
     )  # plus de 13 min
     logger.info(f"Embedding model {repr(embeddings)} available")
 
-    embedding_model = EmbeddingModel(embeddings, "hugging_hub")
-
-    load_dotenv()
+    embedding_model = EmbeddingModel(embeddings, "HuggingFaceEmbeddings")
 
     OPENAI_API_BASE = os.environ["OPENAI_API_BASE"]
     OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
@@ -125,8 +124,12 @@ def read_item(url: str):
     return res
 
 
+MethodType = Literal["map_reduce", "refine", "text_rank", "k-means"]
+ChunkType = Literal["sentences", "chunks"]
+
+
 @app.get("/url/{url}")
-def read_item(url: str, method: str = None):
+def summarize_url(url: str, method: MethodType = "k-means"):
 
     if method is None:
         custom_chain = context["chain"]
@@ -157,7 +160,7 @@ def read_item(url: str, method: str = None):
 
 
 @app.get("/text_summary")
-def summarize_text(text: str, method: str = None):
+def summarize_text(text: str, method: MethodType = "k-means"):
 
     if method is None:
         res = [context["chain"].invoke(text)]
