@@ -92,7 +92,10 @@ class EmbeddingModel:
                 return torch.tensor(embeddings, device=self._device)
 
             case "HuggingFaceEmbeddings":
-                embeddings = self._model.embed_documents(list_chunk)
+                encode_kwargs = {"normalize_embeddings": True}
+                embeddings = self._model.embed_documents(
+                    list_chunk, encode_kwargs=encode_kwargs
+                )
                 return torch.tensor(embeddings, device=self._device)
 
             case "SentenceTransformer":
@@ -227,20 +230,18 @@ def text_rank_iterator(list_chunk: list[str], embedding_model: EmbeddingModel):
         )
 
     # Sort the sentences
-    sentence_order = sorted(
-        calculated_page_rank.items(), key=lambda x: x[1], reverse=True
-    )
+    chunk_order = sorted(calculated_page_rank.items(), key=lambda x: x[1], reverse=True)
 
     # Yield the first sentence
-    yield sentence_order[0][0]
+    yield chunk_order[0][0]
 
     # Yield the other if not to close from previous yield
     i = 1
-    yielded_sentences = [sentence_order[0][0]]
-    while i < len(sentence_order):
-        idx_cur_sent = sentence_order[i][0]
+    yielded_chunks = [chunk_order[0][0]]
+    while i < len(chunk_order):
+        idx_cur_sent = chunk_order[i][0]
         add_sent = True
-        for idx_prev_sent in yielded_sentences:
+        for idx_prev_sent in yielded_chunks:
             cosine = dict_weight.get((idx_cur_sent, idx_prev_sent)) or dict_weight.get(
                 (idx_prev_sent, idx_cur_sent)
             )
@@ -249,7 +250,7 @@ def text_rank_iterator(list_chunk: list[str], embedding_model: EmbeddingModel):
                 break
 
         if add_sent:
-            yielded_sentences.append(idx_cur_sent)
+            yielded_chunks.append(idx_cur_sent)
             yield idx_cur_sent
         i += 1
 
@@ -306,9 +307,7 @@ def build_text_prompt_kmeans(
     str
         extractive summary
     """
-    # First we have to split the text, for the moment, split aroud setences
-    # Maybe it would be better to split around chunk with some overlap to have better control
-    # on context and size of the summary
+    # First we have to split the text
     if (
         chunk_type == "chunks"
         and embedding_model.model_class != "OpenAIEmbeddingFunction"
@@ -338,23 +337,24 @@ def build_text_prompt_kmeans(
         clusters_to_embeddings[cluster].append(embedding)
         cluster_map[cluster].append(idx)
 
-    # Now we compute the closest sentences to each cluster center
-    sentences_idx = []
+    # Now we compute the closest chunk to each cluster center
+    chunk_idx = []
     for embeddings_list, cluster_center, idx_map in zip(
         clusters_to_embeddings, kmean.cluster_centers_, cluster_map
     ):
         embedding_center, _ = pairwise_distances_argmin_min(
             cluster_center.reshape(1, -1), embeddings_list
         )
-        sentences_idx.append(idx_map[int(embedding_center[0])])
+        chunk_idx.append(idx_map[int(embedding_center[0])])
 
-    # Finally return the sentences in order
-    sentences_idx.sort()
+    # Finally return the chunk in order
+    chunk_idx.sort()
 
     res = ""
-    for idx in sentences_idx:
+    for idx in chunk_idx:
         res += list_chunk[idx]
 
+    # Skip the last space ^^
     return res
 
 
@@ -395,54 +395,33 @@ def build_text_prompt(
     elif chunk_type == "chunks":
         list_chunks = split_chunk(text, chunk_size)
 
-    sentence_idx_iterator = iter(text_rank_iterator(list_chunks, embedding_model))
+    chunk_idx_iterator = iter(text_rank_iterator(list_chunks, embedding_model))
 
-    sentence_len = 0
-    sentence_result = []
+    result_len = 0
+    idx_result = []
     enc = tiktoken.get_encoding("cl100k_base")
     try:
         while True:
-            idx_next = next(sentence_idx_iterator)
+            idx_next = next(chunk_idx_iterator)
             num_token_next = len(enc.encode(list_chunks[idx_next]))
-            if sentence_len + num_token_next > size:
+            if result_len + num_token_next > size:
                 break
 
-            sentence_len += num_token_next
-            sentence_result.append(idx_next)
+            result_len += num_token_next
+            idx_result.append(idx_next)
     except StopIteration:
         pass
 
     # Sort result sentences to have them in same order as in the text
-    sentence_result.sort()
+    print(idx_result)
+    idx_result.sort()
 
     result_text = ""
-    for idx_sentence in sentence_result:
-        result_text += list_chunks[idx_sentence]
+    for idx_chunk in idx_result:
+        result_text += list_chunks[idx_chunk]
 
     return result_text
 
 
-def test_kmeans():
-    embedding_model = EmbeddingModel.from_hugging_hub_sentence_transformer(
-        "dangvantuan/sentence-camembert-base"
-    )
-
-    from py_pdf_parser.loaders import load_file
-
-    document = load_file("Malo_Adler_Thesis.pdf")
-    text2 = ""
-    for element in document.elements:
-        text2 += element.text()
-
-    res = build_text_prompt_kmeans(text2, 10, embedding_model)
-    print(res)
-
-    print("\n TextRANK \n")
-
-    res2 = build_text_prompt(text2, len(res), embedding_model)
-    print(res2)
-    print(len(res))
-
-
 if __name__ == "__main__":
-    test_kmeans()
+    pass
