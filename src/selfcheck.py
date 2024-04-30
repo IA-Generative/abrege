@@ -30,7 +30,6 @@ import logging
 @dataclass
 class SelfCheckGPT:
     llm: "Model"
-    documents: list
     retriever: "retriever"
 
     @staticmethod
@@ -88,7 +87,13 @@ Answer:"""
         return statistics.mean(self.get_array(text=text))
 
 
-def selfcheck(llm: "LLM", docs: list, summarize_to_eval: str) -> float:
+def selfcheck(
+    llm: "LLM",
+    docs: list,
+    summarize_to_eval: str,
+    chunk_size: int = 1000,
+    chunk_overlap: int = 50,
+) -> float:
 
     from langchain_core.output_parsers import StrOutputParser
     from langchain_core.runnables import RunnablePassthrough
@@ -100,7 +105,10 @@ def selfcheck(llm: "LLM", docs: list, summarize_to_eval: str) -> float:
         model_name="OrdalieTech/Solon-embeddings-base-0.1"
     )  # plus de 13 min
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000, chunk_overlap=50, keep_separator=True, length_function=len
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+        keep_separator=True,
+        length_function=len,
     )
     splits = text_splitter.split_documents(docs)
     vectorstore = Chroma.from_documents(documents=splits, embedding=embeddings)
@@ -108,7 +116,7 @@ def selfcheck(llm: "LLM", docs: list, summarize_to_eval: str) -> float:
         search_type="similarity", search_kwargs={"k": 3}
     )
 
-    selfCheckGPT = SelfCheckGPT(llm, retriever=retriever)
+    selfCheckGPT = SelfCheckGPT(llm=llm, retriever=retriever)
 
     return selfCheckGPT.eval_text(summarize_to_eval)
 
@@ -117,9 +125,7 @@ if __name__ == "__main__":
     import os
     from pathlib import Path
 
-    OPENAI_API_BASE = os.environ.get(
-        "OPENAI_API_BASE", "https://api-ai.numerique-interieur.com/v1"
-    )
+    OPENAI_API_BASE = os.environ["OPENAI_API_BASE"]
     OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 
     llm = ChatOpenAI(
@@ -129,7 +135,7 @@ if __name__ == "__main__":
         model="mixtral",
     )
 
-    text = Path("./src/camus.txt").read_text()
+    text = Path("./src/some.txt").read_text()
     documents = [Document(page_content=text)]
 
     example_summarize = Path("./src/random.txt").read_text()
