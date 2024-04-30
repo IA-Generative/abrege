@@ -49,7 +49,7 @@ class TestClass:
     dataset = dataset
 
     @staticmethod
-    def eval_chain(custom_chain, iter_of_str, progress_bar=True) -> list[float]:
+    def eval_chain(custom_chain, iter_of_str, progress_bar: bool = True) -> list[float]:
         metrics = []
         iter_ = tqdm(iter_of_str) if progress_bar else iter_of_str
         for text_to_sumup in iter_:
@@ -62,18 +62,31 @@ class TestClass:
             metrics.append(metric)
         return metrics
 
-    def test_textrank(self, n: int = 1):
-
+    @staticmethod
+    def get_metrics_from_method(method: str, n: int = 5):
         text_rank_chain = summarize_chain_builder(
-            method="text_rank", embedding_model=embedding_model, llm=llm
+            method=method, embedding_model=embedding_model, llm=llm
         )
 
         metrics = TestClass.eval_chain(
             text_rank_chain, TestClass.dataset["train"]["input"][:n]
         )
-        print(f"{metrics}")
+        print(f"For {method=}, {metrics=}")
+        return metrics
+
+    def test_textrank(self, n: int = 5):
+        metrics = TestClass.get_metrics_from_method("text_rank", n=n)
+        assert statistics.mean(metrics) >= 0.7
+
+    def test_kmeans(self, n: int = 5):
+        metrics = TestClass.get_metrics_from_method("text_rank", n=n)
         assert statistics.mean(metrics) >= 0.7
 
 
 if __name__ == "__main__":
     TestClass().test_textrank()
+    to_print = ""
+    for method in ("text_rank", "refine", "map_reduce", "k-means"):
+        metrics = TestClass.get_metrics_from_method("text_rank")
+        to_print += f"{method=} {statistics.mean(metrics)=} {metrics}\n"
+    print(to_print)
