@@ -25,12 +25,13 @@ import statistics
 from dataclasses import dataclass
 from functools import cached_property
 import logging
+import typing
 
 
 @dataclass
 class SelfCheckGPT:
-    llm: "Model"
-    retriever: "retriever"
+    llm: typing.Any
+    retriever: typing.Any
 
     @staticmethod
     def parse_response(response: str) -> float:
@@ -88,7 +89,7 @@ Answer:"""
 
 
 def selfcheck(
-    llm: "LLM",
+    llm: typing.Any,
     docs: list,
     summarize_to_eval: str,
     chunk_size: int = 1000,

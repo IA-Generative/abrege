@@ -29,7 +29,7 @@ from langchain_core.documents import Document
 
 from fastapi import FastAPI
 
-sys.path.append("../src")
+sys.path.append(str(Path(__file__).parent.parent / "src"))
 from summary_chain import summarize_chain_builder, EmbeddingModel
 
 import nltk
@@ -59,7 +59,8 @@ async def lifespan(_: FastAPI):
     )  # plus de 13 min
     logger.info(f"Embedding model {repr(embeddings)} available")
 
-    embedding_model = EmbeddingModel(embeddings, "SentenceTransformer")
+    model_class = "HuggingFaceEmbeddings"
+    embedding_model = EmbeddingModel(embeddings, model_class)
 
     OPENAI_API_BASE = os.environ["OPENAI_API_BASE"]
     OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
@@ -72,7 +73,7 @@ async def lifespan(_: FastAPI):
     )
 
     custom_chain = summarize_chain_builder(
-        method="k-means", embedding_model=embedding_model, llm=llm
+        method="text_rank", embedding_model=embedding_model, llm=llm
     )
 
     context["chain"] = custom_chain
@@ -90,8 +91,7 @@ async def lifespan(_: FastAPI):
 
 logger = logging.getLogger()
 
-description = Path("../README.md").read_text()
-
+description = (Path(__file__).parent.parent / "README.md").read_text()
 
 API_KEY_HEADER = APIKeyHeader(name="x-api-key", auto_error=False)
 
@@ -114,19 +114,12 @@ async def healthcheck():
     return
 
 
-@app.get("/camus")
-def read_item(url: str):
-    text2 = Path("./data/camus.txt").read_text()
-    res = context["chain"].invoke(text2)
-    return res
-
-
 MethodType = Literal["map_reduce", "refine", "text_rank", "k-means"]
 ChunkType = Literal["sentences", "chunks"]
 
 
 @app.get("/url/{url}")
-def summarize_url(url: str, method: MethodType = "k-means"):
+def summarize_url(url: str, method: MethodType = "text_rank"):
 
     if method is None:
         custom_chain = context["chain"]
@@ -157,7 +150,7 @@ def summarize_url(url: str, method: MethodType = "k-means"):
 
 
 @app.post("/doc")
-async def summarize_doc(file: UploadFile, method: MethodType = "k-means"):
+async def summarize_doc(file: UploadFile, method: MethodType = "text_rank"):
     """This route is for single file only"""
 
     if file.filename is not None:
@@ -168,7 +161,7 @@ async def summarize_doc(file: UploadFile, method: MethodType = "k-means"):
             detail="No extension found on upload file",
         )
 
-    if extension not in ["pdf", "txt"]:
+    if extension not in {"pdf", "txt"}:
         raise HTTPException(
             status_code=400,
             detail="file format not supported, file format supported are : [pdf, txt]",
