@@ -25,14 +25,14 @@ import statistics
 from dataclasses import dataclass
 from functools import cached_property
 import logging
-
+import typing
 
 @dataclass
 class SelfCheckGPT:
-    llm: "Model"
-    documents: list
-    retriever: "retriever"
-
+    llm: typing.Any
+    documents: typing.Any
+    retriever: typing.Any
+    
     @staticmethod
     def parse_response(response: str) -> float:
         response = response.strip().lower()
