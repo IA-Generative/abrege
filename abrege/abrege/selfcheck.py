@@ -32,7 +32,7 @@ class SelfCheckGPT:
     llm: typing.Any
     documents: typing.Any
     retriever: typing.Any
-    
+
     @staticmethod
     def parse_response(response: str) -> float:
         response = response.strip().lower()
@@ -88,7 +88,7 @@ Answer:"""
         return statistics.mean(self.get_array(text=text))
 
 
-def selfcheck(llm: "LLM", docs: list, summarize_to_eval: str) -> float:
+def selfcheck(llm, docs: list, summarize_to_eval: str) -> float:
 
     from langchain_core.output_parsers import StrOutputParser
     from langchain_core.runnables import RunnablePassthrough
