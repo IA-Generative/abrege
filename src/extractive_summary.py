@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, get_args
 import sys
 from sklearn.cluster import KMeans
 from sklearn.metrics import pairwise_distances_argmin_min
@@ -48,6 +48,7 @@ def openai_encode_multithreading(
 ModelType = Literal[
     "HuggingFaceEmbeddings",
     "OpenAIEmbeddingFunction",
+    "SentenceTransformer",
 ]
 
 
@@ -77,18 +78,36 @@ class EmbeddingModel:
 
     def __init__(self, model, model_class: ModelType):
         self._model = model
-        self.model_class = model_class
+        if model_class not in get_args(ModelType):
+            raise ValueError(
+                f"Embeddding Model was not implemented for {model_class}, available model class are {get_args(ModelType)}"
+            )
+        self.model_class: ModelType = model_class
 
     def encode(self, list_chunk: list[str]) -> torch.Tensor:
         match self.model_class:
 
-            case "openai_ef":
+            case "OpenAIEmbeddingFunction":
                 embeddings = openai_encode_multithreading(self._model, list_chunk)
                 return torch.tensor(embeddings, device=self._device)
 
             case "HuggingFaceEmbeddings":
                 embeddings = self._model.embed_documents(list_chunk)
                 return torch.tensor(embeddings, device=self._device)
+
+            case "SentenceTransformer":
+                embeddings = self._model.encode(
+                    list_chunk,
+                    convert_to_numpy=False,
+                    convert_to_tensor=True,
+                    normalize_embeddings=True,
+                )
+                return embeddings
+
+            case _:
+                raise ValueError(
+                    f"EmbeddingModel.encode is not implemented for model_class : {type(self._model)}, supported class are {get_args(ModelType)}"
+                )
 
     @staticmethod
     def from_hugging_hub_sentence_transformer(model_path: str) -> "EmbeddingModel":
@@ -251,7 +270,7 @@ def split_chunk(text: str, chunk_size: int = 300) -> list[str]:
         list of the chunks
     """
     text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
-        chunk_size=chunk_size, chunk_overlap=15
+        chunk_size=chunk_size, chunk_overlap=0
     )
     split_text = text_splitter.split_text(text)
     return split_text
@@ -290,8 +309,18 @@ def build_text_prompt_kmeans(
     # First we have to split the text, for the moment, split aroud setences
     # Maybe it would be better to split around chunk with some overlap to have better control
     # on context and size of the summary
-    if chunk_type == "chunks":
+    if (
+        chunk_type == "chunks"
+        and embedding_model.model_class != "OpenAIEmbeddingFunction"
+    ):
         list_chunk = split_chunk(text, size // n_clusters)
+    elif (
+        chunk_type == "chunks"
+        and embedding_model.model_class == "OpenAIEmbeddingFunction"
+    ):
+        chunk_size = 200  # Chunk size limit for OpenAIEmbeddingFunction
+        n_clusters = size // chunk_size + 1
+        list_chunk = split_chunk(text, chunk_size)
     elif chunk_type == "sentences":
         list_chunk = split_sentences(text)
 
@@ -335,7 +364,7 @@ def build_text_prompt(
     embedding_model: EmbeddingModel,
     *,
     chunk_type: Literal["sentences", "chunks"] = "sentences",
-    chunk_size: int = 300,
+    chunk_size: int = 200,
 ) -> str:
     """
     Build from the text the extractive summary using TextRank algorithm that fit size
@@ -348,25 +377,19 @@ def build_text_prompt(
         maximal size of the return string, in term of token
         (token are counted by tiktoken.get_encoding('cl100k_base'))
     embedding_model : EmbeddingModel
-        embedding_model use to compute cosine similarity, default model if none
+        embedding_model use to compute cosine similarity
     chunk_type : Literal["sentences, "chunks"], optional
         the type of chunks to split the text and rank betweens
         default to sentence
     chunk_size : int, optional
         the size of chunks if chunk_type = 'chunks'
-        default to 300
+        default to 100
 
     Returns
     ----------
     str
         extractive summary of text with len < size
     """
-
-    if embedding_model is None:
-        embedding_model = EmbeddingModel.from_hugging_hub_sentence_transformer(
-            "dangvantuan/sentence-camembert-base"
-        )
-
     if chunk_type == "sentences":
         list_chunks = split_sentences(text)
     elif chunk_type == "chunks":

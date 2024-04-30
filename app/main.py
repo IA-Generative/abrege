@@ -24,6 +24,8 @@ from langchain_openai import ChatOpenAI
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
+from pypdf import PdfReader
+from langchain_core.documents import Document
 
 from fastapi import FastAPI
 
@@ -57,7 +59,7 @@ async def lifespan(_: FastAPI):
     )  # plus de 13 min
     logger.info(f"Embedding model {repr(embeddings)} available")
 
-    embedding_model = EmbeddingModel(embeddings, "HuggingFaceEmbeddings")
+    embedding_model = EmbeddingModel(embeddings, "SentenceTransformer")
 
     OPENAI_API_BASE = os.environ["OPENAI_API_BASE"]
     OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
@@ -107,11 +109,6 @@ app.add_middleware(
 )
 
 
-@app.get("/", status_code=200)
-async def healthcheck():
-    return "Hello"
-
-
 @app.get("/healthcheck", status_code=200)
 async def healthcheck():
     return
@@ -159,21 +156,72 @@ def summarize_url(url: str, method: MethodType = "k-means"):
     return "\n\n".join(res)
 
 
-@app.get("/text_summary")
-def summarize_text(text: str, method: MethodType = "k-means"):
+@app.post("/doc")
+async def summarize_doc(file: UploadFile, method: MethodType = "k-means"):
+    """This route is for single file only"""
 
-    if method is None:
-        res = [context["chain"].invoke(text)]
-
+    if file.filename is not None:
+        extension = file.filename.split(".")[-1]
     else:
+        raise HTTPException(
+            status_code=400,
+            detail="No extension found on upload file",
+        )
+
+    if extension not in ["pdf", "txt"]:
+        raise HTTPException(
+            status_code=400,
+            detail="file format not supported, file format supported are : [pdf, txt]",
+        )
+
+    if extension == "pdf":
+        text = ""
+        reader = PdfReader(file.file)
+        for page in reader.pages:
+            text += page.extract_text()
+
+    elif extension == "txt":
+        text = await file.read()
+        text = text.decode()
+
+    if method != "k-means":
         custom_chain = summarize_chain_builder(
             llm=context["llm"],
             embedding_model=context["embedding_model"],
             method=method,
         )
-        res = [custom_chain.invoke(text)]
+    else:
+        custom_chain = context["chain"]
 
-    return "\n\n".join(res)
+    res = custom_chain.invoke(text)
+
+    return {"summary": res}
+
+
+@app.post("/docs")
+async def summarize_multi_doc(
+    files: List[UploadFile], method: MethodType = "k-means", one_summary: bool = False
+):
+    """Route for multiple files"""
+
+    summaries = []
+    for file in files:
+        file_summary = await summarize_doc(file, method)
+        summaries.append(file_summary)
+
+    if one_summary:
+        custom_chain = summarize_chain_builder(
+            llm=context["llm"],
+            embedding_model=context["embedding_model"],
+            method="stuff",
+        )
+        docs = []
+        for summary in summaries:
+            docs.append(Document(page_content=summary))
+
+        summaries = [custom_chain.invoke(docs)]
+
+    return {"summaries": summaries}
 
 
 if __name__ == "__main__":
