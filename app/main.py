@@ -26,8 +26,8 @@ from langchain_openai import ChatOpenAI
 
 from fastapi import FastAPI
 
-sys.path.append("./src")
-from summary_chain import summarize_chain_builder, EmbeddingModel
+sys.path.append("./abrege")
+from abrege.summary_chain import summarize_chain_builder, EmbeddingModel
 
 import nltk
 
