@@ -86,7 +86,7 @@ class TestClass:
 if __name__ == "__main__":
     TestClass().test_textrank()
     to_print = ""
-    for method in ("text_rank", "refine", "map_reduce", "k-means"):
-        metrics = TestClass.get_metrics_from_method("text_rank")
+    for method in {"text_rank", "refine", "map_reduce", "k-means"}:
+        metrics = TestClass.get_metrics_from_method(method)
         to_print += f"{method=} {statistics.mean(metrics)=} {metrics}\n"
     print(to_print)
