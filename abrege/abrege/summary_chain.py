@@ -6,13 +6,13 @@ from langchain_core.runnables import chain
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain.chains import MapReduceDocumentsChain, ReduceDocumentsChain
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chains.combine_documents.stuff import StuffDocumentsChain
 from langchain.chains.llm import LLMChain
 from langchain.chains.summarize import load_summarize_chain
 from langchain_core.documents.base import Document
 from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
-from extractive_summary import (
+from .extractive_summary import (
     EmbeddingModel,
     build_text_prompt,
     build_text_prompt_kmeans,
