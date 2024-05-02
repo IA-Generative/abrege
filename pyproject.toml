@@ -17,5 +17,5 @@ dynamic = ["dependencies", "readme"]
 py-modules = ["abrege"]
 
 [tool.setuptools.dynamic]
-dependencies = {file = ["requirement.txt"]}
+dependencies = {file = ["requirements.txt"]}
 readme = {file = ["README.md"]}
