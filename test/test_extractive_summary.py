@@ -1,23 +1,18 @@
-import pytest
-import os, sys, random
-import logging
-
+import os
 import statistics
+import sys
 from pathlib import Path
 
-from langchain_openai import ChatOpenAI
+import nltk
+from langchain.docstore.document import Document
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
-from langchain.docstore.document import Document
-
 from tqdm import tqdm
-import nltk
 
 sys.path.append(str(Path(__file__).parent.parent / "src"))
-from selfcheck import SelfCheckGPT, selfcheck
-
 # poetry add datasets
 from datasets import load_dataset
+from selfcheck import selfcheck
 
 dataset = load_dataset("ZhongshengWang/Alpaca-cnn-dailymail")
 dataset = {
@@ -37,7 +32,7 @@ llm = ChatOpenAI(
     model="mixtral",
 )
 
-from summary_chain import summarize_chain_builder, EmbeddingModel
+from summary_chain import EmbeddingModel, summarize_chain_builder
 
 embeddings = HuggingFaceEmbeddings(
     model_name=os.environ["EMBEDDING_MODEL_PATH"]

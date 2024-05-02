@@ -1,13 +1,23 @@
-from typing import Literal, get_args
-import sys
-from sklearn.cluster import KMeans
-from sklearn.metrics import pairwise_distances_argmin_min
 import concurrent.futures
-import torch
-import nltk
+import sys
+from typing import (
+    Literal,
+    get_args,
+)
+
 import networkx as nx
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+import nltk
 import tiktoken
+import torch
+from langchain.text_splitter import (
+    RecursiveCharacterTextSplitter,
+)
+from sklearn.cluster import (
+    KMeans,
+)
+from sklearn.metrics import (
+    pairwise_distances_argmin_min,
+)
 
 
 def openai_encode_multithreading(
@@ -31,7 +41,7 @@ def openai_encode_multithreading(
     """
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         future_embedding = [
-            executor.submit(model, lc[c_count : c_count + max_batch_size])
+            executor.submit(model, lc[c_count: c_count + max_batch_size])
             for c_count in range(0, len(lc), max_batch_size)
         ]
 
@@ -80,7 +90,8 @@ class EmbeddingModel:
         self._model = model
         if model_class not in get_args(ModelType):
             raise ValueError(
-                f"Embeddding Model was not implemented for {model_class}, available model class are {get_args(ModelType)}"
+                f"""Embeddding Model was not implemented for {model_class},
+                  available model class are {get_args(ModelType)}"""
             )
         self.model_class: ModelType = model_class
 
@@ -88,7 +99,8 @@ class EmbeddingModel:
         match self.model_class:
 
             case "OpenAIEmbeddingFunction":
-                embeddings = openai_encode_multithreading(self._model, list_chunk)
+                embeddings = openai_encode_multithreading(self._model,
+                                                          list_chunk)
                 return torch.tensor(embeddings, device=self._device)
 
             case "HuggingFaceEmbeddings":
@@ -109,12 +121,18 @@ class EmbeddingModel:
 
             case _:
                 raise ValueError(
-                    f"EmbeddingModel.encode is not implemented for model_class : {type(self._model)}, supported class are {get_args(ModelType)}"
+                    f"""EmbeddingModel.encode is not implemented for
+                    model_class : {type(self._model)}
+                    , supported class are {get_args(ModelType)}"""
                 )
 
     @staticmethod
-    def from_hugging_hub_sentence_transformer(model_path: str) -> "EmbeddingModel":
-        from sentence_transformers import SentenceTransformer
+    def from_hugging_hub_sentence_transformer(
+        model_path: str,
+    ) -> "EmbeddingModel":
+        from sentence_transformers import (
+            SentenceTransformer,
+        )
 
         return EmbeddingModel(SentenceTransformer(model_path), "hugging_hub")
 
@@ -178,7 +196,8 @@ def build_graph(
     list_chunk : list[str]
         list of chunk of text (can be either sentences or just chunk)
     dict_weight : dict[(int, int), float]
-        a mapping of pair of sentence (index in original text) and cosine similarity
+        a mapping of pair of sentence (index in original text) and cosine
+        similarity
 
     Returns
     ---------
@@ -224,13 +243,14 @@ def text_rank_iterator(list_chunk: list[str], embedding_model: EmbeddingModel):
     try:
         calculated_page_rank = nx.pagerank(graph, weight="weight")
     except nx.PowerIterationFailedConvergence:
-        # If algorithm didn't manage to converge, try it with less precision
+        # If algorithm didn't manage to converge, try it with less precisi:w
         calculated_page_rank = nx.pagerank(
             graph, weight="weight", max_iter=1000, tol=0.1
         )
 
     # Sort the sentences
-    chunk_order = sorted(calculated_page_rank.items(), key=lambda x: x[1], reverse=True)
+    chunk_order = sorted(calculated_page_rank.items(), key=lambda x: x[1],
+                         reverse=True)
 
     # Yield the first sentence
     yield chunk_order[0][0]
@@ -242,7 +262,9 @@ def text_rank_iterator(list_chunk: list[str], embedding_model: EmbeddingModel):
         idx_cur_sent = chunk_order[i][0]
         add_sent = True
         for idx_prev_sent in yielded_chunks:
-            cosine = dict_weight.get((idx_cur_sent, idx_prev_sent)) or dict_weight.get(
+            cosine = dict_weight.get((
+                idx_cur_sent,
+                idx_prev_sent)) or dict_weight.get(
                 (idx_prev_sent, idx_cur_sent)
             )
             if cosine > 0.8:
@@ -286,7 +308,8 @@ def build_text_prompt_kmeans(
     chunk_type: Literal["sentences", "chunks"] = "chunks",
 ) -> str:
     """Build an extractive summary using k-means algorithm
-    for each cluster, extract the closet chunk to the center and add it to the summary
+    for each cluster, extract the closet chunk to the center and add it to the
+    summary
 
     Parameters
     ----------
@@ -333,7 +356,9 @@ def build_text_prompt_kmeans(
     clusters_to_embeddings = [[] for _ in range(n_clusters)]
     cluster_map = [[] for _ in range(n_clusters)]
 
-    for embedding, cluster, idx in zip(embeddings, clusters, range(len(list_chunk))):
+    for embedding, cluster, idx in zip(embeddings,
+                                       clusters,
+                                       range(len(list_chunk))):
         clusters_to_embeddings[cluster].append(embedding)
         cluster_map[cluster].append(idx)
 
@@ -367,7 +392,8 @@ def build_text_prompt(
     chunk_size: int = 200,
 ) -> str:
     """
-    Build from the text the extractive summary using TextRank algorithm that fit size
+    Build from the text the extractive summary using TextRank algorithm that
+    fit size
 
     Parameters
     ------------
@@ -413,7 +439,6 @@ def build_text_prompt(
         pass
 
     # Sort result sentences to have them in same order as in the text
-    print(idx_result)
     idx_result.sort()
 
     result_text = ""
