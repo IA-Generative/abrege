@@ -1,7 +1,13 @@
 # For more information, please refer to https://aka.ms/vscode-docker-python
 FROM python:3.12-slim
 
-EXPOSE 8000
+
+RUN apt-get update  \
+    && apt-get install build-essential -y \
+    && apt-get purge -y --auto-remove \
+    && rm -rf /var/lib/apt/lists/*
+    
+EXPOSE $BACKEND_PORT
 
 # Keeps Python from generating .pyc files in the container
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -9,12 +15,19 @@ ENV PYTHONDONTWRITEBYTECODE=1
 # Turns off buffering for easier container logging
 ENV PYTHONUNBUFFERED=1
 
-# Install pip requirements
+
+# Install app
 COPY requirements.txt .
 RUN python -m pip install -r requirements.txt
 
 WORKDIR /app
-COPY . /app
+COPY . .
+
+# Install abrege package
+WORKDIR /app/abrege
+RUN pip install -r requirements.txt
+RUN  pip install -e .
+WORKDIR /app
 
 # Creates a non-root user with an explicit UID and adds permission to access the /app folder
 # For more info, please refer to https://aka.ms/vscode-docker-python-configure-containers

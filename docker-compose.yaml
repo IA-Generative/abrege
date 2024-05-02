@@ -1,19 +1,19 @@
 version: "3.8"
 services:
-  dev:
+  abrege:
+    image: abrege:${TAG}
     build: 
       dockerfile: ./Dockerfile
       args:
         - http_proxy=${http_proxy}
         - https_proxy=${http_proxy}
+        - ${BACKEND_PORT}
     env_file:
       - .env
     volumes:
       - type: bind
         source: .
         target: /app
-    ports:
-      - 8000:8000
     environment:
       - http_proxy=${http_proxy}
       - https_proxy=${http_proxy}
