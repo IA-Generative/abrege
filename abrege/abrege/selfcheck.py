@@ -118,9 +118,7 @@ if __name__ == "__main__":
     import os
     from pathlib import Path
 
-    OPENAI_API_BASE = os.environ.get(
-        "OPENAI_API_BASE", "https://api-ai.numerique-interieur.com/v1"
-    )
+    OPENAI_API_BASE = os.environ["OPENAI_API_BASE"]
     OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 
     llm = ChatOpenAI(
