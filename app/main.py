@@ -1,7 +1,7 @@
 import os, sys, logging, random, asyncio, uvicorn, time
 from typing import Union
 import logging
-
+from typing import Literal
 import os
 import sys
 import json
@@ -23,11 +23,14 @@ from langchain_community.vectorstores.chroma import Chroma
 from langchain_openai import ChatOpenAI
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
+from dotenv import load_dotenv
+from pypdf import PdfReader
+from langchain_core.documents import Document
 
 from fastapi import FastAPI
 
-sys.path.append("./abrege")
-from abrege.summary_chain import summarize_chain_builder, EmbeddingModel
+sys.path.append(str(Path(__file__).parent.parent / "src"))
+from summary_chain import summarize_chain_builder, EmbeddingModel
 
 import nltk
 
@@ -49,13 +52,15 @@ async def lifespan(_: FastAPI):
     """
     Load the resources used by the API (models, data)
     """
+    load_dotenv()
 
     embeddings = HuggingFaceEmbeddings(
-        model_name="OrdalieTech/Solon-embeddings-base-0.1"
+        model_name=os.environ["EMBEDDING_MODEL_PATH"]
     )  # plus de 13 min
     logger.info(f"Embedding model {repr(embeddings)} available")
 
-    embedding_model = EmbeddingModel(embeddings, "HuggingFaceEmbeddings")
+    model_class = "HuggingFaceEmbeddings"
+    embedding_model = EmbeddingModel(embeddings, model_class)
 
     OPENAI_API_BASE = os.environ["OPENAI_API_BASE"]
     OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
@@ -68,10 +73,14 @@ async def lifespan(_: FastAPI):
     )
 
     custom_chain = summarize_chain_builder(
-        method="k-means", embedding_model=embedding_model, llm=llm
+        method="text_rank", embedding_model=embedding_model, llm=llm
     )
 
     context["chain"] = custom_chain
+
+    context["llm"] = llm
+
+    context["embedding_model"] = embedding_model
 
     logger.info("======== Lifespan initialization done =========")
 
@@ -82,8 +91,7 @@ async def lifespan(_: FastAPI):
 
 logger = logging.getLogger()
 
-description = Path("./README.md").read_text()
-
+description = (Path(__file__).parent.parent / "README.md").read_text()
 
 API_KEY_HEADER = APIKeyHeader(name="x-api-key", auto_error=False)
 
@@ -101,25 +109,26 @@ app.add_middleware(
 )
 
 
-@app.get("/", status_code=200)
-async def healthcheck():
-    return "Hello"
-
-
 @app.get("/healthcheck", status_code=200)
 async def healthcheck():
     return
 
 
-@app.get("/camus")
-def read_item(url: str):
-    text2 = Path("./data/camus.txt").read_text()
-    res = context["chain"].invoke(text2)
-    return res
+MethodType = Literal["map_reduce", "refine", "text_rank", "k-means"]
+ChunkType = Literal["sentences", "chunks"]
 
 
 @app.get("/url/{url}")
-def read_item(url: str):
+def summarize_url(url: str, method: MethodType = "text_rank"):
+
+    if method is None:
+        custom_chain = context["chain"]
+    else:
+        custom_chain = summarize_chain_builder(
+            llm=context["chain"],
+            embedding_model=context["embedding_model"],
+            method=method,
+        )
 
     parsed_url = urlparse(url)
     if not (parsed_url.scheme and parsed_url.netloc):
@@ -135,9 +144,77 @@ def read_item(url: str):
         loader = SeleniumURLLoader(urls=[url])
     data: list = loader.load()
 
-    res = [context["chain"].invoke(doc.page_content) for doc in data]
+    res = [custom_chain.invoke(doc.page_content) for doc in data]
 
     return "\n\n".join(res)
+
+
+@app.post("/doc")
+async def summarize_doc(file: UploadFile, method: MethodType = "text_rank"):
+    """This route is for single file only"""
+
+    if file.filename is not None:
+        extension = file.filename.split(".")[-1]
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="No extension found on upload file",
+        )
+
+    if extension not in {"pdf", "txt"}:
+        raise HTTPException(
+            status_code=400,
+            detail="file format not supported, file format supported are : [pdf, txt]",
+        )
+
+    if extension == "pdf":
+        text = ""
+        reader = PdfReader(file.file)
+        for page in reader.pages:
+            text += page.extract_text()
+
+    elif extension == "txt":
+        text = await file.read()
+        text = text.decode()
+
+    if method != "k-means":
+        custom_chain = summarize_chain_builder(
+            llm=context["llm"],
+            embedding_model=context["embedding_model"],
+            method=method,
+        )
+    else:
+        custom_chain = context["chain"]
+
+    res = custom_chain.invoke(text)
+
+    return {"summary": res}
+
+
+@app.post("/docs")
+async def summarize_multi_doc(
+    files: List[UploadFile], method: MethodType = "k-means", one_summary: bool = False
+):
+    """Route for multiple files"""
+
+    summaries = []
+    for file in files:
+        file_summary = await summarize_doc(file, method)
+        summaries.append(file_summary)
+
+    if one_summary:
+        custom_chain = summarize_chain_builder(
+            llm=context["llm"],
+            embedding_model=context["embedding_model"],
+            method="stuff",
+        )
+        docs = []
+        for summary in summaries:
+            docs.append(Document(page_content=summary))
+
+        summaries = [custom_chain.invoke(docs)]
+
+    return {"summaries": summaries}
 
 
 if __name__ == "__main__":

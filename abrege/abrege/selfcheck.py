@@ -27,6 +27,7 @@ from functools import cached_property
 import logging
 import typing
 
+
 @dataclass
 class SelfCheckGPT:
     llm: typing.Any
