@@ -1,31 +1,23 @@
 import nltk
 
-nltk.download("punkt")
-
 
 from langchain_openai import ChatOpenAI
-from langchain.chains.summarize import load_summarize_chain
 from langchain.prompts import PromptTemplate
 from langchain_chroma import Chroma
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langchain_text_splitters import (
     RecursiveCharacterTextSplitter,
-    CharacterTextSplitter,
 )
-from langchain.chains.llm import LLMChain
-from langchain_chroma import Chroma
-from langchain_core.output_parsers import StrOutputParser
-from langchain_openai import OpenAIEmbeddings
-from langchain.chains.combine_documents.stuff import StuffDocumentsChain
 from langchain.docstore.document import Document
 
 
 import statistics
 from dataclasses import dataclass
-from functools import cached_property
 import logging
 import typing
+
+nltk.download("punkt")
 
 
 @dataclass
@@ -44,7 +36,8 @@ class SelfCheckGPT:
         else:
             rep_int = 0.5
             logging.warning(
-                f"The answer given by the LLM is neither yes nor no. We need to review the prompt : {response=}"
+                f"""The answer given by the LLM is neither yes nor no. We need to review
+                the prompt : {response=}"""
             )
         return rep_int
 
@@ -53,7 +46,8 @@ class SelfCheckGPT:
         return "\n\n".join(doc.page_content for doc in docs)
 
     def __post_init__(self):
-        template_selfcheck = """Is the sentence true, according to the context provided below? Answer only by Yes or No, without justification
+        template_selfcheck = """Is the sentence true, according to the context provided
+        below? Answer only by Yes or No, without justification
 ####
 CONTEXT: {context}
 
@@ -83,19 +77,17 @@ Answer:"""
 
     def eval_text(self, text: str) -> float:
         """Allows you to evaluate the hallucinations of the text.
-        A score close to 0 indicates that the text cannot be justified from the given vecstore.
-        On the contrary, a score close to 1 indicates that the information in the text is contained in the given vector store.
+        A score close to 0 indicates that the text cannot be justified from the given
+        vecstore.
+        On the contrary, a score close to 1 indicates that the information in the text
+        is contained in the given vector store.
         """
         return statistics.mean(self.get_array(text=text))
 
 
 def selfcheck(llm, docs: list, summarize_to_eval: str) -> float:
 
-    from langchain_core.output_parsers import StrOutputParser
-    from langchain_core.runnables import RunnablePassthrough
     from langchain_community.embeddings import HuggingFaceEmbeddings
-
-    from langchain_core.prompts import PromptTemplate
 
     embeddings = HuggingFaceEmbeddings(
         model_name="OrdalieTech/Solon-embeddings-base-0.1"
