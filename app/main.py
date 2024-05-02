@@ -1,12 +1,10 @@
 import logging
 import os
-import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import List, Literal
 from urllib.parse import urlparse
 
-import nltk
 import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, UploadFile
@@ -18,10 +16,6 @@ from langchain_openai import ChatOpenAI
 from pypdf import PdfReader
 from abrege.extractive_summary import EmbeddingModel
 from abrege.summary_chain import summarize_chain_builder
-
-sys.path.append("../src")
-
-nltk.download("punkt")
 
 
 origins = [
