@@ -1,4 +1,5 @@
 import os
+from typing import Literal
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.runnables import chain
@@ -26,6 +27,14 @@ SUMMARY :
 
 summarize_prompt = PromptTemplate.from_template(summarize_template)
 
+
+summarize_template_en = """
+Write a summary of the following text
+{text}
+SUMMARY :
+"""
+
+summarize_prompt_en = PromptTemplate.from_template(summarize_template_en)
 
 map_template = """The following is a set of documents 
 {docs}
@@ -57,12 +66,16 @@ refine_template = (
 refine_prompt = PromptTemplate.from_template(refine_template)
 
 
+MethodType = Literal["text_rank", "map_reduce", "refine", "k-means", "stuff"]
+
+
 def summarize_chain_builder(
     llm=None,
-    llm_context_window_size: int = 3000,
+    llm_context_window_size: int = 2000,
     embedding_model: EmbeddingModel = None,
     language: str = "english",
-    method: str = "text_rank",
+    method: MethodType = "text_rank",
+    **kwargs,
 ):
     """Build a custom summarizing chain with your models, using the selected method for summarization
 
@@ -78,7 +91,7 @@ def summarize_chain_builder(
         default to miom api if None
     language : str = "french"
         language to use to write the summary
-    method : str = {'refine', 'map_reduce', 'text_rank', 'k-means'}
+    method : Literal['text_rank', 'map_reduce', 'refine', 'kmeans', 'stuff'] = 'text_rank'
         method to build the summary
 
     Returns
@@ -101,7 +114,7 @@ def summarize_chain_builder(
         openai_ef = OpenAIEmbeddingFunction(
             api_key=OPENAI_EMBEDDING_API_KEY, api_base=OPENAI_EMBEDDING_API_BASE
         )
-        embedding_model = EmbeddingModel(openai_ef, "openai_ef")
+        embedding_model = EmbeddingModel(openai_ef, "OpenAIEmbeddingFunction")
 
     match method:
         case "text_rank":
@@ -109,8 +122,9 @@ def summarize_chain_builder(
             @chain
             def custom_chain(text):
                 extractive_summary = build_text_prompt(
-                    text, llm_context_window_size, embedding_model
+                    text, llm_context_window_size, embedding_model, **kwargs
                 )
+                print(extractive_summary)
                 prompt1 = summarize_prompt.invoke(
                     {"text": extractive_summary, "language": language}
                 )
@@ -133,7 +147,7 @@ def summarize_chain_builder(
                 )
 
                 text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
-                    chunk_size=1000, chunk_overlap=50
+                    chunk_size=1000, chunk_overlap=0
                 )
                 split_texts = text_splitter.split_text(text)
                 split_docs = []
@@ -167,7 +181,7 @@ def summarize_chain_builder(
                     return_intermediate_steps=False,
                 )
                 text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
-                    chunk_size=1000, chunk_overlap=50
+                    chunk_size=1000, chunk_overlap=0
                 )
                 split_text = text_splitter.split_text(text)
                 split_docs = []
@@ -180,13 +194,27 @@ def summarize_chain_builder(
 
             @chain
             def custom_chain(text: str):
-                extractive_summary = build_text_prompt_kmeans(text, 10, embedding_model)
+                extractive_summary = build_text_prompt_kmeans(
+                    text, llm_context_window_size, embedding_model, **kwargs
+                )
+                print(extractive_summary)
                 prompt1 = summarize_prompt.invoke(
                     {"text": extractive_summary, "language": language}
                 )
                 output = llm.invoke(prompt1)
                 output_parser = StrOutputParser()
                 return output_parser.invoke(output)
+
+        case "stuff":
+
+            @chain
+            def custom_chain(text: str):
+                llm_chain = LLMChain(llm=llm, prompt=summarize_prompt_en)
+                stuff_chain = StuffDocumentsChain(
+                    llm_chain=llm_chain, document_variable_name="text"
+                )
+                doc = Document(page_content=text)
+                return stuff_chain.invoke([doc])["output_text"]
 
         case _:
             raise ValueError(

@@ -1,3 +1,4 @@
+from typing import Literal, get_args
 import sys
 from sklearn.cluster import KMeans
 from sklearn.metrics import pairwise_distances_argmin_min
@@ -5,8 +6,8 @@ import concurrent.futures
 import torch
 import nltk
 import networkx as nx
-from line_profiler import profile
-from langchain_text_splitters.character import RecursiveCharacterTextSplitter
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+import tiktoken
 
 
 def openai_encode_multithreading(
@@ -44,6 +45,13 @@ def openai_encode_multithreading(
         return result
 
 
+ModelType = Literal[
+    "HuggingFaceEmbeddings",
+    "OpenAIEmbeddingFunction",
+    "SentenceTransformer",
+]
+
+
 class EmbeddingModel:
     """A small wrapper around the real model, to use in text_rank and k-means
 
@@ -68,27 +76,41 @@ class EmbeddingModel:
 
     _device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    def __init__(self, model, model_class: str):
+    def __init__(self, model, model_class: ModelType):
         self._model = model
-        self.model_class = model_class
+        if model_class not in get_args(ModelType):
+            raise ValueError(
+                f"Embeddding Model was not implemented for {model_class}, available model class are {get_args(ModelType)}"
+            )
+        self.model_class: ModelType = model_class
 
-    def encode(self, list_sentences: list[str]) -> torch.Tensor:
+    def encode(self, list_chunk: list[str]) -> torch.Tensor:
         match self.model_class:
-            case "hugging_hub":
-                return self._model.encode(
-                    list_sentences,
-                    normalize_embeddings=True,
-                    convert_to_numpy=False,
-                    convert_to_tensor=True,
-                )
 
-            case "openai_ef":
-                embeddings = openai_encode_multithreading(self._model, list_sentences)
+            case "OpenAIEmbeddingFunction":
+                embeddings = openai_encode_multithreading(self._model, list_chunk)
                 return torch.tensor(embeddings, device=self._device)
 
             case "HuggingFaceEmbeddings":
-                embeddings = self._model.embed_documents(list_sentences)
+                encode_kwargs = {"normalize_embeddings": True}
+                embeddings = self._model.embed_documents(
+                    list_chunk, encode_kwargs=encode_kwargs
+                )
                 return torch.tensor(embeddings, device=self._device)
+
+            case "SentenceTransformer":
+                embeddings = self._model.encode(
+                    list_chunk,
+                    convert_to_numpy=False,
+                    convert_to_tensor=True,
+                    normalize_embeddings=True,
+                )
+                return embeddings
+
+            case _:
+                raise ValueError(
+                    f"EmbeddingModel.encode is not implemented for model_class : {type(self._model)}, supported class are {get_args(ModelType)}"
+                )
 
     @staticmethod
     def from_hugging_hub_sentence_transformer(model_path: str) -> "EmbeddingModel":
@@ -114,14 +136,14 @@ def split_sentences(text: str) -> list[str]:
 
 
 def build_weight(
-    list_sentence: list[str], model: EmbeddingModel
+    list_chunk: list[str], model: EmbeddingModel
 ) -> dict[(int, int), float]:
     """Compute the weight (cosine similarity) of the graph
 
     Parameters
     ----------
-    list_sentence : list[str]
-        list of sentence to compute similarity between
+    list_chunk : list[str]
+        list of chunk of text (can be either sentences or just chunk)
     model : EmbeddingModel
         model used to embed sentences
 
@@ -132,29 +154,29 @@ def build_weight(
     """
 
     result = {}
-    evaluations = model.encode(list_sentence)
+    evaluations = model.encode(list_chunk)
 
     T_evaluations = torch.transpose(evaluations, 0, 1)
 
     matrix_cosine = torch.matmul(evaluations, T_evaluations)
     matrix_cosine = matrix_cosine.tolist()
 
-    for i in range(len(list_sentence)):
-        for j in range(i + 1, len(list_sentence)):
+    for i in range(len(list_chunk)):
+        for j in range(i + 1, len(list_chunk)):
             result[(i, j)] = float(matrix_cosine[i][j])
 
     return result
 
 
 def build_graph(
-    list_sentence: list[str], dict_weight: dict[(int, int), float]
+    list_chunk: list[str], dict_weight: dict[(int, int), float]
 ) -> nx.Graph:
     """
     Compute the similarity graph
     Parameters
     --------------
-    list_sentence : list[str]
-        list of sentences
+    list_chunk : list[str]
+        list of chunk of text (can be either sentences or just chunk)
     dict_weight : dict[(int, int), float]
         a mapping of pair of sentence (index in original text) and cosine similarity
 
@@ -165,7 +187,7 @@ def build_graph(
     """
 
     graph = nx.Graph()
-    graph.add_nodes_from(range(len(list_sentence)))
+    graph.add_nodes_from(range(len(list_chunk)))
 
     for (idx_sent1, idx_sent2), weight in dict_weight.items():
         graph.add_edge(idx_sent1, idx_sent2, weight=weight)
@@ -173,16 +195,16 @@ def build_graph(
     return graph
 
 
-@profile
-def text_rank_iterator(list_sentences: list[str], embedding_model: EmbeddingModel):
+def text_rank_iterator(list_chunk: list[str], embedding_model: EmbeddingModel):
     """
     Yield the top sentences of the models, according to the embeddings computed
     by embedding_model
 
     Parameters
     --------------
-    list_sentences : list[str]
-        list of sentences to extract best from
+    list_chunk : list[str]
+        list of chunk of text (can be either sentences or just chunk)
+
     embedding_model: EmbeddingModel
         model to use for embeddings of sentences
 
@@ -193,10 +215,10 @@ def text_rank_iterator(list_sentences: list[str], embedding_model: EmbeddingMode
     """
 
     # Next build a similarity relation between each pair of sentences
-    dict_weight = build_weight(list_sentences, embedding_model)
+    dict_weight = build_weight(list_chunk, embedding_model)
 
     # Build the graph
-    graph = build_graph(list_sentences, dict_weight)
+    graph = build_graph(list_chunk, dict_weight)
 
     # And apply the text rank algorithm
     try:
@@ -208,20 +230,18 @@ def text_rank_iterator(list_sentences: list[str], embedding_model: EmbeddingMode
         )
 
     # Sort the sentences
-    sentence_order = sorted(
-        calculated_page_rank.items(), key=lambda x: x[1], reverse=True
-    )
+    chunk_order = sorted(calculated_page_rank.items(), key=lambda x: x[1], reverse=True)
 
     # Yield the first sentence
-    yield sentence_order[0][0]
+    yield chunk_order[0][0]
 
     # Yield the other if not to close from previous yield
     i = 1
-    yielded_sentences = [sentence_order[0][0]]
-    while i < len(sentence_order):
-        idx_cur_sent = sentence_order[i][0]
+    yielded_chunks = [chunk_order[0][0]]
+    while i < len(chunk_order):
+        idx_cur_sent = chunk_order[i][0]
         add_sent = True
-        for idx_prev_sent in yielded_sentences:
+        for idx_prev_sent in yielded_chunks:
             cosine = dict_weight.get((idx_cur_sent, idx_prev_sent)) or dict_weight.get(
                 (idx_prev_sent, idx_cur_sent)
             )
@@ -230,12 +250,12 @@ def text_rank_iterator(list_sentences: list[str], embedding_model: EmbeddingMode
                 break
 
         if add_sent:
-            yielded_sentences.append(idx_cur_sent)
+            yielded_chunks.append(idx_cur_sent)
             yield idx_cur_sent
         i += 1
 
 
-def chunk_splitter(text: str, chunk_size: int = 300) -> list[str]:
+def split_chunk(text: str, chunk_size: int = 300) -> list[str]:
     """split the text into chunk with a small overlap
 
     Parameters
@@ -251,14 +271,19 @@ def chunk_splitter(text: str, chunk_size: int = 300) -> list[str]:
         list of the chunks
     """
     text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
-        chunk_size=chunk_size, chunk_overlap=15
+        chunk_size=chunk_size, chunk_overlap=0
     )
     split_text = text_splitter.split_text(text)
     return split_text
 
 
 def build_text_prompt_kmeans(
-    text: str, n_clusters: int, embedding_model: EmbeddingModel
+    text: str,
+    size: int,
+    embedding_model: EmbeddingModel,
+    n_clusters: int = 10,
+    *,
+    chunk_type: Literal["sentences", "chunks"] = "chunks",
 ) -> str:
     """Build an extractive summary using k-means algorithm
     for each cluster, extract the closet chunk to the center and add it to the summary
@@ -267,20 +292,36 @@ def build_text_prompt_kmeans(
     ----------
     text : str
         text to compute summary
-    n_clusters : int
-        number of cluster (and thus sentences in the summary) to compute
+    size : int
+        size of the text (in term of tokens) to compute
     embedding_model : EmbeddingModel
         model to use to compute embeddings of chunk
+    n_clusters : int = 10
+        number cluster to build (size of chunk = size // nb_chunks)
+    chunk_type : Literal['sentences', 'chunks'], optional
+        the type of chunks to construct clusters around
+        default to chunks
 
     Returns
     -------
     str
         extractive summary
     """
-    # First we have to split the text, for the moment, split aroud setences
-    # Maybe it would be better to split around chunk with some overlap to have better control
-    # on context and size of the summary
-    list_chunk = chunk_splitter(text)
+    # First we have to split the text
+    if (
+        chunk_type == "chunks"
+        and embedding_model.model_class != "OpenAIEmbeddingFunction"
+    ):
+        list_chunk = split_chunk(text, size // n_clusters)
+    elif (
+        chunk_type == "chunks"
+        and embedding_model.model_class == "OpenAIEmbeddingFunction"
+    ):
+        chunk_size = 200  # Chunk size limit for OpenAIEmbeddingFunction
+        n_clusters = size // chunk_size + 1
+        list_chunk = split_chunk(text, chunk_size)
+    elif chunk_type == "sentences":
+        list_chunk = split_sentences(text)
 
     # Then we embed each sentences using the model
     embeddings = embedding_model.encode(list_chunk).cpu().numpy()
@@ -296,27 +337,35 @@ def build_text_prompt_kmeans(
         clusters_to_embeddings[cluster].append(embedding)
         cluster_map[cluster].append(idx)
 
-    # Now we compute the closest sentences to each cluster center
-    sentences_idx = []
+    # Now we compute the closest chunk to each cluster center
+    chunk_idx = []
     for embeddings_list, cluster_center, idx_map in zip(
         clusters_to_embeddings, kmean.cluster_centers_, cluster_map
     ):
         embedding_center, _ = pairwise_distances_argmin_min(
             cluster_center.reshape(1, -1), embeddings_list
         )
-        sentences_idx.append(idx_map[int(embedding_center[0])])
+        chunk_idx.append(idx_map[int(embedding_center[0])])
 
-    # Finally return the sentences in order
-    sentences_idx.sort()
+    # Finally return the chunk in order
+    chunk_idx.sort()
 
     res = ""
-    for idx in sentences_idx:
+    for idx in chunk_idx:
         res += list_chunk[idx]
 
+    # Skip the last space ^^
     return res
 
 
-def build_text_prompt(text: str, size: int, embedding_model: EmbeddingModel) -> str:
+def build_text_prompt(
+    text: str,
+    size: int,
+    embedding_model: EmbeddingModel,
+    *,
+    chunk_type: Literal["sentences", "chunks"] = "sentences",
+    chunk_size: int = 200,
+) -> str:
     """
     Build from the text the extractive summary using TextRank algorithm that fit size
 
@@ -325,69 +374,54 @@ def build_text_prompt(text: str, size: int, embedding_model: EmbeddingModel) -> 
     text: str
         Original text to summarize
     size : int
-        maximal size of the return string
+        maximal size of the return string, in term of token
+        (token are counted by tiktoken.get_encoding('cl100k_base'))
     embedding_model : EmbeddingModel
-        embedding_model use to compute cosine similarity, default model if none
+        embedding_model use to compute cosine similarity
+    chunk_type : Literal["sentences, "chunks"], optional
+        the type of chunks to split the text and rank betweens
+        default to sentence
+    chunk_size : int, optional
+        the size of chunks if chunk_type = 'chunks'
+        default to 100
 
     Returns
     ----------
     str
         extractive summary of text with len < size
     """
+    if chunk_type == "sentences":
+        list_chunks = split_sentences(text)
+    elif chunk_type == "chunks":
+        list_chunks = split_chunk(text, chunk_size)
 
-    if embedding_model is None:
-        embedding_model = EmbeddingModel.from_hugging_hub_sentence_transformer(
-            "dangvantuan/sentence-camembert-base"
-        )
+    chunk_idx_iterator = iter(text_rank_iterator(list_chunks, embedding_model))
 
-    list_sentences = split_sentences(text)
-
-    sentence_idx_iterator = iter(text_rank_iterator(list_sentences, embedding_model))
-
-    sentence_len = 0
-    sentence_result = []
+    result_len = 0
+    idx_result = []
+    enc = tiktoken.get_encoding("cl100k_base")
     try:
         while True:
-            idx_next = next(sentence_idx_iterator)
-            if sentence_len + len(list_sentences[idx_next]) > size:
+            idx_next = next(chunk_idx_iterator)
+            num_token_next = len(enc.encode(list_chunks[idx_next]))
+            if result_len + num_token_next > size:
                 break
 
-            sentence_len += len(list_sentences[idx_next])
-            sentence_result.append(idx_next)
+            result_len += num_token_next
+            idx_result.append(idx_next)
     except StopIteration:
         pass
 
     # Sort result sentences to have them in same order as in the text
-    sentence_result.sort()
+    print(idx_result)
+    idx_result.sort()
 
     result_text = ""
-    for idx_sentence in sentence_result:
-        result_text += list_sentences[idx_sentence]
+    for idx_chunk in idx_result:
+        result_text += list_chunks[idx_chunk]
 
     return result_text
 
 
-def test_kmeans():
-    embedding_model = EmbeddingModel.from_hugging_hub_sentence_transformer(
-        "dangvantuan/sentence-camembert-base"
-    )
-
-    from py_pdf_parser.loaders import load_file
-
-    document = load_file("Malo_Adler_Thesis.pdf")
-    text2 = ""
-    for element in document.elements:
-        text2 += element.text()
-
-    res = build_text_prompt_kmeans(text2, 10, embedding_model)
-    print(res)
-
-    print("\n TextRANK \n")
-
-    res2 = build_text_prompt(text2, len(res), embedding_model)
-    print(res2)
-    print(len(res))
-
-
 if __name__ == "__main__":
-    test_kmeans()
+    pass
