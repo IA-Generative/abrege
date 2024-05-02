@@ -16,7 +16,8 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_core.documents import Document
 from langchain_openai import ChatOpenAI
 from pypdf import PdfReader
-from summary_chain import EmbeddingModel, summarize_chain_builder
+from abrege.extractive_summary import EmbeddingModel
+from abrege.summary_chain import summarize_chain_builder
 
 sys.path.append("../src")
 
