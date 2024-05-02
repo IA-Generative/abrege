@@ -3,6 +3,7 @@ import statistics
 import sys
 from pathlib import Path
 
+import nltk
 from langchain.docstore.document import Document
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
@@ -14,7 +15,13 @@ from datasets import load_dataset
 from selfcheck import selfcheck
 
 dataset = load_dataset("ZhongshengWang/Alpaca-cnn-dailymail")
-
+dataset = {
+    "train": {
+        "input": [
+            p.read_text() for p in Path("/home/alex/CODE/abrege/texts").glob("*.txt")
+        ]
+    }
+}
 OPENAI_API_BASE = os.environ["OPENAI_API_BASE"]
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 
@@ -44,18 +51,30 @@ class TestClass:
     dataset = dataset
 
     @staticmethod
-    def eval_chain(custom_chain, iter_of_str, progress_bar: bool = True) -> list[float]:
+    def eval_chain(
+        custom_chain, iter_of_str, progress_bar: bool = True, reversed: int = 5
+    ) -> list[float]:
         metrics = []
         iter_ = tqdm(iter_of_str) if progress_bar else iter_of_str
-        for text_to_sumup in iter_:
-            sumup = custom_chain.invoke(text_to_sumup)
+        sumup_array = [custom_chain.invoke(text_to_sumup) for text_to_sumup in iter_]
+        for i, (text_to_sumup, sumup) in enumerate(zip(iter_of_str, sumup_array)):
             metric = selfcheck(
                 llm=llm,
                 docs=[Document(page_content=text_to_sumup)],
                 summarize_to_eval=sumup,
             )
             metrics.append(metric)
-        return metrics
+        reversed_metrics = []
+        for text_to_sumup, sumup in zip(iter_of_str, sumup_array):
+            sentences = nltk.tokenize.sent_tokenize(text_to_sumup)
+            chosen_sentences = random.sample(sentences, reversed)
+            reversed_metric = selfcheck(
+                llm=llm,
+                docs=[Document(page_content=sumup)],
+                summarize_to_eval="".join(chosen_sentences),
+            )
+            reversed_metrics.append(reversed_metric)
+        return metrics, reversed_metrics
 
     @staticmethod
     def get_metrics_from_method(method: str, n: int = 5):
@@ -63,25 +82,27 @@ class TestClass:
             method=method, embedding_model=embedding_model, llm=llm
         )
 
-        metrics = TestClass.eval_chain(
+        metrics, rmetrics = TestClass.eval_chain(
             text_rank_chain, TestClass.dataset["train"]["input"][:n]
         )
-        print(f"For {method=}, {metrics=}")
-        return metrics
+        print(f"For {method=}, {metrics=}, {rmetrics=}")
+        return metrics, rmetrics
 
     def test_textrank(self, n: int = 5):
-        metrics = TestClass.get_metrics_from_method("text_rank", n=n)
+        metrics, rmetrics = TestClass.get_metrics_from_method("text_rank", n=n)
         assert statistics.mean(metrics) >= 0.7
 
     def test_kmeans(self, n: int = 5):
-        metrics = TestClass.get_metrics_from_method("text_rank", n=n)
+        metrics, rmetrics = TestClass.get_metrics_from_method("text_rank", n=n)
         assert statistics.mean(metrics) >= 0.7
 
 
 if __name__ == "__main__":
-    TestClass().test_textrank()
     to_print = ""
-    for method in {"text_rank", "refine", "map_reduce", "k-means"}:
-        metrics = TestClass.get_metrics_from_method(method)
-        to_print += f"{method=} {statistics.mean(metrics)=} {metrics}\n"
+    for method in {"text_rank", "refine", "map_reduce"}:
+        metrics, rmetrics = TestClass.get_metrics_from_method(method)
+        msg = f"{method=} {statistics.mean(metrics)=} {metrics}\n"
+        print(msg)
+        to_print += msg
+
     print(to_print)
