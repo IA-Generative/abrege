@@ -155,9 +155,7 @@ def summarize_chain_builder(
                     chunk_size=1000, chunk_overlap=0
                 )
                 split_texts = text_splitter.split_text(text)
-                split_docs = []
-                for text in split_texts:
-                    split_docs.append(Document(page_content=text))
+                split_docs = [Document(page_content=text) for text in split_texts]
                 result = refine_chain.invoke(
                     {"input_documents": split_docs}, return_only_outputs=True
                 )
