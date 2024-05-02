@@ -23,7 +23,7 @@ from .extractive_summary import (
 summarize_template = """
 Write in {language} a summary of the following text:
 {text}
-SUMMARY : 
+SUMMARY :
 """
 
 summarize_prompt = PromptTemplate.from_template(summarize_template)
@@ -37,13 +37,13 @@ SUMMARY :
 
 summarize_prompt_en = PromptTemplate.from_template(summarize_template_en)
 
-map_template = """The following is a set of documents 
+map_template = """The following is a set of documents
 {docs}
 Based on this list of docs, please identify the main themes
 Helpful Answer:"""
 map_prompt = PromptTemplate.from_template(map_template)
 
-reduce_template = """The following is set of summaries 
+reduce_template = """The following is set of summaries
 {docs}
 Take these and distill it into a final, consolidated summary written of the main themes.
 Helpful Answer:"""
@@ -78,7 +78,8 @@ def summarize_chain_builder(
     method: MethodType = "text_rank",
     **kwargs,
 ):
-    """Build a custom summarizing chain with your models, using the selected method for summarization
+    """Build a custom summarizing chain with your models, using the selected method for
+    summarization
 
     Parameters
     -----------
@@ -86,14 +87,17 @@ def summarize_chain_builder(
         chat model that will be tasked to execute the abstractive summary
         default to miom api if None
     llm_context_window_size : int = 5000
-        context window size (in terms of len(text), not tokens) for which the llm can best exploit the context
+        context window size (in terms of len(text), not tokens) for which the llm can
+        best exploit the context
     embedding_model: Model = None
-        model chosen for embeddings, please use an instance of EmbeddingModel it with the custom class Model
+        model chosen for embeddings, please use an instance of EmbeddingModel it with
+        the custom class Model
         default to miom api if None
     language : str = "french"
         language to use to write the summary
-    method : Literal['text_rank', 'map_reduce', 'refine', 'kmeans', 'stuff'] = 'text_rank'
+    method : Literal['text_rank', 'map_reduce', 'refine', 'kmeans', 'stuff']
         method to build the summary
+        default to 'text_rank'
 
     Returns
     ----------
@@ -219,7 +223,8 @@ def summarize_chain_builder(
 
         case _:
             raise ValueError(
-                f"method should be one of 'text_rank', 'refine', 'k-means' or 'map_reduce', got {method}"
+                f"""method should be one of 'text_rank', 'refine', 'k-means' or
+                'map_reduce', got {method}"""
             )
 
     return custom_chain

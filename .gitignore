@@ -7,3 +7,5 @@
 *.txt
 !requirements.txt
 *.egg-info
+notebook/*
+data/*
