@@ -6,7 +6,6 @@ import os
 import sys
 import json
 import time
-import re
 from contextlib import asynccontextmanager
 from pathlib import Path
 from datetime import datetime
