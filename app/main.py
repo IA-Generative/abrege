@@ -1,38 +1,24 @@
-import os, sys, logging, random, asyncio, uvicorn, time
-from typing import Union
 import logging
-from typing import Literal
 import os
 import sys
-import json
-import time
-import re
 from contextlib import asynccontextmanager
 from pathlib import Path
-from datetime import datetime
-from collections import Counter
-from typing import Dict, List
-from urllib.parse import urlparse, urlsplit
-
-from fastapi import FastAPI, HTTPException, status, Security, UploadFile
-from fastapi.security.api_key import APIKeyHeader
-from fastapi.responses import FileResponse, RedirectResponse
-from fastapi.middleware.cors import CORSMiddleware
-from langchain.chains.question_answering import load_qa_chain
-from langchain_community.vectorstores.chroma import Chroma
-from langchain_openai import ChatOpenAI
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_openai import ChatOpenAI
-from dotenv import load_dotenv
-from pypdf import PdfReader
-from langchain_core.documents import Document
-
-from fastapi import FastAPI
-
-sys.path.append("../src")
-from summary_chain import summarize_chain_builder, EmbeddingModel
+from typing import List, Literal
+from urllib.parse import urlparse
 
 import nltk
+import uvicorn
+from dotenv import load_dotenv
+from fastapi import FastAPI, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security.api_key import APIKeyHeader
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_core.documents import Document
+from langchain_openai import ChatOpenAI
+from pypdf import PdfReader
+from summary_chain import EmbeddingModel, summarize_chain_builder
+
+sys.path.append("../src")
 
 nltk.download("punkt")
 
@@ -171,7 +157,8 @@ async def summarize_doc(file: UploadFile, method: MethodType = "k-means"):
     if extension not in ["pdf", "txt"]:
         raise HTTPException(
             status_code=400,
-            detail="file format not supported, file format supported are : [pdf, txt]",
+            detail="""file format not supported, file format supported are :
+              [pdf, txt]""",
         )
 
     if extension == "pdf":
@@ -200,7 +187,9 @@ async def summarize_doc(file: UploadFile, method: MethodType = "k-means"):
 
 @app.post("/docs")
 async def summarize_multi_doc(
-    files: List[UploadFile], method: MethodType = "k-means", one_summary: bool = False
+    files: List[UploadFile],
+    method: MethodType = "k-means",
+    one_summary: bool = False,
 ):
     """Route for multiple files"""
 

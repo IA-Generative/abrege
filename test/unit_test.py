@@ -1,12 +1,18 @@
-import pytest
 import sys
 from pathlib import Path
-import torch
 
+import pytest
+import torch
+from extractive_summary import (
+    EmbeddingModel,
+    build_text_prompt,
+    build_text_prompt_kmeans,
+    build_weight,
+    split_sentences,
+    text_rank_iterator,
+)
 
 sys.path.append(str(Path(__file__).parent.parent / "src"))
-
-from extractive_summary import *
 
 
 @pytest.fixture
@@ -84,7 +90,9 @@ class TestExtractiveSummary:
 
         # We need sentences to be far appart
         self.mock_embedding_model.encode = self.mock_encode_constructor(0.1)
-        iterator = iter(text_rank_iterator(list_chunk, self.mock_embedding_model))
+        iterator = iter(
+            text_rank_iterator(list_chunk, self.mock_embedding_model)
+        )
 
         idx_chunk = []
         try:
@@ -104,7 +112,9 @@ class TestExtractiveSummary:
     def test_text_rank_iterator_close_chunk(self):
         # Close chunk so only one element should be iterated
         list_chunk = ["a"] * 100
-        iterator = iter(text_rank_iterator(list_chunk, self.mock_embedding_model))
+        iterator = iter(
+            text_rank_iterator(list_chunk, self.mock_embedding_model)
+        )
 
         idx_chunk = []
         try:
@@ -120,7 +130,9 @@ class TestExtractiveSummary:
     def test_split_chunk():
         pass
 
-    def test_build_text_prompt_kmeans_sentences(self, small_text, custom_encode):
+    def test_build_text_prompt_kmeans_sentences(
+        self, small_text, custom_encode
+    ):
         # Ce qu'on peut tester : On construit un certain texte qui euh...
         # contient autant d'elements que de chunks demandés
         # On peut le faire avec 10 phrases en entrée, s'assurer qu'il en sort 5
@@ -148,7 +160,8 @@ class TestExtractiveSummary:
 
         assert (
             extractive_summary
-            == "A sentence.Another sentence.Again another sentence.A final sentence."
+            == r"""A sentence.Another sentence.Again another sentence.A
+final sentence."""
         )
 
         # Clear the mock

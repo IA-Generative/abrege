@@ -1,50 +1,48 @@
 import os
 from typing import Literal
+
+from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
 from dotenv import load_dotenv
-from langchain_openai import ChatOpenAI
-from langchain_core.runnables import chain
-from langchain_core.prompts import PromptTemplate
-from langchain_core.output_parsers import StrOutputParser
 from langchain.chains import MapReduceDocumentsChain, ReduceDocumentsChain
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain.chains.combine_documents.stuff import StuffDocumentsChain
 from langchain.chains.llm import LLMChain
 from langchain.chains.summarize import load_summarize_chain
+from langchain.prompts.chat import (
+    ChatPromptTemplate,
+    HumanMessagePromptTemplate,
+    SystemMessagePromptTemplate,
+)
 from langchain_core.documents.base import Document
-from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import PromptTemplate
+from langchain_core.runnables import chain
+from langchain_openai import ChatOpenAI
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
 from extractive_summary import (
     EmbeddingModel,
     build_text_prompt,
     build_text_prompt_kmeans,
 )
 
-
 summarize_template = """
-Write in {language} a summary of the following text:
-{text}
-SUMMARY : 
-"""
-
-summarize_prompt = PromptTemplate.from_template(summarize_template)
-
-
-summarize_template_en = """
-Write a summary of the following text
+Write a summary of the following text:
 {text}
 SUMMARY :
 """
 
-summarize_prompt_en = PromptTemplate.from_template(summarize_template_en)
+summarize_prompt = PromptTemplate.from_template(summarize_template)
 
-map_template = """The following is a set of documents 
+map_template = """The following is a set of documents
 {docs}
 Based on this list of docs, please identify the main themes
 Helpful Answer:"""
 map_prompt = PromptTemplate.from_template(map_template)
 
-reduce_template = """The following is set of summaries 
+reduce_template = """The following is set of summaries
 {docs}
-Take these and distill it into a final, consolidated summary written of the main themes.
+Take these and distill it into a final, consolidated summary written of the
+main themes.
 Helpful Answer:"""
 reduce_prompt = PromptTemplate.from_template(reduce_template)
 
@@ -53,15 +51,16 @@ question_prompt_template = """Write a concise summary of the following :
 CONCISE SUMMARY:"""
 question_prompt = PromptTemplate.from_template(question_prompt_template)
 refine_template = (
-    "Your job is to produce a final summary\n"
-    "We have provided an existing summary up to a certain point: {existing_answer}\n"
+    """Your job is to produce a final summary\n"
+    "We have provided an existing summary up to a certain point:
+    {existing_answer}\n"
     "We have the opportunity to refine the existing summary"
     "(only if needed) with some more context below.\n"
     "------------\n"
     "{text}\n"
     "------------\n"
     "Given the new context, refine the original summary in Italian"
-    "If the context isn't useful, return the original summary."
+    "If the context isn't useful, return the original summary."""
 )
 refine_prompt = PromptTemplate.from_template(refine_template)
 
@@ -71,13 +70,14 @@ MethodType = Literal["text_rank", "map_reduce", "refine", "k-means", "stuff"]
 
 def summarize_chain_builder(
     llm=None,
-    llm_context_window_size: int = 2000,
+    llm_context_window_size: int = 3000,
     embedding_model: EmbeddingModel = None,
-    language: str = "english",
+    language: str = "English",
     method: MethodType = "text_rank",
     **kwargs,
 ):
-    """Build a custom summarizing chain with your models, using the selected method for summarization
+    """Build a custom summarizing chain with your models, using the selected
+    method for summarization
 
     Parameters
     -----------
@@ -85,14 +85,17 @@ def summarize_chain_builder(
         chat model that will be tasked to execute the abstractive summary
         default to miom api if None
     llm_context_window_size : int = 5000
-        context window size (in terms of len(text), not tokens) for which the llm can best exploit the context
+        context window size (in terms of len(text), not tokens) for which the
+        llm can best exploit the context
     embedding_model: Model = None
-        model chosen for embeddings, please use an instance of EmbeddingModel it with the custom class Model
+        model chosen for embeddings, please use an instance of EmbeddingModel
+        it with the custom class Model
         default to miom api if None
-    language : str = "french"
+    language : str = "French"
         language to use to write the summary
-    method : Literal['text_rank', 'map_reduce', 'refine', 'kmeans', 'stuff'] = 'text_rank'
+    method : Literal['text_rank', 'map_reduce', 'refine', 'k-means']
         method to build the summary
+        default to text_rank
 
     Returns
     ----------
@@ -108,11 +111,14 @@ def summarize_chain_builder(
         OPENAI_EMBEDDING_API_BASE = os.environ["OPENAI_EMBEDDING_API_BASE"]
 
     if llm is None:
-        llm = ChatOpenAI(api_key=OPENAI_API_KEY, openai_api_base=OPENAI_API_BASE)
+        llm = ChatOpenAI(
+            api_key=OPENAI_API_KEY, openai_api_base=OPENAI_API_BASE
+        )
 
     if embedding_model is None:
         openai_ef = OpenAIEmbeddingFunction(
-            api_key=OPENAI_EMBEDDING_API_KEY, api_base=OPENAI_EMBEDDING_API_BASE
+            api_key=OPENAI_EMBEDDING_API_KEY,
+            api_base=OPENAI_EMBEDDING_API_BASE,
         )
         embedding_model = EmbeddingModel(openai_ef, "OpenAIEmbeddingFunction")
 
@@ -124,10 +130,7 @@ def summarize_chain_builder(
                 extractive_summary = build_text_prompt(
                     text, llm_context_window_size, embedding_model, **kwargs
                 )
-                print(extractive_summary)
-                prompt1 = summarize_prompt.invoke(
-                    {"text": extractive_summary, "language": language}
-                )
+                prompt1 = summarize_prompt.invoke({"text": extractive_summary})
                 output1 = llm.invoke(prompt1)
                 output_parser = StrOutputParser()
                 return output_parser.invoke(output1)
@@ -146,8 +149,10 @@ def summarize_chain_builder(
                     output_key="output_text",
                 )
 
-                text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
-                    chunk_size=1000, chunk_overlap=0
+                text_splitter = (
+                    RecursiveCharacterTextSplitter.from_tiktoken_encoder(
+                        chunk_size=1000, chunk_overlap=0
+                    )
                 )
                 split_texts = text_splitter.split_text(text)
                 split_docs = []
@@ -180,8 +185,10 @@ def summarize_chain_builder(
                     document_variable_name="docs",
                     return_intermediate_steps=False,
                 )
-                text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
-                    chunk_size=1000, chunk_overlap=0
+                text_splitter = (
+                    RecursiveCharacterTextSplitter.from_tiktoken_encoder(
+                        chunk_size=4000, chunk_overlap=0
+                    )
                 )
                 split_text = text_splitter.split_text(text)
                 split_docs = []
@@ -197,10 +204,7 @@ def summarize_chain_builder(
                 extractive_summary = build_text_prompt_kmeans(
                     text, llm_context_window_size, embedding_model, **kwargs
                 )
-                print(extractive_summary)
-                prompt1 = summarize_prompt.invoke(
-                    {"text": extractive_summary, "language": language}
-                )
+                prompt1 = summarize_prompt.invoke({"text": extractive_summary})
                 output = llm.invoke(prompt1)
                 output_parser = StrOutputParser()
                 return output_parser.invoke(output)
@@ -209,7 +213,7 @@ def summarize_chain_builder(
 
             @chain
             def custom_chain(text: str):
-                llm_chain = LLMChain(llm=llm, prompt=summarize_prompt_en)
+                llm_chain = LLMChain(llm=llm, prompt=summarize_prompt)
                 stuff_chain = StuffDocumentsChain(
                     llm_chain=llm_chain, document_variable_name="text"
                 )
@@ -218,7 +222,56 @@ def summarize_chain_builder(
 
         case _:
             raise ValueError(
-                f"method should be one of 'text_rank', 'refine', 'k-means' or 'map_reduce', got {method}"
+                f"""method should be one of 'text_rank', 'refine', 'k-means' or
+                'map_reduce', got {method}"""
             )
 
-    return custom_chain
+    # Chain bifurcation for smaller text
+    @chain
+    def small_text_handler_chain(text: str):
+        if llm.get_num_tokens(text) < 3000:
+            prompt = summarize_prompt.invoke(
+                {"text": text, "language": language}
+            )
+            output = llm.invoke(prompt)
+            output_parser = StrOutputParser()
+            return output_parser.invoke(output)
+        else:
+            return custom_chain.invoke(text)
+
+    # Translation chain
+    @chain
+    def translation_chain(text: str):
+        if language == "English":
+            return small_text_handler_chain.invoke(text)
+        else:
+            english_summary = small_text_handler_chain.invoke(text)
+
+            # Translation by Antonio
+            template = """You are a helpful assistant that translates
+            {input_language} to {output_language}."""
+            system_message_prompt = SystemMessagePromptTemplate.from_template(
+                template
+            )
+            human_template = """Translate this sentence from {input_language}
+            to {output_language}. {text}"""
+            human_message_prompt = HumanMessagePromptTemplate.from_template(
+                human_template
+            )
+
+            chat_promt = ChatPromptTemplate.from_messages(
+                [system_message_prompt, human_message_prompt]
+            )
+
+            summary = llm.invoke(
+                chat_promt.format_prompt(
+                    input_language="English",
+                    output_language=language,
+                    text=english_summary,
+                ).to_messages()
+            )
+
+            output_parser = StrOutputParser()
+            return output_parser.invoke(summary)
+
+    return translation_chain
