@@ -17,17 +17,12 @@ ENV PYTHONUNBUFFERED=1
 
 
 # Install app
-COPY requirements.txt .
-RUN python -m pip install -r requirements.txt
-
 WORKDIR /app
+
 COPY . .
 
 # Install abrege package
-WORKDIR /app/abrege
-RUN pip install -r requirements.txt
 RUN  pip install -e .
-WORKDIR /app
 
 # Creates a non-root user with an explicit UID and adds permission to access the /app folder
 # For more info, please refer to https://aka.ms/vscode-docker-python-configure-containers

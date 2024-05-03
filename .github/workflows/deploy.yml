@@ -130,7 +130,7 @@ jobs:
         name: Build and Push (latest)
         uses: docker/build-push-action@v3
         with:
-          context: ${{ env.APPLICATION }}
+          context: . # 
           platforms: linux/amd64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
