@@ -12,7 +12,7 @@ from langchain.docstore.document import Document
 from tqdm import tqdm
 import nltk
 
-# sys.path.append(str(Path(__file__).parent.parent / "abrege" / "abrege"))
+sys.path.append(str(Path(__file__).parent.parent / "abrege"))
 from selfcheck import SelfCheckGPT, selfcheck
 
 # poetry add datasets

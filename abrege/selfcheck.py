@@ -23,7 +23,6 @@ nltk.download("punkt")
 @dataclass
 class SelfCheckGPT:
     llm: typing.Any
-    documents: typing.Any
     retriever: typing.Any
 
     @staticmethod
