@@ -187,9 +187,7 @@ def summarize_chain_builder(
                     chunk_size=1000, chunk_overlap=0
                 )
                 split_text = text_splitter.split_text(text)
-                split_docs = []
-                for text in split_text:
-                    split_docs.append(Document(page_content=text))
+                split_docs = [Document(page_content=text) for text in split_text]
                 result = map_reduce_chain.invoke(split_docs)
                 return result["output_text"]
 
