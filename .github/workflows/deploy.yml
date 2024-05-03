@@ -130,13 +130,16 @@ jobs:
         name: Build and Push (latest)
         uses: docker/build-push-action@v3
         with:
-          context: . # 
+          context: . # ${{ env.APPLICATION }}
           platforms: linux/amd64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           labels: ${{ steps.meta.outputs.labels }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
           build-args: |
             APP_VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
 
