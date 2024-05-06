@@ -19,7 +19,7 @@ from langchain_core.prompts import (
 from langchain_core.runnables import chain
 from langchain_openai import ChatOpenAI
 
-from .extractive_summary import (
+from extractive_summary import (
     EmbeddingModel,
     build_text_prompt,
     build_text_prompt_kmeans,
@@ -114,19 +114,21 @@ def summarize_chain_builder(
 
     if llm is None or embedding_model is None:
         load_dotenv()
-        OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
-        OPENAI_API_BASE = os.environ["OPENAI_API_BASE"]
-        OPENAI_EMBEDDING_API_KEY = os.environ["OPENAI_EMBEDDING_API_KEY"]
-        OPENAI_EMBEDDING_API_BASE = os.environ["OPENAI_EMBEDDING_API_BASE"]
 
     if llm is None:
+        OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+        OPENAI_API_BASE = os.environ["OPENAI_API_BASE"]
         llm = ChatOpenAI(api_key=OPENAI_API_KEY, openai_api_base=OPENAI_API_BASE)
 
     if embedding_model is None:
+        OPENAI_EMBEDDING_API_KEY = os.environ["OPENAI_EMBEDDING_API_KEY"]
+        OPENAI_EMBEDDING_API_BASE = os.environ["OPENAI_EMBEDDING_API_BASE"]
+
         openai_ef = OpenAIEmbeddingFunction(
             api_key=OPENAI_EMBEDDING_API_KEY, api_base=OPENAI_EMBEDDING_API_BASE
         )
-        embedding_model = EmbeddingModel(openai_ef, "OpenAIEmbeddingFunction")
+        embedding_model = EmbeddingModel(openai_ef)
+        assert embedding_model.model_class == "OpenAIEmbeddingFunction"
 
     if summary_template is None:
         summary_template = summarize_template

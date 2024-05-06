@@ -21,7 +21,7 @@ from sklearn.metrics import (
 
 
 def openai_encode_multithreading(
-    model, lc: list[str], max_batch_size=32
+    model, lc: list[str], max_batch_size: int = 32
 ) -> list[list[int]]:
     """Encode the list of sentence using multithreading
 
@@ -40,6 +40,7 @@ def openai_encode_multithreading(
         a list of embedded vectors
     """
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+<<<<<<< HEAD
         future_embedding = [
             executor.submit(model, lc[c_count : c_count + max_batch_size])
             for c_count in range(0, len(lc), max_batch_size)
@@ -53,6 +54,19 @@ def openai_encode_multithreading(
                 print(err)
                 sys.exit(1)
         return result
+=======
+        future_embedding = executor.map(
+            model,
+            [
+                lc[c_count : c_count + max_batch_size]
+                for c_count in range(0, len(lc), max_batch_size)
+            ],
+        )
+    result = []
+    for embedding in future_embedding:
+        result += embedding
+    return result
+>>>>>>> ee9d4b38e5d6c7a52f170431090988aab1c57d21
 
 
 ModelType = Literal[
@@ -69,8 +83,6 @@ class EmbeddingModel:
     -----------
     _model : Any
         model to wrap
-    model_class : str {'hugging_hub', 'openai_ef'}
-        the class of the model (to know how to encode data)
 
     Examples
     -----------
@@ -86,14 +98,18 @@ class EmbeddingModel:
 
     _device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    def __init__(self, model, model_class: ModelType):
+    def __init__(
+        self,
+        model,
+    ):
         self._model = model
-        if model_class not in get_args(ModelType):
+        name_class = type(self._model).__name__
+        self.model_class = name_class
+        if self.model_class not in get_args(ModelType):
             raise ValueError(
-                f"""Embeddding Model was not implemented for {model_class},
+                f"""Embeddding Model was not implemented for {self.model_class},
                   available model class are {get_args(ModelType)}"""
             )
-        self.model_class: ModelType = model_class
 
     def encode(self, list_chunk: list[str]) -> torch.Tensor:
         match self.model_class:
@@ -103,9 +119,14 @@ class EmbeddingModel:
                 return torch.tensor(embeddings, device=self._device)
 
             case "HuggingFaceEmbeddings":
+<<<<<<< HEAD
                 embeddings = self._model.embed_documents(
                     list_chunk,
                 )
+=======
+                encode_kwargs = {"normalize_embeddings": True}
+                embeddings = self._model.embed_documents(list_chunk)
+>>>>>>> ee9d4b38e5d6c7a52f170431090988aab1c57d21
                 return torch.tensor(embeddings, device=self._device)
 
             case "SentenceTransformer":
@@ -351,7 +372,11 @@ def build_text_prompt_kmeans(
     clusters_to_embeddings = [[] for _ in range(n_clusters)]
     cluster_map = [[] for _ in range(n_clusters)]
 
+<<<<<<< HEAD
     for embedding, cluster, idx in zip(embeddings, clusters, range(len(list_chunk))):
+=======
+    for idx, (embedding, cluster) in enumerate(zip(embeddings, clusters)):
+>>>>>>> ee9d4b38e5d6c7a52f170431090988aab1c57d21
         clusters_to_embeddings[cluster].append(embedding)
         cluster_map[cluster].append(idx)
 
@@ -368,10 +393,7 @@ def build_text_prompt_kmeans(
     # Finally return the chunk in order
     chunk_idx.sort()
 
-    res = ""
-    for idx in chunk_idx:
-        res += list_chunk[idx]
-
+    res = "".join(list_chunk[idx] for idx in chunk_idx)
     # Skip the last space ^^
     return res
 
@@ -433,13 +455,15 @@ def build_text_prompt(
 
     # Sort result sentences to have them in same order as in the text
     idx_result.sort()
-
-    result_text = ""
-    for idx_chunk in idx_result:
-        result_text += list_chunks[idx_chunk]
+    result_text = "".join(list_chunks[idx_chunk] for idx_chunk in idx_result)
 
     return result_text
 
 
 if __name__ == "__main__":
-    pass
+    import os
+
+    llm = OpenAIEmbeddingFunction(
+        api_key=os.environ["OPENAI_API_KEY"], api_base=os.environ["OPENAI_API_BASE"]
+    )
+    embedding_model = EmbeddingModel(llm, model_class="openai_ef")

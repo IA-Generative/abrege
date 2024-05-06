@@ -5,7 +5,7 @@ name: Deploy abrege container
 
 on:
   push:
-    # branches: [ "main", "test/init"]
+#    branches: [ "main", "test/init"]
     tags:
         - 'v*'
 
