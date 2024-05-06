@@ -19,7 +19,7 @@ from langchain_core.prompts import (
 from langchain_core.runnables import chain
 from langchain_openai import ChatOpenAI
 
-from extractive_summary import (
+from abrege.extractive_summary import (
     EmbeddingModel,
     build_text_prompt,
     build_text_prompt_kmeans,
@@ -125,7 +125,8 @@ def summarize_chain_builder(
         OPENAI_EMBEDDING_API_BASE = os.environ["OPENAI_EMBEDDING_API_BASE"]
 
         openai_ef = OpenAIEmbeddingFunction(
-            api_key=OPENAI_EMBEDDING_API_KEY, api_base=OPENAI_EMBEDDING_API_BASE
+            api_key=OPENAI_EMBEDDING_API_KEY,
+            api_base=OPENAI_EMBEDDING_API_BASE,
         )
         embedding_model = EmbeddingModel(openai_ef)
         assert embedding_model.model_class == "OpenAIEmbeddingFunction"
@@ -141,7 +142,6 @@ def summarize_chain_builder(
                 extractive_summary = build_text_prompt(
                     text, llm_context_window_size, embedding_model, **kwargs
                 )
-                print(extractive_summary)
                 summarize_prompt = PromptTemplate.from_template(summary_template)
                 prompt1 = summarize_prompt.invoke({"text": extractive_summary})
                 output1 = llm.invoke(prompt1)

@@ -13,7 +13,6 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, UploadFile, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security.api_key import APIKeyHeader
-from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_core.documents import Document
 from langchain_openai import ChatOpenAI
 from langchain_community.document_loaders import (
@@ -21,7 +20,6 @@ from langchain_community.document_loaders import (
     UnstructuredODTLoader,
     Docx2txtLoader,
 )
-from abrege.extractive_summary import EmbeddingModel
 from abrege.summary_chain import summarize_chain_builder
 
 
@@ -59,13 +57,13 @@ async def lifespan(_: FastAPI):
             reason: {response.text}"""
         )
 
-    embeddings = HuggingFaceEmbeddings(
-        model_name=os.environ["EMBEDDING_MODEL_PATH"]
-    )  # plus de 13 min
-    logger.info(f"Embedding model {repr(embeddings)} available")
+    # embeddings = HuggingFaceEmbeddings(
+    #     model_name=os.environ["EMBEDDING_MODEL_PATH"]
+    # )  # plus de 13 min
+    # logger.info(f"Embedding model {repr(embeddings)} available")
 
-    model_class = "HuggingFaceEmbeddings"
-    embedding_model = EmbeddingModel(embeddings, model_class)
+    # model_class = "HuggingFaceEmbeddings"
+    # embedding_model = EmbeddingModel(embeddings, model_class)
 
     def chat_builder(model: str = "mixtral", temperature: int = 0):
         if model not in model_id:
@@ -82,7 +80,7 @@ async def lifespan(_: FastAPI):
 
     context["chat_builder"] = chat_builder
 
-    context["embedding_model"] = embedding_model
+    context["embedding_model"] = None
 
     logger.info("======== Lifespan initialization done =========")
 

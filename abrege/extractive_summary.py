@@ -1,5 +1,4 @@
 import concurrent.futures
-import sys
 from typing import (
     Literal,
     get_args,
@@ -40,21 +39,6 @@ def openai_encode_multithreading(
         a list of embedded vectors
     """
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-<<<<<<< HEAD
-        future_embedding = [
-            executor.submit(model, lc[c_count : c_count + max_batch_size])
-            for c_count in range(0, len(lc), max_batch_size)
-        ]
-
-        result = []
-        for future in concurrent.futures.as_completed(future_embedding):
-            try:
-                result += future.result()
-            except Exception as err:
-                print(err)
-                sys.exit(1)
-        return result
-=======
         future_embedding = executor.map(
             model,
             [
@@ -66,7 +50,6 @@ def openai_encode_multithreading(
     for embedding in future_embedding:
         result += embedding
     return result
->>>>>>> ee9d4b38e5d6c7a52f170431090988aab1c57d21
 
 
 ModelType = Literal[
@@ -119,14 +102,9 @@ class EmbeddingModel:
                 return torch.tensor(embeddings, device=self._device)
 
             case "HuggingFaceEmbeddings":
-<<<<<<< HEAD
                 embeddings = self._model.embed_documents(
                     list_chunk,
                 )
-=======
-                encode_kwargs = {"normalize_embeddings": True}
-                embeddings = self._model.embed_documents(list_chunk)
->>>>>>> ee9d4b38e5d6c7a52f170431090988aab1c57d21
                 return torch.tensor(embeddings, device=self._device)
 
             case "SentenceTransformer":
@@ -372,11 +350,7 @@ def build_text_prompt_kmeans(
     clusters_to_embeddings = [[] for _ in range(n_clusters)]
     cluster_map = [[] for _ in range(n_clusters)]
 
-<<<<<<< HEAD
-    for embedding, cluster, idx in zip(embeddings, clusters, range(len(list_chunk))):
-=======
     for idx, (embedding, cluster) in enumerate(zip(embeddings, clusters)):
->>>>>>> ee9d4b38e5d6c7a52f170431090988aab1c57d21
         clusters_to_embeddings[cluster].append(embedding)
         cluster_map[cluster].append(idx)
 
@@ -461,9 +435,4 @@ def build_text_prompt(
 
 
 if __name__ == "__main__":
-    import os
-
-    llm = OpenAIEmbeddingFunction(
-        api_key=os.environ["OPENAI_API_KEY"], api_base=os.environ["OPENAI_API_BASE"]
-    )
-    embedding_model = EmbeddingModel(llm, model_class="openai_ef")
+    pass
