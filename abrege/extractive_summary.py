@@ -7,7 +7,6 @@ from typing import (
 import networkx as nx
 import nltk
 import tiktoken
-import torch
 from langchain.text_splitter import (
     RecursiveCharacterTextSplitter,
 )
@@ -17,6 +16,7 @@ from sklearn.cluster import (
 from sklearn.metrics import (
     pairwise_distances_argmin_min,
 )
+import numpy as np
 
 
 def openai_encode_multithreading(
@@ -79,8 +79,6 @@ class EmbeddingModel:
 
     """
 
-    _device = "cuda" if torch.cuda.is_available() else "cpu"
-
     def __init__(
         self,
         model,
@@ -94,18 +92,16 @@ class EmbeddingModel:
                   available model class are {get_args(ModelType)}"""
             )
 
-    def encode(self, list_chunk: list[str]) -> torch.Tensor:
+    def encode(self, list_chunk: list[str]) -> np.ndarray:
         match self.model_class:
 
             case "OpenAIEmbeddingFunction":
                 embeddings = openai_encode_multithreading(self._model, list_chunk)
-                return torch.tensor(embeddings, device=self._device)
+                return np.array(embeddings)
 
             case "HuggingFaceEmbeddings":
-                embeddings = self._model.embed_documents(
-                    list_chunk,
-                )
-                return torch.tensor(embeddings, device=self._device)
+                embeddings = self._model.embed_documents(list_chunk)
+                return np.array(embeddings)
 
             case "SentenceTransformer":
                 embeddings = self._model.encode(
@@ -171,14 +167,13 @@ def build_weight(
     result = {}
     evaluations = model.encode(list_chunk)
 
-    T_evaluations = torch.transpose(evaluations, 0, 1)
+    T_evaluations = np.swapaxes(evaluations, 0, 1)
 
-    matrix_cosine = torch.matmul(evaluations, T_evaluations)
-    matrix_cosine = matrix_cosine.tolist()
+    matrix_cosine = np.matmul(evaluations, T_evaluations)
 
     for i in range(len(list_chunk)):
         for j in range(i + 1, len(list_chunk)):
-            result[(i, j)] = float(matrix_cosine[i][j])
+            result[(i, j)] = float(matrix_cosine[i, j])
 
     return result
 
@@ -341,7 +336,7 @@ def build_text_prompt_kmeans(
         list_chunk = split_sentences(text)
 
     # Then we embed each sentences using the model
-    embeddings = embedding_model.encode(list_chunk).cpu().numpy()
+    embeddings = embedding_model.encode(list_chunk)
 
     # Now we can use k means algorithm to compute cluster
     kmean = KMeans(n_clusters=n_clusters)

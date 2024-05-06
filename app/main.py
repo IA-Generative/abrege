@@ -9,7 +9,6 @@ from typing import List, Literal, Annotated
 from urllib.parse import urlparse
 
 import uvicorn
-from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, UploadFile, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security.api_key import APIKeyHeader
@@ -38,7 +37,16 @@ async def lifespan(_: FastAPI):
     """
     Load the resources used by the API (models, data)
     """
-    load_dotenv()
+    # if 0:
+    #     embeddings = HuggingFaceEmbeddings(
+    #         model_name=os.environ["EMBEDDING_MODEL_PATH"]
+    #     )  # plus de 13 min
+    #     logger.info(f"Embedding model {repr(embeddings)} available")
+
+    #     model_class = "HuggingFaceEmbeddings"
+    #     embedding_model = EmbeddingModel(embeddings, model_class)
+
+    OPENAI_API_BASE = os.environ["OPENAI_API_BASE"]
     OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
     OPENAI_API_BASE = os.environ["OPENAI_API_BASE"]
     MODEL_LIST_BASE = os.environ["MODEL_LIST_BASE"]

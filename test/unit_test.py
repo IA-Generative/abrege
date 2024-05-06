@@ -1,5 +1,8 @@
 import pytest
-import torch
+import numpy as np
+from pathlib import Path
+import sys
+
 from abrege.extractive_summary import (
     EmbeddingModel,
     build_text_prompt,
@@ -33,29 +36,30 @@ def custom_encode():
             elif chunk == "A final sentence.":
                 res.append([0.7, 0.3])
 
-        return torch.Tensor(res)
+        return np.array(res)
 
     return encode
+
+
+class MockEmbeddingModel(EmbeddingModel):
+    def __init__(self, model, value=1.0):
+        self._model = model
+        self.value = value
+        self.model_class = "HuggingFaceEmbeddings"
+
+    def encode(self, list_chunk: list[str]) -> np.ndarray:
+        return np.array([[self.value] for _ in range(len(list_chunk))])
 
 
 class TestExtractiveSummary:
 
     # Init a false model for encodings that returns 0.1 for everything
-    mock_embedding_model = EmbeddingModel(None, "HuggingFaceEmbeddings")
-
-    @staticmethod
-    def mock_encode_constructor(value=1):
-        def mock_encode(list_chunk):
-            return torch.tensor([[value] for _ in range(len(list_chunk))])
-
-        return mock_encode
-
-    mock_embedding_model.encode = mock_encode_constructor()
+    mock_embedding_model = MockEmbeddingModel(None, 1.0)
 
     @staticmethod
     def test_EmbeddingModel_arguments():
         with pytest.raises(ValueError):
-            EmbeddingModel(None, "Clearly not a model")
+            EmbeddingModel(None)  # "Clearly not a model"
 
     @staticmethod
     def test_split_sentences():
@@ -84,8 +88,8 @@ class TestExtractiveSummary:
         list_chunk = ["a", "b", "c"]
 
         # We need sentences to be far appart
-        self.mock_embedding_model.encode = self.mock_encode_constructor(0.1)
-        iterator = iter(text_rank_iterator(list_chunk, self.mock_embedding_model))
+        mock_embedding_model = MockEmbeddingModel(None, 0.1)
+        iterator = iter(text_rank_iterator(list_chunk, mock_embedding_model))
 
         idx_chunk = []
         try:
@@ -98,9 +102,6 @@ class TestExtractiveSummary:
 
         assert set_idx == {0, 1, 2}
         assert len(set_idx) == len(list_chunk)
-
-        # Clear modifications
-        self.mock_embedding_model.encode = self.mock_encode_constructor(1)
 
     def test_text_rank_iterator_close_chunk(self):
         # Close chunk so only one element should be iterated
@@ -127,6 +128,7 @@ class TestExtractiveSummary:
         # On peut le faire avec 10 phrases en entrée, s'assurer qu'il en sort 5
         # c'est déjà ça
 
+        previous_encode = self.mock_embedding_model.encode
         self.mock_embedding_model.encode = custom_encode
 
         # Small preassertion
@@ -152,7 +154,7 @@ class TestExtractiveSummary:
         )
 
         # Clear the mock
-        self.mock_embedding_model = self.mock_encode_constructor()
+        self.mock_embedding_model.encode = previous_encode
 
     @staticmethod
     @pytest.mark.skip(reason="No idea on how to test this")
@@ -162,6 +164,7 @@ class TestExtractiveSummary:
     def test_build_test_prompt_sentence(self, small_text, custom_encode):
         max_code_len = 15  # Empirical, should be tested after
 
+        previous_encode = self.mock_embedding_model.encode
         self.mock_embedding_model.encode = custom_encode
 
         extractive_summary = build_text_prompt(
@@ -176,4 +179,4 @@ class TestExtractiveSummary:
         )
 
         # Clear
-        self.mock_embedding_model.encode = self.mock_encode_constructor()
+        self.mock_embedding_model.encode = previous_encode

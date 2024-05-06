@@ -1,8 +1,7 @@
 import os
 from typing import Literal
 
-from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
-from dotenv import load_dotenv
+from langchain_community.embeddings import OpenAIEmbeddings
 from langchain.chains import MapReduceDocumentsChain, ReduceDocumentsChain
 from langchain.chains.combine_documents.stuff import StuffDocumentsChain
 from langchain.chains.llm import LLMChain
@@ -112,9 +111,6 @@ def summarize_chain_builder(
         custom chain that can be invoked to summarize text
     """
 
-    if llm is None or embedding_model is None:
-        load_dotenv()
-
     if llm is None:
         OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
         OPENAI_API_BASE = os.environ["OPENAI_API_BASE"]
@@ -124,7 +120,7 @@ def summarize_chain_builder(
         OPENAI_EMBEDDING_API_KEY = os.environ["OPENAI_EMBEDDING_API_KEY"]
         OPENAI_EMBEDDING_API_BASE = os.environ["OPENAI_EMBEDDING_API_BASE"]
 
-        openai_ef = OpenAIEmbeddingFunction(
+        openai_ef = OpenAIEmbeddings(
             api_key=OPENAI_EMBEDDING_API_KEY,
             api_base=OPENAI_EMBEDDING_API_BASE,
         )
