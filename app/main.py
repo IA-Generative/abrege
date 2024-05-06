@@ -1,3 +1,9 @@
+__import__('pysqlite3')
+import sys, os
+# https://docs.trychroma.com/troubleshooting#sqlite
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+
+
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -6,7 +12,6 @@ from typing import List, Literal
 from urllib.parse import urlparse
 
 import uvicorn
-from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security.api_key import APIKeyHeader
@@ -33,16 +38,15 @@ async def lifespan(_: FastAPI):
     """
     Load the resources used by the API (models, data)
     """
-    load_dotenv()
+    if 0:    
+        embeddings = HuggingFaceEmbeddings(
+            model_name=os.environ["EMBEDDING_MODEL_PATH"]
+        )  # plus de 13 min
+        logger.info(f"Embedding model {repr(embeddings)} available")
 
-    embeddings = HuggingFaceEmbeddings(
-        model_name=os.environ["EMBEDDING_MODEL_PATH"]
-    )  # plus de 13 min
-    logger.info(f"Embedding model {repr(embeddings)} available")
-
-    model_class = "HuggingFaceEmbeddings"
-    embedding_model = EmbeddingModel(embeddings, model_class)
-
+        model_class = "HuggingFaceEmbeddings"
+        embedding_model = EmbeddingModel(embeddings, model_class)
+    
     OPENAI_API_BASE = os.environ["OPENAI_API_BASE"]
     OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 
@@ -54,14 +58,15 @@ async def lifespan(_: FastAPI):
     )
 
     custom_chain = summarize_chain_builder(
-        method="text_rank", embedding_model=embedding_model, llm=llm
+        method="text_rank", llm=llm
     )
 
     context["chain"] = custom_chain
 
     context["llm"] = llm
 
-    context["embedding_model"] = embedding_model
+    if 0:
+        context["embedding_model"] = embedding_model
 
     logger.info("======== Lifespan initialization done =========")
 
@@ -162,7 +167,7 @@ async def summarize_doc(file: UploadFile, method: MethodType = "text_rank"):
     if method != "k-means":
         custom_chain = summarize_chain_builder(
             llm=context["llm"],
-            embedding_model=context["embedding_model"],
+            # embedding_model=context["embedding_model"],
             method=method,
         )
     else:
@@ -189,7 +194,7 @@ async def summarize_multi_doc(
     if one_summary:
         custom_chain = summarize_chain_builder(
             llm=context["llm"],
-            embedding_model=context["embedding_model"],
+            #embedding_model=context["embedding_model"],
             method="stuff",
         )
         docs = []

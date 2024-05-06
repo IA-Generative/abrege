@@ -2,7 +2,7 @@ import os
 from typing import Literal
 
 from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
-from dotenv import load_dotenv
+from langchain_community.embeddings import OpenAIEmbeddings
 from langchain.chains import MapReduceDocumentsChain, ReduceDocumentsChain
 from langchain.chains.combine_documents.stuff import StuffDocumentsChain
 from langchain.chains.llm import LLMChain
@@ -14,7 +14,7 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import chain
 from langchain_openai import ChatOpenAI
 
-from extractive_summary import (
+from .extractive_summary import (
     EmbeddingModel,
     build_text_prompt,
     build_text_prompt_kmeans,
@@ -105,8 +105,6 @@ def summarize_chain_builder(
         custom chain that can be invoked to summarize text
     """
 
-    if llm is None or embedding_model is None:
-        load_dotenv()
 
     if llm is None:
         OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
