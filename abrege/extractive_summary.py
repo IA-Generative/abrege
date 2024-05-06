@@ -41,7 +41,7 @@ def openai_encode_multithreading(
     """
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         future_embedding = [
-            executor.submit(model, lc[c_count: c_count + max_batch_size])
+            executor.submit(model, lc[c_count : c_count + max_batch_size])
             for c_count in range(0, len(lc), max_batch_size)
         ]
 
@@ -99,14 +99,12 @@ class EmbeddingModel:
         match self.model_class:
 
             case "OpenAIEmbeddingFunction":
-                embeddings = openai_encode_multithreading(self._model,
-                                                          list_chunk)
+                embeddings = openai_encode_multithreading(self._model, list_chunk)
                 return torch.tensor(embeddings, device=self._device)
 
             case "HuggingFaceEmbeddings":
-                encode_kwargs = {"normalize_embeddings": True}
                 embeddings = self._model.embed_documents(
-                    list_chunk, encode_kwargs=encode_kwargs
+                    list_chunk,
                 )
                 return torch.tensor(embeddings, device=self._device)
 
@@ -249,8 +247,7 @@ def text_rank_iterator(list_chunk: list[str], embedding_model: EmbeddingModel):
         )
 
     # Sort the sentences
-    chunk_order = sorted(calculated_page_rank.items(), key=lambda x: x[1],
-                         reverse=True)
+    chunk_order = sorted(calculated_page_rank.items(), key=lambda x: x[1], reverse=True)
 
     # Yield the first sentence
     yield chunk_order[0][0]
@@ -262,9 +259,7 @@ def text_rank_iterator(list_chunk: list[str], embedding_model: EmbeddingModel):
         idx_cur_sent = chunk_order[i][0]
         add_sent = True
         for idx_prev_sent in yielded_chunks:
-            cosine = dict_weight.get((
-                idx_cur_sent,
-                idx_prev_sent)) or dict_weight.get(
+            cosine = dict_weight.get((idx_cur_sent, idx_prev_sent)) or dict_weight.get(
                 (idx_prev_sent, idx_cur_sent)
             )
             if cosine > 0.8:
@@ -356,9 +351,7 @@ def build_text_prompt_kmeans(
     clusters_to_embeddings = [[] for _ in range(n_clusters)]
     cluster_map = [[] for _ in range(n_clusters)]
 
-    for embedding, cluster, idx in zip(embeddings,
-                                       clusters,
-                                       range(len(list_chunk))):
+    for embedding, cluster, idx in zip(embeddings, clusters, range(len(list_chunk))):
         clusters_to_embeddings[cluster].append(embedding)
         cluster_map[cluster].append(idx)
 

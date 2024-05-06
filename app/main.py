@@ -1,3 +1,4 @@
+import tempfile
 import logging
 import os
 import requests
@@ -15,7 +16,11 @@ from fastapi.security.api_key import APIKeyHeader
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_core.documents import Document
 from langchain_openai import ChatOpenAI
-from pypdf import PdfReader
+from langchain_community.document_loaders import (
+    PyPDFLoader,
+    UnstructuredODTLoader,
+    Docx2txtLoader,
+)
 from abrege.extractive_summary import EmbeddingModel
 from abrege.summary_chain import summarize_chain_builder
 
@@ -267,25 +272,36 @@ async def summarize_doc(
     )
 
     if file.filename is not None:
-        extension = file.filename.split(".")[-1]
-    else:
-        raise HTTPException(
-            status_code=400,
-            detail="No extension found on upload file",
-        )
+        try:
+            _, extension = os.path.splitext(file.filename)
+        except Exception as err:
+            raise HTTPException(
+                status_code=400,
+                detail=f"""Error while parsing the filename, {err} occured""",
+            )
 
-    if extension not in {"pdf"}:
+    if extension not in {".pdf", ".odt", ".docx"}:
         raise HTTPException(
             status_code=400,
             detail="""file format not supported, file format supported are :
-              [pdf]""",
+              [pdf, docx, odt]""",
         )
 
-    if extension == "pdf":
-        text = ""
-        reader = PdfReader(file.file)
-        for page in reader.pages:
-            text += page.extract_text()
+    # Dirty method required: save content to a tempory file and read it...
+    with tempfile.NamedTemporaryFile(mode="w+b") as tmp_file:
+        tmp_file.write(file.file.read())
+
+        if extension == ".pdf":
+            loader = PyPDFLoader(tmp_file.name)
+
+        elif extension == ".docx":
+            loader = Docx2txtLoader(tmp_file.name)
+
+        elif extension == ".odt":
+            loader = UnstructuredODTLoader(tmp_file.name)
+
+        docs = loader.load()
+        text = "".join([doc.page_content for doc in docs])
 
     res = custom_chain.invoke(text)
 

@@ -139,6 +139,7 @@ def summarize_chain_builder(
                 extractive_summary = build_text_prompt(
                     text, llm_context_window_size, embedding_model, **kwargs
                 )
+                print(extractive_summary)
                 summarize_prompt = PromptTemplate.from_template(summary_template)
                 prompt1 = summarize_prompt.invoke({"text": extractive_summary})
                 output1 = llm.invoke(prompt1)
@@ -160,7 +161,7 @@ def summarize_chain_builder(
                 )
 
                 text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
-                    chunk_size=1000, chunk_overlap=0
+                    chunk_size=4000, chunk_overlap=0
                 )
                 split_texts = text_splitter.split_text(text)
                 split_docs = [Document(page_content=text) for text in split_texts]
@@ -192,7 +193,7 @@ def summarize_chain_builder(
                     return_intermediate_steps=False,
                 )
                 text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
-                    chunk_size=1000, chunk_overlap=0
+                    chunk_size=4000, chunk_overlap=0
                 )
                 split_text = text_splitter.split_text(text)
                 split_docs = [Document(page_content=text) for text in split_text]
@@ -233,7 +234,7 @@ def summarize_chain_builder(
     # Handle with a simple call to llm small text
     @chain
     def small_text_chain(text: str):
-        if llm.get_num_tokens(text):
+        if llm.get_num_tokens(text) < 3000:
             summarize_prompt = PromptTemplate.from_template(summary_template)
             simple_chain = LLMChain(llm=llm, prompt=summarize_prompt)
             return simple_chain.invoke(text)
