@@ -140,7 +140,7 @@ async def summarize_doc(file: UploadFile, method: MethodType = "text_rank"):
     """This route is for single file only"""
 
     if file.filename is not None:
-        extension = file.filename.split(".")[-1]
+        extension: str = file.filename.split(".")[-1]
     else:
         raise HTTPException(
             status_code=400,
