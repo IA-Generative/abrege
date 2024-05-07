@@ -21,6 +21,7 @@ from langchain_community.document_loaders import (
     UnstructuredURLLoader,
     # SeleniumURLLoader
 )
+import nltk
 from abrege.summary_chain import summarize_chain_builder
 
 
@@ -111,7 +112,7 @@ async def lifespan(_: FastAPI):
     # embedding_model = EmbeddingModel(embeddings, model_class)
 
     context["embedding_model"] = None
-
+    nltk.download("punkt")
     logger.info("======== Lifespan initialization done =========")
 
     yield
@@ -148,7 +149,7 @@ MethodType = Literal["map_reduce", "refine", "text_rank", "k-means"]
 ChunkType = Literal["sentences", "chunks"]
 
 
-@app.get("/url/{url}")
+@app.get("/url")
 def summarize_url(
     url: str,
     method: MethodType = "text_rank",
@@ -202,7 +203,7 @@ def summarize_url(
 
     res = [custom_chain.invoke(doc.page_content) for doc in data]
 
-    return "\n\n".join(res)
+    return "\n\n".join(res).strip()
 
 
 @app.get("/text")
@@ -247,7 +248,7 @@ async def summarize_txt(
         summary_template=prompt_template,
     )
 
-    res = custom_chain.invoke(text)
+    res = custom_chain.invoke(text).strip()
 
     return {"summary": res}
 
@@ -319,7 +320,7 @@ async def summarize_doc(
 
     text = "".join(doc.page_content for doc in docs)
 
-    res = custom_chain.invoke(text)
+    res = custom_chain.invoke(text).strip()
 
     return {"summary": res}
 
