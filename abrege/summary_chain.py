@@ -1,10 +1,9 @@
 import os
 from typing import Literal
 
-from langchain_community.embeddings import OpenAIEmbeddings
+from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
 from langchain.chains import MapReduceDocumentsChain, ReduceDocumentsChain
 from langchain.chains.combine_documents.stuff import StuffDocumentsChain
-from langchain.chains.llm import LLMChain
 from langchain.chains.summarize import load_summarize_chain
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_core.documents.base import Document
@@ -120,11 +119,10 @@ def summarize_chain_builder(
         OPENAI_EMBEDDING_API_KEY = os.environ["OPENAI_EMBEDDING_API_KEY"]
         OPENAI_EMBEDDING_API_BASE = os.environ["OPENAI_EMBEDDING_API_BASE"]
 
-        openai_ef = OpenAIEmbeddings(
-            api_key=OPENAI_EMBEDDING_API_KEY,
-            api_base=OPENAI_EMBEDDING_API_BASE,
+        openai_ef = OpenAIEmbeddingFunction(
+            api_key=OPENAI_EMBEDDING_API_KEY, api_base=OPENAI_EMBEDDING_API_BASE
         )
-        embedding_model = EmbeddingModel(openai_ef)
+        embedding_model = EmbeddingModel(openai_ef)  # mal
         assert embedding_model.model_class == "OpenAIEmbeddingFunction"
 
     if summary_template is None:
@@ -172,8 +170,8 @@ def summarize_chain_builder(
 
             @chain
             def custom_chain(text):
-                map_chain = LLMChain(llm=llm, prompt=map_prompt)
-                reduce_chain = LLMChain(llm=llm, prompt=reduce_prompt)
+                map_chain = map_prompt | llm
+                reduce_chain = reduce_prompt | llm
                 combine_document_chain = StuffDocumentsChain(
                     llm_chain=reduce_chain, document_variable_name="docs"
                 )
@@ -216,7 +214,7 @@ def summarize_chain_builder(
             @chain
             def custom_chain(text: str):
                 summarize_prompt = PromptTemplate.from_template(summary_template)
-                llm_chain = LLMChain(llm=llm, prompt=summarize_prompt)
+                llm_chain = summarize_prompt | llm
                 stuff_chain = StuffDocumentsChain(
                     llm_chain=llm_chain, document_variable_name="text"
                 )
@@ -234,7 +232,7 @@ def summarize_chain_builder(
     def small_text_chain(text: str):
         if llm.get_num_tokens(text) < 3000:
             summarize_prompt = PromptTemplate.from_template(summary_template)
-            simple_chain = LLMChain(llm=llm, prompt=summarize_prompt)
+            simple_chain = summarize_prompt | llm
             return simple_chain.invoke(text)
         else:
             return custom_chain.invoke(text)
