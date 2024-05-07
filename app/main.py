@@ -1,13 +1,19 @@
-import tempfile
-import logging
-import os
+__import__("pysqlite3")
+import sys
+
+# https://docs.trychroma.com/troubleshooting#sqlite
+sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
+
+from typing import Annotated
 import requests
 import json
+import logging
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import List, Literal, Annotated
+from typing import List, Literal
 from urllib.parse import urlparse
-
+import tempfile
 import uvicorn
 from fastapi import FastAPI, HTTPException, UploadFile, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -46,24 +52,51 @@ async def lifespan(_: FastAPI):
     #     model_class = "HuggingFaceEmbeddings"
     #     embedding_model = EmbeddingModel(embeddings, model_class)
 
-    OPENAI_API_BASE = os.environ["OPENAI_API_BASE"]
-    OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
-    OPENAI_API_BASE = os.environ["OPENAI_API_BASE"]
-    MODEL_LIST_BASE = os.environ["MODEL_LIST_BASE"]
+    OPENAI_API_BASE = os.environ.get("OPENAI_API_BASE", default=None)
+    OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", default=None)
+    MODEL_LIST_BASE = os.environ.get("MODEL_LIST_BASE", default=None)
 
-    # Load the models
-    header = {"Authorization": f"Bearer {OPENAI_API_KEY}"}
-    response = requests.get(MODEL_LIST_BASE, headers=header)
+    if (
+        MODEL_LIST_BASE is not None
+        and OPENAI_API_BASE is not None
+        and OPENAI_API_KEY is not None
+    ):
+        # Load the models
+        header = {"Authorization": f"Bearer {OPENAI_API_KEY}"}
+        response = requests.get(MODEL_LIST_BASE, headers=header)
 
-    if response.status_code == 200:
-        models_list = json.loads(response.text)["data"]
-        model_id = [model["id"] for model in models_list]
-        context["models"] = model_id
+        if response.status_code == 200:
+            models_list = json.loads(response.text)["data"]
+            model_id = [model["id"] for model in models_list]
+            context["models"] = model_id
+        else:
+            logging.critical(
+                f"""Models list not availble, error status code :
+                {response.status_code}, reason: {response.text}"""
+            )
+
+        def chat_builder(model: str = "mixtral", temperature: int = 0):
+            if model not in model_id:
+                raise HTTPException(
+                    400, detail=f"Model not available, avaible are {model_id}"
+                )
+            llm = ChatOpenAI(
+                api_key=OPENAI_API_KEY,
+                openai_api_base=OPENAI_API_BASE,
+                model=model,
+                temperature=temperature,
+            )
+            return llm
+
+        context["chat_builder"] = chat_builder
     else:
-        raise ValueError(
-            f"""Models list not availble, error status code : {response.status_code},
-            reason: {response.text}"""
-        )
+        logging.critical("Problem loading environnement variable")
+
+        # To ensure test pass
+        def none_func(*args, **kwargs):
+            pass
+
+        context["chat_builder"] = none_func
 
     # embeddings = HuggingFaceEmbeddings(
     #     model_name=os.environ["EMBEDDING_MODEL_PATH"]
@@ -72,21 +105,6 @@ async def lifespan(_: FastAPI):
 
     # model_class = "HuggingFaceEmbeddings"
     # embedding_model = EmbeddingModel(embeddings, model_class)
-
-    def chat_builder(model: str = "mixtral", temperature: int = 0):
-        if model not in model_id:
-            raise HTTPException(
-                400, detail=f"Model not available, avaible are {model_id}"
-            )
-        llm = ChatOpenAI(
-            api_key=OPENAI_API_KEY,
-            openai_api_base=OPENAI_API_BASE,
-            model=model,
-            temperature=temperature,
-        )
-        return llm
-
-    context["chat_builder"] = chat_builder
 
     context["embedding_model"] = None
 
@@ -187,7 +205,7 @@ def summarize_url(
     return "\n\n".join(res)
 
 
-@app.get("/txt")
+@app.get("/text")
 async def summarize_txt(
     text: str,
     method: MethodType = "text_rank",

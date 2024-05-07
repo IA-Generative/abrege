@@ -100,6 +100,7 @@ class EmbeddingModel:
                 return np.array(embeddings)
 
             case "HuggingFaceEmbeddings":
+                # encode_kwargs = {"normalize_embeddings": True}
                 embeddings = self._model.embed_documents(list_chunk)
                 return np.array(embeddings)
 
@@ -430,4 +431,10 @@ def build_text_prompt(
 
 
 if __name__ == "__main__":
-    pass
+    import os
+    from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
+
+    llm = OpenAIEmbeddingFunction(
+        api_key=os.environ["OPENAI_API_KEY"], api_base=os.environ["OPENAI_API_BASE"]
+    )
+    embedding_model = EmbeddingModel(llm, model_class="openai_ef")

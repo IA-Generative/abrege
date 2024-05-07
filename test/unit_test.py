@@ -1,7 +1,5 @@
 import pytest
 import numpy as np
-from pathlib import Path
-import sys
 
 from abrege.extractive_summary import (
     EmbeddingModel,

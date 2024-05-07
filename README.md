@@ -1,5 +1,6 @@
 # Abrege
 
+
 | method | self check GPT lite score |
 |--|--|
 | text_rank | 0.89 |
