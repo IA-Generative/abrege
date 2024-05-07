@@ -1,9 +1,3 @@
-__import__("pysqlite3")
-import sys
-
-# https://docs.trychroma.com/troubleshooting#sqlite
-sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
-
 from typing import Annotated
 import requests
 import json
