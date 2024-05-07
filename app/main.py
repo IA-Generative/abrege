@@ -200,7 +200,7 @@ def summarize_url(
     if not (parsed_url.scheme and parsed_url.netloc):
         raise HTTPException(
             status_code=400,
-            detail=f"""{url} is not a valide url""",
+            detail=f"""{url} is not a valid url""",
         )
 
     loader = UnstructuredURLLoader(urls=[url])
