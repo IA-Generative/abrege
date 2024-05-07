@@ -30,11 +30,11 @@ DOCUMENT_LOADER_DICT = {
     ".odt": UnstructuredODTLoader,
 }
 
-origins = [
+origins = (
     "https://sie.numerique-interieur.com",
     "http://localhost",
     "http://localhost:8080",
-]
+)
 
 logger = logging.getLogger(__name__)
 context = {}
