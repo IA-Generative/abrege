@@ -1,9 +1,3 @@
-__import__("pysqlite3")
-import sys
-
-# https://docs.trychroma.com/troubleshooting#sqlite
-sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
-
 from typing import Annotated
 import requests
 import json
@@ -24,15 +18,23 @@ from langchain_community.document_loaders import (
     PyPDFLoader,
     UnstructuredODTLoader,
     Docx2txtLoader,
+    UnstructuredURLLoader,
+    # SeleniumURLLoader
 )
 from abrege.summary_chain import summarize_chain_builder
 
 
-origins = [
+DOCUMENT_LOADER_DICT = {
+    ".pdf": PyPDFLoader,
+    ".docx": Docx2txtLoader,
+    ".odt": UnstructuredODTLoader,
+}
+
+origins = (
     "https://sie.numerique-interieur.com",
     "http://localhost",
     "http://localhost:8080",
-]
+)
 
 logger = logging.getLogger(__name__)
 context = {}
@@ -56,10 +58,12 @@ async def lifespan(_: FastAPI):
     OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", default=None)
     MODEL_LIST_BASE = os.environ.get("MODEL_LIST_BASE", default=None)
 
-    if (
-        MODEL_LIST_BASE is not None
-        and OPENAI_API_BASE is not None
-        and OPENAI_API_KEY is not None
+    if all(
+        (
+            MODEL_LIST_BASE,
+            OPENAI_API_BASE,
+            OPENAI_API_KEY,
+        )
     ):
         # Load the models
         header = {"Authorization": f"Bearer {OPENAI_API_KEY}"}
@@ -188,16 +192,12 @@ def summarize_url(
 
     parsed_url = urlparse(url)
     if not (parsed_url.scheme and parsed_url.netloc):
-        url = "https://www.jesuismort.com/tombe/albert-camus"
+        raise HTTPException(
+            status_code=400,
+            detail=f"""{url} is not a valid url""",
+        )
 
-    if 1:
-        from langchain_community.document_loaders import UnstructuredURLLoader
-
-        loader = UnstructuredURLLoader(urls=[url])
-    else:
-        from langchain_community.document_loaders import SeleniumURLLoader
-
-        loader = SeleniumURLLoader(urls=[url])
+    loader = UnstructuredURLLoader(urls=[url])
     data: list = loader.load()
 
     res = [custom_chain.invoke(doc.page_content) for doc in data]
@@ -304,28 +304,20 @@ async def summarize_doc(
                 detail=f"""Error while parsing the filename, {err} occured""",
             )
 
-    if extension not in {".pdf", ".odt", ".docx"}:
+    if extension not in DOCUMENT_LOADER_DICT:
         raise HTTPException(
             status_code=400,
-            detail="""file format not supported, file format supported are :
-              [pdf, docx, odt]""",
+            detail=f"""file format not supported, file format supported are :
+              {tuple(DOCUMENT_LOADER_DICT.keys())}""",
         )
 
     # Dirty method required: save content to a tempory file and read it...
     with tempfile.NamedTemporaryFile(mode="w+b") as tmp_file:
         tmp_file.write(file.file.read())
-
-        if extension == ".pdf":
-            loader = PyPDFLoader(tmp_file.name)
-
-        elif extension == ".docx":
-            loader = Docx2txtLoader(tmp_file.name)
-
-        elif extension == ".odt":
-            loader = UnstructuredODTLoader(tmp_file.name)
-
+        loader = DOCUMENT_LOADER_DICT[extension](tmp_file.name)
         docs = loader.load()
-        text = "".join([doc.page_content for doc in docs])
+
+    text = "".join(doc.page_content for doc in docs)
 
     res = custom_chain.invoke(text)
 
@@ -357,10 +349,7 @@ async def summarize_multi_doc(
             language=language,
             summary_template=prompt_template,
         )
-        docs = []
-        for summary in summaries:
-            docs.append(Document(page_content=summary))
-
+        docs = [Document(page_content=summary) for summary in summaries]
         summaries = [custom_chain.invoke(docs)]
 
     return {"summaries": summaries}

@@ -1,5 +1,5 @@
 # For more information, please refer to https://aka.ms/vscode-docker-python
-FROM python:3.11.2-slim
+FROM python:3.11.9-slim-bookworm
 
 
 RUN apt-get update  \
@@ -22,7 +22,9 @@ WORKDIR /app
 COPY . .
 
 # Install abrege package
-RUN  pip install -e .
+RUN pip install poetry
+RUN poetry export -f requirements.txt --without-hashes > requirements.txt
+RUN pip install -e .
 
 # Creates a non-root user with an explicit UID and adds permission to access the /app folder
 # For more info, please refer to https://aka.ms/vscode-docker-python-configure-containers
