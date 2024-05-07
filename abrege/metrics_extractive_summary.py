@@ -1,19 +1,19 @@
-import os, sys, random
-import logging
+import os
+import sys
+import random
 
 import statistics
 from pathlib import Path
 
 from langchain_openai import ChatOpenAI
 from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_openai import ChatOpenAI
 from langchain.docstore.document import Document
 
 from tqdm import tqdm
 import nltk
 
 sys.path.append(str(Path(__file__).parent.parent / "abrege"))
-from selfcheck import SelfCheckGPT, selfcheck
+from selfcheck import selfcheck
 
 # poetry add datasets
 from datasets import load_dataset
@@ -60,7 +60,7 @@ class TestClass:
     ) -> list[float]:
         metrics = []
         iter_ = tqdm(iter_of_str) if progress_bar else iter_of_str
-        print(f"Calcul des résumés...")
+        print("Calcul des résumés...")
         sumup_array = [custom_chain.invoke(text_to_sumup) for text_to_sumup in iter_]
         print("done")
         for i, (text_to_sumup, sumup) in enumerate(zip(iter_of_str, sumup_array)):

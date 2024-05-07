@@ -8,4 +8,4 @@
 !requirements.txt
 *.egg-info
 notebook/*
-data/*
+test_data/*
