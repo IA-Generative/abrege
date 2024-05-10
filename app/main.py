@@ -73,26 +73,33 @@ async def lifespan(_: FastAPI):
             models_list = json.loads(response.text)["data"]
             model_id = [model["id"] for model in models_list]
             context["models"] = model_id
+
+            def chat_builder(model: str = "mixtral", temperature: int = 0):
+                if model not in model_id:
+                    raise HTTPException(
+                        400, detail=f"Model not available, avaible are {model_id}"
+                    )
+                llm = ChatOpenAI(
+                    api_key=OPENAI_API_KEY,
+                    openai_api_base=OPENAI_API_BASE,
+                    model=model,
+                    temperature=temperature,
+                )
+                return llm
+
+            context["chat_builder"] = chat_builder
         else:
+
             logging.critical(
                 f"""Models list not availble, error status code :
                 {response.status_code}, reason: {response.text}"""
             )
 
-        def chat_builder(model: str = "mixtral", temperature: int = 0):
-            if model not in model_id:
-                raise HTTPException(
-                    400, detail=f"Model not available, avaible are {model_id}"
-                )
-            llm = ChatOpenAI(
-                api_key=OPENAI_API_KEY,
-                openai_api_base=OPENAI_API_BASE,
-                model=model,
-                temperature=temperature,
-            )
-            return llm
+            def none_func(*args, **kwargs):
+                pass
 
-        context["chat_builder"] = chat_builder
+            context["chat_builder"] = none_func
+
     else:
         logging.critical("Problem loading environnement variable")
 

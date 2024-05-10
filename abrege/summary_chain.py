@@ -1,7 +1,7 @@
 import os
 from typing import Literal
 
-from langchain_community.embeddings import OpenAIEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from langchain.chains import MapReduceDocumentsChain, ReduceDocumentsChain
 from langchain.chains.combine_documents.stuff import StuffDocumentsChain
 from langchain.chains.llm import LLMChain
@@ -122,10 +122,9 @@ def summarize_chain_builder(
 
         openai_ef = OpenAIEmbeddings(
             api_key=OPENAI_EMBEDDING_API_KEY,
-            api_base=OPENAI_EMBEDDING_API_BASE,
+            openai_api_base=OPENAI_EMBEDDING_API_BASE,
         )
         embedding_model = EmbeddingModel(openai_ef)
-        assert embedding_model.model_class == "OpenAIEmbeddingFunction"
 
     if summary_template is None:
         summary_template = summarize_template

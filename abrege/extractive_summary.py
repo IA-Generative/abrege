@@ -56,6 +56,7 @@ ModelType = Literal[
     "HuggingFaceEmbeddings",
     "OpenAIEmbeddingFunction",
     "SentenceTransformer",
+    "OpenAIEmbeddings",
 ]
 
 
@@ -66,16 +67,6 @@ class EmbeddingModel:
     -----------
     _model : Any
         model to wrap
-
-    Examples
-    -----------
-    >>> llm = OpenAIEmbeddingFunction(
-        api_key = your_api_key
-        api_base = your_api_base
-    )
-    >>> embedding_model = EmbeddingModel(llm, model_class="openai_ef")
-    >>> sentence_transformer = SentenceTransformer("some_path")
-    >>> embedding_model = EmbeddingModel(sentence_transformer, "hugging_hub")
 
     """
 
@@ -112,6 +103,10 @@ class EmbeddingModel:
                     normalize_embeddings=True,
                 )
                 return embeddings
+
+            case "OpenAIEmbeddings":
+                embeddings = self._model.embed_documents(list_chunk)
+                return np.array(embeddings)
 
             case _:
                 raise ValueError(

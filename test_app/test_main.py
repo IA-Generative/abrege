@@ -1,9 +1,24 @@
+import os
 from unittest import mock
 from fastapi.testclient import TestClient
 import pytest
 
 # Thanks to [tool.pytest.ini_options] section in pyproject.toml
 from main import app
+
+
+def requires_env_var():
+    var1 = os.environ.get("OPENAI_API_BASE", None)
+    var2 = os.environ.get("OPENAI_API_KEY", None)
+    var3 = os.environ.get("MODEL_LIST_BASE", None)
+    var4 = os.environ.get("OPENAI_EMBEDDING_API_BASE", None)
+    var5 = os.environ.get("OPENAI_EMBEDDING_API_KEY", None)
+
+    cond = all((var1, var2, var3, var4, var5))
+
+    return pytest.mark.skipif(
+        not cond, reason="Environnement doesn't have the variables set"
+    )
 
 
 class TestApp:
@@ -62,3 +77,54 @@ class TestApp:
             _ = client.post("/docs", files=files)
 
         mock.assert_called()
+
+    @staticmethod
+    @mock.patch("main.summarize_chain_builder")
+    def test_summarize_chain_builder_param(mock):
+        with TestClient(app) as client:
+            raw_text = "A great text to summarize"
+            client.get(
+                "/text",
+                params={
+                    "text": raw_text,
+                    "method": "map_reduce",
+                    "language": "French",
+                    "prompt_template": "abrege {text}",
+                },
+            )
+
+        mock.assert_called_with()
+
+    @staticmethod
+    @requires_env_var()
+    def test_api_call_text_rank():
+        with TestClient(app) as client:
+            response = client.get("/text", params={"text": "J'aime le chocolat"})
+            assert response.status_code == 200
+
+    @staticmethod
+    @requires_env_var()
+    def test_api_call_k_means():
+        with TestClient(app) as client:
+            response = client.get(
+                "/text", params={"text": "J'aime le chocolat", "method": "k-means"}
+            )
+            assert response.status_code == 200
+
+    @staticmethod
+    @requires_env_var()
+    def test_api_call_map_reduce():
+        with TestClient(app) as client:
+            response = client.get(
+                "/text", params={"text": "J'aime le chocolat", "method": "map_reduce"}
+            )
+            assert response.status_code == 200
+
+    @staticmethod
+    @requires_env_var()
+    def test_api_call_refine():
+        with TestClient(app) as client:
+            response = client.get(
+                "/text", params={"text": "J'aime le chocolat", "method": "refine"}
+            )
+            assert response.status_code == 200
