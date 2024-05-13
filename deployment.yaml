@@ -100,7 +100,6 @@ spec:
   resources:
     requests:
       storage: 500Mi
-
 ---
 # service.yaml
 apiVersion: v1
