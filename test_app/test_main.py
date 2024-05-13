@@ -81,8 +81,8 @@ class TestApp:
     @staticmethod
     @mock.patch("main.summarize_chain_builder")
     def test_summarize_chain_builder_param(mock):
+        raw_text = "A great text to summarize"
         with TestClient(app) as client:
-            raw_text = "A great text to summarize"
             client.get(
                 "/text",
                 params={
@@ -93,7 +93,10 @@ class TestApp:
                 },
             )
 
-        mock.assert_called_with()
+        mock.assert_called_once()
+        assert mock.call_args.kwargs["language"] == "French"
+        assert mock.call_args.kwargs["method"] == "map_reduce"
+        assert mock.call_args.kwargs["prompt_template"] == "abrege {text}"
 
     @staticmethod
     @requires_env_var()

@@ -78,7 +78,7 @@ def summarize_chain_builder(
     embedding_model: EmbeddingModel = None,
     language: str = "english",
     method: MethodType = "text_rank",
-    summary_template: str | None = None,
+    prompt_template: str | None = None,
     **kwargs,
 ):
     """Build a custom summarizing chain with your models, using the selected method for
@@ -101,7 +101,7 @@ def summarize_chain_builder(
     method : Literal['text_rank', 'map_reduce', 'refine', 'kmeans', 'stuff']
         method to build the summary
         default to 'text_rank'
-    summary_prompt : str
+    prompt_template : str
         text template to create a summary prompt
         default to basic template
 
@@ -126,8 +126,8 @@ def summarize_chain_builder(
         )
         embedding_model = EmbeddingModel(openai_ef)
 
-    if summary_template is None:
-        summary_template = summarize_template
+    if prompt_template is None:
+        prompt_template = summarize_template
 
     match method:
         case "text_rank":
@@ -137,7 +137,7 @@ def summarize_chain_builder(
                 extractive_summary = build_text_prompt(
                     text, llm_context_window_size, embedding_model, **kwargs
                 )
-                summarize_prompt = PromptTemplate.from_template(summary_template)
+                summarize_prompt = PromptTemplate.from_template(prompt_template)
                 prompt1 = summarize_prompt.invoke({"text": extractive_summary})
                 output1 = llm.invoke(prompt1)
                 output_parser = StrOutputParser()
@@ -204,7 +204,7 @@ def summarize_chain_builder(
                 extractive_summary = build_text_prompt_kmeans(
                     text, llm_context_window_size, embedding_model, **kwargs
                 )
-                summarize_prompt = PromptTemplate.from_template(summary_template)
+                summarize_prompt = PromptTemplate.from_template(prompt_template)
                 prompt1 = summarize_prompt.invoke({"text": extractive_summary})
                 output = llm.invoke(prompt1)
                 output_parser = StrOutputParser()
@@ -214,7 +214,7 @@ def summarize_chain_builder(
 
             @chain
             def custom_chain(text: str):
-                summarize_prompt = PromptTemplate.from_template(summary_template)
+                summarize_prompt = PromptTemplate.from_template(prompt_template)
                 llm_chain = LLMChain(llm=llm, prompt=summarize_prompt)
                 stuff_chain = StuffDocumentsChain(
                     llm_chain=llm_chain, document_variable_name="text"
@@ -232,7 +232,7 @@ def summarize_chain_builder(
     @chain
     def small_text_chain(text: str):
         if llm.get_num_tokens(text) < 3000:
-            summarize_prompt = PromptTemplate.from_template(summary_template)
+            summarize_prompt = PromptTemplate.from_template(prompt_template)
             simple_chain = LLMChain(llm=llm, prompt=summarize_prompt)
             return simple_chain.invoke(text)
         else:

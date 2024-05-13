@@ -72,6 +72,7 @@ async def lifespan(_: FastAPI):
         if response.status_code == 200:
             models_list = json.loads(response.text)["data"]
             model_id = [model["id"] for model in models_list]
+            logging.info(f"Model available for this instance: {model_id}")
             context["models"] = model_id
 
             def chat_builder(model: str = "mixtral", temperature: int = 0):
@@ -194,7 +195,7 @@ def summarize_url(
         embedding_model=context["embedding_model"],
         method=method,
         language=language,
-        summary_template=prompt_template,
+        prompt_template=prompt_template,
     )
 
     parsed_url = urlparse(url)
@@ -251,7 +252,7 @@ async def summarize_txt(
         embedding_model=context["embedding_model"],
         method=method,
         language=language,
-        summary_template=prompt_template,
+        prompt_template=prompt_template,
     )
 
     res = custom_chain.invoke(text)
@@ -299,7 +300,7 @@ async def summarize_doc(
         embedding_model=context["embedding_model"],
         method=method,
         language=language,
-        summary_template=prompt_template,
+        prompt_template=prompt_template,
     )
 
     if file.filename is not None:
@@ -354,7 +355,7 @@ async def summarize_multi_doc(
             embedding_model=context["embedding_model"],
             method="stuff",
             language=language,
-            summary_template=prompt_template,
+            prompt_template=prompt_template,
         )
         docs = [Document(page_content=summary) for summary in summaries]
         summaries = [custom_chain.invoke(docs)]
