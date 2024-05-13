@@ -5,7 +5,7 @@ name: Deploy abrege container
 
 on:
   push:
-    branches: [ "main", "deploy"]
+    branches: [ "main", "deploy"] # todo
     tags:
         - 'v*'
 
@@ -142,6 +142,62 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
           build-args: |
             APP_VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
+
+  deploy-kube:
+    runs-on: ubuntu-latest
+    needs: check # todo
+    # Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job.
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - uses: azure/setup-kubectl@v3
+
+      - uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBECONFIG }}
+          context: admin@usine-ia-llm-sie # dunno
+
+      #- uses: azure/k8s-create-secret@v4
+      #  with:
+      #    namespace: sie
+      #    secret-name: app-secret
+      #    secret-type: 'generic'
+      #    string-data: ${{ secrets.MODELS_KEYS }}
+
+   #   - name: Sleep for 30 seconds (to let the new image to be saved)
+  #      run: sleep 30s
+  #      shell: bash
+
+
+#      - uses: Azure/k8s-deploy@v4
+#        with:
+#          action: deploy
+#          manifests: |
+#            kube/deployment.yaml
+#            kube/service.yaml
+#          images: 'ghcr.io/ia-generative/rag-llm-sie:${{ github.sha }}'
+#          namespace: sie
+
+      - name: Deploy to the Kubernetes cluster
+        uses: azure/k8s-deploy@v4
+        with:
+          namespace: abrege
+          action: deploy
+          manifests: |
+            deployment.yaml
+          images: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ env.APPLICATION }}
+          # try to solve Warning: Failed to get dockerfile path for image ghcr.io
+          #pull-images: false
+          imagePullSecrets: |
+            ghcr-login-secret
+
+
+
 
   # TODO
   # deploy:
