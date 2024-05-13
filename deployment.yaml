@@ -53,7 +53,7 @@ spec:
               name: secret-abrege
               key: OPENAI_EMBEDDING_API_BASE
         ports:
-        - containerPort: 8080
+        - containerPort: 8000
           protocol: TCP
 #        volumeMounts:
 #        - name: abrege-code
