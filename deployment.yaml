@@ -112,7 +112,7 @@ spec:
     app: abrege
   ports:
   - protocol: TCP
-    port: 8000
+    port: 80
     targetPort: 8000
 
 ---
@@ -139,7 +139,7 @@ spec:
           service:
             name: abrege-service
             port:
-              number: 8000
+              number: 80
         path: /
         pathType: Prefix
   tls:
