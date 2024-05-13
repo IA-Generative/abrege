@@ -27,26 +27,31 @@ spec:
 #        command: ["npm", "run"]
 #        args: ["$(NODE_ENV)"]
         env:
-#        - name: FRONT_PORT
-#          value: "3000"
-#        - name: NODE_ENV
-#          value: development
-        - name: VITE_RECHERCHE_PLUS_URL
-          value: https://demo1.numerique-interieur.com
-        - name: VITE_PDF_URL
-          value: https://demo7.numerique-interieur.com
-        - name: VITE_RESUME_URL
-          value: https://demo4.numerique-interieur.com
-        - name: VITE_CHAT_URL
-          value: https://chatbot.numerique-interieur.com
-        - name: VITE_PDF_PLUS_URL
-          value: https://demo2.numerique-interieur.com
-        - name: VITE_SQL_URL
-          value: https://demo14.numerique-interieur.com
-        - name: ENVIRONMENT
-          value: development
-        - name: VITE_RECHERCHE_INTERNET_URL
-          value: https://demo5.numerique-interieur.com
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: secret-abrege
+              key: OPENAI_API_KEY
+        - name: OPENAI_API_BASE
+          valueFrom:
+            secretKeyRef:
+              name: secret-abrege
+              key: OPENAI_API_BASE
+        - name: EMBEDDING_MODEL_PATH
+          valueFrom:
+            secretKeyRef:
+              name: secret-abrege
+              key: EMBEDDING_MODEL_PATH
+        - name: 
+          valueFrom: OPENAI_EMBEDDING_API_KEY
+            secretKeyRef:
+              name: secret-abrege
+              key: OPENAI_EMBEDDING_API_KEY
+        - name: OPENAI_EMBEDDING_API_BASE
+          valueFrom:
+            secretKeyRef:
+              name: secret-abrege
+              key: OPENAI_EMBEDDING_API_BASE
         ports:
         - containerPort: 8080
           protocol: TCP
