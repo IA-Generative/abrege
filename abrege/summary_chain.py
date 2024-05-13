@@ -20,7 +20,7 @@ from langchain_openai import ChatOpenAI
 
 from abrege.extractive_summary import (
     EmbeddingModel,
-    build_text_prompt,
+    build_text_prompt_text_rank,
     build_text_prompt_kmeans,
 )
 
@@ -69,7 +69,33 @@ human_template = (
 human_message_prompt = HumanMessagePromptTemplate.from_template(human_template)
 
 
-MethodType = Literal["text_rank", "map_reduce", "refine", "k-means", "stuff"]
+map_prompt_tr2 = """
+You will be given a single passage of a document. This section will be enclosed in triple backticks (```)
+Your goal is to give a summary of this section so that the reader will have a full understanding fo what happened.
+Your response should be at least three paragraphs and fully encopass what was said in the passage.
+
+```{text}```
+FULL SUMMARY:
+"""  # noqa
+map_prompt_template_tr2 = PromptTemplate(
+    template=map_prompt_tr2, input_variables=["text"]
+)
+
+combine_prompt = """
+You will be given a series of summaries from a book. The summaries will be enclosed in triple backticks (```)
+Your goal is to give a verbose summary of what happened in the story.
+The reader should be able to grasp what happened in the book.
+
+```{text}```
+VERBOSE SUMMARY:
+"""  # noqa
+combine_prompt_template = PromptTemplate(
+    template=combine_prompt, input_variables=["text"]
+)
+
+MethodType = Literal[
+    "text_rank", "map_reduce", "refine", "k-means", "stuff", "text_rank2"
+]
 
 
 def summarize_chain_builder(
@@ -134,9 +160,10 @@ def summarize_chain_builder(
 
             @chain
             def custom_chain(text):
-                extractive_summary = build_text_prompt(
+                extractive_summary = build_text_prompt_text_rank(
                     text, llm_context_window_size, embedding_model, **kwargs
                 )
+                extractive_summary = "".join(extractive_summary)
                 summarize_prompt = PromptTemplate.from_template(prompt_template)
                 prompt1 = summarize_prompt.invoke({"text": extractive_summary})
                 output1 = llm.invoke(prompt1)
@@ -204,6 +231,7 @@ def summarize_chain_builder(
                 extractive_summary = build_text_prompt_kmeans(
                     text, llm_context_window_size, embedding_model, **kwargs
                 )
+                extractive_summary = "".join(extractive_summary)
                 summarize_prompt = PromptTemplate.from_template(prompt_template)
                 prompt1 = summarize_prompt.invoke({"text": extractive_summary})
                 output = llm.invoke(prompt1)
@@ -221,6 +249,29 @@ def summarize_chain_builder(
                 )
                 doc = Document(page_content=text)
                 return stuff_chain.invoke([doc])["output_text"]
+
+        case "text_rank2":
+
+            @chain
+            def custom_chain(text: str):
+                list_chunk = build_text_prompt_text_rank(
+                    text, llm_context_window_size, embedding_model, chunk_type="chunks"
+                )
+                map_chain = load_summarize_chain(
+                    llm=llm, chain_type="stuff", prompt=map_prompt_template_tr2
+                )
+                summary_list = ["" for _ in len(range(list_chunk))]
+                output_parser = StrOutputParser()
+                for i, chunk in enumerate(list_chunk):
+                    chunk_summary = output_parser.invoke(map_chain.invoke(chunk))
+                    summary_list.append(chunk_summary)
+
+                summaries = "\n".join(summary_list)
+                reduce_chain = load_summarize_chain(
+                    llm=llm, chain_type="stuff", prompt=combine_prompt_template
+                )
+                output = reduce_chain.invoke(summaries)
+                return output_parser(output)
 
         case _:
             raise ValueError(

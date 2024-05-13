@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security.api_key import APIKeyHeader
 from langchain_core.documents import Document
 from langchain_openai import ChatOpenAI
+from langchain_openai.embeddings.base import OpenAIEmbeddings
 from langchain_community.document_loaders import (
     PyPDFLoader,
     UnstructuredODTLoader,
@@ -21,7 +22,7 @@ from langchain_community.document_loaders import (
     UnstructuredURLLoader,
     # SeleniumURLLoader
 )
-from abrege.summary_chain import summarize_chain_builder
+from abrege.summary_chain import summarize_chain_builder, EmbeddingModel
 
 
 DOCUMENT_LOADER_DICT = {
@@ -54,15 +55,19 @@ async def lifespan(_: FastAPI):
     #     model_class = "HuggingFaceEmbeddings"
     #     embedding_model = EmbeddingModel(embeddings, model_class)
 
-    OPENAI_API_BASE = os.environ.get("OPENAI_API_BASE", default=None)
-    OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", default=None)
-    MODEL_LIST_BASE = os.environ.get("MODEL_LIST_BASE", default=None)
+    OPENAI_API_BASE = os.environ.get("OPENAI_API_BASE")
+    OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+    MODEL_LIST_BASE = os.environ.get("MODEL_LIST_BASE")
+    OPENAI_EMBEDDDING_KEY = os.environ.get("OPENAI_EMBEDDING_API_KEY")
+    OPENAI_EMBEDDING_BASE = os.environ.get("OPENAI_EMBEDDING_API_BASE")
 
     if all(
         (
             MODEL_LIST_BASE,
             OPENAI_API_BASE,
             OPENAI_API_KEY,
+            OPENAI_EMBEDDDING_KEY,
+            OPENAI_EMBEDDING_BASE,
         )
     ):
         # Load the models
@@ -72,6 +77,7 @@ async def lifespan(_: FastAPI):
         if response.status_code == 200:
             models_list = json.loads(response.text)["data"]
             model_id = [model["id"] for model in models_list]
+            logger.info(f"Model available : {model_id}")
             context["models"] = model_id
 
             def chat_builder(model: str = "mixtral", temperature: int = 0):
@@ -88,6 +94,12 @@ async def lifespan(_: FastAPI):
                 return llm
 
             context["chat_builder"] = chat_builder
+
+            embedding_model = OpenAIEmbeddings(
+                api_key=OPENAI_EMBEDDDING_KEY, openai_api_base=OPENAI_EMBEDDING_BASE
+            )
+            embedding_model = EmbeddingModel(embedding_model)
+            context["embedding_model"] = embedding_model
         else:
 
             logger.critical(
@@ -100,6 +112,7 @@ async def lifespan(_: FastAPI):
                 pass
 
             context["chat_builder"] = none_func
+            context["embedding_model"] = None
             error_flag = 1
 
     else:
@@ -119,8 +132,6 @@ async def lifespan(_: FastAPI):
 
     # model_class = "HuggingFaceEmbeddings"
     # embedding_model = EmbeddingModel(embeddings, model_class)
-
-    context["embedding_model"] = None
 
     if not error_flag:
         logger.info("======== Lifespan initialization done =========")
@@ -158,7 +169,9 @@ async def healthcheck():
     return
 
 
-MethodType = Literal["map_reduce", "refine", "text_rank", "k-means"]
+MethodType = Literal[
+    "map_reduce", "refine", "text_rank", "k-means", "text_rank2", "stuff"
+]
 ChunkType = Literal["sentences", "chunks"]
 
 

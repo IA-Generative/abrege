@@ -105,7 +105,7 @@ class EmbeddingModel:
                 return embeddings
 
             case "OpenAIEmbeddings":
-                embeddings = self._model.embed_documents(list_chunk)
+                embeddings = self._model.embed_query("say what")
                 return np.array(embeddings)
 
             case _:
@@ -114,16 +114,6 @@ class EmbeddingModel:
                     model_class : {type(self._model)}
                     , supported class are {get_args(ModelType)}"""
                 )
-
-    @staticmethod
-    def from_hugging_hub_sentence_transformer(
-        model_path: str,
-    ) -> "EmbeddingModel":
-        from sentence_transformers import (
-            SentenceTransformer,
-        )
-
-        return EmbeddingModel(SentenceTransformer(model_path), "hugging_hub")
 
 
 def split_sentences(text: str) -> list[str]:
@@ -291,7 +281,7 @@ def build_text_prompt_kmeans(
     n_clusters: int = 10,
     *,
     chunk_type: Literal["sentences", "chunks"] = "chunks",
-) -> str:
+) -> list[str]:
     """Build an extractive summary using k-means algorithm
     for each cluster, extract the closet chunk to the center and add it to the
     summary
@@ -358,19 +348,17 @@ def build_text_prompt_kmeans(
     # Finally return the chunk in order
     chunk_idx.sort()
 
-    res = "".join(list_chunk[idx] for idx in chunk_idx)
-    # Skip the last space ^^
-    return res
+    return [list_chunk[idx] for idx in chunk_idx]
 
 
-def build_text_prompt(
+def build_text_prompt_text_rank(
     text: str,
     size: int,
     embedding_model: EmbeddingModel,
     *,
     chunk_type: Literal["sentences", "chunks"] = "sentences",
     chunk_size: int = 200,
-) -> str:
+) -> list[str]:
     """
     Build from the text the extractive summary using TextRank algorithm that
     fit size
@@ -420,9 +408,8 @@ def build_text_prompt(
 
     # Sort result sentences to have them in same order as in the text
     idx_result.sort()
-    result_text = "".join(list_chunks[idx_chunk] for idx_chunk in idx_result)
 
-    return result_text
+    return [list_chunks[idx] for idx in idx_result]
 
 
 if __name__ == "__main__":

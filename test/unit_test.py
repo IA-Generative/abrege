@@ -3,7 +3,7 @@ import numpy as np
 
 from abrege.extractive_summary import (
     EmbeddingModel,
-    build_text_prompt,
+    build_text_prompt_text_rank,
     build_text_prompt_kmeans,
     build_weight,
     split_sentences,
@@ -147,7 +147,7 @@ class TestExtractiveSummary:
             embedding_model=self.mock_embedding_model,
         )
 
-        assert extractive_summary == (
+        assert "".join(extractive_summary) == (
             "A sentence.Another sentence.Again another sentence.A final sentence."
         )
 
@@ -165,14 +165,14 @@ class TestExtractiveSummary:
         previous_encode = self.mock_embedding_model.encode
         self.mock_embedding_model.encode = custom_encode
 
-        extractive_summary = build_text_prompt(
+        extractive_summary = build_text_prompt_text_rank(
             text=small_text,
             size=max_code_len,
             embedding_model=self.mock_embedding_model,
             chunk_type="sentences",
         )
         assert (
-            extractive_summary
+            "".join(extractive_summary)
             == "A sentence.A sentence.A sentence.Again another sentence."
         )
 

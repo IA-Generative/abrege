@@ -21,6 +21,13 @@ def requires_env_var():
     )
 
 
+@pytest.fixture
+def big_file():
+    test_file = "test_data/Malo_Adler_Thesis.pdf"
+    files = {"file": ("Malo_Adler_Thesis.pdf", open(test_file, "rb"))}
+    return files
+
+
 class TestApp:
 
     @staticmethod
@@ -100,34 +107,34 @@ class TestApp:
 
     @staticmethod
     @requires_env_var()
-    def test_api_call_text_rank():
+    def test_api_call_text_rank(big_file):
         with TestClient(app) as client:
-            response = client.get("/text", params={"text": "J'aime le chocolat"})
-            assert response.status_code == 200
-
-    @staticmethod
-    @requires_env_var()
-    def test_api_call_k_means():
-        with TestClient(app) as client:
-            response = client.get(
-                "/text", params={"text": "J'aime le chocolat", "method": "k-means"}
+            response = client.post(
+                "/doc", files=big_file, params={"method": "text_rank"}
             )
             assert response.status_code == 200
 
     @staticmethod
     @requires_env_var()
-    def test_api_call_map_reduce():
+    def test_api_call_k_means(big_file):
         with TestClient(app) as client:
-            response = client.get(
-                "/text", params={"text": "J'aime le chocolat", "method": "map_reduce"}
+            response = client.post("/doc", files=big_file, params={"method": "k-means"})
+            assert response.status_code == 200
+
+    @staticmethod
+    @requires_env_var()
+    @pytest.mark.slow
+    def test_api_call_map_reduce(big_file):
+        with TestClient(app) as client:
+            response = client.post(
+                "/doc", files=big_file, params={"method": "map_reduce"}
             )
             assert response.status_code == 200
 
     @staticmethod
     @requires_env_var()
-    def test_api_call_refine():
+    @pytest.mark.slow
+    def test_api_call_refine(big_file):
         with TestClient(app) as client:
-            response = client.get(
-                "/text", params={"text": "J'aime le chocolat", "method": "refine"}
-            )
+            response = client.post("/doc", files=big_file, params={"method": "refine"})
             assert response.status_code == 200
