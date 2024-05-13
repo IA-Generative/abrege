@@ -1,0 +1,27 @@
+version: "3.8"
+services:
+  dev:
+    build: 
+      dockerfile: .Dockerfile_dev
+    env_file:
+      - .env
+    volumes:
+      - type: bind
+        source: .
+        target: /app
+
+  prod_dev:
+    build: 
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    volumes:
+      - type: bind
+        source: .
+        target: /app
+  prod:
+    image: ghcr.io/ia-generative/abrege-abrege:latest
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"

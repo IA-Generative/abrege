@@ -159,7 +159,7 @@ jobs:
         with:
           method: kubeconfig
           kubeconfig: ${{ secrets.KUBECONFIG }}
-          context: abrege # dunno
+          context: abrege/127-0-0-1:16443/abrege # abrege # dunno
 
       #- uses: azure/k8s-create-secret@v4
       #  with:
