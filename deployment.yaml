@@ -58,7 +58,7 @@ spec:
 
       dnsPolicy: ClusterFirst
       imagePullSecrets:
-      - name: pull-secret
+      - name: github-regcred
       restartPolicy: Always
       schedulerName: default-scheduler
       terminationGracePeriodSeconds: 30
