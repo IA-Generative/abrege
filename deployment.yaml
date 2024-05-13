@@ -129,11 +129,11 @@ metadata:
     nginx.ingress.kubernetes.io/auth-realm: Authentication Required - demo
     nginx.ingress.kubernetes.io/auth-secret: basic-auth
     nginx.ingress.kubernetes.io/auth-type: basic
-  name: chatpi.numerique-interieur.com
+  name: abrege.numerique-interieur.com
 spec:
   ingressClassName: public
   rules:
-  - host: chatpi.numerique-interieur.com
+  - host: abrege.numerique-interieur.com
     http:
       paths:
       - backend:
@@ -145,5 +145,5 @@ spec:
         pathType: Prefix
   tls:
   - hosts:
-    - chatpi.numerique-interieur.com
-    secretName: chatpi.numerique-interieur.com-tls
+    - abrege.numerique-interieur.com
+    #secretName: chatpi.numerique-interieur.com-tls
