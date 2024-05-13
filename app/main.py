@@ -35,8 +35,7 @@ origins = (
     "http://localhost",
     "http://localhost:8080",
 )
-
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("uvicorn.error")
 context = {}
 
 
@@ -45,6 +44,7 @@ async def lifespan(_: FastAPI):
     """
     Load the resources used by the API (models, data)
     """
+    error_flag = 0
     # if 0:
     #     embeddings = HuggingFaceEmbeddings(
     #         model_name=os.environ["EMBEDDING_MODEL_PATH"]
@@ -72,7 +72,6 @@ async def lifespan(_: FastAPI):
         if response.status_code == 200:
             models_list = json.loads(response.text)["data"]
             model_id = [model["id"] for model in models_list]
-            logging.info(f"Model available for this instance: {model_id}")
             context["models"] = model_id
 
             def chat_builder(model: str = "mixtral", temperature: int = 0):
@@ -91,24 +90,27 @@ async def lifespan(_: FastAPI):
             context["chat_builder"] = chat_builder
         else:
 
-            logging.critical(
+            logger.critical(
                 f"""Models list not availble, error status code :
                 {response.status_code}, reason: {response.text}"""
             )
 
+            # For test without environnement variable
             def none_func(*args, **kwargs):
                 pass
 
             context["chat_builder"] = none_func
+            error_flag = 1
 
     else:
-        logging.critical("Problem loading environnement variable")
+        logger.critical("Problem loading environnement variable")
 
         # To ensure test pass
         def none_func(*args, **kwargs):
             pass
 
         context["chat_builder"] = none_func
+        error_flag = 1
 
     # embeddings = HuggingFaceEmbeddings(
     #     model_name=os.environ["EMBEDDING_MODEL_PATH"]
@@ -120,14 +122,18 @@ async def lifespan(_: FastAPI):
 
     context["embedding_model"] = None
 
-    logger.info("======== Lifespan initialization done =========")
+    if not error_flag:
+        logger.info("======== Lifespan initialization done =========")
+    else:
+        logger.error(
+            """Application startup has encoutered a problem and is not stable
+Please check the log and restart the application"""
+        )
 
     yield
     # Clean up the resources
     context.clear()
 
-
-logger = logging.getLogger()
 
 description = (Path(__file__).parent.parent / "README.md").read_text()
 
