@@ -118,6 +118,14 @@ class TestApp:
     @staticmethod
     @requires_env_var()
     @pytest.mark.slow
+    def test_api_call_stuff(big_file):
+        with TestClient(app) as client:
+            response = client.post("/doc", files=big_file, params={"method": "stuff"})
+        assert response.status_code == 200
+
+    @staticmethod
+    @requires_env_var()
+    @pytest.mark.slow
     def test_api_call_k_means(big_file):
         with TestClient(app) as client:
             response = client.post("/doc", files=big_file, params={"method": "k-means"})

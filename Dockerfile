@@ -22,8 +22,6 @@ WORKDIR /app
 COPY . .
 
 # Install abrege package
-RUN pip install poetry
-RUN poetry export -f requirements.txt --without-hashes > requirements.txt
 RUN pip install -e .
 
 # Creates a non-root user with an explicit UID and adds permission to access the /app folder

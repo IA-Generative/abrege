@@ -125,14 +125,6 @@ async def lifespan(_: FastAPI):
         context["chat_builder"] = none_func
         error_flag = 1
 
-    # embeddings = HuggingFaceEmbeddings(
-    #     model_name=os.environ["EMBEDDING_MODEL_PATH"]
-    # )  # plus de 13 min
-    # logger.info(f"Embedding model {repr(embeddings)} available")
-
-    # model_class = "HuggingFaceEmbeddings"
-    # embedding_model = EmbeddingModel(embeddings, model_class)
-
     if not error_flag:
         logger.info("======== Lifespan initialization done =========")
     else:
@@ -175,7 +167,7 @@ MethodType = Literal[
 ChunkType = Literal["sentences", "chunks"]
 
 
-@app.get("/url/{url}")
+@app.get("/url")
 def summarize_url(
     url: str,
     method: MethodType = "text_rank",
@@ -229,7 +221,7 @@ def summarize_url(
 
     res = [custom_chain.invoke(doc.page_content) for doc in data]
 
-    return "\n\n".join(res)
+    return "\n\n".join(res).strip()
 
 
 @app.get("/text")
@@ -346,7 +338,7 @@ async def summarize_doc(
 
     text = "".join(doc.page_content for doc in docs)
 
-    res = custom_chain.invoke(text)
+    res = custom_chain.invoke(text).strip()
 
     return {"summary": res}
 

@@ -2,10 +2,10 @@ import os
 from typing import Literal
 import concurrent.futures
 
-from langchain_openai import OpenAIEmbeddings
+from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
 from langchain.chains import MapReduceDocumentsChain, ReduceDocumentsChain
-from langchain.chains.combine_documents.stuff import StuffDocumentsChain
 from langchain.chains.llm import LLMChain
+from langchain.chains.combine_documents.stuff import StuffDocumentsChain
 from langchain.chains.summarize import load_summarize_chain
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_core.documents.base import Document
@@ -147,11 +147,11 @@ def summarize_chain_builder(
         OPENAI_EMBEDDING_API_KEY = os.environ["OPENAI_EMBEDDING_API_KEY"]
         OPENAI_EMBEDDING_API_BASE = os.environ["OPENAI_EMBEDDING_API_BASE"]
 
-        openai_ef = OpenAIEmbeddings(
-            api_key=OPENAI_EMBEDDING_API_KEY,
-            openai_api_base=OPENAI_EMBEDDING_API_BASE,
+        openai_ef = OpenAIEmbeddingFunction(
+            api_key=OPENAI_EMBEDDING_API_KEY, api_base=OPENAI_EMBEDDING_API_BASE
         )
-        embedding_model = EmbeddingModel(openai_ef)
+        embedding_model = EmbeddingModel(openai_ef)  # mal
+        assert embedding_model.model_class == "OpenAIEmbeddingFunction"
 
     if prompt_template is None:
         prompt_template = summarize_template
@@ -307,7 +307,7 @@ def summarize_chain_builder(
     def small_text_chain(text: str):
         if llm.get_num_tokens(text) < 3000:
             summarize_prompt = PromptTemplate.from_template(prompt_template)
-            simple_chain = LLMChain(llm=llm, prompt=summarize_prompt)
+            simple_chain = summarize_prompt | llm
             return simple_chain.invoke(text)
         else:
             return custom_chain.invoke(text)

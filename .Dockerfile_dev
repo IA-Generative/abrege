@@ -1,0 +1,18 @@
+FROM python:3.11.9-bookworm
+
+# Keeps Python from generating .pyc files in the container
+ENV PYTHONDONTWRITEBYTECODE 1
+# Turns off buffering for easier container logging
+ENV PYTHONUNBUFFERED 1
+
+# Install and setup poetry
+RUN pip install -U poetry
+ENV PATH="${PATH}:/root/.poetry/bin"
+
+WORKDIR /app
+
+COPY pyproject.toml ./
+
+RUN poetry install --no-interaction --no-ansi
+
+ENTRYPOINT ["tail", "-f", "/dev/null"]
