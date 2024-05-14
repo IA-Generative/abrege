@@ -23,8 +23,8 @@ def requires_env_var():
 
 @pytest.fixture
 def big_file():
-    test_file = "test_data/Malo_Adler_Thesis.pdf"
-    files = {"file": ("Malo_Adler_Thesis.pdf", open(test_file, "rb"))}
+    test_file = "test_data/2106.11520v2.pdf"
+    files = {"file": ("truc.pdf", open(test_file, "rb"))}
     return files
 
 
@@ -107,6 +107,7 @@ class TestApp:
 
     @staticmethod
     @requires_env_var()
+    @pytest.mark.slow
     def test_api_call_text_rank(big_file):
         with TestClient(app) as client:
             response = client.post(
@@ -116,6 +117,7 @@ class TestApp:
 
     @staticmethod
     @requires_env_var()
+    @pytest.mark.slow
     def test_api_call_k_means(big_file):
         with TestClient(app) as client:
             response = client.post("/doc", files=big_file, params={"method": "k-means"})
@@ -138,3 +140,23 @@ class TestApp:
         with TestClient(app) as client:
             response = client.post("/doc", files=big_file, params={"method": "refine"})
             assert response.status_code == 200
+
+    @staticmethod
+    @requires_env_var()
+    @pytest.mark.slow
+    def test_api_call_text_rank2(big_file):
+        with TestClient(app) as client:
+            response = client.post(
+                "/doc", files=big_file, params={"method": "text_rank2"}
+            )
+        assert response.status_code == 200
+
+    @staticmethod
+    @requires_env_var()
+    @pytest.mark.slow
+    def test_api_call_k_means2(big_file):
+        with TestClient(app) as client:
+            response = client.post(
+                "/doc", files=big_file, params={"method": "k-means2"}
+            )
+        assert response.status_code == 200

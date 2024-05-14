@@ -12,9 +12,9 @@ import uvicorn
 from fastapi import FastAPI, HTTPException, UploadFile, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security.api_key import APIKeyHeader
+from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
 from langchain_core.documents import Document
 from langchain_openai import ChatOpenAI
-from langchain_openai.embeddings.base import OpenAIEmbeddings
 from langchain_community.document_loaders import (
     PyPDFLoader,
     UnstructuredODTLoader,
@@ -80,7 +80,7 @@ async def lifespan(_: FastAPI):
             logger.info(f"Model available : {model_id}")
             context["models"] = model_id
 
-            def chat_builder(model: str = "mixtral", temperature: int = 0):
+            def chat_builder(model: str = "vicuna", temperature: int = 0):
                 if model not in model_id:
                     raise HTTPException(
                         400, detail=f"Model not available, avaible are {model_id}"
@@ -95,8 +95,8 @@ async def lifespan(_: FastAPI):
 
             context["chat_builder"] = chat_builder
 
-            embedding_model = OpenAIEmbeddings(
-                api_key=OPENAI_EMBEDDDING_KEY, openai_api_base=OPENAI_EMBEDDING_BASE
+            embedding_model = OpenAIEmbeddingFunction(
+                api_key=OPENAI_EMBEDDDING_KEY, api_base=OPENAI_EMBEDDING_BASE
             )
             embedding_model = EmbeddingModel(embedding_model)
             context["embedding_model"] = embedding_model
@@ -170,7 +170,7 @@ async def healthcheck():
 
 
 MethodType = Literal[
-    "map_reduce", "refine", "text_rank", "k-means", "text_rank2", "stuff"
+    "map_reduce", "refine", "text_rank", "k-means", "text_rank2", "stuff", "k-means2"
 ]
 ChunkType = Literal["sentences", "chunks"]
 
@@ -179,7 +179,7 @@ ChunkType = Literal["sentences", "chunks"]
 def summarize_url(
     url: str,
     method: MethodType = "text_rank",
-    model: str = "mixtral",
+    model: str = "vicuna",
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
     language: str = "English",
     prompt_template: str | None = None,
@@ -193,7 +193,7 @@ def summarize_url(
     method : MethodType, optional
         method to use to generate the summary, by default "text_rank"
     model : str, optional
-        llm to use, by default "mixtral"
+        llm to use, by default "vicuna"
     temperature : Annotated[float, Query, optional
         temperature parameter of the llm, by default 0, le=1.0)]=0
     language : str, optional
@@ -236,7 +236,7 @@ def summarize_url(
 async def summarize_txt(
     text: str,
     method: MethodType = "text_rank",
-    model: str = "mixtral",
+    model: str = "vicuna",
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
     language: str = "English",
     prompt_template: str | None = None,
@@ -250,7 +250,7 @@ async def summarize_txt(
     method : MethodType, optional
         method to use to generate the summary, by default "text_rank"
     model : str, optional
-        llm to use, by default "mixtral"
+        llm to use, by default "vicuna"
     temperature : Annotated[float, Query, optional
         temperature parameter of the llm, by default 0, le=1.0)]=0
     language : str, optional
@@ -283,7 +283,7 @@ async def summarize_txt(
 async def summarize_doc(
     file: UploadFile,
     method: MethodType = "text_rank",
-    model: str = "mixtral",
+    model: str = "vicuna",
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
     language: str = "English",
     prompt_template: str | None = None,
@@ -297,7 +297,7 @@ async def summarize_doc(
     method : MethodType, optional
         method to use to generate the summary, by default "text_rank"
     model : str, optional
-        llm to use, by default "mixtral"
+        llm to use, by default "vicuna"
     temperature : Annotated[float, Query, optional
         temperature parameter of the llm, by default 0, le=1.0)]=0
     language : str, optional
@@ -355,7 +355,7 @@ async def summarize_doc(
 async def summarize_multi_doc(
     files: List[UploadFile],
     method: MethodType = "k-means",
-    model: str = "mixtral",
+    model: str = "vicuna",
     one_summary: bool = False,
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
     language: str = "English",

@@ -1,5 +1,6 @@
 import os
 from typing import Literal
+import concurrent.futures
 
 from langchain_openai import OpenAIEmbeddings
 from langchain.chains import MapReduceDocumentsChain, ReduceDocumentsChain
@@ -82,9 +83,9 @@ map_prompt_template_tr2 = PromptTemplate(
 )
 
 combine_prompt = """
-You will be given a series of summaries from a book. The summaries will be enclosed in triple backticks (```)
-Your goal is to give a verbose summary of what happened in the story.
-The reader should be able to grasp what happened in the book.
+You will be given a series of summaries from a document. The summaries will be enclosed in triple backticks (```)
+Your goal is to give a verbose summary of what happened in the document.
+The reader should be able to grasp what are the main discussions of the document.
 
 ```{text}```
 VERBOSE SUMMARY:
@@ -94,13 +95,13 @@ combine_prompt_template = PromptTemplate(
 )
 
 MethodType = Literal[
-    "text_rank", "map_reduce", "refine", "k-means", "stuff", "text_rank2"
+    "text_rank", "map_reduce", "refine", "k-means", "stuff", "text_rank2", "k-means2"
 ]
 
 
 def summarize_chain_builder(
     llm=None,
-    llm_context_window_size: int = 2000,
+    llm_context_window_size: int = 10_000,
     embedding_model: EmbeddingModel = None,
     language: str = "english",
     method: MethodType = "text_rank",
@@ -155,129 +156,151 @@ def summarize_chain_builder(
     if prompt_template is None:
         prompt_template = summarize_template
 
-    match method:
-        case "text_rank":
+    if method == "text_rank":
 
-            @chain
-            def custom_chain(text):
-                extractive_summary = build_text_prompt_text_rank(
-                    text, llm_context_window_size, embedding_model, **kwargs
-                )
-                extractive_summary = "".join(extractive_summary)
-                summarize_prompt = PromptTemplate.from_template(prompt_template)
-                prompt1 = summarize_prompt.invoke({"text": extractive_summary})
-                output1 = llm.invoke(prompt1)
-                output_parser = StrOutputParser()
-                return output_parser.invoke(output1)
-
-        case "refine":
-
-            @chain
-            def custom_chain(text):
-                refine_chain = load_summarize_chain(
-                    llm=llm,
-                    chain_type="refine",
-                    question_prompt=question_prompt,
-                    refine_prompt=refine_prompt,
-                    return_intermediate_steps=True,
-                    input_key="input_documents",
-                    output_key="output_text",
-                )
-
-                text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
-                    chunk_size=4000, chunk_overlap=0
-                )
-                split_texts = text_splitter.split_text(text)
-                split_docs = [Document(page_content=text) for text in split_texts]
-                result = refine_chain.invoke(
-                    {"input_documents": split_docs}, return_only_outputs=True
-                )
-                return result["output_text"]
-
-        case "map_reduce":
-
-            @chain
-            def custom_chain(text):
-                map_chain = LLMChain(llm=llm, prompt=map_prompt)
-                reduce_chain = LLMChain(llm=llm, prompt=reduce_prompt)
-                combine_document_chain = StuffDocumentsChain(
-                    llm_chain=reduce_chain, document_variable_name="docs"
-                )
-
-                reduce_documents_chain = ReduceDocumentsChain(
-                    combine_documents_chain=combine_document_chain,
-                    collapse_documents_chain=combine_document_chain,
-                    token_max=4000,
-                )
-
-                map_reduce_chain = MapReduceDocumentsChain(
-                    llm_chain=map_chain,
-                    reduce_documents_chain=reduce_documents_chain,
-                    document_variable_name="docs",
-                    return_intermediate_steps=False,
-                )
-                text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
-                    chunk_size=4000, chunk_overlap=0
-                )
-                split_text = text_splitter.split_text(text)
-                split_docs = [Document(page_content=text) for text in split_text]
-                result = map_reduce_chain.invoke(split_docs)
-                return result["output_text"]
-
-        case "k-means":
-
-            @chain
-            def custom_chain(text: str):
-                extractive_summary = build_text_prompt_kmeans(
-                    text, llm_context_window_size, embedding_model, **kwargs
-                )
-                extractive_summary = "".join(extractive_summary)
-                summarize_prompt = PromptTemplate.from_template(prompt_template)
-                prompt1 = summarize_prompt.invoke({"text": extractive_summary})
-                output = llm.invoke(prompt1)
-                output_parser = StrOutputParser()
-                return output_parser.invoke(output)
-
-        case "stuff":
-
-            @chain
-            def custom_chain(text: str):
-                summarize_prompt = PromptTemplate.from_template(prompt_template)
-                llm_chain = LLMChain(llm=llm, prompt=summarize_prompt)
-                stuff_chain = StuffDocumentsChain(
-                    llm_chain=llm_chain, document_variable_name="text"
-                )
-                doc = Document(page_content=text)
-                return stuff_chain.invoke([doc])["output_text"]
-
-        case "text_rank2":
-
-            @chain
-            def custom_chain(text: str):
-                list_chunk = build_text_prompt_text_rank(
-                    text, llm_context_window_size, embedding_model, chunk_type="chunks"
-                )
-                map_chain = load_summarize_chain(
-                    llm=llm, chain_type="stuff", prompt=map_prompt_template_tr2
-                )
-                summary_list = ["" for _ in len(range(list_chunk))]
-                output_parser = StrOutputParser()
-                for i, chunk in enumerate(list_chunk):
-                    chunk_summary = output_parser.invoke(map_chain.invoke(chunk))
-                    summary_list.append(chunk_summary)
-
-                summaries = "\n".join(summary_list)
-                reduce_chain = load_summarize_chain(
-                    llm=llm, chain_type="stuff", prompt=combine_prompt_template
-                )
-                output = reduce_chain.invoke(summaries)
-                return output_parser(output)
-
-        case _:
-            raise ValueError(
-                f"""method should be one of 'text_rank', 'refine', 'k-means' or
-                'map_reduce', got {method}"""
+        @chain
+        def custom_chain(text):
+            extractive_summary = build_text_prompt_text_rank(
+                text, llm_context_window_size, embedding_model, **kwargs
             )
+            extractive_summary = "".join(extractive_summary)
+            summarize_prompt = PromptTemplate.from_template(prompt_template)
+            prompt1 = summarize_prompt.invoke({"text": extractive_summary})
+            output1 = llm.invoke(prompt1)
+            output_parser = StrOutputParser()
+            return output_parser.invoke(output1)
+
+    elif method == "refine":
+
+        @chain
+        def custom_chain(text):
+            refine_chain = load_summarize_chain(
+                llm=llm,
+                chain_type="refine",
+                question_prompt=question_prompt,
+                refine_prompt=refine_prompt,
+                return_intermediate_steps=True,
+                input_key="input_documents",
+                output_key="output_text",
+            )
+
+            text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
+                chunk_size=10_000, chunk_overlap=0
+            )
+            split_texts = text_splitter.split_text(text)
+            split_docs = [Document(page_content=text) for text in split_texts]
+            result = refine_chain.invoke(
+                {"input_documents": split_docs}, return_only_outputs=True
+            )
+            return result["output_text"]
+
+    elif method == "map_reduce":
+
+        @chain
+        def custom_chain(text):
+            map_chain = LLMChain(llm=llm, prompt=map_prompt)
+            reduce_chain = LLMChain(llm=llm, prompt=reduce_prompt)
+            combine_document_chain = StuffDocumentsChain(
+                llm_chain=reduce_chain, document_variable_name="docs"
+            )
+
+            reduce_documents_chain = ReduceDocumentsChain(
+                combine_documents_chain=combine_document_chain,
+                collapse_documents_chain=combine_document_chain,
+                token_max=10_000,
+            )
+
+            map_reduce_chain = MapReduceDocumentsChain(
+                llm_chain=map_chain,
+                reduce_documents_chain=reduce_documents_chain,
+                document_variable_name="docs",
+                return_intermediate_steps=False,
+            )
+            text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
+                chunk_size=10_000, chunk_overlap=0
+            )
+            split_text = text_splitter.split_text(text)
+            split_docs = [Document(page_content=text) for text in split_text]
+            result = map_reduce_chain.invoke(split_docs)
+            return result["output_text"]
+
+    elif method == "k-means":
+
+        @chain
+        def custom_chain(text: str):
+            extractive_summary = build_text_prompt_kmeans(
+                text, llm_context_window_size, embedding_model, **kwargs
+            )
+            extractive_summary = "".join(extractive_summary)
+            summarize_prompt = PromptTemplate.from_template(prompt_template)
+            prompt1 = summarize_prompt.invoke({"text": extractive_summary})
+            output = llm.invoke(prompt1)
+            output_parser = StrOutputParser()
+            return output_parser.invoke(output)
+
+    elif method == "stuff":
+
+        @chain
+        def custom_chain(text: str):
+            summarize_prompt = PromptTemplate.from_template(prompt_template)
+            llm_chain = LLMChain(llm=llm, prompt=summarize_prompt)
+            stuff_chain = StuffDocumentsChain(
+                llm_chain=llm_chain, document_variable_name="text"
+            )
+            doc = Document(page_content=text)
+            return stuff_chain.invoke([doc])["output_text"]
+
+    elif method == "text_rank2":
+
+        @chain
+        def custom_chain(text: str):
+            list_chunk = build_text_prompt_text_rank(
+                text, llm_context_window_size, embedding_model, chunk_type="chunks"
+            )
+            map_chain = load_summarize_chain(
+                llm=llm, chain_type="stuff", prompt=map_prompt_template_tr2
+            )
+            with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+                list_doc = [[Document(page_content=chunk)] for chunk in list_chunk]
+                future_summaries = executor.map(map_chain.invoke, list_doc)
+                summary_list = [summary["output_text"] for summary in future_summaries]
+
+            summaries = "\n".join(summary_list)
+            summaries = Document(page_content=summaries)
+            reduce_chain = load_summarize_chain(
+                llm=llm, chain_type="stuff", prompt=combine_prompt_template
+            )
+            output = reduce_chain.invoke([summaries])
+            return output["output_text"]
+
+    elif method == "k-means2":
+
+        @chain
+        def custom_chain(text: str):
+            list_chunk = build_text_prompt_kmeans(
+                text, 5000, embedding_model, chunk_type="chunks"
+            )
+            map_chain = load_summarize_chain(
+                llm=llm, chain_type="stuff", prompt=map_prompt_template_tr2
+            )
+            with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+                list_doc = [[Document(page_content=chunk)] for chunk in list_chunk]
+                future_summaries = executor.map(map_chain.invoke, list_doc)
+                summary_list = [summary["output_text"] for summary in future_summaries]
+
+            summaries = "\n".join(summary_list)
+            summaries = Document(page_content=summaries)
+            reduce_chain = load_summarize_chain(
+                llm=llm, chain_type="stuff", prompt=combine_prompt_template
+            )
+            output = reduce_chain.invoke([summaries])
+            return output["output_text"]
+
+    else:
+        raise ValueError(
+            f"""method should be one of 'text_rank', 'refine', 'k-means' or
+            'map_reduce', got {method}"""
+        )
 
     # Handle with a simple call to llm small text
     @chain

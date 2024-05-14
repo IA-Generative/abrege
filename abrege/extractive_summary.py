@@ -7,9 +7,7 @@ from typing import (
 import networkx as nx
 import nltk
 import tiktoken
-from langchain.text_splitter import (
-    RecursiveCharacterTextSplitter,
-)
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from sklearn.cluster import (
     KMeans,
 )
@@ -17,6 +15,10 @@ from sklearn.metrics import (
     pairwise_distances_argmin_min,
 )
 import numpy as np
+from transformers import AutoTokenizer
+
+
+tokenizer = AutoTokenizer.from_pretrained("OrdalieTech/Solon-embeddings-large-0.1")
 
 
 def openai_encode_multithreading(
@@ -38,7 +40,7 @@ def openai_encode_multithreading(
     list[list[int]]
         a list of embedded vectors
     """
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
         future_embedding = executor.map(
             model,
             [
@@ -267,8 +269,8 @@ def split_chunk(text: str, chunk_size: int = 300) -> list[str]:
     list[str]
         list of the chunks
     """
-    text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
-        chunk_size=chunk_size, chunk_overlap=0
+    text_splitter = RecursiveCharacterTextSplitter.from_huggingface_tokenizer(
+        tokenizer, chunk_size=chunk_size, chunk_overlap=30
     )
     split_text = text_splitter.split_text(text)
     return split_text
@@ -315,7 +317,7 @@ def build_text_prompt_kmeans(
         chunk_type == "chunks"
         and embedding_model.model_class == "OpenAIEmbeddingFunction"
     ):
-        chunk_size = 200  # Chunk size limit for OpenAIEmbeddingFunction
+        chunk_size = 512  # Chunk size limit for OpenAIEmbeddingFunction
         n_clusters = size // chunk_size + 1
         list_chunk = split_chunk(text, chunk_size)
     elif chunk_type == "sentences":
@@ -357,7 +359,7 @@ def build_text_prompt_text_rank(
     embedding_model: EmbeddingModel,
     *,
     chunk_type: Literal["sentences", "chunks"] = "sentences",
-    chunk_size: int = 200,
+    chunk_size: int = 1000,
 ) -> list[str]:
     """
     Build from the text the extractive summary using TextRank algorithm that
@@ -387,7 +389,9 @@ def build_text_prompt_text_rank(
     if chunk_type == "sentences":
         list_chunks = split_sentences(text)
     elif chunk_type == "chunks":
-        list_chunks = split_chunk(text, chunk_size)
+        if embedding_model.model_class == "OpenAIEmbeddingFunction":
+            chunk_size = 512  # token size limit for this class
+        list_chunks = split_chunk(text, chunk_size=chunk_size)
 
     chunk_idx_iterator = iter(text_rank_iterator(list_chunks, embedding_model))
 
