@@ -1,9 +1,31 @@
+import os
 from unittest import mock
 from fastapi.testclient import TestClient
 import pytest
 
 # Thanks to [tool.pytest.ini_options] section in pyproject.toml
 from main import app
+
+
+def requires_env_var():
+    var1 = os.environ.get("OPENAI_API_BASE", None)
+    var2 = os.environ.get("OPENAI_API_KEY", None)
+    var3 = os.environ.get("MODEL_LIST_BASE", None)
+    var4 = os.environ.get("OPENAI_EMBEDDING_API_BASE", None)
+    var5 = os.environ.get("OPENAI_EMBEDDING_API_KEY", None)
+
+    cond = all((var1, var2, var3, var4, var5))
+
+    return pytest.mark.skipif(
+        not cond, reason="Environnement doesn't have the variables set"
+    )
+
+
+@pytest.fixture
+def big_file():
+    test_file = "test_data/2106.11520v2.pdf"
+    files = {"file": ("truc.pdf", open(test_file, "rb"))}
+    return files
 
 
 class TestApp:
@@ -62,3 +84,87 @@ class TestApp:
             _ = client.post("/docs", files=files)
 
         mock.assert_called()
+
+    @staticmethod
+    @mock.patch("main.summarize_chain_builder")
+    def test_summarize_chain_builder_param(mock):
+        raw_text = "A great text to summarize"
+        with TestClient(app) as client:
+            client.get(
+                "/text",
+                params={
+                    "text": raw_text,
+                    "method": "map_reduce",
+                    "language": "French",
+                    "prompt_template": "abrege {text}",
+                },
+            )
+
+        mock.assert_called_once()
+        assert mock.call_args.kwargs["language"] == "French"
+        assert mock.call_args.kwargs["method"] == "map_reduce"
+        assert mock.call_args.kwargs["prompt_template"] == "abrege {text}"
+
+    @staticmethod
+    @requires_env_var()
+    @pytest.mark.slow
+    def test_api_call_text_rank(big_file):
+        with TestClient(app) as client:
+            response = client.post(
+                "/doc", files=big_file, params={"method": "text_rank"}
+            )
+            assert response.status_code == 200
+
+    @staticmethod
+    @requires_env_var()
+    @pytest.mark.slow
+    def test_api_call_stuff(big_file):
+        with TestClient(app) as client:
+            response = client.post("/doc", files=big_file, params={"method": "stuff"})
+        assert response.status_code == 200
+
+    @staticmethod
+    @requires_env_var()
+    @pytest.mark.slow
+    def test_api_call_k_means(big_file):
+        with TestClient(app) as client:
+            response = client.post("/doc", files=big_file, params={"method": "k-means"})
+            assert response.status_code == 200
+
+    @staticmethod
+    @requires_env_var()
+    @pytest.mark.slow
+    def test_api_call_map_reduce(big_file):
+        with TestClient(app) as client:
+            response = client.post(
+                "/doc", files=big_file, params={"method": "map_reduce"}
+            )
+            assert response.status_code == 200
+
+    @staticmethod
+    @requires_env_var()
+    @pytest.mark.slow
+    def test_api_call_refine(big_file):
+        with TestClient(app) as client:
+            response = client.post("/doc", files=big_file, params={"method": "refine"})
+            assert response.status_code == 200
+
+    @staticmethod
+    @requires_env_var()
+    @pytest.mark.slow
+    def test_api_call_text_rank2(big_file):
+        with TestClient(app) as client:
+            response = client.post(
+                "/doc", files=big_file, params={"method": "text_rank2"}
+            )
+        assert response.status_code == 200
+
+    @staticmethod
+    @requires_env_var()
+    @pytest.mark.slow
+    def test_api_call_k_means2(big_file):
+        with TestClient(app) as client:
+            response = client.post(
+                "/doc", files=big_file, params={"method": "k-means2"}
+            )
+        assert response.status_code == 200

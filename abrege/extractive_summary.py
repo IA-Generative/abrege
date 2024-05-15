@@ -7,9 +7,7 @@ from typing import (
 import networkx as nx
 import nltk
 import tiktoken
-from langchain.text_splitter import (
-    RecursiveCharacterTextSplitter,
-)
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from sklearn.cluster import (
     KMeans,
 )
@@ -17,6 +15,10 @@ from sklearn.metrics import (
     pairwise_distances_argmin_min,
 )
 import numpy as np
+from transformers import AutoTokenizer
+
+
+tokenizer = AutoTokenizer.from_pretrained("OrdalieTech/Solon-embeddings-large-0.1")
 
 
 def openai_encode_multithreading(
@@ -38,7 +40,7 @@ def openai_encode_multithreading(
     list[list[int]]
         a list of embedded vectors
     """
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
         future_embedding = executor.map(
             model,
             [
@@ -56,6 +58,7 @@ ModelType = Literal[
     "HuggingFaceEmbeddings",
     "OpenAIEmbeddingFunction",
     "SentenceTransformer",
+    "OpenAIEmbeddings",
 ]
 
 
@@ -66,16 +69,6 @@ class EmbeddingModel:
     -----------
     _model : Any
         model to wrap
-
-    Examples
-    -----------
-    >>> llm = OpenAIEmbeddingFunction(
-        api_key = your_api_key
-        api_base = your_api_base
-    )
-    >>> embedding_model = EmbeddingModel(llm, model_class="openai_ef")
-    >>> sentence_transformer = SentenceTransformer("some_path")
-    >>> embedding_model = EmbeddingModel(sentence_transformer, "hugging_hub")
 
     """
 
@@ -113,22 +106,16 @@ class EmbeddingModel:
                 )
                 return embeddings
 
+            case "OpenAIEmbeddings":
+                embeddings = self._model.embed_query("say what")
+                return np.array(embeddings)
+
             case _:
                 raise ValueError(
                     f"""EmbeddingModel.encode is not implemented for
                     model_class : {type(self._model)}
                     , supported class are {get_args(ModelType)}"""
                 )
-
-    @staticmethod
-    def from_hugging_hub_sentence_transformer(
-        model_path: str,
-    ) -> "EmbeddingModel":
-        from sentence_transformers import (
-            SentenceTransformer,
-        )
-
-        return EmbeddingModel(SentenceTransformer(model_path), "hugging_hub")
 
 
 def split_sentences(text: str) -> list[str]:
@@ -282,8 +269,8 @@ def split_chunk(text: str, chunk_size: int = 300) -> list[str]:
     list[str]
         list of the chunks
     """
-    text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
-        chunk_size=chunk_size, chunk_overlap=0
+    text_splitter = RecursiveCharacterTextSplitter.from_huggingface_tokenizer(
+        tokenizer, chunk_size=chunk_size, chunk_overlap=30
     )
     split_text = text_splitter.split_text(text)
     return split_text
@@ -296,7 +283,7 @@ def build_text_prompt_kmeans(
     n_clusters: int = 10,
     *,
     chunk_type: Literal["sentences", "chunks"] = "chunks",
-) -> str:
+) -> list[str]:
     """Build an extractive summary using k-means algorithm
     for each cluster, extract the closet chunk to the center and add it to the
     summary
@@ -330,7 +317,7 @@ def build_text_prompt_kmeans(
         chunk_type == "chunks"
         and embedding_model.model_class == "OpenAIEmbeddingFunction"
     ):
-        chunk_size = 200  # Chunk size limit for OpenAIEmbeddingFunction
+        chunk_size = 512  # Chunk size limit for OpenAIEmbeddingFunction
         n_clusters = size // chunk_size + 1
         list_chunk = split_chunk(text, chunk_size)
     elif chunk_type == "sentences":
@@ -363,19 +350,17 @@ def build_text_prompt_kmeans(
     # Finally return the chunk in order
     chunk_idx.sort()
 
-    res = "".join(list_chunk[idx] for idx in chunk_idx)
-    # Skip the last space ^^
-    return res
+    return [list_chunk[idx] for idx in chunk_idx]
 
 
-def build_text_prompt(
+def build_text_prompt_text_rank(
     text: str,
     size: int,
     embedding_model: EmbeddingModel,
     *,
     chunk_type: Literal["sentences", "chunks"] = "sentences",
-    chunk_size: int = 200,
-) -> str:
+    chunk_size: int = 1000,
+) -> list[str]:
     """
     Build from the text the extractive summary using TextRank algorithm that
     fit size
@@ -404,7 +389,9 @@ def build_text_prompt(
     if chunk_type == "sentences":
         list_chunks = split_sentences(text)
     elif chunk_type == "chunks":
-        list_chunks = split_chunk(text, chunk_size)
+        if embedding_model.model_class == "OpenAIEmbeddingFunction":
+            chunk_size = 512  # token size limit for this class
+        list_chunks = split_chunk(text, chunk_size=chunk_size)
 
     chunk_idx_iterator = iter(text_rank_iterator(list_chunks, embedding_model))
 
@@ -425,9 +412,8 @@ def build_text_prompt(
 
     # Sort result sentences to have them in same order as in the text
     idx_result.sort()
-    result_text = "".join(list_chunks[idx_chunk] for idx_chunk in idx_result)
 
-    return result_text
+    return [list_chunks[idx] for idx in idx_result]
 
 
 if __name__ == "__main__":

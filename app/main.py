@@ -12,6 +12,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException, UploadFile, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security.api_key import APIKeyHeader
+from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
 from langchain_core.documents import Document
 from langchain_openai import ChatOpenAI
 from langchain_community.document_loaders import (
@@ -21,8 +22,7 @@ from langchain_community.document_loaders import (
     UnstructuredURLLoader,
     # SeleniumURLLoader
 )
-import nltk
-from abrege.summary_chain import summarize_chain_builder
+from abrege.summary_chain import summarize_chain_builder, EmbeddingModel
 
 
 DOCUMENT_LOADER_DICT = {
@@ -36,8 +36,7 @@ origins = (
     "http://localhost",
     "http://localhost:8080",
 )
-
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("uvicorn.error")
 context = {}
 
 
@@ -46,6 +45,7 @@ async def lifespan(_: FastAPI):
     """
     Load the resources used by the API (models, data)
     """
+    error_flag = 0
     # if 0:
     #     embeddings = HuggingFaceEmbeddings(
     #         model_name=os.environ["EMBEDDING_MODEL_PATH"]
@@ -55,15 +55,19 @@ async def lifespan(_: FastAPI):
     #     model_class = "HuggingFaceEmbeddings"
     #     embedding_model = EmbeddingModel(embeddings, model_class)
 
-    OPENAI_API_BASE = os.environ.get("OPENAI_API_BASE", default=None)
-    OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", default=None)
-    MODEL_LIST_BASE = os.environ.get("MODEL_LIST_BASE", default=None)
+    OPENAI_API_BASE = os.environ.get("OPENAI_API_BASE")
+    OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+    MODEL_LIST_BASE = os.environ.get("MODEL_LIST_BASE")
+    OPENAI_EMBEDDDING_KEY = os.environ.get("OPENAI_EMBEDDING_API_KEY")
+    OPENAI_EMBEDDING_BASE = os.environ.get("OPENAI_EMBEDDING_API_BASE")
 
     if all(
         (
             MODEL_LIST_BASE,
             OPENAI_API_BASE,
             OPENAI_API_KEY,
+            OPENAI_EMBEDDDING_KEY,
+            OPENAI_EMBEDDING_BASE,
         )
     ):
         # Load the models
@@ -73,54 +77,66 @@ async def lifespan(_: FastAPI):
         if response.status_code == 200:
             models_list = json.loads(response.text)["data"]
             model_id = [model["id"] for model in models_list]
+            logger.info(f"Model available : {model_id}")
             context["models"] = model_id
+
+            def chat_builder(model: str = "vicuna", temperature: int = 0):
+                if model not in model_id:
+                    raise HTTPException(
+                        400, detail=f"Model not available, avaible are {model_id}"
+                    )
+                llm = ChatOpenAI(
+                    api_key=OPENAI_API_KEY,
+                    openai_api_base=OPENAI_API_BASE,
+                    model=model,
+                    temperature=temperature,
+                )
+                return llm
+
+            context["chat_builder"] = chat_builder
+
+            embedding_model = OpenAIEmbeddingFunction(
+                api_key=OPENAI_EMBEDDDING_KEY, api_base=OPENAI_EMBEDDING_BASE
+            )
+            embedding_model = EmbeddingModel(embedding_model)
+            context["embedding_model"] = embedding_model
         else:
-            logging.critical(
+
+            logger.critical(
                 f"""Models list not availble, error status code :
                 {response.status_code}, reason: {response.text}"""
             )
 
-        def chat_builder(model: str = "mixtral", temperature: int = 0):
-            if model not in model_id:
-                raise HTTPException(
-                    400, detail=f"Model not available, avaible are {model_id}"
-                )
-            llm = ChatOpenAI(
-                api_key=OPENAI_API_KEY,
-                openai_api_base=OPENAI_API_BASE,
-                model=model,
-                temperature=temperature,
-            )
-            return llm
+            # For test without environnement variable
+            def none_func(*args, **kwargs):
+                pass
 
-        context["chat_builder"] = chat_builder
+            context["chat_builder"] = none_func
+            context["embedding_model"] = None
+            error_flag = 1
+
     else:
-        logging.critical("Problem loading environnement variable")
+        logger.critical("Problem loading environnement variable")
 
         # To ensure test pass
         def none_func(*args, **kwargs):
             pass
 
         context["chat_builder"] = none_func
+        error_flag = 1
 
-    # embeddings = HuggingFaceEmbeddings(
-    #     model_name=os.environ["EMBEDDING_MODEL_PATH"]
-    # )  # plus de 13 min
-    # logger.info(f"Embedding model {repr(embeddings)} available")
-
-    # model_class = "HuggingFaceEmbeddings"
-    # embedding_model = EmbeddingModel(embeddings, model_class)
-
-    context["embedding_model"] = None
-    nltk.download("punkt")
-    logger.info("======== Lifespan initialization done =========")
+    if not error_flag:
+        logger.info("======== Lifespan initialization done =========")
+    else:
+        logger.error(
+            """Application startup has encoutered a problem and is not stable
+Please check the log and restart the application"""
+        )
 
     yield
     # Clean up the resources
     context.clear()
 
-
-logger = logging.getLogger()
 
 description = (Path(__file__).parent.parent / "README.md").read_text()
 
@@ -145,7 +161,9 @@ async def healthcheck():
     return
 
 
-MethodType = Literal["map_reduce", "refine", "text_rank", "k-means"]
+MethodType = Literal[
+    "map_reduce", "refine", "text_rank", "k-means", "text_rank2", "stuff", "k-means2"
+]
 ChunkType = Literal["sentences", "chunks"]
 
 
@@ -153,7 +171,7 @@ ChunkType = Literal["sentences", "chunks"]
 def summarize_url(
     url: str,
     method: MethodType = "text_rank",
-    model: str = "mixtral",
+    model: str = "vicuna",
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
     language: str = "English",
     prompt_template: str | None = None,
@@ -167,7 +185,7 @@ def summarize_url(
     method : MethodType, optional
         method to use to generate the summary, by default "text_rank"
     model : str, optional
-        llm to use, by default "mixtral"
+        llm to use, by default "vicuna"
     temperature : Annotated[float, Query, optional
         temperature parameter of the llm, by default 0, le=1.0)]=0
     language : str, optional
@@ -188,7 +206,7 @@ def summarize_url(
         embedding_model=context["embedding_model"],
         method=method,
         language=language,
-        summary_template=prompt_template,
+        prompt_template=prompt_template,
     )
 
     parsed_url = urlparse(url)
@@ -210,7 +228,7 @@ def summarize_url(
 async def summarize_txt(
     text: str,
     method: MethodType = "text_rank",
-    model: str = "mixtral",
+    model: str = "vicuna",
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
     language: str = "English",
     prompt_template: str | None = None,
@@ -224,7 +242,7 @@ async def summarize_txt(
     method : MethodType, optional
         method to use to generate the summary, by default "text_rank"
     model : str, optional
-        llm to use, by default "mixtral"
+        llm to use, by default "vicuna"
     temperature : Annotated[float, Query, optional
         temperature parameter of the llm, by default 0, le=1.0)]=0
     language : str, optional
@@ -245,10 +263,10 @@ async def summarize_txt(
         embedding_model=context["embedding_model"],
         method=method,
         language=language,
-        summary_template=prompt_template,
+        prompt_template=prompt_template,
     )
 
-    res = custom_chain.invoke(text).strip()
+    res = custom_chain.invoke(text)
 
     return {"summary": res}
 
@@ -257,7 +275,7 @@ async def summarize_txt(
 async def summarize_doc(
     file: UploadFile,
     method: MethodType = "text_rank",
-    model: str = "mixtral",
+    model: str = "vicuna",
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
     language: str = "English",
     prompt_template: str | None = None,
@@ -271,7 +289,7 @@ async def summarize_doc(
     method : MethodType, optional
         method to use to generate the summary, by default "text_rank"
     model : str, optional
-        llm to use, by default "mixtral"
+        llm to use, by default "vicuna"
     temperature : Annotated[float, Query, optional
         temperature parameter of the llm, by default 0, le=1.0)]=0
     language : str, optional
@@ -293,7 +311,7 @@ async def summarize_doc(
         embedding_model=context["embedding_model"],
         method=method,
         language=language,
-        summary_template=prompt_template,
+        prompt_template=prompt_template,
     )
 
     if file.filename is not None:
@@ -329,7 +347,7 @@ async def summarize_doc(
 async def summarize_multi_doc(
     files: List[UploadFile],
     method: MethodType = "k-means",
-    model: str = "mixtral",
+    model: str = "vicuna",
     one_summary: bool = False,
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
     language: str = "English",
@@ -348,7 +366,7 @@ async def summarize_multi_doc(
             embedding_model=context["embedding_model"],
             method="stuff",
             language=language,
-            summary_template=prompt_template,
+            prompt_template=prompt_template,
         )
         docs = [Document(page_content=summary) for summary in summaries]
         summaries = [custom_chain.invoke(docs)]
