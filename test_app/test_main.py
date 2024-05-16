@@ -96,14 +96,14 @@ class TestApp:
                     "text": raw_text,
                     "method": "map_reduce",
                     "language": "French",
-                    "prompt_template": "abrege {text}",
+                    "summarize_template": "abrege {text}",
                 },
             )
 
         mock.assert_called_once()
         assert mock.call_args.kwargs["language"] == "French"
         assert mock.call_args.kwargs["method"] == "map_reduce"
-        assert mock.call_args.kwargs["prompt_template"] == "abrege {text}"
+        assert mock.call_args.kwargs["summarize_template"] == "abrege {text}"
 
     @staticmethod
     @requires_env_var()
@@ -151,7 +151,25 @@ class TestApp:
 
     @staticmethod
     @requires_env_var()
+    def test_api_call_full_param(big_file):
+        with TestClient(app) as client:
+            response = client.post(
+                "/doc",
+                files=big_file,
+                params={
+                    "method": "k-means",
+                    "language": "French",
+                    "model": "vicuna",
+                    "summarize template": "resume {text}",
+                    "temperature": 1,
+                },
+            )
+        assert response.status_code == 200
+
+    @staticmethod
+    @requires_env_var()
     @pytest.mark.slow
+    @pytest.mark.skip(reason="Too slow, experimental, may be removed")
     def test_api_call_text_rank2(big_file):
         with TestClient(app) as client:
             response = client.post(
@@ -162,6 +180,7 @@ class TestApp:
     @staticmethod
     @requires_env_var()
     @pytest.mark.slow
+    @pytest.mark.skip(reason="Too slow, experimental, may be removed")
     def test_api_call_k_means2(big_file):
         with TestClient(app) as client:
             response = client.post(
