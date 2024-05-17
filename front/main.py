@@ -43,6 +43,13 @@ params["temperature"] = st.sidebar.number_input(
 params["language"] = st.sidebar.text_input(
     label="Choisissez un language pour le résumé", value="French"
 )
+params["size"] = st.sidebar.number_input(
+    label="Choissisez un nombre de mots pour votre résumé",
+    min_value=50,
+    max_value=300,
+    step=1,
+    value=200,
+)
 st.sidebar.header("Personalisation des prompts")
 
 expander1 = st.sidebar.expander("Prompt pour les méthodes text_rank, k-means et stuff")

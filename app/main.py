@@ -128,6 +128,7 @@ async def lifespan(_: FastAPI):
             pass
 
         context["chat_builder"] = none_func
+        context["embedding_model"] = None
         error_flag = 1
 
     if not error_flag:
@@ -179,6 +180,7 @@ def summarize_url(
     model: str = "vicuna",
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
     language: str = "English",
+    size: int = 200,
     summarize_template: str | None = None,
     map_template: str | None = None,
     reduce_template: str | None = None,
@@ -199,6 +201,9 @@ def summarize_url(
         temperature parameter of the llm, by default 0, le=1.0)]=0
     language : str, optional
         language to use to write the summary, by default "English"
+    size : int
+        size of the final summary, in words
+        default to 200
     summarize_template: str | None
         basic template for text_rank, k-means and small text
     map_template: str | None
@@ -222,6 +227,7 @@ def summarize_url(
         embedding_model=context["embedding_model"],
         method=method,
         language=language,
+        size=size,
         summarize_template=summarize_template,
         map_template=map_template,
         reduce_template=reduce_template,
@@ -252,6 +258,7 @@ async def summarize_txt(
     model: str = "vicuna",
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
     language: str = "English",
+    size: int = 200,
     summarize_template: str | None = None,
     map_template: str | None = None,
     reduce_template: str | None = None,
@@ -272,6 +279,9 @@ async def summarize_txt(
         temperature parameter of the llm, by default 0, le=1.0)]=0
     language : str, optional
         language to use to write the summary, by default "English"
+    size : int
+        size of the final summary, in words
+        default to 200
     summarize_template: str | None
         basic template for text_rank, k-means and small text
     map_template: str | None
@@ -295,6 +305,7 @@ async def summarize_txt(
         embedding_model=context["embedding_model"],
         method=method,
         language=language,
+        size=size,
         summarize_template=summarize_template,
         map_template=map_template,
         reduce_template=reduce_template,
@@ -314,6 +325,7 @@ async def summarize_doc(
     model: str = "vicuna",
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
     language: str = "English",
+    size: int = 200,
     summarize_template: str | None = None,
     map_template: str | None = None,
     reduce_template: str | None = None,
@@ -334,6 +346,9 @@ async def summarize_doc(
         temperature parameter of the llm, by default 0, le=1.0)]=0
     language : str, optional
         language to use to write the summary, by default "English"
+    size : int
+        size of the final summary, in words
+        default to 200
     summarize_template: str | None
         basic template for text_rank, k-means and small text
     map_template: str | None
@@ -359,6 +374,7 @@ async def summarize_doc(
         embedding_model=context["embedding_model"],
         method=method,
         language=language,
+        size=size,
         summarize_template=summarize_template,
         map_template=map_template,
         reduce_template=reduce_template,
@@ -403,6 +419,7 @@ async def summarize_multi_doc(
     one_summary: bool = False,
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
     language: str = "English",
+    size: int = 200,
     summarize_template: str | None = None,
     map_template: str | None = None,
     reduce_template: str | None = None,
@@ -422,6 +439,7 @@ async def summarize_multi_doc(
             embedding_model=context["embedding_model"],
             method="stuff",
             language=language,
+            size=size,
             summarize_template=summarize_template,
             map_template=map_template,
             reduce_template=reduce_template,

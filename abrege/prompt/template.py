@@ -1,8 +1,8 @@
 summarize_template = """
-Write a summary of the following text:
+Write a summary of the following text, delimited by triple backticks, in at most {size} words:
 {text}
 SUMMARY:
-"""
+"""  # noqa
 
 map_template = """The following is a set of documents
 {docs}
@@ -11,12 +11,12 @@ Helpful Answer:"""
 
 reduce_template = """The following is set of summaries
 {docs}
-Take these and distill it into a final, consolidated summary written of the main themes.
-Helpful Answer:"""
+Take these and distill it into a final, consolidated summary written of the main themes in at most {size} words.
+Helpful Answer:"""  # noqa
 
-question_prompt_template = """Write a concise summary of the following :
+question_prompt_template = """Write a concise summary of the following in a most {size} words:
 {text}
-CONCISE SUMMARY:"""
+CONCISE SUMMARY:"""  # noqa
 
 refine_template = """
 Your job is to produce a final summary
@@ -24,7 +24,7 @@ We have provided an existing summary up to a certain point{existing_answer}:
 We have the opportunity to refine the existing summary (only if needed)
 with some more context below enclosed in triple backstick
 ´´´{text}´´´
-Given the new context, refine the original summary
+Given the new context, refine the original summary in at most {size} words.
 If the context isn't useful, return the original summary
 """
 

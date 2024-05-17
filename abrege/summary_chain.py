@@ -43,6 +43,7 @@ def summarize_chain_builder(
     llm_context_window_size: int = 10_000,
     language: str = "english",
     method: MethodType = "text_rank",
+    size: int = 200,
     summarize_template: str | None = None,
     map_template: str | None = None,
     reduce_template: str | None = None,
@@ -99,7 +100,9 @@ def summarize_chain_builder(
             if summarize_template is None:
                 summarize_template = prompt_template["summarize"]
             summarize_prompt = PromptTemplate.from_template(summarize_template)
-            prompt1 = summarize_prompt.invoke({"text": extractive_summary})
+            prompt1 = summarize_prompt.invoke(
+                {"text": extractive_summary, "size": size}
+            )
             output1 = llm.invoke(prompt1)
             output_parser = StrOutputParser()
             return output_parser.invoke(output1)
@@ -133,7 +136,7 @@ def summarize_chain_builder(
             split_texts = text_splitter.split_text(text)
             split_docs = [Document(page_content=text) for text in split_texts]
             result = refine_chain.invoke(
-                {"input_documents": split_docs}, return_only_outputs=True
+                {"input_documents": split_docs, "size": size}, return_only_outputs=True
             )
             return result["output_text"]
 
@@ -173,7 +176,9 @@ def summarize_chain_builder(
             )
             split_text = text_splitter.split_text(text)
             split_docs = [Document(page_content=text) for text in split_text]
-            result = map_reduce_chain.invoke(split_docs)
+            result = map_reduce_chain.invoke(
+                {"input_documents": split_docs, "size": size}
+            )
             return result["output_text"]
 
     elif method == "k-means":
@@ -189,7 +194,7 @@ def summarize_chain_builder(
                 text, llm_context_window_size, embedding_model, **kwargs
             )
             extractive_summary = "".join(extractive_summary)
-            prompt1 = summarize_prompt.invoke({"text": extractive_summary})
+            prompt1 = summarize_prompt.invoke({"text": text, "size": size})
             output = llm.invoke(prompt1)
             output_parser = StrOutputParser()
             return output_parser.invoke(output)
@@ -208,7 +213,9 @@ def summarize_chain_builder(
                 llm_chain=llm_chain, document_variable_name="text"
             )
             doc = Document(page_content=text)
-            return stuff_chain.invoke([doc])["output_text"]
+            return stuff_chain.invoke({"input_documents": [doc], "size": size})[
+                "output_text"
+            ]
 
     elif method == "text_rank2":
 
@@ -274,7 +281,9 @@ def summarize_chain_builder(
             nonlocal summarize_template
             if summarize_template is None:
                 summarize_template = prompt_template["summarize"]
-            summarize_prompt = PromptTemplate.from_template(summarize_template)
+            summarize_prompt = PromptTemplate.from_template(
+                {"text": text, "size": size}
+            )
             # Deprecated
             simple_chain = LLMChain(llm=llm, prompt=summarize_prompt)
             return simple_chain.invoke(text)
