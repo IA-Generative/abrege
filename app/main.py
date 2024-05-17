@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, get_args
 import requests
 import json
 import logging
@@ -22,7 +22,11 @@ from langchain_community.document_loaders import (
     UnstructuredURLLoader,
     # SeleniumURLLoader
 )
-from abrege.summary_chain import summarize_chain_builder, EmbeddingModel
+from abrege.summary_chain import (
+    summarize_chain_builder,
+    EmbeddingModel,
+    prompt_template,
+)
 
 
 DOCUMENT_LOADER_DICT = {
@@ -35,6 +39,7 @@ origins = (
     "https://sie.numerique-interieur.com",
     "http://localhost",
     "http://localhost:8080",
+    "http://localhost:8501",
 )
 logger = logging.getLogger("uvicorn.error")
 context = {}
@@ -174,7 +179,11 @@ def summarize_url(
     model: str = "vicuna",
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
     language: str = "English",
-    prompt_template: str | None = None,
+    summarize_template: str | None = None,
+    map_template: str | None = None,
+    reduce_template: str | None = None,
+    question_template: str | None = None,
+    refine_template: str | None = None,
 ):
     """Generate a summary of text found by resolving the url
 
@@ -190,9 +199,16 @@ def summarize_url(
         temperature parameter of the llm, by default 0, le=1.0)]=0
     language : str, optional
         language to use to write the summary, by default "English"
-    prompt_template : str | None, optional
-        prompt template used to ask for a summary, should contain a '{text}'
-        by default None, will result to a basic summary prompt
+    summarize_template: str | None
+        basic template for text_rank, k-means and small text
+    map_template: str | None
+        map template for map_reduce method
+    reduce_template: str | None
+        reduce template for map_reduce method
+    question_template: str | None
+        question template for refine method
+    refine_template: str | None
+        refine template for refine method
 
     Returns
     -------
@@ -206,7 +222,11 @@ def summarize_url(
         embedding_model=context["embedding_model"],
         method=method,
         language=language,
-        prompt_template=prompt_template,
+        summarize_template=summarize_template,
+        map_template=map_template,
+        reduce_template=reduce_template,
+        question_template=question_template,
+        refine_template=refine_template,
     )
 
     parsed_url = urlparse(url)
@@ -221,7 +241,8 @@ def summarize_url(
 
     res = [custom_chain.invoke(doc.page_content) for doc in data]
 
-    return "\n\n".join(res).strip()
+    res = "\n\n".join(res).strip()
+    return {"summary": res}
 
 
 @app.get("/text")
@@ -231,7 +252,11 @@ async def summarize_txt(
     model: str = "vicuna",
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
     language: str = "English",
-    prompt_template: str | None = None,
+    summarize_template: str | None = None,
+    map_template: str | None = None,
+    reduce_template: str | None = None,
+    question_template: str | None = None,
+    refine_template: str | None = None,
 ):
     """Generate a summary of the raw text
 
@@ -247,9 +272,16 @@ async def summarize_txt(
         temperature parameter of the llm, by default 0, le=1.0)]=0
     language : str, optional
         language to use to write the summary, by default "English"
-    prompt_template : str | None, optional
-        prompt template used to ask for a summary, should contain a '{text}'
-        by default None, will result to a basic summary prompt
+    summarize_template: str | None
+        basic template for text_rank, k-means and small text
+    map_template: str | None
+        map template for map_reduce method
+    reduce_template: str | None
+        reduce template for map_reduce method
+    question_template: str | None
+        question template for refine method
+    refine_template: str | None
+        refine template for refine method
 
     Returns
     -------
@@ -263,7 +295,11 @@ async def summarize_txt(
         embedding_model=context["embedding_model"],
         method=method,
         language=language,
-        prompt_template=prompt_template,
+        summarize_template=summarize_template,
+        map_template=map_template,
+        reduce_template=reduce_template,
+        question_template=question_template,
+        refine_template=refine_template,
     )
 
     res = custom_chain.invoke(text)
@@ -278,7 +314,11 @@ async def summarize_doc(
     model: str = "vicuna",
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
     language: str = "English",
-    prompt_template: str | None = None,
+    summarize_template: str | None = None,
+    map_template: str | None = None,
+    reduce_template: str | None = None,
+    question_template: str | None = None,
+    refine_template: str | None = None,
 ):
     """Generate a summary of the file
 
@@ -294,9 +334,17 @@ async def summarize_doc(
         temperature parameter of the llm, by default 0, le=1.0)]=0
     language : str, optional
         language to use to write the summary, by default "English"
-    prompt_template : str | None, optional
-        prompt template used to ask for a summary, should contain a '{text}'
-        by default None, will result to a basic summary prompt
+    summarize_template: str | None
+        basic template for text_rank, k-means and small text
+    map_template: str | None
+        map template for map_reduce method
+    reduce_template: str | None
+        reduce template for map_reduce method
+    question_template: str | None
+        question template for refine method
+    refine_template: str | None
+        refine template for refine method
+
 
     Returns
     -------
@@ -311,7 +359,11 @@ async def summarize_doc(
         embedding_model=context["embedding_model"],
         method=method,
         language=language,
-        prompt_template=prompt_template,
+        summarize_template=summarize_template,
+        map_template=map_template,
+        reduce_template=reduce_template,
+        question_template=question_template,
+        refine_template=refine_template,
     )
 
     if file.filename is not None:
@@ -351,7 +403,11 @@ async def summarize_multi_doc(
     one_summary: bool = False,
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
     language: str = "English",
-    prompt_template: str | None = None,
+    summarize_template: str | None = None,
+    map_template: str | None = None,
+    reduce_template: str | None = None,
+    question_template: str | None = None,
+    refine_template: str | None = None,
 ):
 
     summaries = []
@@ -366,12 +422,32 @@ async def summarize_multi_doc(
             embedding_model=context["embedding_model"],
             method="stuff",
             language=language,
-            prompt_template=prompt_template,
+            summarize_template=summarize_template,
+            map_template=map_template,
+            reduce_template=reduce_template,
+            question_template=question_template,
+            refine_template=refine_template,
         )
         docs = [Document(page_content=summary) for summary in summaries]
         summaries = [custom_chain.invoke(docs)]
 
     return {"summaries": summaries}
+
+
+@app.get("/models")
+async def list_model():
+    """Get a list a available mode for the api"""
+    return context["models"]
+
+
+@app.get("/default_params")
+async def param():
+    """Generate a dict of default param of the app"""
+    return {
+        "models": context["models"],
+        "methods": get_args(MethodType),
+        "prompt_template": prompt_template,
+    }
 
 
 if __name__ == "__main__":
