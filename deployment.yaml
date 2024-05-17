@@ -24,8 +24,6 @@ spec:
       containers:
       - name: abrege
         image: ghcr.io/ia-generative/abrege-abrege:latest
-#        command: ["npm", "run"]
-#        args: ["$(NODE_ENV)"]
         env:
         - name: OPENAI_API_KEY
           valueFrom:
@@ -55,51 +53,12 @@ spec:
         ports:
         - containerPort: 8000
           protocol: TCP
-#        volumeMounts:
-#        - name: abrege-code
-#          mountPath: /usr/src/app
-#        - name: abrege-node-modules
-#          mountPath: /usr/src/app/node_modules
-
       dnsPolicy: ClusterFirst
       imagePullSecrets:
       - name: github-regcred
       restartPolicy: Always
       schedulerName: default-scheduler
       terminationGracePeriodSeconds: 30
-
-#      volumes:
-#      - name: abrege-code
-#        persistentVolumeClaim:
-#          claimName: abrege-code-pvc
-#      - name: abrege-node-modules
-#        persistentVolumeClaim:
-#          claimName: abrege-node-modules-pvc
-
----
-# pvc.yaml
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: abrege-code-pvc
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 1Gi
-
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: abrege-node-modules-pvc
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 500Mi
 ---
 # service.yaml
 apiVersion: v1
