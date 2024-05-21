@@ -410,9 +410,9 @@ async def summarize_doc(
                 raise HTTPException(status_code=422, detail="too_short")
 
     text = "".join(doc.page_content for doc in docs)
-    print(f"Voici le texte extrait: {type(text)}")
 
-    res = custom_chain.invoke(text).strip()
+    res = custom_chain.invoke(text)
+    res = res.strip()
 
     return {"summary": res}
 

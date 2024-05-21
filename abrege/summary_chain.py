@@ -40,7 +40,7 @@ MethodType = Literal[
 def summarize_chain_builder(
     llm,
     embedding_model: EmbeddingModel = None,
-    llm_context_window_size: int = 10_000,
+    llm_context_window_size: int = 2_000,
     language: str = "english",
     method: MethodType = "text_rank",
     size: int = 200,
@@ -281,12 +281,10 @@ def summarize_chain_builder(
             nonlocal summarize_template
             if summarize_template is None:
                 summarize_template = prompt_template["summarize"]
-            summarize_prompt = PromptTemplate.from_template(
-                {"text": text, "size": size}
-            )
-            # Deprecated
-            simple_chain = LLMChain(llm=llm, prompt=summarize_prompt)
-            return simple_chain.invoke(text)
+            summarize_prompt = PromptTemplate.from_template(summarize_template)
+            simple_chain = summarize_prompt | llm
+            simple_summary = simple_chain.invoke({"text": text, "size": size})
+            return simple_summary.content
         else:
             return custom_chain.invoke(text)
 

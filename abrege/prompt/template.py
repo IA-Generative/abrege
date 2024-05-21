@@ -1,6 +1,6 @@
 summarize_template = """
 Write a summary of the following text, delimited by triple backticks, in at most {size} words:
-{text}
+´´´{text}´´´
 SUMMARY:
 """  # noqa
 
