@@ -199,4 +199,4 @@ class TestApp:
             response = client.post("/doc", files=files)
 
         assert response.status_code == 422
-        assert response.json() == {"detail": "scanned_document"}
+        assert response.json() == {"detail": "Text retrieved from documents too short"}

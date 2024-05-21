@@ -40,7 +40,7 @@ MethodType = Literal[
 def summarize_chain_builder(
     llm,
     embedding_model: EmbeddingModel = None,
-    llm_context_window_size: int = 2_000,
+    context_size: int = 10_000,
     language: str = "english",
     method: MethodType = "text_rank",
     size: int = 200,
@@ -61,7 +61,7 @@ def summarize_chain_builder(
     embedding_model: Model = None
         model chosen for embeddings, please use an instance of EmbeddingModel it with
         the custom class Model. Necessary with text_rank and k-means method
-    llm_context_window_size : int = 10_000
+    context_size : int = 10_000
         context window size (in terms of len(text), not tokens) for which the llm can
         best exploit the context
     language : str = "french"
@@ -94,7 +94,7 @@ def summarize_chain_builder(
         def custom_chain(text):
             nonlocal summarize_template
             extractive_summary = build_text_prompt_text_rank(
-                text, llm_context_window_size, embedding_model, **kwargs
+                text, context_size, embedding_model, **kwargs
             )
             extractive_summary = "".join(extractive_summary)
             if summarize_template is None:
@@ -131,7 +131,7 @@ def summarize_chain_builder(
             )
 
             text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
-                chunk_size=llm_context_window_size, chunk_overlap=0
+                chunk_size=context_size, chunk_overlap=0
             )
             split_texts = text_splitter.split_text(text)
             split_docs = [Document(page_content=text) for text in split_texts]
@@ -172,7 +172,7 @@ def summarize_chain_builder(
                 return_intermediate_steps=False,
             )
             text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
-                chunk_size=llm_context_window_size, chunk_overlap=0
+                chunk_size=context_size, chunk_overlap=0
             )
             split_text = text_splitter.split_text(text)
             split_docs = [Document(page_content=text) for text in split_text]
@@ -191,7 +191,7 @@ def summarize_chain_builder(
             summarize_prompt = PromptTemplate.from_template(summarize_template)
 
             extractive_summary = build_text_prompt_kmeans(
-                text, llm_context_window_size, embedding_model, **kwargs
+                text, context_size, embedding_model, **kwargs
             )
             extractive_summary = "".join(extractive_summary)
             prompt1 = summarize_prompt.invoke({"text": text, "size": size})
@@ -225,7 +225,7 @@ def summarize_chain_builder(
             map_prompt = experimental_prompt_template["map"]
             combine_prompt = experimental_prompt_template["combine"]
             list_chunk = build_text_prompt_text_rank(
-                text, llm_context_window_size, embedding_model, chunk_type="chunks"
+                text, context_size, embedding_model, chunk_type="chunks"
             )
             map_chain = load_summarize_chain(
                 llm=llm, chain_type="stuff", prompt=map_prompt
