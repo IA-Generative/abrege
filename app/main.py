@@ -5,7 +5,7 @@ import logging
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import List, Literal
+from typing import Literal
 from urllib.parse import urlparse
 import tempfile
 import uvicorn
@@ -13,12 +13,13 @@ from fastapi import FastAPI, HTTPException, UploadFile, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security.api_key import APIKeyHeader
 from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
-from langchain_core.documents import Document
 from langchain_openai import ChatOpenAI
 from langchain_community.document_loaders import (
+    PyPDFLoader,
     UnstructuredODTLoader,
     Docx2txtLoader,
     UnstructuredURLLoader,
+    TextLoader,
     # SeleniumURLLoader
 )
 from abrege.summary_chain import (
@@ -26,12 +27,12 @@ from abrege.summary_chain import (
     EmbeddingModel,
     prompt_template,
 )
-from utils.pdf_handler import PDFHandler, DocumentHandlerError, Reason
 
 DOCUMENT_LOADER_DICT = {
-    ".pdf": PDFHandler,
+    ".pdf": PyPDFLoader,
     ".docx": Docx2txtLoader,
     ".odt": UnstructuredODTLoader,
+    ".txt": TextLoader,
 }
 
 origins = (
@@ -177,6 +178,7 @@ def summarize_url(
     url: str,
     method: MethodType = "text_rank",
     model: str = "vicuna",
+    context_size: int = 10_000,
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
     language: str = "English",
     size: int = 200,
@@ -196,6 +198,10 @@ def summarize_url(
         method to use to generate the summary, by default "text_rank"
     model : str, optional
         llm to use, by default "vicuna"
+    context_size: int
+        maximum size of the context windows passed to the llm
+        bigger size allows more context but also induces more mistakes by the llm
+        default to 10_000
     temperature : Annotated[float, Query, optional
         temperature parameter of the llm, by default 0, le=1.0)]=0
     language : str, optional
@@ -225,6 +231,7 @@ def summarize_url(
         llm=llm,
         embedding_model=context["embedding_model"],
         method=method,
+        context_size=context_size,
         language=language,
         size=size,
         summarize_template=summarize_template,
@@ -255,6 +262,7 @@ async def summarize_txt(
     text: str,
     method: MethodType = "text_rank",
     model: str = "vicuna",
+    context_size: int = 10_000,
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
     language: str = "English",
     size: int = 200,
@@ -274,6 +282,10 @@ async def summarize_txt(
         method to use to generate the summary, by default "text_rank"
     model : str, optional
         llm to use, by default "vicuna"
+    context_size: int
+        maximum size of the context windows passed to the llm
+        bigger size allows more context but also induces more mistakes by the llm
+        default to 10_000
     temperature : Annotated[float, Query, optional
         temperature parameter of the llm, by default 0, le=1.0)]=0
     language : str, optional
@@ -303,6 +315,7 @@ async def summarize_txt(
         llm=llm,
         embedding_model=context["embedding_model"],
         method=method,
+        context_size=context_size,
         language=language,
         size=size,
         summarize_template=summarize_template,
@@ -322,6 +335,7 @@ async def summarize_doc(
     file: UploadFile,
     method: MethodType = "text_rank",
     model: str = "vicuna",
+    context_size: int = 10_000,
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
     language: str = "English",
     size: int = 200,
@@ -341,6 +355,10 @@ async def summarize_doc(
         method to use to generate the summary, by default "text_rank"
     model : str, optional
         llm to use, by default "vicuna"
+    context_size: int
+        maximum size of the context windows passed to the llm
+        bigger size allows more context but also induces more mistakes by the llm
+        default to 10_000
     temperature : Annotated[float, Query, optional
         temperature parameter of the llm, by default 0, le=1.0)]=0
     language : str, optional
@@ -372,6 +390,7 @@ async def summarize_doc(
         llm=llm,
         embedding_model=context["embedding_model"],
         method=method,
+        context_size=context_size,
         language=language,
         size=size,
         summarize_template=summarize_template,
@@ -400,16 +419,14 @@ async def summarize_doc(
     # Dirty method required: save content to a tempory file and read it...
     with tempfile.NamedTemporaryFile(mode="w+b") as tmp_file:
         tmp_file.write(file.file.read())
-        try:
-            loader = DOCUMENT_LOADER_DICT[extension](tmp_file.name)
-            docs = loader.load()
-        except DocumentHandlerError as err:
-            if err.error_type == Reason.FULLY_SCANNED:
-                raise HTTPException(status_code=422, detail="scanned_document")
-            elif err.error_type == Reason.TOO_SHORT:
-                raise HTTPException(status_code=422, detail="too_short")
+        loader = DOCUMENT_LOADER_DICT[extension](tmp_file.name)
+        docs = loader.load()
+        text = "".join(doc.page_content for doc in docs)
 
-    text = "".join(doc.page_content for doc in docs)
+    if len(text) < size:
+        raise HTTPException(
+            status_code=422, detail="Text retrieved from documents too short"
+        )
 
     res = custom_chain.invoke(text)
     res = res.strip()
@@ -417,45 +434,45 @@ async def summarize_doc(
     return {"summary": res}
 
 
-@app.post("/docs")
-async def summarize_multi_doc(
-    files: List[UploadFile],
-    method: MethodType = "k-means",
-    model: str = "vicuna",
-    one_summary: bool = False,
-    temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
-    language: str = "English",
-    size: int = 200,
-    summarize_template: str | None = None,
-    map_template: str | None = None,
-    reduce_template: str | None = None,
-    question_template: str | None = None,
-    refine_template: str | None = None,
-):
+# @app.post("/docs")
+# async def summarize_multi_doc(
+# files: List[UploadFile],
+# method: MethodType = "k-means",
+# model: str = "vicuna",
+# one_summary: bool = False,
+# temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
+# language: str = "English",
+# size: int = 200,
+# summarize_template: str | None = None,
+# map_template: str | None = None,
+# reduce_template: str | None = None,
+# question_template: str | None = None,
+# refine_template: str | None = None,
+# ):
 
-    summaries = []
-    for file in files:
-        file_summary = await summarize_doc(file, method, model, temperature)
-        summaries.append(file_summary)
+# summaries = []
+# for file in files:
+# file_summary = await summarize_doc(file, method, model, temperature)
+# summaries.append(file_summary)
 
-    if one_summary:
-        llm = context["chat_builder"](model, temperature)
-        custom_chain = summarize_chain_builder(
-            llm=llm,
-            embedding_model=context["embedding_model"],
-            method="stuff",
-            language=language,
-            size=size,
-            summarize_template=summarize_template,
-            map_template=map_template,
-            reduce_template=reduce_template,
-            question_template=question_template,
-            refine_template=refine_template,
-        )
-        docs = [Document(page_content=summary) for summary in summaries]
-        summaries = [custom_chain.invoke(docs)]
+# if one_summary:
+# llm = context["chat_builder"](model, temperature)
+# custom_chain = summarize_chain_builder(
+# llm=llm,
+# embedding_model=context["embedding_model"],
+# method="stuff",
+# language=language,
+# size=size,
+# summarize_template=summarize_template,
+# map_template=map_template,
+# reduce_template=reduce_template,
+# question_template=question_template,
+# refine_template=refine_template,
+# )
+# docs = [Document(page_content=summary) for summary in summaries]
+# summaries = [custom_chain.invoke(docs)]
 
-    return {"summaries": summaries}
+# return {"summaries": summaries}
 
 
 @app.get("/models")
