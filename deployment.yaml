@@ -127,5 +127,6 @@ spec:
   - hosts:
     - abrege.c0.cloud-pi-native.com
     secretName: abrege.c0.cloud-pi-native.com-tls
+  - hosts:
     - abrege-streamlit.c0.cloud-pi-native.com
     secretName: abrege-streamlit.c0.cloud-pi-native.com-tls
