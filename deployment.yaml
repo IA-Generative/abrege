@@ -108,14 +108,17 @@ spec:
       paths:
       - backend:
           service:
-            name: abrege-streamlit-service
+            name: abrege-service
             port:
               number: 80
-        path: /streamlit
+        path: /
         pathType: Prefix
+  - host: abrege-streamlit.c0.cloud-pi-native.com
+    http:
+      paths:
       - backend:
           service:
-            name: abrege-service
+            name: abrege-streamlit-service
             port:
               number: 80
         path: /
@@ -124,3 +127,5 @@ spec:
   - hosts:
     - abrege.c0.cloud-pi-native.com
     secretName: abrege.c0.cloud-pi-native.com-tls
+    - abrege-streamlit.c0.cloud-pi-native.com
+    secretName: abrege-streamlit.c0.cloud-pi-native.com-tls
