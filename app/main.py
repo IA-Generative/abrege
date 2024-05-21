@@ -62,13 +62,11 @@ async def lifespan(_: FastAPI):
 
     OPENAI_API_BASE = os.environ.get("OPENAI_API_BASE")
     OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-    MODEL_LIST_BASE = os.environ.get("MODEL_LIST_BASE")
     OPENAI_EMBEDDDING_KEY = os.environ.get("OPENAI_EMBEDDING_API_KEY")
     OPENAI_EMBEDDING_BASE = os.environ.get("OPENAI_EMBEDDING_API_BASE")
 
     if all(
         (
-            MODEL_LIST_BASE,
             OPENAI_API_BASE,
             OPENAI_API_KEY,
             OPENAI_EMBEDDDING_KEY,
@@ -76,8 +74,12 @@ async def lifespan(_: FastAPI):
         )
     ):
         # Load the models
+        parsed_openai_api_base = urlparse(OPENAI_API_BASE)
+        model_list_url = (
+            f"{parsed_openai_api_base.scheme}://{parsed_openai_api_base.netloc}/models"
+        )
         header = {"Authorization": f"Bearer {OPENAI_API_KEY}"}
-        response = requests.get(MODEL_LIST_BASE, headers=header)
+        response = requests.get(model_list_url, headers=header)
 
         if response.status_code == 200:
             models_list = json.loads(response.text)["data"]

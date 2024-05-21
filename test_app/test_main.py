@@ -10,11 +10,10 @@ from main import app
 def requires_env_var():
     var1 = os.environ.get("OPENAI_API_BASE", None)
     var2 = os.environ.get("OPENAI_API_KEY", None)
-    var3 = os.environ.get("MODEL_LIST_BASE", None)
-    var4 = os.environ.get("OPENAI_EMBEDDING_API_BASE", None)
-    var5 = os.environ.get("OPENAI_EMBEDDING_API_KEY", None)
+    var3 = os.environ.get("OPENAI_EMBEDDING_API_BASE", None)
+    var4 = os.environ.get("OPENAI_EMBEDDING_API_KEY", None)
 
-    cond = all((var1, var2, var3, var4, var5))
+    cond = all((var1, var2, var3, var4))
 
     return pytest.mark.skipif(
         not cond, reason="Environnement doesn't have the variables set"
