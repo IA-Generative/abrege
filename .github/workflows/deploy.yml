@@ -197,7 +197,7 @@ jobs:
 #             ghcr-login-secret
 
   deploy:
-    needs: check # todo
+    needs: build # todo
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
