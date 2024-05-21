@@ -24,8 +24,6 @@ spec:
       containers:
       - name: abrege
         image: ghcr.io/ia-generative/abrege-abrege:latest
-#        command: ["npm", "run"]
-#        args: ["$(NODE_ENV)"]
         env:
         - name: OPENAI_API_KEY
           valueFrom:
@@ -55,51 +53,14 @@ spec:
         ports:
         - containerPort: 8000
           protocol: TCP
-#        volumeMounts:
-#        - name: abrege-code
-#          mountPath: /usr/src/app
-#        - name: abrege-node-modules
-#          mountPath: /usr/src/app/node_modules
-
+        - containerPort: 8080
+          protocol: TCP
       dnsPolicy: ClusterFirst
       imagePullSecrets:
       - name: github-regcred
       restartPolicy: Always
       schedulerName: default-scheduler
       terminationGracePeriodSeconds: 30
-
-#      volumes:
-#      - name: abrege-code
-#        persistentVolumeClaim:
-#          claimName: abrege-code-pvc
-#      - name: abrege-node-modules
-#        persistentVolumeClaim:
-#          claimName: abrege-node-modules-pvc
-
----
-# pvc.yaml
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: abrege-code-pvc
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 1Gi
-
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: abrege-node-modules-pvc
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 500Mi
 ---
 # service.yaml
 apiVersion: v1
@@ -114,7 +75,20 @@ spec:
   - protocol: TCP
     port: 80
     targetPort: 8000
-
+---
+# service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: abrege-streamlit-service
+spec:
+  type: ClusterIP
+  selector:
+    app: abrege
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -125,14 +99,11 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
     nginx.ingress.kubernetes.io/session-cookie-hash: sha1
     nginx.ingress.kubernetes.io/session-cookie-name: route
-    nginx.ingress.kubernetes.io/auth-realm: Authentication Required - demo
-    nginx.ingress.kubernetes.io/auth-secret: basic-auth
-    nginx.ingress.kubernetes.io/auth-type: basic
-  name: abrege.numerique-interieur.com
+  name: abrege.c0.cloud-pi-native.com
 spec:
   ingressClassName: public
   rules:
-  - host: abrege.numerique-interieur.com
+  - host: abrege.c0.cloud-pi-native.com
     http:
       paths:
       - backend:
@@ -142,7 +113,20 @@ spec:
               number: 80
         path: /
         pathType: Prefix
+  - host: abrege-streamlit.c0.cloud-pi-native.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: abrege-streamlit-service
+            port:
+              number: 80
+        path: /
+        pathType: Prefix
   tls:
   - hosts:
-    - abrege.numerique-interieur.com
-    #secretName: chatpi.numerique-interieur.com-tls
+    - abrege.c0.cloud-pi-native.com
+    secretName: abrege.c0.cloud-pi-native.com-tls
+  - hosts:
+    - abrege-streamlit.c0.cloud-pi-native.com
+    secretName: abrege-streamlit.c0.cloud-pi-native.com-tls
