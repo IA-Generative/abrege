@@ -83,14 +83,11 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
     nginx.ingress.kubernetes.io/session-cookie-hash: sha1
     nginx.ingress.kubernetes.io/session-cookie-name: route
-    nginx.ingress.kubernetes.io/auth-realm: Authentication Required - demo
-    nginx.ingress.kubernetes.io/auth-secret: basic-auth
-    nginx.ingress.kubernetes.io/auth-type: basic
-  name: abrege.numerique-interieur.com
+  name: abrege.c0.cloud-pi-native.com
 spec:
   ingressClassName: public
   rules:
-  - host: abrege.numerique-interieur.com
+  - host: abrege.c0.cloud-pi-native.com
     http:
       paths:
       - backend:
@@ -102,5 +99,5 @@ spec:
         pathType: Prefix
   tls:
   - hosts:
-    - abrege.numerique-interieur.com
-    #secretName: chatpi.numerique-interieur.com-tls
+    - abrege.c0.cloud-pi-native.com
+    secretName: abrege.c0.cloud-pi-native.com-tls
