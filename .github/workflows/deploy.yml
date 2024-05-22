@@ -202,19 +202,43 @@ jobs:
 #             ghcr-login-secret
 
   deploy:
-    needs: build # todo
+#    needs: build
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v2
+#      - name: Set up Kubeconfig
+#        env:
+#          KUBECONFIG_CONTENT: ${{ secrets.KUBECONFIG }}
+#        run: |
+#          mkdir $HOME/.kube
+#          echo "$KUBECONFIG_CONTENT" > $HOME/.kube/config
+#      - name: Deploy to Kubernetes
+#        run: |
+#          kubectl apply -f ./deployment.yaml
     runs-on: ubuntu-latest
+    needs: build
+    # Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job.
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v2
-      - name: Set up Kubeconfig
-        env:
-          KUBECONFIG_CONTENT: ${{ secrets.KUBECONFIG }}
-        run: |
-          mkdir $HOME/.kube
-          echo "$KUBECONFIG_CONTENT" > $HOME/.kube/config
-      - name: Deploy to Kubernetes
-        run: |
-          kubectl apply -f ./deployment.yaml
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - uses: azure/setup-kubectl@v3
+
+      - uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBECONFIG }}
+          context: abrege/51.159.183.142:16443/abrege
+
+      - uses: Azure/k8s-deploy@v4
+        with:
+          action: deploy
+          manifests: |
+            ./deployment.yaml
+          images: 'ghcr.io/ia-generative/abrege-abrege:${{ github.sha }}'
+          namespace: abrege
 
 
 

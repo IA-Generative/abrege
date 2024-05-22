@@ -26,6 +26,9 @@ from abrege.summary_chain import (
     EmbeddingModel,
     prompt_template,
 )
+import sys
+
+sys.path.append(str(Path(__file__).parent.absolute()))
 from utils.pdf_handler import PDFHandler, DocumentHandlerError, Reason
 
 DOCUMENT_LOADER_DICT = {
