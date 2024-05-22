@@ -73,6 +73,11 @@ jobs:
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        OPENAI_API_BASE: ${{ secrets.OPENAI_API_BASE }}
+        OPENAI_EMBEDDING_API_KEY: ${{ secrets.OPENAI_EMBEDDING_API_KEY }}
+        OPENAI_EMBEDDING_API_BASE: ${{ secrets.OPENAI_EMBEDDING_API_BASE }}
       shell: bash
       run: |
         # app module seems not to be used, whereas it is defined
@@ -84,7 +89,7 @@ jobs:
   build:
     name: 🐋 Save docker image
     runs-on: ubuntu-latest
-    needs: check
+    needs: test
     permissions:
       contents: read
       packages: write
