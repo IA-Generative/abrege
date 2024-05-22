@@ -150,6 +150,7 @@ class TestApp:
 
     @staticmethod
     @requires_env_var()
+    @pytest.mark.slow
     def test_api_call_full_param(big_file):
         with TestClient(app) as client:
             response = client.post(
@@ -186,3 +187,15 @@ class TestApp:
                 "/doc", files=big_file, params={"method": "k-means2"}
             )
         assert response.status_code == 200
+
+    @staticmethod
+    @mock.patch("main.summarize_chain_builder")
+    def test_scanned_pdf(_):
+        files = {
+            "file": ("truc.pdf", open("test_data/PDF-export-example-image.pdf", "rb"))
+        }
+        with TestClient(app) as client:
+            response = client.post("/doc", files=files)
+
+        assert response.status_code == 422
+        assert response.json() == {"detail": "scanned_document"}

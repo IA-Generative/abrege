@@ -16,7 +16,6 @@ from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
 from langchain_core.documents import Document
 from langchain_openai import ChatOpenAI
 from langchain_community.document_loaders import (
-    PyPDFLoader,
     UnstructuredODTLoader,
     Docx2txtLoader,
     UnstructuredURLLoader,
@@ -27,10 +26,10 @@ from abrege.summary_chain import (
     EmbeddingModel,
     prompt_template,
 )
-
+from utils.pdf_handler import PDFHandler, DocumentHandlerError, Reason
 
 DOCUMENT_LOADER_DICT = {
-    ".pdf": PyPDFLoader,
+    ".pdf": PDFHandler,
     ".docx": Docx2txtLoader,
     ".odt": UnstructuredODTLoader,
 }
@@ -130,6 +129,7 @@ async def lifespan(_: FastAPI):
             pass
 
         context["chat_builder"] = none_func
+        context["embedding_model"] = None
         error_flag = 1
 
     if not error_flag:
@@ -181,6 +181,7 @@ def summarize_url(
     model: str = "vicuna",
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
     language: str = "English",
+    size: int = 200,
     summarize_template: str | None = None,
     map_template: str | None = None,
     reduce_template: str | None = None,
@@ -201,6 +202,9 @@ def summarize_url(
         temperature parameter of the llm, by default 0, le=1.0)]=0
     language : str, optional
         language to use to write the summary, by default "English"
+    size : int
+        size of the final summary, in words
+        default to 200
     summarize_template: str | None
         basic template for text_rank, k-means and small text
     map_template: str | None
@@ -224,6 +228,7 @@ def summarize_url(
         embedding_model=context["embedding_model"],
         method=method,
         language=language,
+        size=size,
         summarize_template=summarize_template,
         map_template=map_template,
         reduce_template=reduce_template,
@@ -254,6 +259,7 @@ async def summarize_txt(
     model: str = "vicuna",
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
     language: str = "English",
+    size: int = 200,
     summarize_template: str | None = None,
     map_template: str | None = None,
     reduce_template: str | None = None,
@@ -274,6 +280,9 @@ async def summarize_txt(
         temperature parameter of the llm, by default 0, le=1.0)]=0
     language : str, optional
         language to use to write the summary, by default "English"
+    size : int
+        size of the final summary, in words
+        default to 200
     summarize_template: str | None
         basic template for text_rank, k-means and small text
     map_template: str | None
@@ -297,6 +306,7 @@ async def summarize_txt(
         embedding_model=context["embedding_model"],
         method=method,
         language=language,
+        size=size,
         summarize_template=summarize_template,
         map_template=map_template,
         reduce_template=reduce_template,
@@ -316,6 +326,7 @@ async def summarize_doc(
     model: str = "vicuna",
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
     language: str = "English",
+    size: int = 200,
     summarize_template: str | None = None,
     map_template: str | None = None,
     reduce_template: str | None = None,
@@ -336,6 +347,9 @@ async def summarize_doc(
         temperature parameter of the llm, by default 0, le=1.0)]=0
     language : str, optional
         language to use to write the summary, by default "English"
+    size : int
+        size of the final summary, in words
+        default to 200
     summarize_template: str | None
         basic template for text_rank, k-means and small text
     map_template: str | None
@@ -361,6 +375,7 @@ async def summarize_doc(
         embedding_model=context["embedding_model"],
         method=method,
         language=language,
+        size=size,
         summarize_template=summarize_template,
         map_template=map_template,
         reduce_template=reduce_template,
@@ -373,13 +388,13 @@ async def summarize_doc(
             _, extension = os.path.splitext(file.filename)
         except Exception as err:
             raise HTTPException(
-                status_code=400,
+                status_code=422,
                 detail=f"""Error while parsing the filename, {err} occured""",
             )
 
     if extension not in DOCUMENT_LOADER_DICT:
         raise HTTPException(
-            status_code=400,
+            status_code=422,
             detail=f"""file format not supported, file format supported are :
               {tuple(DOCUMENT_LOADER_DICT.keys())}""",
         )
@@ -387,12 +402,19 @@ async def summarize_doc(
     # Dirty method required: save content to a tempory file and read it...
     with tempfile.NamedTemporaryFile(mode="w+b") as tmp_file:
         tmp_file.write(file.file.read())
-        loader = DOCUMENT_LOADER_DICT[extension](tmp_file.name)
-        docs = loader.load()
+        try:
+            loader = DOCUMENT_LOADER_DICT[extension](tmp_file.name)
+            docs = loader.load()
+        except DocumentHandlerError as err:
+            if err.error_type == Reason.FULLY_SCANNED:
+                raise HTTPException(status_code=422, detail="scanned_document")
+            elif err.error_type == Reason.TOO_SHORT:
+                raise HTTPException(status_code=422, detail="too_short")
 
     text = "".join(doc.page_content for doc in docs)
 
-    res = custom_chain.invoke(text).strip()
+    res = custom_chain.invoke(text)
+    res = res.strip()
 
     return {"summary": res}
 
@@ -405,6 +427,7 @@ async def summarize_multi_doc(
     one_summary: bool = False,
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
     language: str = "English",
+    size: int = 200,
     summarize_template: str | None = None,
     map_template: str | None = None,
     reduce_template: str | None = None,
@@ -424,6 +447,7 @@ async def summarize_multi_doc(
             embedding_model=context["embedding_model"],
             method="stuff",
             language=language,
+            size=size,
             summarize_template=summarize_template,
             map_template=map_template,
             reduce_template=reduce_template,
@@ -444,7 +468,8 @@ async def list_model():
 
 @app.get("/default_params")
 async def param():
-    """Generate a dict of default param of the app"""
+    """Generate a dict of default param of the app
+    Return the available models, available methods and default prompt_template"""
     return {
         "models": context["models"],
         "methods": get_args(MethodType),
