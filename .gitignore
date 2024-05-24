@@ -7,3 +7,4 @@
 !requirements.txt
 *.egg-info
 notebook/*
+*.log

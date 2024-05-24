@@ -50,6 +50,14 @@ params["size"] = st.sidebar.number_input(
     step=1,
     value=200,
 )
+
+params["context_size"] = st.sidebar.number_input(
+    label="Taille de contexte maximale pour le llm",
+    min_value=1000,
+    max_value=50_000,
+    step=500,
+    value=10_000,
+)
 st.sidebar.header("Personalisation des prompts")
 
 expander1 = st.sidebar.expander("Prompt pour les méthodes text_rank, k-means et stuff")
