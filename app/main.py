@@ -168,7 +168,7 @@ app.add_middleware(
 
 @app.get("/healthcheck", status_code=200)
 async def healthcheck():
-    return
+    return "OK"
 
 
 MethodType = Literal[

@@ -32,13 +32,33 @@ network:
 backend-build:
 	@$(COMPOSE) -f docker-compose.yaml build $(DC_BUILD_ARGS)
 
+
+backend: network
+	@echo "Listening on port: $(BACKEND_PORT)"
+	$(COMPOSE) -f docker-compose.yaml  up -d $(DC_UP_ARGS)
+
 backend-dev: network
 	@echo "Listening on port: $(BACKEND_PORT)"
 	$(COMPOSE) -f docker-compose.yaml -f docker-compose-dev.yaml up -d $(DC_UP_ARGS)
-
 
 backend-exec:
 	$(COMPOSE) -f docker-compose.yaml -f docker-compose-dev.yaml run -ti abrege bash
 
 # backend-test:
 # 	$(COMPOSE) -f docker-compose.yaml -f docker-compose-dev.yaml run --rm --name=${APP} abrege /bin/sh -c 'pip3 install pytest && pytest tests/ -s'
+
+backend-stop:
+	@echo docker-compose down backend 
+	$(COMPOSE) -f docker-compose.yaml -f docker-compose-dev.yaml  down
+
+#############
+#  General  #
+#############
+
+build: backend-build
+
+dev: backend-dev
+
+up: backend
+
+down: backend-stop
