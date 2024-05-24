@@ -15,6 +15,8 @@ export BACKEND_PORT = 8000
 export DC_NETWORK_OPT = --opt com.docker.network.driver.mtu=1450 # In RIE network
 export DC_NETWORK = ia-foule
 
+dummy		    := $(shell touch .env)
+
 #############
 #  Network  #
 #############

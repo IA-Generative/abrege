@@ -19,13 +19,13 @@ services:
       - https_proxy=${http_proxy}
       - no_proxy=${no_proxy}
       - SENTENCE_TRANSFORMERS_HOME=/app/embeddings
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-        limits:
-          memory: 10G
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+    #     limits:
+    #       memory: 10G
 
