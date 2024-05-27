@@ -27,6 +27,9 @@ from abrege.summary_chain import (
     EmbeddingModel,
     prompt_template,
 )
+import sys
+
+sys.path.append(str(Path(__file__).parent.absolute()))
 
 DOCUMENT_LOADER_DICT = {
     ".pdf": PyPDFLoader,
@@ -102,10 +105,10 @@ async def lifespan(_: FastAPI):
 
             context["chat_builder"] = chat_builder
 
-            embedding_model = OpenAIEmbeddingFunction(
+            openai_embedding_function = OpenAIEmbeddingFunction(
                 api_key=OPENAI_EMBEDDDING_KEY, api_base=OPENAI_EMBEDDING_BASE
             )
-            embedding_model = EmbeddingModel(embedding_model)
+            embedding_model = EmbeddingModel(openai_embedding_function)
             context["embedding_model"] = embedding_model
         else:
 
@@ -166,7 +169,7 @@ app.add_middleware(
 
 @app.get("/healthcheck", status_code=200)
 async def healthcheck():
-    return
+    return "OK"
 
 
 MethodType = Literal[

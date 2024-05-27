@@ -7,3 +7,5 @@ services:
       - ./tests/:/app/tests/
     ports:
       - ${BACKEND_PORT}:8000
+    environment:
+      - RELOAD=true
