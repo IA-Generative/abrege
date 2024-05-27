@@ -358,7 +358,7 @@ def build_text_prompt_text_rank(
     size: int,
     embedding_model: EmbeddingModel,
     *,
-    chunk_type: Literal["sentences", "chunks"] = "sentences",
+    chunk_type: Literal["sentences", "chunks"] = "chunks",
     chunk_size: int = 1000,
 ) -> list[str]:
     """
