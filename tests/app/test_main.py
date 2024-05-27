@@ -22,7 +22,7 @@ def requires_env_var():
 
 @pytest.fixture
 def big_file():
-    test_file = "test_data/2106.11520v2.pdf"
+    test_file = "tests/test_data/2106.11520v2.pdf"
     files = {"file": ("truc.pdf", open(test_file, "rb"))}
     return files
 
@@ -46,7 +46,7 @@ class TestApp:
     @mock.patch("main.summarize_chain_builder")
     def test_pdf(mock):
         with TestClient(app) as client:
-            test_file = "test_data/Malo_Adler_Thesis.pdf"
+            test_file = "tests/test_data/Malo_Adler_Thesis.pdf"
             files = {"file": ("Malo_Adler_Thesis.pdf", open(test_file, "rb"))}
             _ = client.post("/doc", files=files)
         assert mock.call_count == 1
@@ -55,7 +55,7 @@ class TestApp:
     @mock.patch("main.summarize_chain_builder")
     def test_odt(mock):
         with TestClient(app) as client:
-            test_file = "test_data/CR1.odt"
+            test_file = "tests/test_data/CR1.odt"
             files = {"file": ("CR1.odt", open(test_file, "rb"))}
             _ = client.post("/doc", files=files)
         mock.assert_called()
@@ -64,7 +64,7 @@ class TestApp:
     @mock.patch("main.summarize_chain_builder")
     def test_docx(mock):
         with TestClient(app) as client:
-            test_file = "test_data/Cadrage.docx"
+            test_file = "tests/test_data/Cadrage.docx"
             files = {"file": ("Cadrage.docx", open(test_file, "rb"))}
             _ = client.post("/doc", files=files)
         mock.assert_called()
@@ -74,8 +74,8 @@ class TestApp:
     @mock.patch("main.summarize_chain_builder")
     def test_many_files(mock):
         with TestClient(app) as client:
-            test_file1 = "test_data/Cadrage.docx"
-            test_file2 = "test_data/CR1.odt"
+            test_file1 = "tests/test_data/Cadrage.docx"
+            test_file2 = "tests/test_data/CR1.odt"
             files = [
                 ("Cadrage.docx", open(test_file1, "rb")),
                 ("CR1.odt", open(test_file2, "rb")),
@@ -192,7 +192,8 @@ class TestApp:
     @mock.patch("main.summarize_chain_builder")
     def test_scanned_pdf(_):
         files = {
-            "file": ("truc.pdf", open("test_data/PDF-export-example-image.pdf", "rb"))
+            "file": ("truc.pdf",
+                     open("tests/test_data/PDF-export-example-image.pdf", "rb"))
         }
         with TestClient(app) as client:
             response = client.post("/doc", files=files)
