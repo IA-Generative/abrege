@@ -8,3 +8,4 @@
 *.egg-info
 notebook/*
 *.log
+*poetry.lock

@@ -59,6 +59,7 @@ ModelType = Literal[
     "OpenAIEmbeddingFunction",
     "SentenceTransformer",
     "OpenAIEmbeddings",
+    "OpenAI",
 ]
 
 
@@ -108,6 +109,15 @@ class EmbeddingModel:
 
             case "OpenAIEmbeddings":
                 embeddings = self._model.embed_query("say what")
+                return np.array(embeddings)
+
+            case "OpenAI":
+                embeddings = [
+                    self._model.embeddings.create(input=[chunk], model="")
+                    .data[0]
+                    .embedding
+                    for chunk in list_chunk
+                ]
                 return np.array(embeddings)
 
             case _:
@@ -308,15 +318,15 @@ def build_text_prompt_kmeans(
         extractive summary
     """
     # First we have to split the text
-    if (
-        chunk_type == "chunks"
-        and embedding_model.model_class != "OpenAIEmbeddingFunction"
-    ):
+    if chunk_type == "chunks" and embedding_model.model_class not in [
+        "OpenAIEmbeddingFunction",
+        "OpenAI",
+    ]:
         list_chunk = split_chunk(text, size // n_clusters)
-    elif (
-        chunk_type == "chunks"
-        and embedding_model.model_class == "OpenAIEmbeddingFunction"
-    ):
+    elif chunk_type == "chunks" and embedding_model.model_class in [
+        "OpenAIEmbeddingFunction",
+        "OpenAI",
+    ]:
         chunk_size = 512  # Chunk size limit for OpenAIEmbeddingFunction
         n_clusters = size // chunk_size + 1
         list_chunk = split_chunk(text, chunk_size)
@@ -389,7 +399,7 @@ def build_text_prompt_text_rank(
     if chunk_type == "sentences":
         list_chunks = split_sentences(text)
     elif chunk_type == "chunks":
-        if embedding_model.model_class == "OpenAIEmbeddingFunction":
+        if embedding_model.model_class in ["OpenAIEmbeddingFunction", "OpenAI"]:
             chunk_size = 512  # token size limit for this class
         list_chunks = split_chunk(text, chunk_size=chunk_size)
 

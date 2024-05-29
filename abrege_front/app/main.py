@@ -2,9 +2,11 @@ import streamlit as st
 import streamlit_dsfr as stdsfr
 import requests
 import json
+import os
 
 # REMOVE AND CONFIGURE
-base_api_url = "http://127.0.0.1:8000"
+api_service = os.environ["API_BASE"]
+base_api_url = f"http://{api_service}:8000"
 
 st.set_page_config(page_title="Demo abrege", initial_sidebar_state="collapsed")
 stdsfr.override_font_family()

@@ -1,1 +1,1 @@
-(bash ./run-streamlit.sh) & (bash ./run-fastapi.sh)
+(bash ./abrege_api/run.sh) & (bash ./abrege_front/run.sh)

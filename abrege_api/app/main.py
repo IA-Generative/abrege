@@ -12,7 +12,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException, UploadFile, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security.api_key import APIKeyHeader
-from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
+from openai import OpenAI
 from langchain_openai import ChatOpenAI
 from langchain_community.document_loaders import (
     PyPDFLoader,
@@ -105,10 +105,9 @@ async def lifespan(_: FastAPI):
 
             context["chat_builder"] = chat_builder
 
-            openai_embedding_function = OpenAIEmbeddingFunction(
-                api_key=OPENAI_EMBEDDDING_KEY, api_base=OPENAI_EMBEDDING_BASE
-            )
-            embedding_model = EmbeddingModel(openai_embedding_function)
+            openai_client = OpenAI(api_key=OPENAI_EMBEDDDING_KEY, 
+                                   base_url=OPENAI_EMBEDDING_BASE)
+            embedding_model = EmbeddingModel(openai_client)
             context["embedding_model"] = embedding_model
         else:
 

@@ -18,7 +18,8 @@ stopRunningProcess() {
 
 trap stopRunningProcess EXIT TERM
 
-streamlit run ./front/main.py --server.port=8080 &
+streamlit run ./app/main.py --server.port=8080 &
 APP_ID=${!}
 
 wait ${APP_ID}
+
