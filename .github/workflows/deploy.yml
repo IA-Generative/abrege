@@ -4,7 +4,7 @@
 name: Deploy abrege container
 
 on:
-  push:
+  # push:
     # branches: [ "main", "deploy"] # todo
     #tags:
     #    - 'v*'
@@ -95,7 +95,7 @@ jobs:
   build:
     name: 🐋 Save docker image
     runs-on: ubuntu-latest
-    needs: test
+    # needs: test
     permissions:
       contents: read
       packages: write
