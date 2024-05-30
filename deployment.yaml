@@ -53,8 +53,12 @@ spec:
         ports:
         - containerPort: 8000
           protocol: TCP
+
       - name: abrege-front
         image: ghcr.io/ia-generative/abrege-front:latest
+        env:
+          - name: API_BASE
+            value: 0.0.0.0
         ports:
         - containerPort: 8080
           protocol: TCP
