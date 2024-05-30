@@ -6,11 +6,11 @@ name: Deploy abrege container
 on:
   push:
     # branches: [ "main", "deploy"] # todo
-    tags:
-        - 'v*'
+    #tags:
+    #    - 'v*'
 
-#  pull_request:
-#    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 env:
   REGISTRY: ghcr.io
@@ -25,34 +25,36 @@ permissions:
   contents: read
 
 jobs:
-  check:
-    name: ≠ Check files
-    runs-on: ubuntu-latest
-    outputs:
-      docs_changed: ${{ steps.changed-files-specific.outputs.any_changed }}
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 2  # OR "2" -> To retrieve the preceding commit.
-          submodules: 'true'
-      - name: Get changed files in the abrege and app folder
-        id: changed-files-specific
-        uses: tj-actions/changed-files@v34
-        with:
-          files: |
-            abrege/**
-            app/**
-      - name: Run step if any file(s) in the docs folder change
-        if: steps.changed-files-specific.outputs.any_changed == 'true'
-        run: |
-          echo "One or more files in the docs folder has changed."
-          echo "List all the files that have changed: ${{ steps.changed-files-specific.outputs.all_changed_files }}"
+#  check:
+#    name: ≠ Check files
+#    runs-on: ubuntu-latest
+#    outputs:
+#      docs_changed: ${{ steps.changed-files-specific.outputs.any_changed }}
+#    steps:
+#      - uses: actions/checkout@v3
+#        with:
+#          fetch-depth: 2  # OR "2" -> To retrieve the preceding commit.
+#          submodules: 'true'
+#      - name: Get changed files in the abrege and app folder
+#        id: changed-files-specific
+#        uses: tj-actions/changed-files@v34
+#        with:
+#          files: |
+#            abrege/**
+#            app/**
+#      - name: Run step if any file(s) in the docs folder change
+#        if: steps.changed-files-specific.outputs.any_changed == 'true'
+#        run: |
+#          echo "One or more files in the docs folder has changed."
+#          echo "List all the files that have changed: ${{ steps.changed-files-specific.outputs.all_changed_files }}"
  
   test:
     name: ✅ Test with pytest
     runs-on: ubuntu-22.04
-    needs: check
-    if: needs.check.outputs.docs_changed == 'true'
+#    needs: check
+#    if: needs.check.outputs.docs_changed == 'true'
+    env:
+      POETRY_VIRTUALENVS_CREATE: false
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python 3.11.9
@@ -61,11 +63,14 @@ jobs:
         python-version: "3.11.9"
     - name: Install dependencies
       run: |
+        export 
         python -m pip install --upgrade pip
-        pip install flake8 pytest
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-        if [ -f abrege/requirements.txt ]; then pip install -r abrege/requirements.txt; fi
-        if [ -f abrege/requirements.txt ]; then pip install -e abrege; fi
+        pip install flake8 pytest poetry
+        cd abrege_api
+        poetry install
+#        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+#        if [ -f abrege/requirements.txt ]; then pip install -r abrege/requirements.txt; fi
+#        if [ -f abrege/requirements.txt ]; then pip install -e abrege; fi
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
@@ -95,6 +100,14 @@ jobs:
       packages: write
     #if: github.ref == 'refs/heads/main'
     #if: github.ref_type == 'tag' && github.ref == 'refs/heads/main'
+    strategy:
+      matrix:
+        include:
+          - image-name: ghcr.io/ia-generative/abrege-api
+            dockerfile: abrege_api/Dockerfile.prod
+          - image-name: ghcr.io/ia-generative/abrege-front
+            dockerfile: abrege_front/Dockerfile
+    
     steps:
       -
         uses: actions/checkout@v3
@@ -116,7 +129,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v4
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ env.APPLICATION }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{matrix.name}}-${{ env.APPLICATION }}
           flavor: |
             latest=auto
           tags: |
@@ -136,9 +149,10 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: . # ${{ env.APPLICATION }}
+          file: ${{ matrix.dockerfile }}
           platforms: linux/amd64
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ${{matrix.image-name}}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
           labels: ${{ steps.meta.outputs.labels }}
@@ -237,7 +251,9 @@ jobs:
           action: deploy
           manifests: |
             ./deployment.yaml
-          images: 'ghcr.io/ia-generative/abrege-abrege:${{ github.sha }}'
+          images: |
+            'ghcr.io/ia-generative/abrege-api:${{ github.sha }}'
+            'ghcr.io/ia-generative/abrege-front:${{ github.sha }}'
           namespace: abrege
 
 
