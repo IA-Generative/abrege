@@ -5,23 +5,18 @@ RUN apt-get update \
     && apt-get purge -y --auto-remove \
     && rm -rf /var/lib/apt/lists/*
 
-EXPOSE $BACKEND_PORT
+EXPOSE $FRONTEND_PORT
 
-# Keeps Python from generating .pyc files in the container
 ENV PYTHONDONTWRITEBYTECODE=1
 
-
-# Turns off buffering for easier container logging
 ENV PYTHONUNBUFFERED=1
 
-# Copy all the packages, as this container should be used for dev
 WORKDIR /app
-COPY . .
 
-WORKDIR /app/abrege_api
+COPY ./frontend .
 
 ENV POETRY_VIRTUALENVS_CREATE=false
 RUN pip install poetry
-RUN poetry lock && poetry install --with dev
+RUN poetry lock && poetry install
 
-CMD [ "bash", "run.sh" ]
+CMD ["bash", "run.sh"]

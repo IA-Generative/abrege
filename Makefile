@@ -15,50 +15,44 @@ export BACKEND_PORT = 8000
 export DC_NETWORK_OPT = --opt com.docker.network.driver.mtu=1450 # In RIE network
 export DC_NETWORK = ia-foule
 
-dummy		    := $(shell touch .env)
-
-#############
-#  Network  #
-#############
 
 network:
-	@docker network create ${DC_NETWORK_OPT} ${DC_NETWORK} 2> /dev/null; true
-
-#############
-#  Backend  #
-#############
+	docker network create ${DC_NETWORK_OPT} ${DC_NETWORK} 2> /dev/null; true
 
 
-backend-build:
-	@$(COMPOSE) -f docker-compose.yaml build $(DC_BUILD_ARGS)
+build-dev: network
+	$(COMPOSE) -f docker-compose.yaml -f docker-compose-dev.yaml build $(DC_BUILD_ARGS)
 
+exec-dev:
+	$(COMPOSE) -f docker-compose.yaml -f docker-compose-dev.yaml up $(DC_UP_ARGS)
 
-backend: network
-	@echo "Listening on port: $(BACKEND_PORT)"
-	$(COMPOSE) -f docker-compose.yaml  up -d $(DC_UP_ARGS)
+stop-dev:
+	$(COMPOSE) -f docker-compose.yaml -f docker-compose-dev.yaml down
 
-backend-dev: network
-	@echo "Listening on port: $(BACKEND_PORT)"
-	$(COMPOSE) -f docker-compose.yaml -f docker-compose-dev.yaml up -d $(DC_UP_ARGS)
+test-dev:
+	$(COMPOSE) exec -i fastapi bash -c "cd ../ && pytest --runslow"
 
-backend-exec:
-	$(COMPOSE) -f docker-compose.yaml -f docker-compose-dev.yaml run -ti abrege bash
+build-prod: network
+	$(COMPOSE) -f docker-compose.yaml build $(DC_BUILD_ARGS)
+	
+exec-prod:
+	$(COMPOSE) -f docker-compose.yaml up $(DC_UP_ARGS)
 
-# backend-test:
-# 	$(COMPOSE) -f docker-compose.yaml -f docker-compose-dev.yaml run --rm --name=${APP} abrege /bin/sh -c 'pip3 install pytest && pytest tests/ -s'
+stop-prod:
+	$(COMPOSE) -f docker-compose.yaml down
 
-backend-stop:
-	@echo docker-compose down backend 
-	$(COMPOSE) -f docker-compose.yaml -f docker-compose-dev.yaml  down
+test-prod:
+	$(COMPOSE) cp ./tests fastapi:/app
+	$(COMPOSE) cp ./pyproject.toml fastapi:/app
+	$(COMPOSE) exec -i fastapi bash -c "cd ../ && pytest --runslow"
+	$(COMPOSE) exec -i fastapi bash -c "cd ../ && rm -r tests && rm pyproject.toml"
 
 #############
 #  General  #
 #############
 
-build: backend-build
+dev: exec-dev
 
-dev: backend-dev
+prod: exec-prod
 
-up: backend
-
-down: backend-stop
+down: stop-dev stop-prod

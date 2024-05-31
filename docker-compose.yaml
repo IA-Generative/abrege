@@ -1,31 +1,36 @@
 version: "3.8"
 services:
-  abrege:
-    image: abrege:${TAG}
+  fastapi:
     build: 
-      dockerfile: ./Dockerfile
-      args:
-        - http_proxy=${http_proxy}
-        - https_proxy=${http_proxy}
-        - ${BACKEND_PORT}
+      dockerfile: ./fastapi/Dockerfile
+      target: prod
+      context: ./
+      # args:
+      #   - http_proxy=${http_proxy}
+      #   - https_proxy=${http_proxy}
+      #   - ${BACKEND_PORT}
     env_file:
       - .env
-    volumes:
-      - type: bind
-        source: .
-        target: /app
-    environment:
-      - http_proxy=${http_proxy}
-      - https_proxy=${http_proxy}
-      - no_proxy=${no_proxy}
-      - SENTENCE_TRANSFORMERS_HOME=/app/embeddings
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: all
-    #           capabilities: [gpu]
-    #     limits:
-    #       memory: 10G
+    # environment:
+    #   - http_proxy=${http_proxy}
+    #   - https_proxy=${http_proxy}
+    #   - no_proxy=${no_proxy}
+    ports:
+      - "8000:8000"
+    networks:
+      - ia-foule
 
+  frontend:
+    build: 
+      dockerfile: ./frontend/Dockerfile
+      context: ./
+    ports:
+      - "8080:8080"
+    environment:
+      - API_BASE=fastapi
+    networks:
+      - ia-foule
+
+networks:
+  ia-foule:
+    external: true

@@ -1,1 +1,0 @@
-(bash ./abrege_api/run.sh) & (bash ./abrege_front/run.sh)
