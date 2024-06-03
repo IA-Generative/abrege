@@ -105,9 +105,10 @@ jobs:
       matrix:
         include:
           - image-name: ghcr.io/ia-generative/abrege-api
-            dockerfile: abrege_api/Dockerfile.prod
+            dockerfile: fastapi/Dockerfile
+            target: prod
           - image-name: ghcr.io/ia-generative/abrege-front
-            dockerfile: abrege_front/Dockerfile
+            dockerfile: frontend/Dockerfile
     
     steps:
       -
