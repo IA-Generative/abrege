@@ -105,8 +105,15 @@ elif doc_type == "URL":
         label="Entrer votre URL", placeholder="URL vers la page web à résumer"
     )
 elif doc_type == "document":
-    stdsfr.alert(
-        "Attention: les documents scannés ne sont pas supportés pour le moment"
+    pdf_mode_ocr = st.selectbox(
+        label="Dans le cas d'un document PDF. Est-ce que le docuemnt contient des pages scannées, uniquement du texte ou un mixte des deux ?",
+        options=["full_text", "text_and_ocr", "full_ocr"],
+        format_func={
+            "full_text": "que du texte",
+            "full_ocr": "que des pages scannées",
+            "text_and_ocr": "mixte",
+        }.__getitem__,
+        index=0,
     )
     user_input = stdsfr.dsfr_file_uploader(
         label="Téléverser votre document", help="Documents acceptés: .pdf, .docx, .odt"
@@ -126,6 +133,7 @@ def ask_llm(request_type, params, user_input) -> str:
         elif request_type == "document":
             url = base_api_url + "/doc"
             file = {"file": (user_input.name, user_input)}
+            params |= {"pdf_mode_ocr": pdf_mode_ocr}
             response = requests.post(url=url, files=file, params=params)
 
     if response.status_code == 200:
