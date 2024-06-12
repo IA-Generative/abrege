@@ -40,7 +40,7 @@ def get_text_from_image(image_pil) -> str:
         headers={"Authorization": "Basic " + os.environ["PADDLE_OCR_TOKEN"]},
     )
     output = res.json()
-    return get_text_from_output(output)
+    return get_text_from_output(output)[0]
 
 
 ModeOCR = Literal["full_ocr", "text_and_ocr", "full_text"]
@@ -57,14 +57,13 @@ class OCRPdfLoader:
     def load(
         self, mode: ModeOCR = "text_and_ocr", debug: bool = False
     ) -> list[Document]:
-        assert isinstance(mode, ModeOCR)
         assert mode in ModeOCR.__args__
         assert mode != "full_text"
         result = []
         with pymupdf.open(self.path) as pdf_document:
             for page_num in range(pdf_document.page_count):
-
-                if mode is ModeOCR.text_and_ocr:
+                use_OCR = False
+                if mode == "text_and_ocr":
                     text = pdf_document.get_page_text(page_num)
                     use_OCR = len(text.strip()) <= 30
                     if debug:
@@ -72,7 +71,7 @@ class OCRPdfLoader:
                     if not use_OCR:
                         doc = Document(page_content=text, origin="plain-text-pdf")
 
-                if use_OCR or (mode is ModeOCR.full_ocr):
+                if use_OCR or mode == "full_ocr":
                     page = pdf_document.load_page(page_num)  # its 0-based page
                     image = page.get_pixmap(dpi=800)
                     image_pil = Image.frombytes(
