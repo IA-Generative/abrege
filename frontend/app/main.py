@@ -116,7 +116,8 @@ elif doc_type == "document":
         index=0,
     )
     user_input = stdsfr.dsfr_file_uploader(
-        label="Téléverser votre document", help="Documents acceptés: .pdf, .docx, .odt"
+        label="Téléverser votre document",
+        help="Documents acceptés: .pdf, .docx, .odt, .txt",
     )
 
 
