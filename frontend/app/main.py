@@ -2,9 +2,11 @@ import streamlit as st
 import streamlit_dsfr as stdsfr
 import requests
 import json
+import os
 
 # REMOVE AND CONFIGURE
-base_api_url = "http://127.0.0.1:8000"
+api_service = os.environ["API_BASE"]
+base_api_url = f"http://{api_service}:8000"
 
 st.set_page_config(page_title="Demo abrege", initial_sidebar_state="collapsed")
 stdsfr.override_font_family()
@@ -49,6 +51,14 @@ params["size"] = st.sidebar.number_input(
     max_value=300,
     step=1,
     value=200,
+)
+
+params["context_size"] = st.sidebar.number_input(
+    label="Taille de contexte maximale pour le llm",
+    min_value=1000,
+    max_value=50_000,
+    step=500,
+    value=10_000,
 )
 st.sidebar.header("Personalisation des prompts")
 
@@ -95,11 +105,19 @@ elif doc_type == "URL":
         label="Entrer votre URL", placeholder="URL vers la page web à résumer"
     )
 elif doc_type == "document":
-    stdsfr.alert(
-        "Attention: les documents scannés ne sont pas supportés pour le moment"
+    pdf_mode_ocr = st.selectbox(
+        label="Dans le cas d'un document PDF. Est-ce que le docuemnt contient des pages scannées, uniquement du texte ou un mixte des deux ?",
+        options=["full_text", "text_and_ocr", "full_ocr"],
+        format_func={
+            "full_text": "que du texte",
+            "full_ocr": "que des pages scannées",
+            "text_and_ocr": "mixte",
+        }.__getitem__,
+        index=0,
     )
     user_input = stdsfr.dsfr_file_uploader(
-        label="Téléverser votre document", help="Documents acceptés: .pdf, .docx, .odt"
+        label="Téléverser votre document",
+        help="Documents acceptés: .pdf, .docx, .odt, .txt",
     )
 
 
@@ -116,6 +134,7 @@ def ask_llm(request_type, params, user_input) -> str:
         elif request_type == "document":
             url = base_api_url + "/doc"
             file = {"file": (user_input.name, user_input)}
+            params |= {"pdf_mode_ocr": pdf_mode_ocr}
             response = requests.post(url=url, files=file, params=params)
 
     if response.status_code == 200:

@@ -1,8 +1,14 @@
-summarize_template = """
+old_summarize_template = """
 Write a summary of the following text, delimited by triple backticks, in at most {size} words:
-´´´{text}´´´
-SUMMARY:
+```{text}```
+Summary:
 """  # noqa
+
+summarize_template = """
+The following is a collection of extract from a text (or the entire text itself)
+{text}
+Take these and distill it into a considated summary in at most {size} words
+"""
 
 map_template = """The following is a set of documents
 {docs}

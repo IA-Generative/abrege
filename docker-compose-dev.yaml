@@ -1,11 +1,18 @@
-version: "3.8"
+version: '3.8'
+
 services:
-  abrege:
-    volumes:
-      - ./abrege:/app/abrege/
-      - ./app:/app/app/
-      - ./tests/:/app/tests/
-    ports:
-      - ${BACKEND_PORT}:8000
+  fastapi:
+    build:
+      target: dev
     environment:
       - RELOAD=true
+    volumes:
+      - type: bind
+        source: .
+        target: /app
+
+  frontend:
+    volumes:
+      - type: bind
+        source: ./frontend
+        target: /app

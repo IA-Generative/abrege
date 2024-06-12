@@ -1,1 +1,0 @@
-(bash ./run-streamlit.sh) & (bash ./run-fastapi.sh)

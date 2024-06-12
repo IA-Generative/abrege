@@ -7,3 +7,5 @@
 !requirements.txt
 *.egg-info
 notebook/*
+*.log
+*poetry.lock
