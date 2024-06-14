@@ -109,6 +109,7 @@ class EmbeddingModel:
 
             case "OpenAIEmbeddings":
                 embeddings = self._model.embed_query("say what")
+                raise NotImplementedError
                 return np.array(embeddings)
 
             case "OpenAI":
