@@ -126,6 +126,7 @@ def f1_bertscore(
 def compute_questeval(
     source: str,
     resume: str,
+    llm,
     embedding_model=None,
     n_sentence_selected: int = 10,
     n_question_per_sentence: int = 1,
@@ -218,8 +219,11 @@ if __name__ == "__main__":
     source = "Alex est en France mais va à l'école en Suisse. Alex est mousquetaire"
     resume = "Alex est l'un des trois mousquetaire"
     score = compute_questeval(
-        source=source, resume=resume, embedding_model=embedding_model,
-        n_sentence_selected=5
-        n_question_per_sentence=1
+        source=source,
+        resume=resume,
+        llm=llm,
+        embedding_model=embedding_model,
+        n_sentence_selected=1,
+        n_question_per_sentence=1,
     )
     print()
