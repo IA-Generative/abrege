@@ -205,6 +205,25 @@ def build_graph(
     return graph
 
 
+def compute_textrank_score(list_chunk: list[str], embedding_model: EmbeddingModel):
+
+    # Next build a similarity relation between each pair of sentences
+    dict_weight = build_weight(list_chunk, embedding_model)
+
+    # Build the graph
+    graph = build_graph(list_chunk, dict_weight)
+
+    # And apply the text rank algorithm
+    try:
+        calculated_page_rank = nx.pagerank(graph, weight="weight")
+    except nx.PowerIterationFailedConvergence:
+        # If algorithm didn't manage to converge, try it with less precisi:w
+        calculated_page_rank = nx.pagerank(
+            graph, weight="weight", max_iter=1000, tol=0.1
+        )
+    return calculated_page_rank
+
+
 def text_rank_iterator(list_chunk: list[str], embedding_model: EmbeddingModel):
     """
     Yield the top sentences of the models, according to the embeddings computed
