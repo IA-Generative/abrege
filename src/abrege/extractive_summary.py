@@ -427,6 +427,73 @@ def build_text_prompt_text_rank(
     return [list_chunks[idx] for idx in idx_result]
 
 
+def text_rank_iterator2(list_chunks: list[str], embedding_model: EmbeddingModel):
+    """
+    Yield the top sentences of the models, according to the embeddings computed
+    by embedding_model
+
+    Parameters
+    --------------
+    list_chunk : list[str]
+        list of chunk of text (can be either sentences or just chunk)
+
+    embedding_model: EmbeddingModel
+        model to use for embeddings of sentences
+
+    Yield
+    --------
+    int
+        index of the best sentences so far
+    """
+    # First get the embeddings
+    embeddings = embedding_model.encode(list_chunks)
+
+    # The build the cosine similarity matrix
+    cosine_matrix = np.matmul(embeddings, np.swapaxes(embeddings, 0, 1))
+
+    # Compute the best scorer in PageRank
+
+
+def page_rank(
+    cosine_matrix: np.ndarray,
+    alpha: float = 0.85,
+    eps: float = 0.01,
+    max_iter: int = 100,
+) -> np.ndarray:
+    """
+    Compute the page rank algorithm on the given embeddins
+
+    Parameters
+    -----------
+    cosine_matrix: np.ndarray
+        Matrix of dimensions (n, n) where n is the number of chunks representing where
+        M[i, j] = cosine_simaliraty(list_chunk[i], list_chunk[j])
+    alpha: float
+        damping factor
+        default to 0.85
+    eps: float
+        tolerance for convergence
+        default to 0.01
+    max_iter: int
+        maximum number of iteration
+        default to 100
+
+    Returns
+    ---------
+    np.ndarray
+        array of length n containing the pagerank values
+    """
+    counter = 0
+    P0 = np.array([1 for _ in cosine_matrix])
+    P1 = np.sum(P0 / cosine_matrix, axis=1)
+    while np.linalg.norm(P0 - P1) > eps and counter < max_iter:
+        counter += 1
+        P0 = P1
+        P1 = np.sum(P0 / cosine_matrix, axis=1)
+
+    return P1
+
+
 if __name__ == "__main__":
     import os
     from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
