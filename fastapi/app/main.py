@@ -30,6 +30,10 @@ from abrege.summary_chain import (
 import sys
 
 sys.path.append(str(Path(__file__).parent.absolute()))
+from utils.pdf_handler import (
+    ModeOCR,
+    OCRPdfLoader,
+)
 
 DOCUMENT_LOADER_DICT = {
     ".pdf": PyPDFLoader,
@@ -67,6 +71,8 @@ async def lifespan(_: FastAPI):
     OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
     OPENAI_EMBEDDDING_KEY = os.environ.get("OPENAI_EMBEDDING_API_KEY")
     OPENAI_EMBEDDING_BASE = os.environ.get("OPENAI_EMBEDDING_API_BASE")
+    PADDLE_OCR_TOKEN = os.environ.get("PADDLE_OCR_TOKEN")
+    PADDLE_OCR_URL = os.environ.get("PADDLE_OCR_URL")
 
     if all(
         (
@@ -74,6 +80,8 @@ async def lifespan(_: FastAPI):
             OPENAI_API_KEY,
             OPENAI_EMBEDDDING_KEY,
             OPENAI_EMBEDDING_BASE,
+            PADDLE_OCR_TOKEN,
+            PADDLE_OCR_URL,
         )
     ):
         # Load the models
@@ -173,8 +181,8 @@ async def healthcheck():
 
 
 MethodType = Literal[
-    "map_reduce", "refine", "text_rank", "k-means", "text_rank2", "stuff", "k-means2"
-]
+    "map_reduce", "refine", "text_rank", "k-means", "stuff"
+]  # "text_rank2", "k-means2"
 ChunkType = Literal["sentences", "chunks"]
 
 
@@ -344,6 +352,7 @@ async def summarize_txt(
 async def summarize_doc(
     file: UploadFile,
     method: MethodType = "text_rank",
+    pdf_mode_ocr: ModeOCR | None = None,
     model: str = "vicuna",
     context_size: int = 10_000,
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
@@ -426,12 +435,23 @@ async def summarize_doc(
               {tuple(DOCUMENT_LOADER_DICT.keys())}""",
         )
 
+    if extension == ".pdf" and pdf_mode_ocr is None:
+        raise HTTPException(
+            status_code=422,
+            detail=f"""for pdf files, the pdf_mode_ocr parameter must be specified ({repr(tuple(ModeOCR.__args__))})""",
+        )
+
     # Dirty method required: save content to a tempory file and read it...
     with tempfile.NamedTemporaryFile(mode="w+b") as tmp_file:
         tmp_file.write(file.file.read())
-        loader = DOCUMENT_LOADER_DICT[extension](tmp_file.name)
-        docs = loader.load()
-        text = "".join(doc.page_content for doc in docs)
+        if extension != ".pdf" or pdf_mode_ocr == "full_text":
+            loader = DOCUMENT_LOADER_DICT[extension](tmp_file.name)
+            docs = loader.load()
+        else:
+            loader = OCRPdfLoader(tmp_file.name)
+            docs = loader.load(mode=pdf_mode_ocr)
+
+    text = "\n".join(doc.page_content for doc in docs)
 
     if len(text) < size:
         raise HTTPException(

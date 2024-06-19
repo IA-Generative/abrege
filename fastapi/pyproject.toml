@@ -18,6 +18,7 @@ unstructured = "^0.14.3"
 python-docx = "^1.1.2"
 pypandoc-binary = "^1.13"
 tenacity = "8.3.0"
+pymupdf = "^1.24.5"
 
 [tool.poetry.group.dev.dependencies]
 abrege = {path = "../src/", develop = true, extras = ["dev"]}

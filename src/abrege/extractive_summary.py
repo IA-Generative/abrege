@@ -109,6 +109,7 @@ class EmbeddingModel:
 
             case "OpenAIEmbeddings":
                 embeddings = self._model.embed_query("say what")
+                raise NotImplementedError
                 return np.array(embeddings)
 
             case "OpenAI":
@@ -202,6 +203,25 @@ def build_graph(
         graph.add_edge(idx_sent1, idx_sent2, weight=weight)
 
     return graph
+
+
+def compute_textrank_score(list_chunk: list[str], embedding_model: EmbeddingModel):
+
+    # Next build a similarity relation between each pair of sentences
+    dict_weight = build_weight(list_chunk, embedding_model)
+
+    # Build the graph
+    graph = build_graph(list_chunk, dict_weight)
+
+    # And apply the text rank algorithm
+    try:
+        calculated_page_rank = nx.pagerank(graph, weight="weight")
+    except nx.PowerIterationFailedConvergence:
+        # If algorithm didn't manage to converge, try it with less precisi:w
+        calculated_page_rank = nx.pagerank(
+            graph, weight="weight", max_iter=1000, tol=0.1
+        )
+    return calculated_page_rank
 
 
 def text_rank_iterator(list_chunk: list[str], embedding_model: EmbeddingModel):
