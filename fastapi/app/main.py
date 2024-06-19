@@ -105,8 +105,9 @@ async def lifespan(_: FastAPI):
 
             context["chat_builder"] = chat_builder
 
-            openai_client = OpenAI(api_key=OPENAI_EMBEDDDING_KEY, 
-                                   base_url=OPENAI_EMBEDDING_BASE)
+            openai_client = OpenAI(
+                api_key=OPENAI_EMBEDDDING_KEY, base_url=OPENAI_EMBEDDING_BASE
+            )
             embedding_model = EmbeddingModel(openai_client)
             context["embedding_model"] = embedding_model
         else:
@@ -313,6 +314,7 @@ async def summarize_txt(
     dict[str, str]
         summary
     """
+    from time import perf_counter
 
     llm = context["chat_builder"](model, temperature)
     custom_chain = summarize_chain_builder(
@@ -329,9 +331,13 @@ async def summarize_txt(
         refine_template=refine_template,
     )
 
+    deb = perf_counter()
+
     res = custom_chain.invoke(text)
 
-    return {"summary": res}
+    elapsed = perf_counter() - deb
+
+    return {"summary": res, "time": elapsed}
 
 
 @app.post("/doc")
