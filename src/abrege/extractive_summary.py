@@ -224,7 +224,7 @@ def compute_textrank_score(list_chunk: list[str], embedding_model: EmbeddingMode
     return calculated_page_rank
 
 
-def text_rank_iterator(list_chunk: list[str], embedding_model: EmbeddingModel):
+def text_rank_iterator2(list_chunk: list[str], embedding_model: EmbeddingModel):
     """
     Yield the top sentences of the models, according to the embeddings computed
     by embedding_model
@@ -446,7 +446,7 @@ def build_text_prompt_text_rank(
     return [list_chunks[idx] for idx in idx_result]
 
 
-def text_rank_iterator2(list_chunks: list[str], embedding_model: EmbeddingModel):
+def text_rank_iterator(list_chunks: list[str], embedding_model: EmbeddingModel):
     """
     Yield the top sentences of the models, according to the embeddings computed
     by embedding_model
@@ -471,12 +471,40 @@ def text_rank_iterator2(list_chunks: list[str], embedding_model: EmbeddingModel)
     cosine_matrix = np.matmul(embeddings, np.swapaxes(embeddings, 0, 1))
 
     # Compute the best scorer in PageRank
+    chunk_rank = page_rank(cosine_matrix)
+
+    # Next we iter through the best chunk according to text rank
+    # If we found a chunk that has a similarity to close to a previous yielded chunk
+    # we skip it to avoid redundance
+    idx = 0
+    previous_yielded = []
+    while idx < len(chunk_rank):
+        chunk_idx = chunk_rank[idx]
+        send_chunk = True
+        for p_yielded_idx in previous_yielded:
+            if np.all(
+                cosine_matrix[chunk_rank, p_yielded_idx] > 0.8
+            ):  # Ref : Malo Adler thesis
+                send_chunk = False
+                break
+
+        if send_chunk:
+            previous_yielded.append(chunk_idx)
+            yield chunk_idx
+
+        idx += 1
+
+
+class PowerIterationFailedConvergence(Exception):
+
+    def __init__(self, *args):
+        super().__init__(*args)
 
 
 def page_rank(
     cosine_matrix: np.ndarray,
     alpha: float = 0.85,
-    eps: float = 0.01,
+    eps: float = 0.000001,
     max_iter: int = 100,
 ) -> np.ndarray:
     """
@@ -502,15 +530,21 @@ def page_rank(
     np.ndarray
         array of length n containing the pagerank values
     """
-    counter = 0
-    P0 = np.array([1 for _ in cosine_matrix])
-    P1 = np.sum(P0 / cosine_matrix, axis=1)
-    while np.linalg.norm(P0 - P1) > eps and counter < max_iter:
-        counter += 1
+    n_iter = 0
+    sum_row = np.sum(cosine_matrix, axis=1)
+    T_cosine_matrix = np.transpose(cosine_matrix)
+    P0 = np.array([alpha for _ in cosine_matrix])
+    P1 = (1 - alpha) + (alpha * np.matmul(T_cosine_matrix, P0 / sum_row))
+    while np.linalg.norm(P0 - P1) > eps and n_iter < max_iter:
+        n_iter += 1
         P0 = P1
-        P1 = np.sum(P0 / cosine_matrix, axis=1)
+        P1 = (1 - alpha) + (alpha * np.matmul(T_cosine_matrix, P0 / sum_row))
+    if n_iter == max_iter:
+        raise PowerIterationFailedConvergence(
+            f"Failed to convergence under {eps} in {max_iter} iterations"
+        )
 
-    return P1
+    return np.argsort(P1)[::-1]
 
 
 if __name__ == "__main__":

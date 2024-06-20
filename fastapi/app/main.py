@@ -29,11 +29,12 @@ from abrege.summary_chain import (
 )
 import sys
 
+
 sys.path.append(str(Path(__file__).parent.absolute()))
-from utils.pdf_handler import (
-    ModeOCR,
-    OCRPdfLoader,
-)
+
+from utils.pdf_handler import ModeOCR, OCRPdfLoader
+
+print(__name__)
 
 DOCUMENT_LOADER_DICT = {
     ".pdf": PyPDFLoader,
@@ -98,7 +99,7 @@ async def lifespan(_: FastAPI):
             logger.info(f"Model available : {model_id}")
             context["models"] = model_id
 
-            def chat_builder(model: str = "vicuna", temperature: int = 0):
+            def chat_builder(model: str = "phi3", temperature: int = 0):
                 if model not in model_id:
                     raise HTTPException(
                         400, detail=f"Model not available, avaible are {model_id}"
@@ -190,7 +191,7 @@ ChunkType = Literal["sentences", "chunks"]
 def summarize_url(
     url: str,
     method: MethodType = "text_rank",
-    model: str = "vicuna",
+    model: str = "phi3",
     context_size: int = 10_000,
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
     language: str = "English",
@@ -210,7 +211,7 @@ def summarize_url(
     method : MethodType, optional
         method to use to generate the summary, by default "text_rank"
     model : str, optional
-        llm to use, by default "vicuna"
+        llm to use, by default "phi3"
     context_size: int
         maximum size of the context windows passed to the llm
         bigger size allows more context but also induces more mistakes by the llm
@@ -274,7 +275,7 @@ def summarize_url(
 async def summarize_txt(
     text: str,
     method: MethodType = "text_rank",
-    model: str = "vicuna",
+    model: str = "phi3",
     context_size: int = 10_000,
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
     language: str = "English",
@@ -294,7 +295,7 @@ async def summarize_txt(
     method : MethodType, optional
         method to use to generate the summary, by default "text_rank"
     model : str, optional
-        llm to use, by default "vicuna"
+        llm to use, by default "phi3"
     context_size: int
         maximum size of the context windows passed to the llm
         bigger size allows more context but also induces more mistakes by the llm
@@ -348,7 +349,7 @@ async def summarize_doc(
     file: UploadFile,
     method: MethodType = "text_rank",
     pdf_mode_ocr: ModeOCR | None = None,
-    model: str = "vicuna",
+    model: str = "phi3",
     context_size: int = 10_000,
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
     language: str = "English",
@@ -368,7 +369,7 @@ async def summarize_doc(
     method : MethodType, optional
         method to use to generate the summary, by default "text_rank"
     model : str, optional
-        llm to use, by default "vicuna"
+        llm to use, by default "phi3"
     context_size: int
         maximum size of the context windows passed to the llm
         bigger size allows more context but also induces more mistakes by the llm
@@ -433,7 +434,8 @@ async def summarize_doc(
     if extension == ".pdf" and pdf_mode_ocr is None:
         raise HTTPException(
             status_code=422,
-            detail=f"""for pdf files, the pdf_mode_ocr parameter must be specified ({repr(tuple(ModeOCR.__args__))})""",
+            detail=f"""for pdf files, the pdf_mode_ocr parameter must be specified 
+            ({repr(tuple(ModeOCR.__args__))})""",
         )
 
     # Dirty method required: save content to a tempory file and read it...
@@ -463,7 +465,7 @@ async def summarize_doc(
 # async def summarize_multi_doc(
 # files: List[UploadFile],
 # method: MethodType = "k-means",
-# model: str = "vicuna",
+# model: str = "phi3",
 # one_summary: bool = False,
 # temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
 # language: str = "English",

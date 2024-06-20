@@ -80,7 +80,7 @@ class TestExtractiveSummary:
 
         assert expected_weight == weight
 
-    def test_text_rank_iterator_distant_chunk(self):
+    def test_text_rank_iterator2_distant_chunk(self):
         # Cannot test the page rank algorithm, so insteand, we ensure that each
         # sentences is yielded once through all the iterator and no more
         list_chunk = ["a", "b", "c"]
@@ -101,7 +101,7 @@ class TestExtractiveSummary:
         assert set_idx == {0, 1, 2}
         assert len(set_idx) == len(list_chunk)
 
-    def test_text_rank_iterator_close_chunk(self):
+    def test_text_rank_iterator2_close_chunk(self):
         # Close chunk so only one element should be iterated
         list_chunk = ["a"] * 100
         iterator = iter(text_rank_iterator(list_chunk, self.mock_embedding_model))

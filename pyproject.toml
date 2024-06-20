@@ -54,5 +54,5 @@ pymupdf = "^1.24.5"
 ipykernel = "^6.29.4"
 
 [tool.pytest.ini_options]
-pythonpath = "fastapi/app"
+pythonpath = "fastapi/app fastapi/app/utils"
 addopts = "-ra -v"
