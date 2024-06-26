@@ -1,5 +1,4 @@
 from typing import Literal
-import concurrent.futures
 
 from langchain.chains import MapReduceDocumentsChain, ReduceDocumentsChain
 from langchain.chains.llm import LLMChain
@@ -12,22 +11,25 @@ from langchain_core.prompts import (
     PromptTemplate,
     SystemMessagePromptTemplate,
     HumanMessagePromptTemplate,
-    ChatPromptTemplate,
 )
-from langchain_core.runnables import chain
+from langchain_core.runnables import (
+    RunnableLambda,
+    RunnablePassthrough,
+    RunnableParallel,
+)
 
 from abrege.extractive_summary import (
     EmbeddingModel,
     build_text_prompt_text_rank,
     build_text_prompt_kmeans,
 )
-from abrege.prompt.template import prompt_template, experimental_prompt_template
+from abrege.prompt.template import prompt_template
 
 template = (
     "You are a helpful assistant that translates {input_language} to {output_language}."
 )
 system_message_prompt = SystemMessagePromptTemplate.from_template(template)
-human_template = "Translate this sentence from {input_language} to {output_language}. Adds no comments (before or after) in addition to the translation. {text}"
+human_template = "Translate this sentence from {input_language} to {output_language}. Adds no comments (before or after) in addition to the translation. {text}"  # noqa
 human_message_prompt = HumanMessagePromptTemplate.from_template(human_template)
 
 translation_prompt = PromptTemplate.from_template(
@@ -92,224 +94,188 @@ def summarize_chain_builder(
     Runnable[Any, str]
         custom chain that can be invoked to summarize text
     """
+    new_chain = new_summarize_chain()
+    info = {
+        "llm": llm,
+        "embedding_model": embedding_model,
+        "context_size": context_size,
+        "language": language,
+        "method": method,
+        "size": size,
+        "summarize_template": summarize_template,
+        "map_template": map_template,
+        "reduce_template": reduce_template,
+        "question_template": question_template,
+        "refine_template": refine_template,
+    }
 
-    if method == "text_rank":
-        if embedding_model is None:
-            raise ValueError("embedding_model parameter necessary for text_rank method")
+    return RunnableLambda(lambda x: info | x) | new_chain
 
-        @chain
-        def custom_chain(text):
-            nonlocal summarize_template
-            extractive_summary = build_text_prompt_text_rank(
-                text, context_size, embedding_model, **kwargs
+
+output_parser = StrOutputParser()
+
+
+def text_rank_lambda(info):
+    if info.get("embedding_model") is None:
+        raise ValueError("embedding_model parameter necessecary for text_rank method")
+
+    prompt = PromptTemplate.from_template(info["summarize_template"])
+
+    extractive_summary = build_text_prompt_text_rank(
+        info["text"], info["context_size"], info["embedding_model"]
+    )
+
+    return (
+        RunnablePassthrough.assign(text=lambda _: extractive_summary)
+        | prompt
+        | info["llm"]
+        | output_parser
+    )
+
+
+def kmeans_lambda(info):
+    if info.get("embedding_model") is None:
+        raise ValueError("embedding_model parameter necessecary for text_rank method")
+
+    prompt = PromptTemplate.from_template(info["summarize_template"])
+
+    extractive_summary = build_text_prompt_kmeans(
+        info["text"], info["context_size"], info["embedding_model"]
+    )
+
+    return (
+        RunnablePassthrough.assign(text=lambda _: extractive_summary)
+        | prompt
+        | info["llm"]
+        | output_parser
+    )
+
+
+text_rank_chain = RunnableLambda(text_rank_lambda)
+kmeans_chain = RunnableLambda(kmeans_lambda)
+
+
+def split_lambda(info):
+    text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
+        chunk_size=info["context_size"], chunk_overlap=0
+    )
+
+    split_texts = text_splitter.split_text(info["text"])
+    split_docs = [Document(page_content=text) for text in split_texts]
+    return RunnablePassthrough.assign(input_documents=lambda _: split_docs)
+
+
+split_chain = RunnableLambda(split_lambda)
+
+
+def refine_lambda(info):
+    refine_chain = load_summarize_chain(
+        llm=info["llm"],
+        chain_type="refine",
+        question_prompt=PromptTemplate.from_template(info["question_template"]),
+        refine_prompt=PromptTemplate.from_template(info["refine_template"]),
+        input_key="input_documents",
+        output_key="summary_english",
+    )
+
+    return split_chain | refine_chain | RunnableLambda(lambda x: x["summary_english"])
+
+
+def map_reduce_lambda(info):
+    map_prompt = PromptTemplate.from_template(info["map_template"])
+    reduce_prompt = PromptTemplate.from_template(info["reduce_template"])
+    map_chain = LLMChain(llm=info["llm"], prompt=map_prompt)
+    reduce_chain = LLMChain(llm=info["llm"], prompt=reduce_prompt)
+    combine_document_chain = StuffDocumentsChain(
+        llm_chain=reduce_chain, document_variable_name="docs"
+    )
+
+    reduce_documents_chain = ReduceDocumentsChain(
+        combine_documents_chain=combine_document_chain,
+        collapse_documents_chain=combine_document_chain,
+        token_max=info["context_size"],
+    )
+
+    final_chain = MapReduceDocumentsChain(
+        llm_chain=map_chain,
+        reduce_documents_chain=reduce_documents_chain,
+        document_variable_name="docs",
+        return_intermediate_steps=False,
+        output_key="summary_english",
+    )
+
+    return split_chain | final_chain | RunnableLambda(lambda x: x["summary_english"])
+
+
+refine_chain = RunnableLambda(refine_lambda)
+map_reduce_chain = RunnableLambda(map_reduce_lambda)
+
+
+method_to_chain = {
+    "text_rank": text_rank_chain,
+    "k-means": kmeans_chain,
+    "refine": refine_chain,
+    "map_reduce": map_reduce_chain,
+}
+
+
+def route(info):
+    print(info)
+    if info.get("method") not in method_to_chain:
+        raise ValueError
+    return method_to_chain[info["method"]]
+
+
+def complete_input(info):
+    print(info)
+    if not info.get("context_size"):
+        info["context_size"] = 2500
+    if not info.get("language"):
+        info["language"] = "french"
+    if not info.get("size"):
+        info["size"] = 200
+    if not info.get("summarize_template"):
+        info["summarize_template"] = prompt_template["summarize"]
+    if not info.get("map_template"):
+        info["map_template"] = prompt_template["map"]
+    if not info.get("reduce_template"):
+        info["reduce_template"] = prompt_template["reduce"]
+    if not info.get("question_template"):
+        info["question_template"] = prompt_template["question"]
+    if not info.get("refine_template"):
+        info["refine_template"] = prompt_template["refine"]
+
+    return info
+
+
+def translate_lambda(summary_output):
+    summary = summary_output["english_summary"]
+    info = summary_output["info"]
+
+    if info["language"].lower() != "english":
+        translation_chain = (
+            RunnablePassthrough.assign(
+                source_language=lambda _: "english",
+                target_language=lambda _: info["language"].lower(),
+                text=lambda _: summary,
             )
-            extractive_summary = "".join(extractive_summary)
-            if summarize_template is None:
-                summarize_template = prompt_template["summarize"]
-            summarize_prompt = PromptTemplate.from_template(summarize_template)
-            prompt1 = summarize_prompt.invoke(
-                {"text": extractive_summary, "size": size}
-            )
-            output1 = llm.invoke(prompt1)
-            output_parser = StrOutputParser()
-            return output_parser.invoke(output1)
-
-    elif method == "refine":
-
-        @chain
-        def custom_chain(text):
-            nonlocal question_template
-            nonlocal refine_template
-
-            if question_template is None:
-                question_template = prompt_template["question"]
-            if refine_template is None:
-                refine_template = prompt_template["refine"]
-            question_prompt = PromptTemplate.from_template(question_template)
-            refine_prompt = PromptTemplate.from_template(refine_template)
-            refine_chain = load_summarize_chain(
-                llm=llm,
-                chain_type="refine",
-                question_prompt=question_prompt,
-                refine_prompt=refine_prompt,
-                return_intermediate_steps=True,
-                input_key="input_documents",
-                output_key="output_text",
-            )
-
-            text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
-                chunk_size=context_size, chunk_overlap=0
-            )
-            split_texts = text_splitter.split_text(text)
-            split_docs = [Document(page_content=text) for text in split_texts]
-            result = refine_chain.invoke(
-                {"input_documents": split_docs, "size": size}, return_only_outputs=True
-            )
-            return result["output_text"]
-
-    elif method == "map_reduce":
-
-        @chain
-        def custom_chain(text):
-            nonlocal map_template
-            nonlocal reduce_template
-
-            if map_template is None:
-                map_template = prompt_template["map"]
-            if reduce_template is None:
-                reduce_template = prompt_template["reduce"]
-            map_prompt = PromptTemplate.from_template(map_template)
-            reduce_prompt = PromptTemplate.from_template(reduce_template)
-            map_chain = LLMChain(llm=llm, prompt=map_prompt)
-            reduce_chain = LLMChain(llm=llm, prompt=reduce_prompt)
-            combine_document_chain = StuffDocumentsChain(
-                llm_chain=reduce_chain, document_variable_name="docs"
-            )
-
-            reduce_documents_chain = ReduceDocumentsChain(
-                combine_documents_chain=combine_document_chain,
-                collapse_documents_chain=combine_document_chain,
-                token_max=10_000,  # What ?
-            )
-
-            map_reduce_chain = MapReduceDocumentsChain(
-                llm_chain=map_chain,
-                reduce_documents_chain=reduce_documents_chain,
-                document_variable_name="docs",
-                return_intermediate_steps=False,
-            )
-            text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
-                chunk_size=context_size, chunk_overlap=0
-            )
-            split_text = text_splitter.split_text(text)
-            split_docs = [Document(page_content=text) for text in split_text]
-            result = map_reduce_chain.invoke(
-                {"input_documents": split_docs, "size": size}
-            )
-            return result["output_text"]
-
-    elif method == "k-means":
-
-        @chain
-        def custom_chain(text: str):
-            nonlocal summarize_template
-            if summarize_template is None:
-                summarize_template = prompt_template["summarize"]
-            summarize_prompt = PromptTemplate.from_template(summarize_template)
-
-            extractive_summary = build_text_prompt_kmeans(
-                text, context_size, embedding_model, **kwargs
-            )
-            extractive_summary = "".join(extractive_summary)
-            prompt1 = summarize_prompt.invoke({"text": text, "size": size})
-            output = llm.invoke(prompt1)
-            output_parser = StrOutputParser()
-            return output_parser.invoke(output)
-
-    elif method == "stuff":
-
-        @chain
-        def custom_chain(text: str):
-            nonlocal summarize_template
-            if summarize_template is None:
-                summarize_template = prompt_template["summarize"]
-            summarize_prompt = PromptTemplate.from_template(summarize_template)
-
-            llm_chain = LLMChain(llm=llm, prompt=summarize_prompt)
-            stuff_chain = StuffDocumentsChain(
-                llm_chain=llm_chain, document_variable_name="text"
-            )
-            doc = Document(page_content=text)
-            return stuff_chain.invoke({"input_documents": [doc], "size": size})[
-                "output_text"
-            ]
-
-    elif method == "text_rank2":
-
-        @chain
-        def custom_chain(text: str):
-
-            map_prompt = experimental_prompt_template["map"]
-            combine_prompt = experimental_prompt_template["combine"]
-            list_chunk = build_text_prompt_text_rank(
-                text, context_size, embedding_model, chunk_type="chunks"
-            )
-            map_chain = load_summarize_chain(
-                llm=llm, chain_type="stuff", prompt=map_prompt
-            )
-            with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-                list_doc = [[Document(page_content=chunk)] for chunk in list_chunk]
-                future_summaries = executor.map(map_chain.invoke, list_doc)
-                summary_list = [summary["output_text"] for summary in future_summaries]
-
-            summaries = "\n".join(summary_list)
-            summaries = Document(page_content=summaries)
-            reduce_chain = load_summarize_chain(
-                llm=llm, chain_type="stuff", prompt=combine_prompt
-            )
-            output = reduce_chain.invoke([summaries])
-            return output["output_text"]
-
-    elif method == "k-means2":
-
-        @chain
-        def custom_chain(text: str):
-            map_prompt = experimental_prompt_template["map"]
-            combine_prompt = experimental_prompt_template["combine"]
-            list_chunk = build_text_prompt_kmeans(
-                text, 5000, embedding_model, chunk_type="chunks"
-            )
-            map_chain = load_summarize_chain(
-                llm=llm, chain_type="stuff", prompt=map_prompt
-            )
-            with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-                list_doc = [[Document(page_content=chunk)] for chunk in list_chunk]
-                future_summaries = executor.map(map_chain.invoke, list_doc)
-                summary_list = [summary["output_text"] for summary in future_summaries]
-
-            summaries = "\n".join(summary_list)
-            summaries = Document(page_content=summaries)
-            reduce_chain = load_summarize_chain(
-                llm=llm, chain_type="stuff", prompt=combine_prompt
-            )
-            output = reduce_chain.invoke([summaries])
-            return output["output_text"]
-
-    else:
-        raise ValueError(
-            f"""method should be one of 'text_rank', 'refine', 'k-means' or
-            'map_reduce', got {method}"""
+            | translation_prompt
+            | info["llm"]
+            | output_parser
         )
+    else:
+        return RunnableLambda(lambda _: summary)
+    return translation_chain
 
-    # Handle with a simple call to llm small text
-    @chain
-    def small_text_chain(text: str):
-        if llm.get_num_tokens(text) < 3000:
-            nonlocal summarize_template
-            if summarize_template is None:
-                summarize_template = prompt_template["summarize"]
-            summarize_prompt = PromptTemplate.from_template(summarize_template)
-            simple_chain = summarize_prompt | llm | StrOutputParser()
-            simple_summary = simple_chain.invoke({"text": text, "size": size})
-            assert isinstance(simple_chain, str)
-            return simple_summary
-        else:
-            return custom_chain.invoke(text)
 
-    @chain
-    def translate_chain(text: str):
-        summary_english = small_text_chain.invoke(text)
-        if language.lower() != "english":
-            translation_chain = translation_prompt | llm | StrOutputParser()
-            summary = translation_chain.invoke(
-                {
-                    "source_language": "english",
-                    "target_language": language.lower(),
-                    "text": summary_english,
-                }
-            )
-            return summary
-        else:
-            return summary_english
+input_chain = RunnableLambda(complete_input)
+route_chain = RunnableLambda(route)
+translate_chain = RunnableLambda(translate_lambda)
 
-    return translate_chain
+
+def new_summarize_chain():
+    return (
+        input_chain
+        | RunnableParallel(english_summary=route_chain, info=RunnablePassthrough())
+        | translate_chain
+    )

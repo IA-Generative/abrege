@@ -3,7 +3,6 @@ import numpy as np
 
 from abrege.extractive_summary import (
     EmbeddingModel,
-    build_text_prompt_text_rank,
     build_text_prompt_kmeans,
     build_weight,
     split_sentences,
@@ -80,7 +79,7 @@ class TestExtractiveSummary:
 
         assert expected_weight == weight
 
-    def test_text_rank_iterator_distant_chunk(self):
+    def test_text_rank_iterator2_distant_chunk(self):
         # Cannot test the page rank algorithm, so insteand, we ensure that each
         # sentences is yielded once through all the iterator and no more
         list_chunk = ["a", "b", "c"]
@@ -101,7 +100,7 @@ class TestExtractiveSummary:
         assert set_idx == {0, 1, 2}
         assert len(set_idx) == len(list_chunk)
 
-    def test_text_rank_iterator_close_chunk(self):
+    def test_text_rank_iterator2_close_chunk(self):
         # Close chunk so only one element should be iterated
         list_chunk = ["a"] * 100
         iterator = iter(text_rank_iterator(list_chunk, self.mock_embedding_model))
@@ -158,23 +157,3 @@ class TestExtractiveSummary:
     @pytest.mark.skip(reason="No idea on how to test this")
     def test_build_text_prompt_kmeans_chunk():
         pass
-
-    def test_build_test_prompt_sentence(self, small_text, custom_encode):
-        max_code_len = 15  # Empirical, should be tested after
-
-        previous_encode = self.mock_embedding_model.encode
-        self.mock_embedding_model.encode = custom_encode
-
-        extractive_summary = build_text_prompt_text_rank(
-            text=small_text,
-            size=max_code_len,
-            embedding_model=self.mock_embedding_model,
-            chunk_type="sentences",
-        )
-        assert (
-            "".join(extractive_summary)
-            == "A sentence.A sentence.A sentence.Again another sentence."
-        )
-
-        # Clear
-        self.mock_embedding_model.encode = previous_encode

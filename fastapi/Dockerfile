@@ -29,6 +29,10 @@ COPY . .
 WORKDIR /app/fastapi
 
 RUN poetry lock && poetry install --with dev
+# Sometimes src/abrege seems to be not installed in editable
+WORKDIR /app/src
+RUN pip install -e .
+WORKDIR /app/fastapi
 
 CMD [ "bash", "run.sh" ]
 

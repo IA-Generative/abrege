@@ -124,7 +124,7 @@ def selfcheck(
     docs : une liste des doc représentant le document à résumer
     mode: "full", "textrank" ou "random" Si toutes les phrases du résumé de sont pas à évaluer, quelle phrases traiter en premier ?
     k_max: le nombre de phrase du résumer à évaluer. -1 pour toutes.
-    """
+    """ # noqa
     from langchain_community.embeddings import HuggingFaceEmbeddings
 
     embeddings = HuggingFaceEmbeddings(
@@ -161,9 +161,7 @@ if __name__ == "__main__":
     )
 
     from abrege.summary_chain import (
-        summarize_chain_builder,
         EmbeddingModel,
-        prompt_template,
     )
     from openai import OpenAI
 
