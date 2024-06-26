@@ -66,9 +66,8 @@ jobs:
         export 
         python -m pip install --upgrade pip
         pip install flake8 pytest poetry
-        cd abrege_api
+        cd fastapi
         poetry install
-        poetry add docx
 #        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 #        if [ -f abrege/requirements.txt ]; then pip install -r abrege/requirements.txt; fi
 #        if [ -f abrege/requirements.txt ]; then pip install -e abrege; fi

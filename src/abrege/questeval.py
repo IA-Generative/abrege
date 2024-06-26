@@ -47,7 +47,7 @@ Format your response as follows:
 ...
 
 Try to generate diverse and thoughtful questions that cover key points and details from the context. Avoid overly broad or vague questions. The answers should be factual and directly reference information from the context text.
-""" # noqa
+"""  # noqa
     )
     chain = prompt_template | llm | StrOutputParser() | extract_list
     return [
@@ -93,8 +93,8 @@ def selector(
     elif mode == "full":
         selected_sentences = list_str
     elif mode == "textrank":
-        # dans le cas d'un texte rank, le découpage en phrase donne parfois des phrases trop longue pour l'API d'embedding_model
-        # il faut donc privilégier le un découpage selon split_chunk de extractive_summary
+        # dans le cas d'un texte rank, le découpage en phrase donne parfois des phrases trop longue pour l'API d'embedding_model # noqa
+        # il faut donc privilégier le un découpage selon split_chunk de extractive_summary # noqa
         idx_generator = text_rank_iterator(list_str, embedding_model)
         selected_idx = [next(idx_generator, None) for _ in range(k)]
         if None in selected_idx:

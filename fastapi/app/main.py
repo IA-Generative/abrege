@@ -265,7 +265,7 @@ def summarize_url(
     loader = UnstructuredURLLoader(urls=[url])
     data: list = loader.load()
 
-    res = [custom_chain.invoke(doc.page_content) for doc in data]
+    res = [custom_chain.invoke({"text": doc.page_content}) for doc in data]
 
     res = "\n\n".join(res).strip()
     return {"summary": res}
@@ -339,7 +339,7 @@ async def summarize_txt(
         refine_template=refine_template,
     )
 
-    res = custom_chain.invoke(text)
+    res = custom_chain.invoke({"text": text})
 
     return {"summary": res}
 
@@ -455,7 +455,7 @@ async def summarize_doc(
             status_code=422, detail="Text retrieved from documents too short"
         )
 
-    res = custom_chain.invoke(text)
+    res = custom_chain.invoke({"text": text})
     res = res.strip()
 
     return {"summary": res}
