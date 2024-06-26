@@ -282,7 +282,7 @@ def text_rank_iterator2(list_chunk: list[str], embedding_model: EmbeddingModel):
         i += 1
 
 
-def split_chunk(text: str, chunk_size: int = 300) -> list[str]:
+def split_chunk(text: str, chunk_size: int = 300, chunk_overlap: int = 30) -> list[str]:
     """split the text into chunk with a small overlap
 
     Parameters
@@ -298,7 +298,7 @@ def split_chunk(text: str, chunk_size: int = 300) -> list[str]:
         list of the chunks
     """
     text_splitter = RecursiveCharacterTextSplitter.from_huggingface_tokenizer(
-        tokenizer, chunk_size=chunk_size, chunk_overlap=30
+        tokenizer, chunk_size=chunk_size, chunk_overlap=chunk_overlap
     )
     split_text = text_splitter.split_text(text)
     return split_text
