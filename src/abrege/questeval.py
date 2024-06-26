@@ -22,7 +22,7 @@ from extractive_summary import (
 
 import nltk
 
-nltk.download("punkt", quiet=True)
+nltk.download("punkt", quiet=False)
 
 
 def extract_list(output: str) -> list[str]:
@@ -97,6 +97,8 @@ def selector(
     elif mode == "full":
         selected_sentences = list_str
     elif mode == "textrank":
+        # dans le cas d'un texte rank, le découpage en phrase donne parfois des phrases trop longue pour l'API d'embedding_model
+        # il faut donc privilégier le un découpage selon split_chunk de extractive_summary
         idx_generator = text_rank_iterator(list_str, embedding_model)
         selected_idx = [next(idx_generator, None) for _ in range(k)]
         if None in selected_idx:
@@ -106,7 +108,7 @@ def selector(
             list_str[idx] for idx in selected_idx if selected_idx is not None
         ]
     else:
-        raise NotImplementedError(f"the mode `{mode}`is not implemented")
+        raise NotImplementedError(f"the mode `{mode}` is not implemented")
     return selected_sentences
 
 
@@ -130,6 +132,7 @@ def compute_questeval(
     embedding_model=None,
     n_sentence_selected: int = 10,
     n_question_per_sentence: int = 1,
+    mode: Literal["random", "full", "textrank"] = "random",
     do_weighter: bool = True,
 ) -> float:
     assert isinstance(source, str)
@@ -141,7 +144,7 @@ def compute_questeval(
     sentences = nltk.tokenize.sent_tokenize(source)
     selected_sentences = selector(
         sentences,
-        mode="textrank",
+        mode=mode,
         k_max=n_sentence_selected,
         embedding_model=embedding_model,
     )
@@ -165,7 +168,7 @@ def compute_questeval(
     sentences = nltk.tokenize.sent_tokenize(resume)
     selected_sentences = selector(
         sentences,
-        mode="textrank",
+        mode=mode,
         k_max=n_sentence_selected,
         embedding_model=embedding_model,
     )

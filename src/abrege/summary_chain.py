@@ -27,9 +27,7 @@ template = (
     "You are a helpful assistant that translates {input_language} to {output_language}."
 )
 system_message_prompt = SystemMessagePromptTemplate.from_template(template)
-human_template = (
-    "Translate this sentence from {input_language} to {output_language}. {text}"
-)
+human_template = "Translate this sentence from {input_language} to {output_language}. Adds no comments (before or after) in addition to the translation. {text}"
 human_message_prompt = HumanMessagePromptTemplate.from_template(human_template)
 
 MethodType = Literal[
@@ -291,14 +289,14 @@ def summarize_chain_builder(
     @chain
     def translate_chain(text: str):
         summary_english = small_text_chain.invoke(text)
-        if language != "English":
+        if language.lower() != "english":
             chat_prompt = ChatPromptTemplate.from_messages(
                 [system_message_prompt, human_message_prompt]
             )
             summary = llm.invoke(
                 chat_prompt.format_prompt(
                     input_language="English",
-                    output_language="French",
+                    output_language=language,
                     text=summary_english,
                 ).to_messages()
             )
