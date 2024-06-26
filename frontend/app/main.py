@@ -48,7 +48,7 @@ if 0:
     )
 else:
     params["language"] = st.selectbox(
-        label="Choisissez un language pour le résumé",
+        label="Choisissez une langue pour le résumé",
         options=["French", "English"],
         format_func={
             "French": "Français",
