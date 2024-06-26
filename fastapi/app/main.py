@@ -181,8 +181,8 @@ async def healthcheck():
 
 
 MethodType = Literal[
-    "map_reduce", "refine", "text_rank", "k-means", "text_rank2", "stuff", "k-means2"
-]
+    "map_reduce", "refine", "text_rank", "k-means", "stuff"
+]  # "text_rank2", "k-means2"
 ChunkType = Literal["sentences", "chunks"]
 
 

@@ -42,9 +42,22 @@ params["method"] = st.sidebar.selectbox(
 params["temperature"] = st.sidebar.number_input(
     label="Choisissez une température", min_value=0.0, max_value=1.0, step=0.01
 )
-params["language"] = st.sidebar.text_input(
-    label="Choisissez un language pour le résumé", value="French"
-)
+if 0:
+    params["language"] = st.sidebar.text_input(
+        label="Choisissez un language pour le résumé", value="French"
+    )
+else:
+    params["language"] = st.selectbox(
+        label="Choisissez un language pour le résumé",
+        options=["French", "English"],
+        format_func={
+            "French": "Français",
+            "English": "Anglais",
+        }.__getitem__,
+        index=0,
+    )
+
+
 params["size"] = st.sidebar.number_input(
     label="Choissisez un nombre de mots pour votre résumé",
     min_value=50,

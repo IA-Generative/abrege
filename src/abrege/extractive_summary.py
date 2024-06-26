@@ -109,6 +109,7 @@ class EmbeddingModel:
 
             case "OpenAIEmbeddings":
                 embeddings = self._model.embed_query("say what")
+                raise NotImplementedError
                 return np.array(embeddings)
 
             case "OpenAI":
@@ -204,6 +205,25 @@ def build_graph(
     return graph
 
 
+def compute_textrank_score(list_chunk: list[str], embedding_model: EmbeddingModel):
+
+    # Next build a similarity relation between each pair of sentences
+    dict_weight = build_weight(list_chunk, embedding_model)
+
+    # Build the graph
+    graph = build_graph(list_chunk, dict_weight)
+
+    # And apply the text rank algorithm
+    try:
+        calculated_page_rank = nx.pagerank(graph, weight="weight")
+    except nx.PowerIterationFailedConvergence:
+        # If algorithm didn't manage to converge, try it with less precisi:w
+        calculated_page_rank = nx.pagerank(
+            graph, weight="weight", max_iter=1000, tol=0.1
+        )
+    return calculated_page_rank
+
+
 def text_rank_iterator(list_chunk: list[str], embedding_model: EmbeddingModel):
     """
     Yield the top sentences of the models, according to the embeddings computed
@@ -264,7 +284,7 @@ def text_rank_iterator(list_chunk: list[str], embedding_model: EmbeddingModel):
         i += 1
 
 
-def split_chunk(text: str, chunk_size: int = 300) -> list[str]:
+def split_chunk(text: str, chunk_size: int = 300, chunk_overlap: int = 30) -> list[str]:
     """split the text into chunk with a small overlap
 
     Parameters
@@ -280,7 +300,7 @@ def split_chunk(text: str, chunk_size: int = 300) -> list[str]:
         list of the chunks
     """
     text_splitter = RecursiveCharacterTextSplitter.from_huggingface_tokenizer(
-        tokenizer, chunk_size=chunk_size, chunk_overlap=30
+        tokenizer, chunk_size=chunk_size, chunk_overlap=chunk_overlap
     )
     split_text = text_splitter.split_text(text)
     return split_text
