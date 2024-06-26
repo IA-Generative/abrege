@@ -30,6 +30,15 @@ system_message_prompt = SystemMessagePromptTemplate.from_template(template)
 human_template = "Translate this sentence from {input_language} to {output_language}. Adds no comments (before or after) in addition to the translation. {text}"
 human_message_prompt = HumanMessagePromptTemplate.from_template(human_template)
 
+translation_prompt = PromptTemplate.from_template(
+    """Translate the following text from {source_language} to {target_language}.
+The Text :
+```
+{text}
+```
+Translation:"""
+)
+
 MethodType = Literal[
     "text_rank", "map_reduce", "refine", "k-means", "stuff", "text_rank2", "k-means2"
 ]
@@ -280,9 +289,10 @@ def summarize_chain_builder(
             if summarize_template is None:
                 summarize_template = prompt_template["summarize"]
             summarize_prompt = PromptTemplate.from_template(summarize_template)
-            simple_chain = summarize_prompt | llm
+            simple_chain = summarize_prompt | llm | StrOutputParser()
             simple_summary = simple_chain.invoke({"text": text, "size": size})
-            return simple_summary.content
+            assert isinstance(simple_chain, str)
+            return simple_summary
         else:
             return custom_chain.invoke(text)
 
@@ -290,17 +300,15 @@ def summarize_chain_builder(
     def translate_chain(text: str):
         summary_english = small_text_chain.invoke(text)
         if language.lower() != "english":
-            chat_prompt = ChatPromptTemplate.from_messages(
-                [system_message_prompt, human_message_prompt]
+            translation_chain = translation_prompt | llm | StrOutputParser()
+            summary = translation_chain.invoke(
+                {
+                    "source_language": "english",
+                    "target_language": language.lower(),
+                    "text": summary_english,
+                }
             )
-            summary = llm.invoke(
-                chat_prompt.format_prompt(
-                    input_language="English",
-                    output_language=language,
-                    text=summary_english,
-                ).to_messages()
-            )
-            return summary.content
+            return summary
         else:
             return summary_english
 
