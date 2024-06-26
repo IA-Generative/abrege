@@ -4,8 +4,8 @@
 name: Deploy abrege container
 
 on:
-  # push:
-    # branches: [ "main", "deploy"] # todo
+  push:
+    branches: [ "main", "deploy"] # todo
     #tags:
     #    - 'v*'
 
