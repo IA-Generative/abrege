@@ -1,19 +1,15 @@
 from langchain_openai import ChatOpenAI
 from langchain.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnablePassthrough
-from langchain_text_splitters import (
-    RecursiveCharacterTextSplitter,
-)
-from langchain.docstore.document import Document
-from langchain_core.prompts import PromptTemplate
 from openai import OpenAI
 
 from typing import Literal
-import re, os, random
+import re
+import os
+import random
 import statistics
 
-from extractive_summary import (
+from abrege.extractive_summary import (
     compute_textrank_score,
     EmbeddingModel,
     text_rank_iterator,
@@ -51,7 +47,7 @@ Format your response as follows:
 ...
 
 Try to generate diverse and thoughtful questions that cover key points and details from the context. Avoid overly broad or vague questions. The answers should be factual and directly reference information from the context text.
-"""
+""" # noqa
     )
     chain = prompt_template | llm | StrOutputParser() | extract_list
     return [
@@ -208,8 +204,6 @@ if __name__ == "__main__":
         temperature=0,
         model="mixtral",
     )
-
-    from openai import OpenAI
 
     openai_client = OpenAI(
         api_key=os.environ["OPENAI_EMBEDDING_API_KEY"],

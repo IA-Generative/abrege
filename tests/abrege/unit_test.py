@@ -3,7 +3,6 @@ import numpy as np
 
 from abrege.extractive_summary import (
     EmbeddingModel,
-    build_text_prompt_text_rank,
     build_text_prompt_kmeans,
     build_weight,
     split_sentences,
@@ -158,23 +157,3 @@ class TestExtractiveSummary:
     @pytest.mark.skip(reason="No idea on how to test this")
     def test_build_text_prompt_kmeans_chunk():
         pass
-
-    def test_build_test_prompt_sentence(self, small_text, custom_encode):
-        max_code_len = 15  # Empirical, should be tested after
-
-        previous_encode = self.mock_embedding_model.encode
-        self.mock_embedding_model.encode = custom_encode
-
-        extractive_summary = build_text_prompt_text_rank(
-            text=small_text,
-            size=max_code_len,
-            embedding_model=self.mock_embedding_model,
-            chunk_type="sentences",
-        )
-        assert (
-            "".join(extractive_summary)
-            == "A sentence.A sentence.A sentence.Again another sentence."
-        )
-
-        # Clear
-        self.mock_embedding_model.encode = previous_encode

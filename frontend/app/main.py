@@ -106,7 +106,7 @@ elif doc_type == "URL":
     )
 elif doc_type == "document":
     pdf_mode_ocr = st.selectbox(
-        label="Dans le cas d'un document PDF. Est-ce que le docuemnt contient des pages scannées, uniquement du texte ou un mixte des deux ?",
+        label="Dans le cas d'un document PDF. Est-ce que le docuemnt contient des pages scannées, uniquement du texte ou un mixte des deux ?", # noqa
         options=["full_text", "text_and_ocr", "full_ocr"],
         format_func={
             "full_text": "que du texte",

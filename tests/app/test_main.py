@@ -22,13 +22,12 @@ def requires_env_var():
 
 @pytest.fixture
 def big_file():
-    test_file = "tests/test_data/big_text.txt"
+    test_file = "tests/test_data/pg5097.txt"
     files = {"file": ("truc.txt", open(test_file, "rb"))}
     return files
 
 
 class TestApp:
-
     @staticmethod
     def test_healthcheck():
         with TestClient(app) as client:
@@ -39,7 +38,8 @@ class TestApp:
     @mock.patch("main.summarize_chain_builder")
     def test_raw_text(mock):
         with TestClient(app) as client:
-            _ = client.get("/text", params={"text": "text"})
+            response = client.get("/text", params={"text": "text"})
+            assert response.status_code == 200
             assert mock.call_count == 1
 
     @staticmethod

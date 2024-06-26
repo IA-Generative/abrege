@@ -434,7 +434,7 @@ async def summarize_doc(
     if extension == ".pdf" and pdf_mode_ocr is None:
         raise HTTPException(
             status_code=422,
-            detail=f"""for pdf files, the pdf_mode_ocr parameter must be specified 
+            detail=f"""for pdf files, the pdf_mode_ocr parameter must be specified
             ({repr(tuple(ModeOCR.__args__))})""",
         )
 

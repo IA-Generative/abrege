@@ -47,9 +47,8 @@ test-prod:
 	$(COMPOSE) exec -i fastapi bash -c "cd ../ && pytest --runslow"
 	$(COMPOSE) exec -i fastapi bash -c "cd ../ && rm -r tests && rm pyproject.toml"
 
-dev-shell:
+shell:
 	$(COMPOSE) exec -it fastapi bash -c "/bin/bash"
-
 #############
 #  General  #
 #############

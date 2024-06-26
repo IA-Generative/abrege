@@ -88,7 +88,6 @@ class EmbeddingModel:
 
     def encode(self, list_chunk: list[str]) -> np.ndarray:
         match self.model_class:
-
             case "OpenAIEmbeddingFunction":
                 embeddings = openai_encode_multithreading(self._model, list_chunk)
                 return np.array(embeddings)
@@ -206,7 +205,6 @@ def build_graph(
 
 
 def compute_textrank_score(list_chunk: list[str], embedding_model: EmbeddingModel):
-
     # Next build a similarity relation between each pair of sentences
     dict_weight = build_weight(list_chunk, embedding_model)
 
@@ -496,7 +494,6 @@ def text_rank_iterator(list_chunks: list[str], embedding_model: EmbeddingModel):
 
 
 class PowerIterationFailedConvergence(Exception):
-
     def __init__(self, *args):
         super().__init__(*args)
 
