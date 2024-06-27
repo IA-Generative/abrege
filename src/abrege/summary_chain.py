@@ -25,21 +25,6 @@ from abrege.extractive_summary import (
 )
 from abrege.prompt.template import prompt_template
 
-template = (
-    "You are a helpful assistant that translates {input_language} to {output_language}."
-)
-system_message_prompt = SystemMessagePromptTemplate.from_template(template)
-human_template = "Translate this sentence from {input_language} to {output_language}. Adds no comments (before or after) in addition to the translation. {text}"  # noqa
-human_message_prompt = HumanMessagePromptTemplate.from_template(human_template)
-
-translation_prompt = PromptTemplate.from_template(
-    """Translate the following text from {source_language} to {target_language}.
-The Text :
-```
-{text}
-```
-Translation:"""
-)
 
 MethodType = Literal[
     "text_rank", "map_reduce", "refine", "k-means", "stuff", "text_rank2", "k-means2"
@@ -246,34 +231,11 @@ def complete_input(info):
     return info
 
 
-def translate_lambda(summary_output):
-    summary = summary_output["english_summary"]
-    info = summary_output["info"]
-
-    if info["language"].lower() != "english":
-        translation_chain = (
-            RunnablePassthrough.assign(
-                source_language=lambda _: "english",
-                target_language=lambda _: info["language"].lower(),
-                text=lambda _: summary,
-            )
-            | translation_prompt
-            | info["llm"]
-            | output_parser
-        )
-    else:
-        return RunnableLambda(lambda _: summary)
-    return translation_chain
-
-
 input_chain = RunnableLambda(complete_input)
 route_chain = RunnableLambda(route)
-translate_chain = RunnableLambda(translate_lambda)
 
 
 def new_summarize_chain():
-    return (
-        input_chain
-        | RunnableParallel(english_summary=route_chain, info=RunnablePassthrough())
-        | translate_chain
+    return input_chain | RunnableParallel(
+        english_summary=route_chain, info=RunnablePassthrough()
     )
