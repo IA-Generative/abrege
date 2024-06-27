@@ -12,6 +12,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException, UploadFile, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security.api_key import APIKeyHeader
+from fastapi.responses import StreamingResponse
 from openai import OpenAI
 from langchain_openai import ChatOpenAI
 from langchain_community.document_loaders import (
@@ -522,6 +523,88 @@ async def param():
         "methods": get_args(MethodType),
         "prompt_template": prompt_template,
     }
+
+
+@app.get("/stream_txt")
+async def stream_summary(
+    text: str,
+    method: MethodType = "text_rank",
+    model: str = "phi3",
+    context_size: int = 10_000,
+    temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
+    language: str = "English",
+    size: int = 200,
+    summarize_template: str | None = None,
+    map_template: str | None = None,
+    reduce_template: str | None = None,
+    question_template: str | None = None,
+    refine_template: str | None = None,
+):
+    """Generate a summary of the raw text
+
+    Parameters
+    ----------
+    text : str
+        text to summarize
+    method : MethodType, optional
+        method to use to generate the summary, by default "text_rank"
+    model : str, optional
+        llm to use, by default "phi3"
+    context_size: int
+        maximum size of the context windows passed to the llm
+        bigger size allows more context but also induces more mistakes by the llm
+        default to 10_000
+    temperature : Annotated[float, Query, optional
+        temperature parameter of the llm, by default 0, le=1.0)]=0
+    language : str, optional
+        language to use to write the summary, by default "English"
+    size : int
+        size of the final summary, in words
+        default to 200
+    summarize_template: str | None
+        basic template for text_rank, k-means and small text
+    map_template: str | None
+        map template for map_reduce method
+    reduce_template: str | None
+        reduce template for map_reduce method
+    question_template: str | None
+        question template for refine method
+    refine_template: str | None
+        refine template for refine method
+
+    Returns
+    -------
+    dict[str, str]
+        summary
+    """
+    llm = context["chat_builder"](model, temperature)
+    custom_chain = summarize_chain_builder(
+        llm=llm,
+        embedding_model=context["embedding_model"],
+        method=method,
+        context_size=context_size,
+        language=language,
+        size=size,
+        summarize_template=summarize_template,
+        map_template=map_template,
+        reduce_template=reduce_template,
+        question_template=question_template,
+        refine_template=refine_template,
+    )
+
+    return StreamingResponse(custom_chain.astream({"text": text}))
+
+
+@app.get("/test_stream")
+async def zzz():
+    import asyncio
+
+    async def f():
+        for i in range(10):
+            yield "Je deteste le caca"
+            await asyncio.sleep(1)
+
+    return StreamingResponse(f())
 
 
 if __name__ == "__main__":

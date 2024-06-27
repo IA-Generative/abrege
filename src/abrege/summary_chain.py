@@ -9,13 +9,12 @@ from langchain_core.documents.base import Document
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import (
     PromptTemplate,
-    SystemMessagePromptTemplate,
-    HumanMessagePromptTemplate,
 )
 from langchain_core.runnables import (
     RunnableLambda,
     RunnablePassthrough,
 )
+from operator import itemgetter
 
 from abrege.extractive_summary import (
     EmbeddingModel,
@@ -162,7 +161,7 @@ def refine_lambda(info):
         output_key="summary_english",
     )
 
-    return split_chain | refine_chain | RunnableLambda(lambda x: x["summary_english"])
+    return split_chain | refine_chain | RunnableLambda(itemgetter("summary_english"))
 
 
 def map_reduce_lambda(info):
@@ -188,7 +187,7 @@ def map_reduce_lambda(info):
         output_key="summary_english",
     )
 
-    return split_chain | final_chain | RunnableLambda(lambda x: x["summary_english"])
+    return split_chain | final_chain | RunnableLambda(itemgetter("summary_english"))
 
 
 def stuff_lambda(info):
@@ -201,7 +200,7 @@ def stuff_lambda(info):
                 document_variable_name="text",
                 output_key="summary_english"
             )
-            | RunnableLambda(lambda x: x["summary_english"])
+            | RunnableLambda(itemgetter("summary_english"))
             )
 
 

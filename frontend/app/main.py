@@ -162,12 +162,19 @@ def ask_llm(request_type, params, user_input) -> str:
             )
 
 
+def ask_llm2(request_type, params, user_input):
+    if request_type == "texte":
+        url = base_api_url + "/stream_txt"
+        params |= {"text": user_input}
+        s = requests.Session()
+        with s.get(url=url, params=params, stream=True) as r:
+            for chunk in r.iter_content(1024):
+                yield chunk.decode()
+
 # stdsfr button not working, seems to rerun to early to let st.spinner work
 # maybe should open a pull request
 if st.button("Générer un résumé"):
-    summary = ask_llm(doc_type, params, user_input)
-    st.session_state.summary = summary
+    st.write_stream(ask_llm2(doc_type, params, user_input))
 
-if "summary" in st.session_state:
-    st.subheader("Résumé:")
-    st.write(st.session_state.summary)
+if "stream" in st.session_state:
+    pass
