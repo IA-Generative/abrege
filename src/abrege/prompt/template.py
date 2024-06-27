@@ -7,25 +7,25 @@ Summary:
 summarize_template = """
 The following is a collection of extract from a text (or the entire text itself)
 {text}
-Take these and distill it into a consolidated summary in at most {size} words
+Take these and distill it into a consolidated summary in {language} in at most {size} words
 """
 
 map_template = """The following is a set of documents
 {docs}
 Based on this list of docs, please identify the main themes
-Helpful Answer:"""
+Helpful Answer in {language}:"""
 
 reduce_template = """The following is set of summaries
 {docs}
 Take these and distill it into a final, consolidated summary written of the main themes in at most {size} words.
-Helpful Answer:"""  # noqa
+Helpful Answer in {language}:"""  # noqa
 
 question_prompt_template = """Write a concise summary of the following in a most {size} words:
 {text}
-CONCISE SUMMARY:"""  # noqa
+CONCISE SUMMARY in {language}:"""  # noqa
 
 refine_template = """
-Your job is to produce a final summary.
+Your job is to produce a final summary in {language}.
 We have provided an existing summary up to a certain point {existing_answer}.
 We have the opportunity to refine the existing summary (only if needed)
 with some more context below enclosed in triple backstick
