@@ -122,6 +122,9 @@ def kmeans_lambda(info):
 
     prompt = PromptTemplate.from_template(info["summarize_template"])
 
+    if info["context_size"] > info["llm"].get_num_tokens(info["text"]):
+        info["context_size"] = info["llm"].get_num_tokens(info["text"])
+
     extractive_summary = build_text_prompt_kmeans(
         info["text"], info["context_size"], info["embedding_model"]
     )

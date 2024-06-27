@@ -119,7 +119,7 @@ elif doc_type == "URL":
     )
 elif doc_type == "document":
     pdf_mode_ocr = st.selectbox(
-        label="Dans le cas d'un document PDF. Est-ce que le docuemnt contient des pages scannées, uniquement du texte ou un mixte des deux ?", # noqa
+        label="Dans le cas d'un document PDF. Est-ce que le docuemnt contient des pages scannées, uniquement du texte ou un mixte des deux ?",  # noqa
         options=["full_text", "text_and_ocr", "full_ocr"],
         format_func={
             "full_text": "que du texte",
@@ -162,19 +162,37 @@ def ask_llm(request_type, params, user_input) -> str:
             )
 
 
-def ask_llm2(request_type, params, user_input):
+type_to_url_stream = {
+    "texte": "text_stream",
+    "document": "doc_stream",
+}
+
+
+def ask_llm_stream(request_type, params, user_input):
+    url = f"{base_api_url}/{type_to_url_stream[request_type]}"
+    s = requests.Session()
     if request_type == "texte":
-        url = base_api_url + "/stream_txt"
         params |= {"text": user_input}
-        s = requests.Session()
         with s.get(url=url, params=params, stream=True) as r:
             for chunk in r.iter_content(1024):
                 yield chunk.decode()
+    elif request_type == "document":
+        file = {"file": (user_input.name, user_input)}
+        params |= {"pdf_mode_ocr": pdf_mode_ocr}
+        with s.post(url=url, params=params, files=file) as r:
+            for chunk in r.iter_content(1024):
+                yield chunk.decode()
+
 
 # stdsfr button not working, seems to rerun to early to let st.spinner work
 # maybe should open a pull request
+st.session_state.stream = False
 if st.button("Générer un résumé"):
-    st.write_stream(ask_llm2(doc_type, params, user_input))
+    if params["method"] in ["text_rank", "k-means"] and doc_type != "url":
+        st.write_stream(ask_llm_stream(doc_type, params, user_input))
+        st.session_state.stream = True
+    else:
+        st.session_state.summary = ask_llm(doc_type, params, user_input)
 
-if "stream" in st.session_state:
-    pass
+if "summary" in st.session_state and not st.session_state.stream:
+    st.write(st.session_state.summary)

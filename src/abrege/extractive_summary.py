@@ -355,6 +355,7 @@ def build_text_prompt_kmeans(
     embeddings = embedding_model.encode(list_chunk)
 
     # Now we can use k means algorithm to compute cluster
+    n_clusters = max(n_clusters, len(embeddings))
     kmean = KMeans(n_clusters=n_clusters)
     clusters = kmean.fit_predict(embeddings)
 
