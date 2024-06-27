@@ -66,11 +66,7 @@ jobs:
         export 
         python -m pip install --upgrade pip
         pip install flake8 pytest poetry
-<<<<<<< HEAD
-        cd fast_api
-=======
         cd fastapi
->>>>>>> main
         poetry install
 #        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 #        if [ -f abrege/requirements.txt ]; then pip install -r abrege/requirements.txt; fi

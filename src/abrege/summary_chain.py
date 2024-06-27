@@ -15,7 +15,6 @@ from langchain_core.prompts import (
 from langchain_core.runnables import (
     RunnableLambda,
     RunnablePassthrough,
-    RunnableParallel,
 )
 
 from abrege.extractive_summary import (
@@ -207,8 +206,23 @@ def map_reduce_lambda(info):
     return split_chain | final_chain | RunnableLambda(lambda x: x["summary_english"])
 
 
+def stuff_lambda(info):
+    prompt = PromptTemplate.from_template(info["summarize_template"])
+    llm_chain = LLMChain(llm=info["llm"], prompt=prompt)
+
+    return (split_chain
+            | StuffDocumentsChain(
+                llm_chain=llm_chain,
+                document_variable_name="text",
+                output_key="summary_english"
+            )
+            | RunnableLambda(lambda x: x["summary_english"])
+            )
+
+
 refine_chain = RunnableLambda(refine_lambda)
 map_reduce_chain = RunnableLambda(map_reduce_lambda)
+stuff_chain = RunnableLambda(stuff_lambda)
 
 
 method_to_chain = {
@@ -216,6 +230,7 @@ method_to_chain = {
     "k-means": kmeans_chain,
     "refine": refine_chain,
     "map_reduce": map_reduce_chain,
+    "stuff": stuff_chain,
 }
 
 
@@ -274,6 +289,5 @@ translate_chain = RunnableLambda(translate_lambda)
 def new_summarize_chain():
     return (
         input_chain
-        | RunnableParallel(english_summary=route_chain, info=RunnablePassthrough())
-        | translate_chain
+        | RunnableLambda(route)
     )
