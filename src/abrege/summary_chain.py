@@ -220,14 +220,12 @@ method_to_chain = {
 
 
 def route(info):
-    print(info)
     if info.get("method") not in method_to_chain:
         raise ValueError
     return method_to_chain[info["method"]]
 
 
 def complete_input(info):
-    print(info)
     if not info.get("context_size"):
         info["context_size"] = 2500
     if not info.get("language"):
