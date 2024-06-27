@@ -7,7 +7,7 @@ Summary:
 summarize_template = """
 The following is a collection of extract from a text (or the entire text itself)
 {text}
-Take these and distill it into a considated summary in at most {size} words
+Take these and distill it into a consolidated summary in at most {size} words
 """
 
 map_template = """The following is a set of documents
@@ -25,8 +25,8 @@ question_prompt_template = """Write a concise summary of the following in a most
 CONCISE SUMMARY:"""  # noqa
 
 refine_template = """
-Your job is to produce a final summary
-We have provided an existing summary up to a certain point{existing_answer}:
+Your job is to produce a final summary.
+We have provided an existing summary up to a certain point {existing_answer}.
 We have the opportunity to refine the existing summary (only if needed)
 with some more context below enclosed in triple backstick
 ´´´{text}´´´

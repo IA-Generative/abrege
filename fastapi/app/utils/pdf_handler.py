@@ -1,13 +1,8 @@
-from enum import Enum
-import pathlib
-import pypdf
-from langchain_community.document_loaders import PyPDFLoader
 from typing import Literal
 import pymupdf
 from PIL import Image
 from io import BytesIO
 import base64
-from PIL import Image
 import requests
 
 from langchain_core.documents import Document

@@ -88,7 +88,6 @@ class EmbeddingModel:
 
     def encode(self, list_chunk: list[str]) -> np.ndarray:
         match self.model_class:
-
             case "OpenAIEmbeddingFunction":
                 embeddings = openai_encode_multithreading(self._model, list_chunk)
                 return np.array(embeddings)
@@ -206,7 +205,6 @@ def build_graph(
 
 
 def compute_textrank_score(list_chunk: list[str], embedding_model: EmbeddingModel):
-
     # Next build a similarity relation between each pair of sentences
     dict_weight = build_weight(list_chunk, embedding_model)
 
@@ -224,7 +222,7 @@ def compute_textrank_score(list_chunk: list[str], embedding_model: EmbeddingMode
     return calculated_page_rank
 
 
-def text_rank_iterator(list_chunk: list[str], embedding_model: EmbeddingModel):
+def text_rank_iterator2(list_chunk: list[str], embedding_model: EmbeddingModel):
     """
     Yield the top sentences of the models, according to the embeddings computed
     by embedding_model
@@ -284,7 +282,7 @@ def text_rank_iterator(list_chunk: list[str], embedding_model: EmbeddingModel):
         i += 1
 
 
-def split_chunk(text: str, chunk_size: int = 300) -> list[str]:
+def split_chunk(text: str, chunk_size: int = 300, chunk_overlap: int = 30) -> list[str]:
     """split the text into chunk with a small overlap
 
     Parameters
@@ -300,7 +298,7 @@ def split_chunk(text: str, chunk_size: int = 300) -> list[str]:
         list of the chunks
     """
     text_splitter = RecursiveCharacterTextSplitter.from_huggingface_tokenizer(
-        tokenizer, chunk_size=chunk_size, chunk_overlap=30
+        tokenizer, chunk_size=chunk_size, chunk_overlap=chunk_overlap
     )
     split_text = text_splitter.split_text(text)
     return split_text
@@ -444,6 +442,106 @@ def build_text_prompt_text_rank(
     idx_result.sort()
 
     return [list_chunks[idx] for idx in idx_result]
+
+
+def text_rank_iterator(list_chunks: list[str], embedding_model: EmbeddingModel):
+    """
+    Yield the top sentences of the models, according to the embeddings computed
+    by embedding_model
+
+    Parameters
+    --------------
+    list_chunk : list[str]
+        list of chunk of text (can be either sentences or just chunk)
+
+    embedding_model: EmbeddingModel
+        model to use for embeddings of sentences
+
+    Yield
+    --------
+    int
+        index of the best sentences so far
+    """
+    # First get the embeddings
+    embeddings = embedding_model.encode(list_chunks)
+
+    # The build the cosine similarity matrix
+    cosine_matrix = np.matmul(embeddings, np.swapaxes(embeddings, 0, 1))
+
+    # Compute the best scorer in PageRank
+    chunk_rank = page_rank(cosine_matrix)
+
+    # Next we iter through the best chunk according to text rank
+    # If we found a chunk that has a similarity to close to a previous yielded chunk
+    # we skip it to avoid redundance
+    idx = 0
+    previous_yielded = []
+    while idx < len(chunk_rank):
+        chunk_idx = chunk_rank[idx]
+        send_chunk = True
+        for p_yielded_idx in previous_yielded:
+            if np.all(
+                cosine_matrix[chunk_rank, p_yielded_idx] > 0.8
+            ):  # Ref : Malo Adler thesis
+                send_chunk = False
+                break
+
+        if send_chunk:
+            previous_yielded.append(chunk_idx)
+            yield chunk_idx
+
+        idx += 1
+
+
+class PowerIterationFailedConvergence(Exception):
+    def __init__(self, *args):
+        super().__init__(*args)
+
+
+def page_rank(
+    cosine_matrix: np.ndarray,
+    alpha: float = 0.85,
+    eps: float = 0.000001,
+    max_iter: int = 100,
+) -> np.ndarray:
+    """
+    Compute the page rank algorithm on the given embeddins
+
+    Parameters
+    -----------
+    cosine_matrix: np.ndarray
+        Matrix of dimensions (n, n) where n is the number of chunks representing where
+        M[i, j] = cosine_simaliraty(list_chunk[i], list_chunk[j])
+    alpha: float
+        damping factor
+        default to 0.85
+    eps: float
+        tolerance for convergence
+        default to 0.01
+    max_iter: int
+        maximum number of iteration
+        default to 100
+
+    Returns
+    ---------
+    np.ndarray
+        array of length n containing the pagerank values
+    """
+    n_iter = 0
+    sum_row = np.sum(cosine_matrix, axis=1)
+    T_cosine_matrix = np.transpose(cosine_matrix)
+    P0 = np.array([alpha for _ in cosine_matrix])
+    P1 = (1 - alpha) + (alpha * np.matmul(T_cosine_matrix, P0 / sum_row))
+    while np.linalg.norm(P0 - P1) > eps and n_iter < max_iter:
+        n_iter += 1
+        P0 = P1
+        P1 = (1 - alpha) + (alpha * np.matmul(T_cosine_matrix, P0 / sum_row))
+    if n_iter == max_iter:
+        raise PowerIterationFailedConvergence(
+            f"Failed to convergence under {eps} in {max_iter} iterations"
+        )
+
+    return np.argsort(P1)[::-1]
 
 
 if __name__ == "__main__":

@@ -7,7 +7,7 @@ readme = "README.md"
 package-mode = false
 
 [tool.poetry.dependencies]
-abrege = {path = "../src/"}
+abrege = {path = "../src", develop = true}
 python = ">=3.11, <3.13"
 langchain = "^0.1.16"
 langchain-openai = "^0.1.6"
@@ -21,8 +21,7 @@ tenacity = "8.3.0"
 pymupdf = "^1.24.5"
 
 [tool.poetry.group.dev.dependencies]
-abrege = {path = "../src/", develop = true, extras = ["dev"]}
-
+abrege = {path = "../src", develop = true, extras = ["dev"]}
 
 [build-system]
 requires = ["poetry-core"]

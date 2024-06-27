@@ -42,9 +42,22 @@ params["method"] = st.sidebar.selectbox(
 params["temperature"] = st.sidebar.number_input(
     label="Choisissez une température", min_value=0.0, max_value=1.0, step=0.01
 )
-params["language"] = st.sidebar.text_input(
-    label="Choisissez un language pour le résumé", value="French"
-)
+if 0:
+    params["language"] = st.sidebar.text_input(
+        label="Choisissez un language pour le résumé", value="French"
+    )
+else:
+    params["language"] = st.sidebar.selectbox(
+        label="Choisissez une langue pour le résumé",
+        options=["French", "English"],
+        format_func={
+            "French": "Français",
+            "English": "Anglais",
+        }.__getitem__,
+        index=0,
+    )
+
+
 params["size"] = st.sidebar.number_input(
     label="Choissisez un nombre de mots pour votre résumé",
     min_value=50,
@@ -106,7 +119,7 @@ elif doc_type == "URL":
     )
 elif doc_type == "document":
     pdf_mode_ocr = st.selectbox(
-        label="Dans le cas d'un document PDF. Est-ce que le docuemnt contient des pages scannées, uniquement du texte ou un mixte des deux ?",
+        label="Dans le cas d'un document PDF. Est-ce que le docuemnt contient des pages scannées, uniquement du texte ou un mixte des deux ?", # noqa
         options=["full_text", "text_and_ocr", "full_ocr"],
         format_func={
             "full_text": "que du texte",

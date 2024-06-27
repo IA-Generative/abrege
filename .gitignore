@@ -3,7 +3,6 @@
 *__pycache__*
 *.idea/*
 *prof
-*.txt
 !requirements.txt
 *.egg-info
 notebook/*

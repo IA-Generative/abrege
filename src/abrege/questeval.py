@@ -1,19 +1,15 @@
 from langchain_openai import ChatOpenAI
 from langchain.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnablePassthrough
-from langchain_text_splitters import (
-    RecursiveCharacterTextSplitter,
-)
-from langchain.docstore.document import Document
-from langchain_core.prompts import PromptTemplate
 from openai import OpenAI
 
 from typing import Literal
-import re, os, random
+import re
+import os
+import random
 import statistics
 
-from extractive_summary import (
+from abrege.extractive_summary import (
     compute_textrank_score,
     EmbeddingModel,
     text_rank_iterator,
@@ -22,7 +18,7 @@ from extractive_summary import (
 
 import nltk
 
-nltk.download("punkt", quiet=True)
+nltk.download("punkt", quiet=False)
 
 
 def extract_list(output: str) -> list[str]:
@@ -51,7 +47,7 @@ Format your response as follows:
 ...
 
 Try to generate diverse and thoughtful questions that cover key points and details from the context. Avoid overly broad or vague questions. The answers should be factual and directly reference information from the context text.
-"""
+"""  # noqa
     )
     chain = prompt_template | llm | StrOutputParser() | extract_list
     return [
@@ -97,6 +93,8 @@ def selector(
     elif mode == "full":
         selected_sentences = list_str
     elif mode == "textrank":
+        # dans le cas d'un texte rank, le découpage en phrase donne parfois des phrases trop longue pour l'API d'embedding_model # noqa
+        # il faut donc privilégier le un découpage selon split_chunk de extractive_summary # noqa
         idx_generator = text_rank_iterator(list_str, embedding_model)
         selected_idx = [next(idx_generator, None) for _ in range(k)]
         if None in selected_idx:
@@ -106,7 +104,7 @@ def selector(
             list_str[idx] for idx in selected_idx if selected_idx is not None
         ]
     else:
-        raise NotImplementedError(f"the mode `{mode}`is not implemented")
+        raise NotImplementedError(f"the mode `{mode}` is not implemented")
     return selected_sentences
 
 
@@ -130,6 +128,7 @@ def compute_questeval(
     embedding_model=None,
     n_sentence_selected: int = 10,
     n_question_per_sentence: int = 1,
+    mode: Literal["random", "full", "textrank"] = "random",
     do_weighter: bool = True,
 ) -> float:
     assert isinstance(source, str)
@@ -141,7 +140,7 @@ def compute_questeval(
     sentences = nltk.tokenize.sent_tokenize(source)
     selected_sentences = selector(
         sentences,
-        mode="textrank",
+        mode=mode,
         k_max=n_sentence_selected,
         embedding_model=embedding_model,
     )
@@ -165,7 +164,7 @@ def compute_questeval(
     sentences = nltk.tokenize.sent_tokenize(resume)
     selected_sentences = selector(
         sentences,
-        mode="textrank",
+        mode=mode,
         k_max=n_sentence_selected,
         embedding_model=embedding_model,
     )
@@ -208,8 +207,6 @@ if __name__ == "__main__":
         temperature=0,
         model="mixtral",
     )
-
-    from openai import OpenAI
 
     openai_client = OpenAI(
         api_key=os.environ["OPENAI_EMBEDDING_API_KEY"],

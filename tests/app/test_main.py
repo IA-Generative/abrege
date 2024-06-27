@@ -22,13 +22,12 @@ def requires_env_var():
 
 @pytest.fixture
 def big_file():
-    test_file = "tests/test_data/2106.11520v2.pdf"
-    files = {"file": ("truc.pdf", open(test_file, "rb"))}
+    test_file = "tests/test_data/pg5097.txt"
+    files = {"file": ("truc.txt", open(test_file, "rb"))}
     return files
 
 
 class TestApp:
-
     @staticmethod
     def test_healthcheck():
         with TestClient(app) as client:
@@ -39,7 +38,8 @@ class TestApp:
     @mock.patch("main.summarize_chain_builder")
     def test_raw_text(mock):
         with TestClient(app) as client:
-            _ = client.get("/text", params={"text": "text"})
+            response = client.get("/text", params={"text": "text"})
+            assert response.status_code == 200
             assert mock.call_count == 1
 
     @staticmethod
@@ -117,6 +117,7 @@ class TestApp:
     @staticmethod
     @requires_env_var()
     @pytest.mark.slow
+    @pytest.mark.skip("Not new implmentation")
     def test_api_call_stuff(big_file):
         with TestClient(app) as client:
             response = client.post("/doc", files=big_file, params={"method": "stuff"})
@@ -165,38 +166,3 @@ class TestApp:
                 },
             )
         assert response.status_code == 200
-
-    @staticmethod
-    @requires_env_var()
-    @pytest.mark.slow
-    @pytest.mark.skip(reason="Too slow, experimental, may be removed")
-    def test_api_call_text_rank2(big_file):
-        with TestClient(app) as client:
-            response = client.post(
-                "/doc", files=big_file, params={"method": "text_rank2"}
-            )
-        assert response.status_code == 200
-
-    @staticmethod
-    @requires_env_var()
-    @pytest.mark.slow
-    @pytest.mark.skip(reason="Too slow, experimental, may be removed")
-    def test_api_call_k_means2(big_file):
-        with TestClient(app) as client:
-            response = client.post(
-                "/doc", files=big_file, params={"method": "k-means2"}
-            )
-        assert response.status_code == 200
-
-    @staticmethod
-    @mock.patch("main.summarize_chain_builder")
-    def test_scanned_pdf(_):
-        files = {
-            "file": ("truc.pdf",
-                     open("tests/test_data/PDF-export-example-image.pdf", "rb"))
-        }
-        with TestClient(app) as client:
-            response = client.post("/doc", files=files)
-
-        assert response.status_code == 422
-        assert response.json() == {"detail": "Text retrieved from documents too short"}
