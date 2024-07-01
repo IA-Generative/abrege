@@ -9,14 +9,12 @@ from langchain_core.documents.base import Document
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import (
     PromptTemplate,
-    SystemMessagePromptTemplate,
-    HumanMessagePromptTemplate,
 )
 from langchain_core.runnables import (
     RunnableLambda,
     RunnablePassthrough,
-    RunnableParallel,
 )
+from operator import itemgetter
 
 from abrege.extractive_summary import (
     EmbeddingModel,
@@ -27,7 +25,7 @@ from abrege.prompt.template import prompt_template
 
 
 MethodType = Literal[
-    "text_rank", "map_reduce", "refine", "k-means", "stuff", "text_rank2", "k-means2"
+    "text_rank", "map_reduce", "refine", "k-means", "stuff"
 ]
 
 
@@ -124,6 +122,9 @@ def kmeans_lambda(info):
 
     prompt = PromptTemplate.from_template(info["summarize_template"])
 
+    if info["context_size"] > info["llm"].get_num_tokens(info["text"]):
+        info["context_size"] = info["llm"].get_num_tokens(info["text"])
+
     extractive_summary = build_text_prompt_kmeans(
         info["text"], info["context_size"], info["embedding_model"]
     )
@@ -163,7 +164,7 @@ def refine_lambda(info):
         output_key="summary_english",
     )
 
-    return split_chain | refine_chain | RunnableLambda(lambda x: x["summary_english"])
+    return split_chain | refine_chain | RunnableLambda(itemgetter("summary_english"))
 
 
 def map_reduce_lambda(info):
@@ -189,11 +190,26 @@ def map_reduce_lambda(info):
         output_key="summary_english",
     )
 
-    return split_chain | final_chain | RunnableLambda(lambda x: x["summary_english"])
+    return split_chain | final_chain | RunnableLambda(itemgetter("summary_english"))
+
+
+def stuff_lambda(info):
+    prompt = PromptTemplate.from_template(info["summarize_template"])
+    llm_chain = LLMChain(llm=info["llm"], prompt=prompt)
+
+    return (split_chain
+            | StuffDocumentsChain(
+                llm_chain=llm_chain,
+                document_variable_name="text",
+                output_key="summary_english"
+            )
+            | RunnableLambda(itemgetter("summary_english"))
+            )
 
 
 refine_chain = RunnableLambda(refine_lambda)
 map_reduce_chain = RunnableLambda(map_reduce_lambda)
+stuff_chain = RunnableLambda(stuff_lambda)
 
 
 method_to_chain = {
@@ -201,6 +217,7 @@ method_to_chain = {
     "k-means": kmeans_chain,
     "refine": refine_chain,
     "map_reduce": map_reduce_chain,
+    "stuff": stuff_chain,
 }
 
 
@@ -236,6 +253,7 @@ route_chain = RunnableLambda(route)
 
 
 def new_summarize_chain():
-    return input_chain | RunnableParallel(
-        english_summary=route_chain, info=RunnablePassthrough()
+    return (
+        input_chain
+        | RunnableLambda(route)
     )

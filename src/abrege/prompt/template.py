@@ -8,7 +8,7 @@ summarize_template = """
 The following is a collection of extract from a text (or the entire text itself)
 {text}
 Take these and distill it into a consolidated summary in {language} in at most {size} words
-"""
+""" # noqa
 
 map_template = """The following is a set of documents
 {docs}

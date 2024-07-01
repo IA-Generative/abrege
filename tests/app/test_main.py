@@ -117,7 +117,6 @@ class TestApp:
     @staticmethod
     @requires_env_var()
     @pytest.mark.slow
-    @pytest.mark.skip("Not new implmentation")
     def test_api_call_stuff(big_file):
         with TestClient(app) as client:
             response = client.post("/doc", files=big_file, params={"method": "stuff"})

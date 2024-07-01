@@ -12,6 +12,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException, UploadFile, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security.api_key import APIKeyHeader
+from fastapi.responses import StreamingResponse
 from openai import OpenAI
 from langchain_openai import ChatOpenAI
 from langchain_community.document_loaders import (
@@ -323,6 +324,7 @@ async def summarize_txt(
     dict[str, str]
         summary
     """
+    from time import perf_counter
 
     llm = context["chat_builder"](model, temperature)
     custom_chain = summarize_chain_builder(
@@ -339,9 +341,13 @@ async def summarize_txt(
         refine_template=refine_template,
     )
 
+    deb = perf_counter()
+
     res = custom_chain.invoke({"text": text})
 
-    return {"summary": res}
+    elapsed = perf_counter() - deb
+
+    return {"summary": res, "time": elapsed}
 
 
 @app.post("/doc")
@@ -461,47 +467,6 @@ async def summarize_doc(
     return {"summary": res}
 
 
-# @app.post("/docs")
-# async def summarize_multi_doc(
-# files: List[UploadFile],
-# method: MethodType = "k-means",
-# model: str = "phi3",
-# one_summary: bool = False,
-# temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
-# language: str = "English",
-# size: int = 200,
-# summarize_template: str | None = None,
-# map_template: str | None = None,
-# reduce_template: str | None = None,
-# question_template: str | None = None,
-# refine_template: str | None = None,
-# ):
-
-# summaries = []
-# for file in files:
-# file_summary = await summarize_doc(file, method, model, temperature)
-# summaries.append(file_summary)
-
-# if one_summary:
-# llm = context["chat_builder"](model, temperature)
-# custom_chain = summarize_chain_builder(
-# llm=llm,
-# embedding_model=context["embedding_model"],
-# method="stuff",
-# language=language,
-# size=size,
-# summarize_template=summarize_template,
-# map_template=map_template,
-# reduce_template=reduce_template,
-# question_template=question_template,
-# refine_template=refine_template,
-# )
-# docs = [Document(page_content=summary) for summary in summaries]
-# summaries = [custom_chain.invoke(docs)]
-
-# return {"summaries": summaries}
-
-
 @app.get("/models")
 async def list_model():
     """Get a list a available mode for the api"""
@@ -517,6 +482,190 @@ async def param():
         "methods": get_args(MethodType),
         "prompt_template": prompt_template,
     }
+
+
+@app.get("/text_stream")
+async def stream_summary(
+    text: str,
+    method: MethodType = "text_rank",
+    model: str = "phi3",
+    context_size: int = 10_000,
+    temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
+    language: str = "English",
+    size: int = 200,
+    summarize_template: str | None = None,
+    map_template: str | None = None,
+    reduce_template: str | None = None,
+    question_template: str | None = None,
+    refine_template: str | None = None,
+):
+    """Generate a summary of the raw text
+
+    Parameters
+    ----------
+    text : str
+        text to summarize
+    method : MethodType, optional
+        method to use to generate the summary, by default "text_rank"
+    model : str, optional
+        llm to use, by default "phi3"
+    context_size: int
+        maximum size of the context windows passed to the llm
+        bigger size allows more context but also induces more mistakes by the llm
+        default to 10_000
+    temperature : Annotated[float, Query, optional
+        temperature parameter of the llm, by default 0, le=1.0)]=0
+    language : str, optional
+        language to use to write the summary, by default "English"
+    size : int
+        size of the final summary, in words
+        default to 200
+    summarize_template: str | None
+        basic template for text_rank, k-means and small text
+    map_template: str | None
+        map template for map_reduce method
+    reduce_template: str | None
+        reduce template for map_reduce method
+    question_template: str | None
+        question template for refine method
+    refine_template: str | None
+        refine template for refine method
+
+    Returns
+    -------
+    dict[str, str]
+        summary
+    """
+    llm = context["chat_builder"](model, temperature)
+    custom_chain = summarize_chain_builder(
+        llm=llm,
+        embedding_model=context["embedding_model"],
+        method=method,
+        context_size=context_size,
+        language=language,
+        size=size,
+        summarize_template=summarize_template,
+        map_template=map_template,
+        reduce_template=reduce_template,
+        question_template=question_template,
+        refine_template=refine_template,
+    )
+
+    return StreamingResponse(custom_chain.astream({"text": text}))
+
+
+@app.post("/doc_stream")
+async def summarize_doc_stream(
+    file: UploadFile,
+    method: MethodType = "text_rank",
+    pdf_mode_ocr: ModeOCR | None = None,
+    model: str = "phi3",
+    context_size: int = 10_000,
+    temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
+    language: str = "English",
+    size: int = 200,
+    summarize_template: str | None = None,
+    map_template: str | None = None,
+    reduce_template: str | None = None,
+    question_template: str | None = None,
+    refine_template: str | None = None,
+):
+    """Generate a summary of the file
+
+    Parameters
+    ----------
+    file : UploadFile
+        file to generate a summary from it's content
+    method : MethodType, optional
+        method to use to generate the summary, by default "text_rank"
+    model : str, optional
+        llm to use, by default "phi3"
+    context_size: int
+        maximum size of the context windows passed to the llm
+        bigger size allows more context but also induces more mistakes by the llm
+        default to 10_000
+    temperature : Annotated[float, Query, optional
+        temperature parameter of the llm, by default 0, le=1.0)]=0
+    language : str, optional
+        language to use to write the summary, by default "English"
+    size : int
+        size of the final summary, in words
+        default to 200
+    summarize_template: str | None
+        basic template for text_rank, k-means and small text
+    map_template: str | None
+        map template for map_reduce method
+    reduce_template: str | None
+        reduce template for map_reduce method
+    question_template: str | None
+        question template for refine method
+    refine_template: str | None
+        refine template for refine method
+
+
+    Returns
+    -------
+    dict[str, str]
+        summary
+    """
+
+    llm = context["chat_builder"](model, temperature)
+
+    custom_chain = summarize_chain_builder(
+        llm=llm,
+        embedding_model=context["embedding_model"],
+        method=method,
+        context_size=context_size,
+        language=language,
+        size=size,
+        summarize_template=summarize_template,
+        map_template=map_template,
+        reduce_template=reduce_template,
+        question_template=question_template,
+        refine_template=refine_template,
+    )
+
+    if file.filename is not None:
+        try:
+            _, extension = os.path.splitext(file.filename)
+        except Exception as err:
+            raise HTTPException(
+                status_code=422,
+                detail=f"""Error while parsing the filename, {err} occured""",
+            )
+
+    if extension not in DOCUMENT_LOADER_DICT:
+        raise HTTPException(
+            status_code=422,
+            detail=f"""file format not supported, file format supported are :
+              {tuple(DOCUMENT_LOADER_DICT.keys())}""",
+        )
+
+    if extension == ".pdf" and pdf_mode_ocr is None:
+        raise HTTPException(
+            status_code=422,
+            detail=f"""for pdf files, the pdf_mode_ocr parameter must be specified
+            ({repr(tuple(ModeOCR.__args__))})""",
+        )
+
+    # Dirty method required: save content to a tempory file and read it...
+    with tempfile.NamedTemporaryFile(mode="w+b") as tmp_file:
+        tmp_file.write(file.file.read())
+        if extension != ".pdf" or pdf_mode_ocr == "full_text":
+            loader = DOCUMENT_LOADER_DICT[extension](tmp_file.name)
+            docs = loader.load()
+        else:
+            loader = OCRPdfLoader(tmp_file.name)
+            docs = loader.load(mode=pdf_mode_ocr)
+
+    text = "\n".join(doc.page_content for doc in docs)
+
+    if len(text) < size:
+        raise HTTPException(
+            status_code=422, detail="Text retrieved from documents too short"
+        )
+
+    return StreamingResponse(custom_chain.astream({"text": text}))
 
 
 if __name__ == "__main__":
