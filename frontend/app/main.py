@@ -33,9 +33,17 @@ params = {}
 
 st.sidebar.header("Paramètres")
 
+for m in ("qwen2", "llama3", "phi3"):
+    if m in available_params["models"]:
+        index_model = available_params["models"].index(m)
+        break
+else:
+    index_model = 0
+
 params["model"] = st.sidebar.selectbox(
-    label="Choisissez un modèle", options=available_params["models"]
+    label="Choisissez un modèle", options=available_params["models"], index=index_model
 )
+
 params["method"] = st.sidebar.selectbox(
     label="Choisissez une méthode", options=available_params["methods"]
 )
