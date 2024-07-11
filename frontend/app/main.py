@@ -13,7 +13,6 @@ base_api_url = f"http://{api_service}:8000"
 st.set_page_config(page_title="Demo abrege", initial_sidebar_state="collapsed")
 stdsfr.override_font_family()
 
-
 @st.cache_data
 def get_param():
     response = requests.get(base_api_url + "/default_params")
@@ -127,11 +126,15 @@ elif doc_type == "URL":
         label="Entrer votre URL", placeholder="URL vers la page web à résumer"
     )
 elif doc_type == "document":
-    user_input = stdsfr.dsfr_file_uploader(
+    user_input = st.file_uploader(
         label="Téléverser votre document",
         help="Documents acceptés: .pdf, .docx, .odt, .txt",
+        type=["pdf", "docx", ".odt", "txt"]
     )
+    import logging
+
     if user_input is not None:
+        logging.warning(f"{user_input}")
         if user_input.name.rsplit(".", 1)[-1] == "pdf":
             pdf_mode_ocr = st.selectbox(
                 label="Dans le cas d'un document PDF. Est-ce que le docuemnt contient des pages scannées, uniquement du texte ou un mixte des deux ?",  # noqa
