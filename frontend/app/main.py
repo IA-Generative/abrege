@@ -138,7 +138,7 @@ elif doc_type == "document":
         logging.warning(f"{user_input=}")
         if user_input.name.rsplit(".", 1)[-1] == "pdf":
             pdf_mode_ocr = st.selectbox(
-                label="Dans le cas d'un document PDF. Est-ce que le document contient uniquement des pages scannées, uniquement du texte ou un mixte des deux ?",  # noqa
+                label="Est-ce que le document PDF contient uniquement des pages scannées, uniquement du texte ou un mixte des deux ?",  # noqa
                 options=["full_text", "text_and_ocr", "full_ocr"],
                 format_func={
                     "full_text": "que du texte",
