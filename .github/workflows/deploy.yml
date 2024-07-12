@@ -247,6 +247,17 @@ jobs:
           kubeconfig: ${{ secrets.KUBECONFIG }}
           context: abrege/51.159.183.142:16443/abrege
 
+
+      - name: Update deployment.yaml (with the image and the new image hash)
+        run: |
+          IMAGE_HASH=${{ github.sha }}
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main"
+          IMAGE_LOWERCASE=$(echo $IMAGE | tr '[:upper:]' '[:lower:]')
+          sed -i "s|PLACEHOLDER_FOR_IMAGE_HASH|${IMAGE_HASH}|g" deployment.yaml
+          sed -i "s|PLACEHOLDER_FOR_IMAGE|${IMAGE_LOWERCASE}|g" deployment.yaml
+          cat ./deployment.yaml
+  
+
       - uses: Azure/k8s-deploy@v4
         with:
           action: deploy
