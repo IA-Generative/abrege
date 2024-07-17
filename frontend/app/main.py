@@ -5,10 +5,8 @@ import json
 import os
 import logging
 
-
 INTREGRATION_MIRAI = True
 
-# REMOVE AND CONFIGURE
 api_service = os.environ["API_BASE"]
 base_api_url = f"http://{api_service}:8000"
 
@@ -121,24 +119,22 @@ doc_type = st.selectbox(
     index=2,
 )
 
-show_button: bool
+user_input = None
+
 if doc_type == "texte":
     user_input = st.text_area(label="Entrer votre texte", placeholder="Texte à résumer")
-    show_button = (user_input is not None) and len(user_input) >= 10
 elif doc_type == "URL":
     user_input = st.text_area(
         label="Entrer votre URL", placeholder="URL vers la page web à résumer"
     )
-    show_button = (user_input is not None) and len(user_input)
 elif doc_type == "document":
     user_input = st.file_uploader(
         label="Téléverser votre document",
         help="Documents acceptés: .pdf, .docx, .odt, .txt",
-        type=["pdf", "docx", ".odt", "txt"]
+        type=["pdf", "docx", ".odt", "txt"],
     )
-    show_button = user_input is not None
     if user_input is not None:
-        logging.warning(f"{user_input=}")
+        pdf_mode_ocr = None
         if user_input.name.rsplit(".", 1)[-1] == "pdf":
             pdf_mode_ocr = st.selectbox(
                 label="Est-ce que le document PDF contient uniquement des pages scannées, uniquement du texte ou un mixte des deux ?",  # noqa
@@ -150,9 +146,7 @@ elif doc_type == "document":
                 }.__getitem__,
                 index=0,
             )
-
-
-
+            
 
 def ask_llm(request_type, params, user_input) -> str:
     with st.spinner("Résumé en cours de fabrication..."):
@@ -207,13 +201,14 @@ def ask_llm_stream(request_type, params, user_input):
 # stdsfr button not working, seems to rerun to early to let st.spinner work
 # maybe should open a pull request
 st.session_state.stream = False
-if show_button:
-    if st.button("Générer un résumé"):
-        if params["method"] in ["text_rank", "k-means"] and doc_type != "url":
-            st.write_stream(ask_llm_stream(doc_type, params, user_input))
-            st.session_state.stream = True
-        else:
-            st.session_state.summary = ask_llm(doc_type, params, user_input)
+
+if st.button("Générer un résumé") and user_input:
+    if params["method"] in ["text_rank", "k-means"] and doc_type == "url":
+        st.write_stream(ask_llm_stream(doc_type, params, user_input))
+        st.session_state.stream = True
+    else:
+        st.session_state.summary = ask_llm(doc_type, params, user_input)
+
 
 if "summary" in st.session_state and not st.session_state.stream:
     st.write(st.session_state.summary)
