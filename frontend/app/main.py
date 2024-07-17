@@ -4,7 +4,6 @@ import requests
 import json
 import os
 
-# REMOVE AND CONFIGURE
 api_service = os.environ["API_BASE"]
 base_api_url = f"http://{api_service}:8000"
 
@@ -188,7 +187,7 @@ def ask_llm_stream(request_type, params, user_input):
 # maybe should open a pull request
 st.session_state.stream = False
 if st.button("Générer un résumé"):
-    if params["method"] in ["text_rank", "k-means"] and doc_type != "url":
+    if params["method"] in ["text_rank", "k-means"] and doc_type == "url":
         st.write_stream(ask_llm_stream(doc_type, params, user_input))
         st.session_state.stream = True
     else:
