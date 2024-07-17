@@ -20,6 +20,9 @@ spec:
     metadata:
       labels:
         app: abrege
+      annotations:
+        redeploy-hash: "PLACEHOLDER_FOR_IMAGE_HASH"
+
     spec:
       containers:
       - name: abrege-api

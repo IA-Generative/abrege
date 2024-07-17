@@ -5,12 +5,13 @@ import json
 import os
 import logging
 
+INTREGRATION_MIRAI = True
+
 api_service = os.environ["API_BASE"]
 base_api_url = f"http://{api_service}:8000"
 
 st.set_page_config(page_title="Demo abrege", initial_sidebar_state="collapsed")
 stdsfr.override_font_family()
-
 
 @st.cache_data
 def get_param():
@@ -43,7 +44,6 @@ else:
 params["model"] = st.sidebar.selectbox(
     label="Choisissez un modèle", options=available_params["models"], index=index_model
 )
-
 params["method"] = st.sidebar.selectbox(
     label="Choisissez une méthode", options=available_params["methods"]
 )
@@ -52,11 +52,11 @@ params["temperature"] = st.sidebar.number_input(
 )
 if 0:
     params["language"] = st.sidebar.text_input(
-        label="Choisissez un language pour le résumé", value="French"
+        label="Choisissez une langue pour le résumé", value="French"
     )
 else:
     params["language"] = st.sidebar.selectbox(
-        label="Choisissez un language pour le résumé",
+        label="Choisissez une langue pour le résumé",
         options=["French", "English"],
         format_func={
             "French": "Français",
@@ -103,9 +103,18 @@ params["question_template"] = expander3.text_area(
 params["refine_template"] = expander3.text_area(
     label="refine_template", value=available_params["prompt_template"]["refine"]
 )
+if not INTREGRATION_MIRAI:
+    st.header("Résumeur de documents")
+
+    st.write(
+        """Cette page web propose un service pour résumer un texte, une page web via une 
+url ou bien un document. Le résumé est effectué à l'aide d'un LLM du MIOM, souverain et 
+sans collecte de vos données. Les résumés produits peuvent être parametrisés à l'aide 
+du menu déroulant à gauche"""
+    )   
 
 doc_type = st.selectbox(
-    label="Choisissez un type de documents à résumer",
+    label="Choisissez le type du document à résumer",
     options=["texte", "URL", "document"],
     index=2,
 )
@@ -125,7 +134,6 @@ elif doc_type == "document":
         type=["pdf", "docx", ".odt", "txt"],
     )
     if user_input is not None:
-        logging.warning(f"{user_input=}")
         pdf_mode_ocr = None
         if user_input.name.rsplit(".", 1)[-1] == "pdf":
             pdf_mode_ocr = st.selectbox(
@@ -138,7 +146,7 @@ elif doc_type == "document":
                 }.__getitem__,
                 index=0,
             )
-
+            
 
 def ask_llm(request_type, params, user_input) -> str:
     with st.spinner("Résumé en cours de fabrication..."):
@@ -193,12 +201,14 @@ def ask_llm_stream(request_type, params, user_input):
 # stdsfr button not working, seems to rerun to early to let st.spinner work
 # maybe should open a pull request
 st.session_state.stream = False
+
 if st.button("Générer un résumé") and user_input:
     if params["method"] in ["text_rank", "k-means"] and doc_type == "url":
         st.write_stream(ask_llm_stream(doc_type, params, user_input))
         st.session_state.stream = True
     else:
         st.session_state.summary = ask_llm(doc_type, params, user_input)
+
 
 if "summary" in st.session_state and not st.session_state.stream:
     st.write(st.session_state.summary)
