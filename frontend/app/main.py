@@ -3,6 +3,7 @@ import streamlit_dsfr as stdsfr
 import requests
 import json
 import os
+import logging
 
 api_service = os.environ["API_BASE"]
 base_api_url = f"http://{api_service}:8000"
@@ -103,20 +104,13 @@ params["refine_template"] = expander3.text_area(
     label="refine_template", value=available_params["prompt_template"]["refine"]
 )
 
-st.header("Résumeur de documents")
-
-st.write(
-    """Cette page web propose un service pour résumer un texte, une page web via une 
-url ou bien un document. Le résumé est effectué à l'aide d'un LLM du MIOM, souverain et 
-sans collecte de vos données. Les résumés produits peuvent être parametrisés à l'aide 
-du menu déroulant à gauche"""
-)
-
 doc_type = st.selectbox(
     label="Choisissez un type de documents à résumer",
     options=["texte", "URL", "document"],
     index=2,
 )
+
+user_input = None
 
 if doc_type == "texte":
     user_input = st.text_area(label="Entrer votre texte", placeholder="Texte à résumer")
@@ -125,20 +119,25 @@ elif doc_type == "URL":
         label="Entrer votre URL", placeholder="URL vers la page web à résumer"
     )
 elif doc_type == "document":
-    pdf_mode_ocr = st.selectbox(
-        label="Dans le cas d'un document PDF. Est-ce que le docuemnt contient des pages scannées, uniquement du texte ou un mixte des deux ?",  # noqa
-        options=["full_text", "text_and_ocr", "full_ocr"],
-        format_func={
-            "full_text": "que du texte",
-            "full_ocr": "que des pages scannées",
-            "text_and_ocr": "mixte",
-        }.__getitem__,
-        index=0,
-    )
-    user_input = stdsfr.dsfr_file_uploader(
+    user_input = st.file_uploader(
         label="Téléverser votre document",
         help="Documents acceptés: .pdf, .docx, .odt, .txt",
+        type=["pdf", "docx", ".odt", "txt"],
     )
+    if user_input is not None:
+        logging.warning(f"{user_input=}")
+        pdf_mode_ocr = None
+        if user_input.name.rsplit(".", 1)[-1] == "pdf":
+            pdf_mode_ocr = st.selectbox(
+                label="Est-ce que le document PDF contient uniquement des pages scannées, uniquement du texte ou un mixte des deux ?",  # noqa
+                options=["full_text", "text_and_ocr", "full_ocr"],
+                format_func={
+                    "full_text": "que du texte",
+                    "full_ocr": "que des pages scannées",
+                    "text_and_ocr": "mixte",
+                }.__getitem__,
+                index=0,
+            )
 
 
 def ask_llm(request_type, params, user_input) -> str:
@@ -194,7 +193,7 @@ def ask_llm_stream(request_type, params, user_input):
 # stdsfr button not working, seems to rerun to early to let st.spinner work
 # maybe should open a pull request
 st.session_state.stream = False
-if st.button("Générer un résumé"):
+if st.button("Générer un résumé") and user_input:
     if params["method"] in ["text_rank", "k-means"] and doc_type == "url":
         st.write_stream(ask_llm_stream(doc_type, params, user_input))
         st.session_state.stream = True
