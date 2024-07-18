@@ -29,7 +29,9 @@ from abrege.summary_chain import (
     prompt_template,
 )
 import sys
+import nltk
 
+nltk.download("averaged_perceptron_tagger")
 
 sys.path.append(str(Path(__file__).parent.absolute()))
 
@@ -121,7 +123,6 @@ async def lifespan(_: FastAPI):
             embedding_model = EmbeddingModel(openai_client)
             context["embedding_model"] = embedding_model
         else:
-
             logger.critical(
                 f"""Models list not availble, error status code :
                 {response.status_code}, reason: {response.text}"""
