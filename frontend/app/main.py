@@ -34,7 +34,7 @@ params = {}
 
 st.sidebar.header("Paramètres")
 
-for m in ("qwen2", "llama3", "phi3"):
+for m in ("summary", "vicuna-7b", "phi3"):
     if m in available_params["models"]:
         index_model = available_params["models"].index(m)
         break
