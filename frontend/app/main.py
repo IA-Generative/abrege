@@ -1,9 +1,9 @@
-import streamlit as st
-import streamlit_dsfr as stdsfr
-import requests
 import json
 import os
-import logging
+
+import requests
+import streamlit as st
+import streamlit_dsfr as stdsfr
 
 INTREGRATION_MIRAI = True
 
@@ -12,6 +12,7 @@ base_api_url = f"http://{api_service}:8000"
 
 st.set_page_config(page_title="Demo abrege", initial_sidebar_state="collapsed")
 stdsfr.override_font_family()
+
 
 @st.cache_data
 def get_param():
@@ -111,7 +112,7 @@ if not INTREGRATION_MIRAI:
 url ou bien un document. Le résumé est effectué à l'aide d'un LLM du MIOM, souverain et 
 sans collecte de vos données. Les résumés produits peuvent être parametrisés à l'aide 
 du menu déroulant à gauche"""
-    )   
+    )
 
 doc_type = st.selectbox(
     label="Choisissez le type du document à résumer",
@@ -146,7 +147,7 @@ elif doc_type == "document":
                 }.__getitem__,
                 index=0,
             )
-            
+
 
 def ask_llm(request_type, params, user_input) -> str:
     with st.spinner("Résumé en cours de fabrication..."):
