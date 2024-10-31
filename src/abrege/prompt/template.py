@@ -12,7 +12,7 @@ Take these and distill it into a consolidated summary in {language} in at most {
 
 map_template = """The following is a set of documents
 {docs}
-Based on this list of docs, summarize concizely
+Based on this list of docs, summarize concisely in max 200 words.
 Helpful Answer in {language}:"""
 
 reduce_template = """The following is set of summaries
