@@ -5,13 +5,9 @@ name: Deploy abrege container
 
 on:
   push:
-    branches: [ "main", "deploy"] # todo
+    branches: [ "main"] # todo
     #tags:
     #    - 'v*'
-
-  pull_request:
-    branches: [ "main" ]
-
 env:
   REGISTRY: ghcr.io
   APPLICATION: abrege
