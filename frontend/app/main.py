@@ -70,9 +70,9 @@ else:
 params["size"] = st.sidebar.number_input(
     label="Choissisez un nombre de mots pour votre résumé",
     min_value=50,
-    max_value=300,
-    step=1,
-    value=200,
+    max_value=10_000,
+    step=50,
+    value=4_000,
 )
 
 params["context_size"] = st.sidebar.number_input(
