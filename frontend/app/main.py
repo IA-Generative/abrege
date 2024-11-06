@@ -56,7 +56,7 @@ if 0:
         label="Choisissez une langue pour le résumé", value="French"
     )
 else:
-    params["language"] = st.sidebar.selectbox(
+    params["language"] = st.selectbox(
         label="Choisissez une langue pour le résumé",
         options=["French", "English"],
         format_func={
@@ -67,11 +67,11 @@ else:
     )
 
 
-params["size"] = st.sidebar.number_input(
+params["size"] = st.number_input(
     label="Choissisez un nombre de mots pour votre résumé",
     min_value=50,
     max_value=10_000,
-    step=50,
+    step=100,
     value=4_000,
 )
 
