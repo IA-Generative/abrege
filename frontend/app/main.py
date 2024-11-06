@@ -212,4 +212,8 @@ if st.button("Générer un résumé") and user_input:
 
 
 if "summary" in st.session_state and not st.session_state.stream:
-    st.write(st.session_state.summary)
+    summary = st.session_state.summary
+    st.write(f"**{len(summary.split())} mots générés**")
+    st.write(summary)
+
+
