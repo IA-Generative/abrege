@@ -6,6 +6,7 @@ import streamlit as st
 import streamlit_dsfr as stdsfr
 
 INTREGRATION_MIRAI = True
+FOR_NEWBIES = True
 
 api_service = os.environ["API_BASE"]
 base_api_url = f"http://{api_service}:8000"
@@ -43,13 +44,20 @@ else:
     index_model = 0
 
 params["model"] = st.sidebar.selectbox(
-    label="Choisissez un modèle", options=available_params["models"], index=index_model
+    label="Choisissez un modèle",
+    options=available_params["models"],
+    index=index_model,
+    label_visibility="collapsed" if FOR_NEWBIES else "visible",
 )
 params["method"] = st.sidebar.selectbox(
     label="Choisissez une méthode", options=available_params["methods"]
 )
 params["temperature"] = st.sidebar.number_input(
-    label="Choisissez une température", min_value=0.0, max_value=1.0, step=0.01
+    label="Choisissez une température",
+    min_value=0.0,
+    max_value=1.0,
+    step=0.01,
+    label_visibility="collapsed" if FOR_NEWBIES else "visible",
 )
 if 0:
     params["language"] = st.sidebar.text_input(
@@ -82,28 +90,39 @@ params["context_size"] = st.sidebar.number_input(
     step=500,
     value=10_000,
 )
-st.sidebar.header("Personalisation des prompts")
 
-expander1 = st.sidebar.expander("Prompt pour les méthodes text_rank, k-means et stuff")
-params["summarize_template"] = expander1.text_area(
-    label="summarize_prompt", value=available_params["prompt_template"]["summarize"]
-)
+if FOR_NEWBIES:
+    params["summarize_template"] = available_params["prompt_template"]["summarize"]
+    params["map_template"] = available_params["prompt_template"]["map"]
+    params["reduce_template"] = available_params["prompt_template"]["reduce"]
+    params["question_template"] = available_params["prompt_template"]["question"]
+    params["refine_template"] = available_params["prompt_template"]["refine"]
+else:
+    st.sidebar.header("Personalisation des prompts")
 
-expander2 = st.sidebar.expander("Prompt pour la méthod map_reduce")
-params["map_template"] = expander2.text_area(
-    label="map_template", value=available_params["prompt_template"]["map"]
-)
-params["reduce_template"] = expander2.text_area(
-    label="reduce_template", value=available_params["prompt_template"]["reduce"]
-)
+    expander1 = st.sidebar.expander(
+        "Prompt pour les méthodes text_rank, k-means et stuff"
+    )
+    params["summarize_template"] = expander1.text_area(
+        label="summarize_prompt", value=available_params["prompt_template"]["summarize"]
+    )
 
-expander3 = st.sidebar.expander("Prompt pour la méthode refine")
-params["question_template"] = expander3.text_area(
-    label="question_template", value=available_params["prompt_template"]["question"]
-)
-params["refine_template"] = expander3.text_area(
-    label="refine_template", value=available_params["prompt_template"]["refine"]
-)
+    expander2 = st.sidebar.expander("Prompt pour la méthod map_reduce")
+    params["map_template"] = expander2.text_area(
+        label="map_template", value=available_params["prompt_template"]["map"]
+    )
+    params["reduce_template"] = expander2.text_area(
+        label="reduce_template", value=available_params["prompt_template"]["reduce"]
+    )
+
+    expander3 = st.sidebar.expander("Prompt pour la méthode refine")
+    params["question_template"] = expander3.text_area(
+        label="question_template", value=available_params["prompt_template"]["question"]
+    )
+    params["refine_template"] = expander3.text_area(
+        label="refine_template", value=available_params["prompt_template"]["refine"]
+    )
+
 if not INTREGRATION_MIRAI:
     st.header("Résumeur de documents")
 
