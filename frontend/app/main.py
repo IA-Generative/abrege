@@ -43,22 +43,29 @@ for m in ("summary", "vicuna-7b", "phi3"):
 else:
     index_model = 0
 
-params["model"] = st.sidebar.selectbox(
-    label="Choisissez un modèle",
-    options=available_params["models"],
-    index=index_model,
-    label_visibility="collapsed" if FOR_NEWBIES else "visible",
-)
+if not FOR_NEWBIES:
+    params["model"] = st.sidebar.selectbox(
+        label="Choisissez un modèle",
+        options=available_params["models"],
+        index=index_model,
+    )
+else:
+    params["model"] = available_params["models"][index_model]
+
 params["method"] = st.sidebar.selectbox(
     label="Choisissez une méthode", options=available_params["methods"]
 )
-params["temperature"] = st.sidebar.number_input(
-    label="Choisissez une température",
-    min_value=0.0,
-    max_value=1.0,
-    step=0.01,
-    label_visibility="collapsed" if FOR_NEWBIES else "visible",
-)
+
+if not FOR_NEWBIES:
+    params["temperature"] = st.sidebar.number_input(
+        label="Choisissez une température",
+        min_value=0.0,
+        max_value=1.0,
+        step=0.01,
+    )
+else:
+    params["temperature"] = 0
+
 if 0:
     params["language"] = st.sidebar.text_input(
         label="Choisissez une langue pour le résumé", value="French"
