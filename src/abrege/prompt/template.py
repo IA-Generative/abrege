@@ -7,7 +7,7 @@ Summary:
 summarize_template = """
 The following is a collection of extract from a text (or the entire text itself)
 {text}
-Take these and distill it into a consolidated summary in {language} in at most {size} words
+Take these and distill it into a consolidated summary in {language} in at most {size} words.{custom_prompt}
 """ # noqa
 
 map_template = """The following is a set of documents
@@ -17,10 +17,10 @@ Helpful Answer in {language}:"""
 
 reduce_template = """The following is set of summaries
 {docs}
-Take these and distill it into a final, consolidated summary written of the main themes in at most {size} words.
+Take these and distill it into a final, consolidated summary written of the main themes in at most {size} words.{custom_prompt}
 Helpful Answer in {language}:"""  # noqa
 
-question_prompt_template = """Write a concise summary of the following in a most {size} words:
+question_prompt_template = """{custom_prompt}. Write a concise summary of the following in a most {size} words:
 {text}
 CONCISE SUMMARY in {language}:"""  # noqa
 
@@ -31,7 +31,7 @@ We have the opportunity to refine the existing summary (only if needed)
 with some more context below enclosed in triple backstick
 ´´´{text}´´´
 Given the new context, refine the original summary in at most {size} words.
-If the context isn't useful, return the original summary
+If the context isn't useful, return the original summary.{custom_prompt}
 """
 
 experimental_map_prompt = """

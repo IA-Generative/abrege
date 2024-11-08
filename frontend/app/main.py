@@ -18,6 +18,7 @@ stdsfr.override_font_family()
 @st.cache_data
 def get_param():
     response = requests.get(base_api_url + "/default_params")
+    # assert response.status_code == 200, response.status_code 
     if response.status_code == 200:
         payload = json.loads(response.content)
         return payload
@@ -31,6 +32,7 @@ except requests.exceptions.ConnectionError:
     stdsfr.alert("Erreur lors du chargement de la configuration initiale", type="error")
     st.stop()
 
+assert "models" in available_params, repr(available_params)
 
 params = {}
 
@@ -174,6 +176,11 @@ elif doc_type == "document":
                 index=0,
             )
 
+# Proposer de customiser le prompt
+params["custom_prompt"] = st.text_area(
+    label="Si vous le souhaitez, vous pouvez ajouter ici un prompt personnalisé pour colorer le résumé selon votre envie (ton spécifique, vocabulaire simple, etc.)", placeholder="adopte un ton très formel."
+)
+
 
 def ask_llm(request_type, params, user_input) -> str:
     with st.spinner("Résumé en cours de fabrication..."):
@@ -239,7 +246,8 @@ if st.button("Générer un résumé") and user_input:
 
 if "summary" in st.session_state and not st.session_state.stream:
     summary = st.session_state.summary
-    st.write(f"**{len(summary.split())} mots générés**")
-    st.write(summary)
+    if summary:
+        st.write(f"**{len(summary.split())} mots générés**")
+        st.write(summary)
 
 

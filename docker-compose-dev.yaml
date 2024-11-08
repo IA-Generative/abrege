@@ -4,14 +4,21 @@ services:
   fastapi:
     build:
       target: dev
-    environment:
-      - RELOAD=true
+    env_file:
+      - path: .env
     volumes:
       - type: bind
         source: .
         target: /app
 
   frontend:
+    build: 
+      dockerfile: ./frontend/Dockerfile
+      context: ./
+    environment:
+      - API_BASE=fastapi
+    ports:
+      - "8080:8080"
     volumes:
       - type: bind
         source: ./frontend

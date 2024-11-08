@@ -24,10 +24,9 @@ build-dev: network
 	$(COMPOSE) -f docker-compose.yaml -f docker-compose-dev.yaml build $(DC_BUILD_ARGS)
 
 exec-dev:
-	$(COMPOSE) -f docker-compose.yaml -f docker-compose-dev.yaml up $(DC_UP_ARGS)
-
+	$(COMPOSE) -f docker-compose-dev.yaml up $(DC_UP_ARGS)
 stop-dev:
-	$(COMPOSE) -f docker-compose.yaml -f docker-compose-dev.yaml down
+	$(COMPOSE) -f docker-compose-dev.yaml down
 
 test-dev:
 	$(COMPOSE) exec -i fastapi bash -c "cd ../ && pytest --runslow"
