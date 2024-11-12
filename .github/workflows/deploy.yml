@@ -5,7 +5,9 @@ name: Deploy abrege container
 
 on:
   push:
-    branches: [ "main"] # todo
+    branches:
+      - main
+      - staging
     #tags:
     #    - 'v*'
 env:
@@ -246,11 +248,18 @@ jobs:
 
       - name: Update deployment.yaml (with the image and the new image hash)
         run: |
+          if [ "${{ github.ref_name }}" == "main" ]; then
+            NAME="abrege"
+          else
+            NAME="abrege-staging"
+          fi
           IMAGE_HASH=${{ github.sha }}
           IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main"
           IMAGE_LOWERCASE=$(echo $IMAGE | tr '[:upper:]' '[:lower:]')
           sed -i "s|PLACEHOLDER_FOR_IMAGE_HASH|${IMAGE_HASH}|g" deployment.yaml
           sed -i "s|PLACEHOLDER_FOR_IMAGE|${IMAGE_LOWERCASE}|g" deployment.yaml
+          sed -i "s|PLACEHOLDER_FOR_NAME|${NAME}|g" deployment.yaml
+
           cat ./deployment.yaml
   
 

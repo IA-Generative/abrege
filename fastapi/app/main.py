@@ -30,8 +30,8 @@ from abrege.summary_chain import (
 )
 import sys
 import nltk
-
-nltk.download("averaged_perceptron_tagger")
+nltk.download('punkt_tab', quiet=True)
+nltk.download("averaged_perceptron_tagger", quiet=True)
 
 sys.path.append(str(Path(__file__).parent.absolute()))
 
@@ -73,8 +73,8 @@ async def lifespan(_: FastAPI):
 
     OPENAI_API_BASE = os.environ.get("OPENAI_API_BASE")
     OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-    OPENAI_EMBEDDDING_KEY = os.environ.get("OPENAI_EMBEDDING_API_KEY")
-    OPENAI_EMBEDDING_BASE = os.environ.get("OPENAI_EMBEDDING_API_BASE")
+    OPENAI_EMBEDDING_API_KEY = os.environ.get("OPENAI_EMBEDDING_API_KEY")
+    OPENAI_EMBEDDING_API_BASE = os.environ.get("OPENAI_EMBEDDING_API_BASE")
     PADDLE_OCR_TOKEN = os.environ.get("PADDLE_OCR_TOKEN")
     PADDLE_OCR_URL = os.environ.get("PADDLE_OCR_URL")
 
@@ -82,8 +82,8 @@ async def lifespan(_: FastAPI):
         (
             OPENAI_API_BASE,
             OPENAI_API_KEY,
-            OPENAI_EMBEDDDING_KEY,
-            OPENAI_EMBEDDING_BASE,
+            OPENAI_EMBEDDING_API_KEY,
+            OPENAI_EMBEDDING_API_BASE,
             PADDLE_OCR_TOKEN,
             PADDLE_OCR_URL,
         )
@@ -118,7 +118,7 @@ async def lifespan(_: FastAPI):
             context["chat_builder"] = chat_builder
 
             openai_client = OpenAI(
-                api_key=OPENAI_EMBEDDDING_KEY, base_url=OPENAI_EMBEDDING_BASE
+                api_key=OPENAI_EMBEDDING_API_KEY, base_url=OPENAI_EMBEDDING_API_BASE
             )
             embedding_model = EmbeddingModel(openai_client)
             context["embedding_model"] = embedding_model
@@ -137,8 +137,16 @@ async def lifespan(_: FastAPI):
             error_flag = 1
 
     else:
-        logger.critical("Problem loading environnement variable")
-
+        fh = {"OPENAI_API_BASE":OPENAI_API_BASE,
+            "OPENAI_API_KEY": OPENAI_API_KEY,
+            "OPENAI_EMBEDDDING_KEY":OPENAI_EMBEDDING_API_KEY,
+            "OPENAI_EMBEDDING_BASE": OPENAI_EMBEDDING_API_BASE,
+            "PADDLE_OCR_TOKEN":PADDLE_OCR_TOKEN,
+            "PADDLE_OCR_TOKEN":PADDLE_OCR_TOKEN
+            }
+        missing = [b for b,f in fh.items() if not f]
+        logger.critical("Problem loading environnement variable : missing " + ", ".join(missing))
+        
         # To ensure test pass
         def none_func(*args, **kwargs):
             pass
@@ -154,6 +162,7 @@ async def lifespan(_: FastAPI):
             """Application startup has encoutered a problem and is not stable
 Please check the log and restart the application"""
         )
+        exit()
 
     yield
     # Clean up the resources
@@ -203,6 +212,7 @@ def summarize_url(
     reduce_template: str | None = None,
     question_template: str | None = None,
     refine_template: str | None = None,
+    custom_prompt: str | None = None
 ):
     """Generate a summary of text found by resolving the url
 
@@ -255,6 +265,7 @@ def summarize_url(
         reduce_template=reduce_template,
         question_template=question_template,
         refine_template=refine_template,
+        custom_prompt=custom_prompt
     )
 
     parsed_url = urlparse(url)
@@ -287,6 +298,7 @@ async def summarize_txt(
     reduce_template: str | None = None,
     question_template: str | None = None,
     refine_template: str | None = None,
+    custom_prompt: str | None = None
 ):
     """Generate a summary of the raw text
 
@@ -340,6 +352,7 @@ async def summarize_txt(
         reduce_template=reduce_template,
         question_template=question_template,
         refine_template=refine_template,
+        custom_prompt=custom_prompt
     )
 
     deb = perf_counter()
@@ -366,6 +379,7 @@ async def summarize_doc(
     reduce_template: str | None = None,
     question_template: str | None = None,
     refine_template: str | None = None,
+    custom_prompt: str | None = None
 ):
     """Generate a summary of the file
 
@@ -420,6 +434,7 @@ async def summarize_doc(
         reduce_template=reduce_template,
         question_template=question_template,
         refine_template=refine_template,
+        custom_prompt=custom_prompt
     )
 
     if file.filename is not None:
@@ -499,6 +514,7 @@ async def stream_summary(
     reduce_template: str | None = None,
     question_template: str | None = None,
     refine_template: str | None = None,
+    custom_prompt: str | None = None
 ):
     """Generate a summary of the raw text
 
@@ -550,6 +566,7 @@ async def stream_summary(
         reduce_template=reduce_template,
         question_template=question_template,
         refine_template=refine_template,
+        custom_prompt=custom_prompt
     )
 
     return StreamingResponse(custom_chain.astream({"text": text}))
@@ -570,6 +587,7 @@ async def summarize_doc_stream(
     reduce_template: str | None = None,
     question_template: str | None = None,
     refine_template: str | None = None,
+    custom_prompt: str | None = None
 ):
     """Generate a summary of the file
 
@@ -624,6 +642,7 @@ async def summarize_doc_stream(
         reduce_template=reduce_template,
         question_template=question_template,
         refine_template=refine_template,
+        custom_prompt=custom_prompt
     )
 
     if file.filename is not None:

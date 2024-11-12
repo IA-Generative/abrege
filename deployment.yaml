@@ -2,7 +2,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: abrege
+  name: PLACEHOLDER_FOR_NAME
   namespace: abrege
 spec:
   progressDeadlineSeconds: 600
@@ -10,7 +10,7 @@ spec:
   revisionHistoryLimit: 10
   selector:
     matchLabels:
-      app: abrege
+      app: PLACEHOLDER_FOR_NAME
   strategy:
     rollingUpdate:
       maxSurge: "25%"
@@ -19,13 +19,13 @@ spec:
   template:
     metadata:
       labels:
-        app: abrege
+        app: PLACEHOLDER_FOR_NAME
       annotations:
         redeploy-hash: "PLACEHOLDER_FOR_IMAGE_HASH"
 
     spec:
       containers:
-      - name: abrege-api
+      - name: PLACEHOLDER_FOR_NAME-api
         image: ghcr.io/ia-generative/abrege-api:latest
         env:
         - name: OPENAI_API_KEY
@@ -68,7 +68,7 @@ spec:
         - containerPort: 8000
           protocol: TCP
 
-      - name: abrege-front
+      - name: PLACEHOLDER_FOR_NAME-front
         image: ghcr.io/ia-generative/abrege-front:latest
         env:
           - name: API_BASE
@@ -88,11 +88,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: abrege-service
+  name: PLACEHOLDER_FOR_NAME-service
 spec:
   type: ClusterIP
   selector:
-    app: abrege
+    app: PLACEHOLDER_FOR_NAME
   ports:
   - protocol: TCP
     port: 80
@@ -102,11 +102,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: abrege-streamlit-service
+  name: PLACEHOLDER_FOR_NAME-streamlit-service
 spec:
   type: ClusterIP
   selector:
-    app: abrege
+    app: PLACEHOLDER_FOR_NAME
   ports:
   - protocol: TCP
     port: 80
@@ -121,34 +121,34 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
     nginx.ingress.kubernetes.io/session-cookie-hash: sha1
     nginx.ingress.kubernetes.io/session-cookie-name: route
-  name: abrege.c0.cloud-pi-native.com
+  name: PLACEHOLDER_FOR_NAME.c0.cloud-pi-native.com
 spec:
   ingressClassName: public
   rules:
-  - host: abrege.c0.cloud-pi-native.com
+  - host: PLACEHOLDER_FOR_NAME.c0.cloud-pi-native.com
     http:
       paths:
       - backend:
           service:
-            name: abrege-service
+            name: PLACEHOLDER_FOR_NAME-service
             port:
               number: 80
         path: /
         pathType: Prefix
-  - host: abrege-streamlit.c0.cloud-pi-native.com
+  - host: PLACEHOLDER_FOR_NAME-streamlit.c0.cloud-pi-native.com
     http:
       paths:
       - backend:
           service:
-            name: abrege-streamlit-service
+            name: PLACEHOLDER_FOR_NAME-streamlit-service
             port:
               number: 80
         path: /
         pathType: Prefix
   tls:
   - hosts:
-    - abrege.c0.cloud-pi-native.com
-    secretName: abrege.c0.cloud-pi-native.com-tls
+    - PLACEHOLDER_FOR_NAME.c0.cloud-pi-native.com
+    secretName: PLACEHOLDER_FOR_NAME.c0.cloud-pi-native.com-tls
   - hosts:
-    - abrege-streamlit.c0.cloud-pi-native.com
-    secretName: abrege-streamlit.c0.cloud-pi-native.com-tls
+    - PLACEHOLDER_FOR_NAME-streamlit.c0.cloud-pi-native.com
+    secretName: PLACEHOLDER_FOR_NAME-streamlit.c0.cloud-pi-native.com-tls

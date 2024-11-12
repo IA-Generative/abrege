@@ -18,6 +18,7 @@ stdsfr.override_font_family()
 @st.cache_data
 def get_param():
     response = requests.get(base_api_url + "/default_params")
+    # assert response.status_code == 200, response.status_code 
     if response.status_code == 200:
         payload = json.loads(response.content)
         return payload
@@ -31,6 +32,7 @@ except requests.exceptions.ConnectionError:
     stdsfr.alert("Erreur lors du chargement de la configuration initiale", type="error")
     st.stop()
 
+assert "models" in available_params, repr(available_params)
 
 params = {}
 
@@ -43,28 +45,35 @@ for m in ("summary", "vicuna-7b", "phi3"):
 else:
     index_model = 0
 
-params["model"] = st.sidebar.selectbox(
-    label="Choisissez un modèle",
-    options=available_params["models"],
-    index=index_model,
-    label_visibility="collapsed" if FOR_NEWBIES else "visible",
-)
+if not FOR_NEWBIES:
+    params["model"] = st.sidebar.selectbox(
+        label="Choisissez un modèle",
+        options=available_params["models"],
+        index=index_model,
+    )
+else:
+    params["model"] = available_params["models"][index_model]
+
 params["method"] = st.sidebar.selectbox(
     label="Choisissez une méthode", options=available_params["methods"]
 )
-params["temperature"] = st.sidebar.number_input(
-    label="Choisissez une température",
-    min_value=0.0,
-    max_value=1.0,
-    step=0.01,
-    label_visibility="collapsed" if FOR_NEWBIES else "visible",
-)
+
+if not FOR_NEWBIES:
+    params["temperature"] = st.sidebar.number_input(
+        label="Choisissez une température",
+        min_value=0.0,
+        max_value=1.0,
+        step=0.01,
+    )
+else:
+    params["temperature"] = 0
+
 if 0:
     params["language"] = st.sidebar.text_input(
         label="Choisissez une langue pour le résumé", value="French"
     )
 else:
-    params["language"] = st.sidebar.selectbox(
+    params["language"] = st.selectbox(
         label="Choisissez une langue pour le résumé",
         options=["French", "English"],
         format_func={
@@ -75,11 +84,11 @@ else:
     )
 
 
-params["size"] = st.sidebar.number_input(
+params["size"] = st.number_input(
     label="Choissisez un nombre de mots pour votre résumé",
     min_value=50,
     max_value=10_000,
-    step=50,
+    step=100,
     value=4_000,
 )
 
@@ -167,6 +176,11 @@ elif doc_type == "document":
                 index=0,
             )
 
+# Proposer de customiser le prompt
+params["custom_prompt"] = st.text_area(
+    label="Si vous le souhaitez, vous pouvez ajouter ici un prompt personnalisé pour colorer le résumé selon votre envie (ton spécifique, vocabulaire simple, etc.)", placeholder="adopte un ton très formel."
+)
+
 
 def ask_llm(request_type, params, user_input) -> str:
     with st.spinner("Résumé en cours de fabrication..."):
@@ -231,4 +245,9 @@ if st.button("Générer un résumé") and user_input:
 
 
 if "summary" in st.session_state and not st.session_state.stream:
-    st.write(st.session_state.summary)
+    summary = st.session_state.summary
+    if summary:
+        st.write(f"**{len(summary.split())} mots générés**")
+        st.write(summary)
+
+

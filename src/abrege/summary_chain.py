@@ -41,6 +41,7 @@ def summarize_chain_builder(
     reduce_template: str | None = None,
     question_template: str | None = None,
     refine_template: str | None = None,
+    custom_prompt: str | None = None,
     **kwargs,
 ):
     """Build a custom summarizing chain with your models, using the selected method for
@@ -90,6 +91,7 @@ def summarize_chain_builder(
         "reduce_template": reduce_template,
         "question_template": question_template,
         "refine_template": refine_template,
+        "custom_prompt": custom_prompt,
     }
 
     return RunnableLambda(lambda x: info | x) | new_chain
@@ -244,7 +246,11 @@ def complete_input(info):
         info["question_template"] = prompt_template["question"]
     if not info.get("refine_template"):
         info["refine_template"] = prompt_template["refine"]
-
+    if not info.get("custom_prompt"):
+        info["custom_prompt"] = ""
+    else:
+        import logging
+        logging.warning(f'{info["custom_prompt"]=}')
     return info
 
 
