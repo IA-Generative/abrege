@@ -13,6 +13,8 @@ import os
 
 def get_text_from_output(output: dict) -> list[str]:
     result = []
+    #if not "results" in output:
+    assert "results" in output, f"{tuple(output.keys())}"
     for doc in output["results"]:
         result.append("\n".join(ll["text"] for ll in doc))
     return result
@@ -29,11 +31,21 @@ def get_text_from_image(image_pil) -> str:
     # Get the base64 encoded string from the BytesIO object
     img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
     # print(len(img_str), type(img_str))
-    res = requests.post(
-        url=os.environ["PADDLE_OCR_URL"],
-        json={"images": [img_str]},
-        headers={"Authorization": "Basic " + os.environ["PADDLE_OCR_TOKEN"]},
-    )
+    max_retries = 10
+    for attempt in range(max_retries):
+        try:
+            res = requests.post(
+                url=os.environ["PADDLE_OCR_URL"],
+                json={"images": [img_str]},
+                headers={"Authorization": "Basic " + os.environ["PADDLE_OCR_TOKEN"]},
+            )
+            res.raise_for_status()
+        except Exception as e:
+            import logging
+            logging.error(repr(e))
+            import time
+            time.sleep(0.4)
+
     output = res.json()
     return get_text_from_output(output)[0]
 
@@ -68,7 +80,7 @@ class OCRPdfLoader:
 
                 if use_OCR or mode == "full_ocr":
                     page = pdf_document.load_page(page_num)  # its 0-based page
-                    image = page.get_pixmap(dpi=800)
+                    image = page.get_pixmap(dpi=250)
                     image_pil = Image.frombytes(
                         "RGB", [image.width, image.height], image.samples
                     )

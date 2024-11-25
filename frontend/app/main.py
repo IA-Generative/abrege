@@ -178,7 +178,8 @@ elif doc_type == "document":
 
 # Proposer de customiser le prompt
 params["custom_prompt"] = st.text_area(
-    label="Si vous le souhaitez, vous pouvez ajouter ici un prompt personnalisé pour colorer le résumé selon votre envie (ton spécifique, vocabulaire simple, etc.)", placeholder="adopte un ton très formel."
+    label="Si vous le souhaitez, vous pouvez ajouter ici un prompt personnalisé pour colorer le résumé selon votre envie (ton spécifique, vocabulaire simple, etc.)", placeholder="adopte un ton très formel.",
+    value="en français"
 )
 
 
