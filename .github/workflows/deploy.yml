@@ -48,8 +48,9 @@ jobs:
  
   test:
     name: ✅ Test with pytest
-    runs-on: ubuntu-22.04
-#    needs: check
+    # runs-on: ubuntu-22.04
+    runs-on: arc-runner
+    #    needs: check
 #    if: needs.check.outputs.docs_changed == 'true'
     env:
       POETRY_VIRTUALENVS_CREATE: false
@@ -91,7 +92,9 @@ jobs:
 
   build:
     name: 🐋 Save docker image
-    runs-on: ubuntu-latest
+    # runs-on: ubuntu-latest
+    runs-on: arc-runner
+
     # needs: test
     permissions:
       contents: read
@@ -228,7 +231,8 @@ jobs:
 #      - name: Deploy to Kubernetes
 #        run: |
 #          kubectl apply -f ./deployment.yaml
-    runs-on: ubuntu-latest
+    # runs-on: ubuntu-latest
+    runs-on: arc-runner
     needs: build
     # Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job.
     permissions:
