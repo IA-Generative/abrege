@@ -30,10 +30,12 @@ from abrege.summary_chain import (
 )
 import sys
 import nltk
-nltk.download('punkt_tab', quiet=True)
+
+nltk.download("punkt_tab", quiet=True)
 nltk.download("averaged_perceptron_tagger", quiet=True)
 
 sys.path.append(str(Path(__file__).parent.absolute()))
+
 
 from utils.pdf_handler import ModeOCR, OCRPdfLoader
 
@@ -112,6 +114,7 @@ async def lifespan(_: FastAPI):
                     openai_api_base=OPENAI_API_BASE,
                     model=model,
                     temperature=temperature,
+                    max_retries=10,
                 )
                 return llm
 
@@ -137,16 +140,19 @@ async def lifespan(_: FastAPI):
             error_flag = 1
 
     else:
-        fh = {"OPENAI_API_BASE":OPENAI_API_BASE,
+        fh = {
+            "OPENAI_API_BASE": OPENAI_API_BASE,
             "OPENAI_API_KEY": OPENAI_API_KEY,
-            "OPENAI_EMBEDDDING_KEY":OPENAI_EMBEDDING_API_KEY,
+            "OPENAI_EMBEDDDING_KEY": OPENAI_EMBEDDING_API_KEY,
             "OPENAI_EMBEDDING_BASE": OPENAI_EMBEDDING_API_BASE,
-            "PADDLE_OCR_TOKEN":PADDLE_OCR_TOKEN,
-            "PADDLE_OCR_TOKEN":PADDLE_OCR_TOKEN
-            }
-        missing = [b for b,f in fh.items() if not f]
-        logger.critical("Problem loading environnement variable : missing " + ", ".join(missing))
-        
+            "PADDLE_OCR_TOKEN": PADDLE_OCR_TOKEN,
+            "PADDLE_OCR_TOKEN": PADDLE_OCR_TOKEN,
+        }
+        missing = [b for b, f in fh.items() if not f]
+        logger.critical(
+            "Problem loading environnement variable : missing " + ", ".join(missing)
+        )
+
         # To ensure test pass
         def none_func(*args, **kwargs):
             pass
@@ -212,7 +218,7 @@ def summarize_url(
     reduce_template: str | None = None,
     question_template: str | None = None,
     refine_template: str | None = None,
-    custom_prompt: str | None = None
+    custom_prompt: str | None = None,
 ):
     """Generate a summary of text found by resolving the url
 
@@ -265,7 +271,7 @@ def summarize_url(
         reduce_template=reduce_template,
         question_template=question_template,
         refine_template=refine_template,
-        custom_prompt=custom_prompt
+        custom_prompt=custom_prompt,
     )
 
     parsed_url = urlparse(url)
@@ -277,6 +283,8 @@ def summarize_url(
 
     loader = UnstructuredURLLoader(urls=[url])
     data: list = loader.load()
+
+    # logger.error(f"/url. Lors du scrap, on a trouvé {len(data)}  docs. tailles des docs", [len(doc.page_content) for doc in data])
 
     res = [custom_chain.invoke({"text": doc.page_content}) for doc in data]
 
@@ -298,7 +306,7 @@ async def summarize_txt(
     reduce_template: str | None = None,
     question_template: str | None = None,
     refine_template: str | None = None,
-    custom_prompt: str | None = None
+    custom_prompt: str | None = None,
 ):
     """Generate a summary of the raw text
 
@@ -339,6 +347,7 @@ async def summarize_txt(
     """
     from time import perf_counter
 
+    # logger.warning(f"{len(text)=}")
     llm = context["chat_builder"](model, temperature)
     custom_chain = summarize_chain_builder(
         llm=llm,
@@ -352,7 +361,7 @@ async def summarize_txt(
         reduce_template=reduce_template,
         question_template=question_template,
         refine_template=refine_template,
-        custom_prompt=custom_prompt
+        custom_prompt=custom_prompt,
     )
 
     deb = perf_counter()
@@ -379,7 +388,7 @@ async def summarize_doc(
     reduce_template: str | None = None,
     question_template: str | None = None,
     refine_template: str | None = None,
-    custom_prompt: str | None = None
+    custom_prompt: str | None = None,
 ):
     """Generate a summary of the file
 
@@ -434,7 +443,7 @@ async def summarize_doc(
         reduce_template=reduce_template,
         question_template=question_template,
         refine_template=refine_template,
-        custom_prompt=custom_prompt
+        custom_prompt=custom_prompt,
     )
 
     if file.filename is not None:
@@ -514,7 +523,7 @@ async def stream_summary(
     reduce_template: str | None = None,
     question_template: str | None = None,
     refine_template: str | None = None,
-    custom_prompt: str | None = None
+    custom_prompt: str | None = None,
 ):
     """Generate a summary of the raw text
 
@@ -566,7 +575,7 @@ async def stream_summary(
         reduce_template=reduce_template,
         question_template=question_template,
         refine_template=refine_template,
-        custom_prompt=custom_prompt
+        custom_prompt=custom_prompt,
     )
 
     return StreamingResponse(custom_chain.astream({"text": text}))
@@ -587,7 +596,7 @@ async def summarize_doc_stream(
     reduce_template: str | None = None,
     question_template: str | None = None,
     refine_template: str | None = None,
-    custom_prompt: str | None = None
+    custom_prompt: str | None = None,
 ):
     """Generate a summary of the file
 
@@ -642,7 +651,7 @@ async def summarize_doc_stream(
         reduce_template=reduce_template,
         question_template=question_template,
         refine_template=refine_template,
-        custom_prompt=custom_prompt
+        custom_prompt=custom_prompt,
     )
 
     if file.filename is not None:
