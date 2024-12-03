@@ -252,7 +252,7 @@ jobs:
       - uses: azure/k8s-create-secret@v4
         with:
           namespace: abrege
-          secret-name: secret-abrege
+          secret-name: secret-abrege2
           secret-type: 'generic'
           string-data: ${{ secrets.APP_SECRETS }}
   

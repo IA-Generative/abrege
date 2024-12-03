@@ -31,37 +31,37 @@ spec:
         - name: OPENAI_API_KEY
           valueFrom:
             secretKeyRef:
-              name: secret-abrege
+              name: secret-abrege2
               key: OPENAI_API_KEY
         - name: OPENAI_API_BASE
           valueFrom:
             secretKeyRef:
-              name: secret-abrege
+              name: secret-abrege2
               key: OPENAI_API_BASE
         - name: EMBEDDING_MODEL_PATH
           valueFrom:
             secretKeyRef:
-              name: secret-abrege
+              name: secret-abrege2
               key: EMBEDDING_MODEL_PATH
         - name: OPENAI_EMBEDDING_API_KEY
           valueFrom:
             secretKeyRef:
-              name: secret-abrege
+              name: secret-abrege2
               key: OPENAI_EMBEDDING_API_KEY
         - name: OPENAI_EMBEDDING_API_BASE
           valueFrom:
             secretKeyRef:
-              name: secret-abrege
+              name: secret-abrege2
               key: OPENAI_EMBEDDING_API_BASE
         - name: PADDLE_OCR_URL
           valueFrom:
             secretKeyRef:
-              name: secret-abrege
+              name: secret-abrege2
               key: PADDLE_OCR_URL
         - name: PADDLE_OCR_TOKEN
           valueFrom:
             secretKeyRef:
-              name: secret-abrege
+              name: secret-abrege2
               key: PADDLE_OCR_TOKEN
         
         ports:
