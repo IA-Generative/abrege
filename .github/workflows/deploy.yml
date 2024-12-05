@@ -249,12 +249,12 @@ jobs:
           kubeconfig: ${{ secrets.KUBECONFIG }}
           context: abrege/51.159.183.142:16443/abrege
 
-#      - uses: azure/k8s-create-secret@v4
-#        with:
-#          namespace: abrege
-#          secret-name: secret-abrege2
-#          secret-type: 'generic'
-#          string-data: ${{ secrets.APP_SECRETS }}
+      - uses: azure/k8s-create-secret@v4
+        with:
+          namespace: abrege
+          secret-name: secret-abrege
+          secret-type: 'generic'
+          string-data: ${{ secrets.APP_SECRETS }}
   
       - name: Update deployment.yaml (with the image and the new image hash)
         run: |
