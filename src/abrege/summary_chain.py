@@ -1,4 +1,5 @@
 from typing import Literal
+import logging
 
 from langchain.chains import MapReduceDocumentsChain, ReduceDocumentsChain
 from langchain.chains.llm import LLMChain
@@ -93,7 +94,6 @@ def summarize_chain_builder(
         "refine_template": refine_template,
         "custom_prompt": custom_prompt,
     }
-
     return RunnableLambda(lambda x: info | x) | new_chain
 
 
@@ -150,10 +150,11 @@ def split_lambda(info):
 
     split_texts = text_splitter.split_text(info["text"])
     split_docs = [Document(page_content=text) for text in split_texts]
-    return RunnablePassthrough.assign(input_documents=lambda _: split_docs)
+    return split_docs
+    #return RunnablePassthrough.assign(input_documents=lambda _: split_docs, )
 
 
-split_chain = RunnableLambda(split_lambda)
+split_chain = RunnablePassthrough.assign(input_documents=split_lambda) #  #RunnableLambda(split_lambda)
 
 
 def refine_lambda(info):
@@ -174,6 +175,7 @@ def map_reduce_lambda(info):
     reduce_prompt = PromptTemplate.from_template(info["reduce_template"])
     map_chain = LLMChain(llm=info["llm"], prompt=map_prompt)
     reduce_chain = LLMChain(llm=info["llm"], prompt=reduce_prompt)
+    
     combine_document_chain = StuffDocumentsChain(
         llm_chain=reduce_chain, document_variable_name="docs"
     )
@@ -187,12 +189,19 @@ def map_reduce_lambda(info):
     final_chain = MapReduceDocumentsChain(
         llm_chain=map_chain,
         reduce_documents_chain=reduce_documents_chain,
-        document_variable_name="docs",
+        document_variable_name="docs", # docs
         return_intermediate_steps=False,
         output_key="summary_english",
     )
 
-    return split_chain | final_chain | RunnableLambda(itemgetter("summary_english"))
+    def db(g):
+        import logging
+        logging.error("map reduce debug")
+        #logging.error(repr(g))
+        logging.error(repr(tuple(g.keys())))
+        return g
+
+    return RunnableLambda(db) | split_chain | db | final_chain | db | RunnableLambda(itemgetter("summary_english"))
 
 
 def stuff_lambda(info):
@@ -223,10 +232,23 @@ method_to_chain = {
 }
 
 
-def route(info):
+def route(info) -> dict:
     if info.get("method") not in method_to_chain:
         raise ValueError
-    return method_to_chain[info["method"]]
+    try:
+        return method_to_chain[info["method"]].invoke(info)
+    except TypeError as e:
+        logging.error(repr(e))
+        if "unsupported operand type(s) for +=: 'NoneType' and 'NoneType'" not in repr(e):
+            raise e
+        if info.get("method") != "map_reduce":
+            raise e
+        # https://github.com/langchain-ai/langchain/issues/27270 souci danss langchain
+        
+        logging.error(f"On a une erreur {repr(e)} de langchain. Voir : https://github.com/langchain-ai/langchain/issues/27270 o, va tester une autre méthode que map_reduce")
+        if len(info["text"]) <= 8192:
+            return stuff_chain.invoke(info)
+        return refine_chain.invoke(info)
 
 
 def complete_input(info):
@@ -246,7 +268,7 @@ def complete_input(info):
         info["question_template"] = prompt_template["question"]
     if not info.get("refine_template"):
         info["refine_template"] = prompt_template["refine"]
-    if not info.get("custom_prompt"):
+    if "custom_prompt" not in info:
         info["custom_prompt"] = ""
     else:
         import logging

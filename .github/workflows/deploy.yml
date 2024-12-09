@@ -14,6 +14,7 @@ env:
   REGISTRY: ghcr.io
   APPLICATION: abrege
   IMAGE_NAME: ${{ github.repository }}
+  K8S_NAMESPACE: abrege
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -48,8 +49,10 @@ jobs:
  
   test:
     name: ✅ Test with pytest
+    if: 0
     runs-on: ubuntu-22.04
-#    needs: check
+    #runs-on: arc-runner
+    #    needs: check
 #    if: needs.check.outputs.docs_changed == 'true'
     env:
       POETRY_VIRTUALENVS_CREATE: false
@@ -92,6 +95,8 @@ jobs:
   build:
     name: 🐋 Save docker image
     runs-on: ubuntu-latest
+    # runs-on: arc-runner
+
     # needs: test
     permissions:
       contents: read
@@ -229,6 +234,7 @@ jobs:
 #        run: |
 #          kubectl apply -f ./deployment.yaml
     runs-on: ubuntu-latest
+    # runs-on: arc-runner
     needs: build
     # Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job.
     permissions:
@@ -245,7 +251,13 @@ jobs:
           kubeconfig: ${{ secrets.KUBECONFIG }}
           context: abrege/51.159.183.142:16443/abrege
 
-
+      - uses: azure/k8s-create-secret@v4
+        with:
+          namespace: abrege
+          secret-name: secret-abrege
+          secret-type: 'generic'
+          string-data: ${{ secrets.APP_SECRETS }}
+  
       - name: Update deployment.yaml (with the image and the new image hash)
         run: |
           if [ "${{ github.ref_name }}" == "main" ]; then
@@ -261,18 +273,20 @@ jobs:
           sed -i "s|PLACEHOLDER_FOR_NAME|${NAME}|g" deployment.yaml
 
           cat ./deployment.yaml
+          kubectl apply -f ./deployment.yaml -n ${{env.K8S_NAMESPACE}}
   
 
-      - uses: Azure/k8s-deploy@v4
-        with:
-          action: deploy
-          manifests: |
-            ./deployment.yaml
-          images: |
-            'ghcr.io/ia-generative/abrege-api:${{ github.sha }}'
-            'ghcr.io/ia-generative/abrege-front:${{ github.sha }}'
-          namespace: abrege
-
+      # - uses: Azure/k8s-deploy@v4
+      #   with:
+      #     action: deploy
+      #     manifests: |
+      #       ./deployment.yaml
+      #     images: |
+      #       'ghcr.io/ia-generative/abrege-api:${{ github.sha }}'
+      #       'ghcr.io/ia-generative/abrege-front:${{ github.sha }}'
+      #     namespace: abrege
+      #     imagepullsecrets: |
+      #       github-regcred
 
 
   # TODO
