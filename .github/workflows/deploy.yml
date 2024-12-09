@@ -14,6 +14,7 @@ env:
   REGISTRY: ghcr.io
   APPLICATION: abrege
   IMAGE_NAME: ${{ github.repository }}
+  K8S_NAMESPACE: abrege
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -272,19 +273,20 @@ jobs:
           sed -i "s|PLACEHOLDER_FOR_NAME|${NAME}|g" deployment.yaml
 
           cat ./deployment.yaml
+          kubectl apply -f ./deployment.yaml -n ${{env.K8S_NAMESPACE}}
   
 
-      - uses: Azure/k8s-deploy@v4
-        with:
-          action: deploy
-          manifests: |
-            ./deployment.yaml
-          images: |
-            'ghcr.io/ia-generative/abrege-api:${{ github.sha }}'
-            'ghcr.io/ia-generative/abrege-front:${{ github.sha }}'
-          namespace: abrege
-          imagepullsecrets: |
-            github-regcred
+      # - uses: Azure/k8s-deploy@v4
+      #   with:
+      #     action: deploy
+      #     manifests: |
+      #       ./deployment.yaml
+      #     images: |
+      #       'ghcr.io/ia-generative/abrege-api:${{ github.sha }}'
+      #       'ghcr.io/ia-generative/abrege-front:${{ github.sha }}'
+      #     namespace: abrege
+      #     imagepullsecrets: |
+      #       github-regcred
 
 
   # TODO
