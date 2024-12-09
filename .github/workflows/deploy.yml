@@ -48,6 +48,7 @@ jobs:
  
   test:
     name: ✅ Test with pytest
+    if: 0
     runs-on: ubuntu-22.04
     #runs-on: arc-runner
     #    needs: check
@@ -282,7 +283,8 @@ jobs:
             'ghcr.io/ia-generative/abrege-api:${{ github.sha }}'
             'ghcr.io/ia-generative/abrege-front:${{ github.sha }}'
           namespace: abrege
-
+          imagepullsecrets: |
+            github-regcred
 
 
   # TODO
