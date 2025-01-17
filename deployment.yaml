@@ -121,7 +121,7 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
     nginx.ingress.kubernetes.io/session-cookie-hash: sha1
     nginx.ingress.kubernetes.io/session-cookie-name: route
-    nginx.ingress.kubernetes.io/whitelist-source-range: 127.0.0.0/16,192.168.0.0/16,172.16.0.0/12,10.0.0.0/8,51.159.0.0/16,163.172.0.0/16,91.121.239.0/28,77.158.219.0/24,92.103.164.0/24,185.24.186.0/24,82.64.241.24/32
+    nginx.ingress.kubernetes.io/whitelist-source-range: 127.0.0.0/16,192.168.0.0/16,172.16.0.0/12,10.0.0.0/8,51.159.0.0/16,163.172.0.0/16,91.121.239.0/28,77.158.219.0/24,92.103.164.0/24,185.24.186.0/24,82.64.241.24/32,37.67.157.185/32
   name: PLACEHOLDER_FOR_NAME.c0.cloud-pi-native.com
 spec:
   ingressClassName: public
