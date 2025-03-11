@@ -52,8 +52,13 @@ origins = (
     "https://sie.numerique-interieur.com",
     "http://localhost",
     "http://localhost:8080",
-    "http://localhost:8501",
+    "http://localhost:8501"
 )
+
+origin_regex = (
+    'https://.*\.cloud-pi-native\.com'
+)
+
 logger = logging.getLogger("uvicorn.error")
 context = {}
 
@@ -187,6 +192,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
