@@ -249,7 +249,6 @@ jobs:
         with:
           method: kubeconfig
           kubeconfig: ${{ secrets.KUBECONFIG }}
-          context: abrege/51.159.183.142:16443/abrege
 
       - uses: azure/k8s-create-secret@v4
         with:
