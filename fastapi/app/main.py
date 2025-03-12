@@ -57,12 +57,14 @@ origins = (
 logger = logging.getLogger("uvicorn.error")
 context = {}
 
+DEFAULT_MODEL = None
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     """
     Load the resources used by the API (models, data)
     """
+    global DEFAULT_MODEL
     error_flag = 0
     # if 0:
     #     embeddings = HuggingFaceEmbeddings(
@@ -102,6 +104,7 @@ async def lifespan(_: FastAPI):
             models_list = json.loads(response.text)["data"]
             model_id = [model["id"] for model in models_list]
             logger.info(f"Model available : {model_id}")
+            DEFAULT_MODEL = sorted(model_id, key=lambda x: "summary" not in x.lower())[0]
             context["models"] = model_id
 
             def chat_builder(model: str = "phi3", temperature: int = 0):
@@ -208,11 +211,11 @@ ChunkType = Literal["sentences", "chunks"]
 def summarize_url(
     url: str,
     method: MethodType = "text_rank",
-    model: str = "phi3",
-    context_size: int = 10_000,
+    model: str = DEFAULT_MODEL,
+    context_size: int = None,
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
-    language: str = "English",
-    size: int = 200,
+    language: str = None,
+    size: int = None,
     summarize_template: str | None = None,
     map_template: str | None = None,
     reduce_template: str | None = None,
@@ -296,11 +299,11 @@ def summarize_url(
 async def summarize_txt(
     text: str,
     method: MethodType = "text_rank",
-    model: str = "phi3",
-    context_size: int = 10_000,
+    model: str = DEFAULT_MODEL,
+    context_size: int = None,
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
-    language: str = "English",
-    size: int = 200,
+    language: str = None,
+    size: int = None,
     summarize_template: str | None = None,
     map_template: str | None = None,
     reduce_template: str | None = None,
@@ -378,11 +381,11 @@ async def summarize_doc(
     file: UploadFile,
     method: MethodType = "text_rank",
     pdf_mode_ocr: ModeOCR | None = None,
-    model: str = "phi3",
-    context_size: int = 10_000,
+    model: str = DEFAULT_MODEL,
+    context_size: int = None,
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
-    language: str = "English",
-    size: int = 200,
+    language: str = None,
+    size: int = None,
     summarize_template: str | None = None,
     map_template: str | None = None,
     reduce_template: str | None = None,
@@ -513,11 +516,11 @@ async def param():
 async def stream_summary(
     text: str,
     method: MethodType = "text_rank",
-    model: str = "phi3",
-    context_size: int = 10_000,
+    model: str = DEFAULT_MODEL,
+    context_size: int = None,
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
-    language: str = "English",
-    size: int = 200,
+    language: str = None,
+    size: int = None,
     summarize_template: str | None = None,
     map_template: str | None = None,
     reduce_template: str | None = None,
@@ -586,11 +589,11 @@ async def summarize_doc_stream(
     file: UploadFile,
     method: MethodType = "text_rank",
     pdf_mode_ocr: ModeOCR | None = None,
-    model: str = "phi3",
-    context_size: int = 10_000,
+    model: str = DEFAULT_MODEL,
+    context_size: int | None = None,
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
-    language: str = "English",
-    size: int = 200,
+    language: str | None = None,
+    size: int | None = None,
     summarize_template: str | None = None,
     map_template: str | None = None,
     reduce_template: str | None = None,
