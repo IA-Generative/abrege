@@ -62,7 +62,7 @@ origin_regex = (
 logger = logging.getLogger("uvicorn.error")
 context = {}
 
-DEFAULT_MODEL = None
+DEFAULT_MODEL = "summary"
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
@@ -109,7 +109,7 @@ async def lifespan(_: FastAPI):
             models_list = json.loads(response.text)["data"]
             model_id = [model["id"] for model in models_list]
             logger.info(f"Model available : {model_id}")
-            DEFAULT_MODEL = sorted(model_id, key=lambda x: "summary" not in x.lower())[0]
+            assert DEFAULT_MODEL in model_id, f"The default mdoel ({DEFAULT_MODEL}) is not in the available models ({model_id})"
             context["models"] = model_id
 
             def chat_builder(model: str = "phi3", temperature: int = 0):
