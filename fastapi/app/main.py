@@ -63,6 +63,7 @@ logger = logging.getLogger("uvicorn.error")
 context = {}
 
 DEFAULT_MODEL = "summary"
+DEFAULT_METHOD = "map_reduce"
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
@@ -216,7 +217,7 @@ ChunkType = Literal["sentences", "chunks"]
 @app.get("/url")
 def summarize_url(
     url: str,
-    method: MethodType = "text_rank",
+    method: MethodType = "map_reduce",
     model: str = DEFAULT_MODEL,
     context_size: int = None,
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
@@ -304,7 +305,7 @@ def summarize_url(
 @app.get("/text")
 async def summarize_txt(
     text: str,
-    method: MethodType = "text_rank",
+    method: MethodType = DEFAULT_METHOD,
     model: str = DEFAULT_MODEL,
     context_size: int = None,
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
@@ -385,7 +386,7 @@ async def summarize_txt(
 @app.post("/doc")
 async def summarize_doc(
     file: UploadFile,
-    method: MethodType = "text_rank",
+    method: MethodType = DEFAULT_METHOD,
     pdf_mode_ocr: ModeOCR | None = None,
     model: str = DEFAULT_MODEL,
     context_size: int = None,
@@ -521,7 +522,7 @@ async def param():
 @app.get("/text_stream")
 async def stream_summary(
     text: str,
-    method: MethodType = "text_rank",
+    method: MethodType = DEFAULT_METHOD,
     model: str = DEFAULT_MODEL,
     context_size: int = None,
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
@@ -593,7 +594,7 @@ async def stream_summary(
 @app.post("/doc_stream")
 async def summarize_doc_stream(
     file: UploadFile,
-    method: MethodType = "text_rank",
+    method: MethodType = DEFAULT_METHOD,
     pdf_mode_ocr: ModeOCR | None = None,
     model: str = DEFAULT_MODEL,
     context_size: int | None = None,
