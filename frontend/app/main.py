@@ -13,7 +13,7 @@ INTREGRATION_MIRAI = True
 FOR_NEWBIES = True
 
 api_service = os.environ["API_BASE"]
-base_api_url = f"http://{api_service}:8000"
+base_api_url = f"http://{api_service}:8000/api"
 
 logger.debug("Load all app parameters")
 st.set_page_config(page_title="Demo abrege", initial_sidebar_state="collapsed")
@@ -29,15 +29,16 @@ def get_param():
         payload = json.loads(response.content)
         return payload
     else:
-        logger.error(f"{response.content} - {response.status_code}")
-        return None
+        logger.error(f"{response.content} - {response.status_code} - {base_api_url}")
+        raise Exception(f"Error usinf {base_api_url}")
 
 
 try:
     available_params = get_param()
 except requests.exceptions.ConnectionError as e:
     stdsfr.alert(
-        f"Erreur lors du chargement de la configuration initiale {str(e)}", type="error")
+        f"Erreur lors du chargement de la configuration initiale {str(e)}", type="error"
+    )
     st.stop()
 
 assert "models" in available_params, repr(available_params)
@@ -186,8 +187,9 @@ elif doc_type == "document":
 
 # Proposer de customiser le prompt
 params["custom_prompt"] = st.text_area(
-    label="Si vous le souhaitez, vous pouvez ajouter ici un prompt personnalisé pour colorer le résumé selon votre envie (ton spécifique, vocabulaire simple, etc.)", placeholder="adopte un ton très formel.",
-    value="en français"
+    label="Si vous le souhaitez, vous pouvez ajouter ici un prompt personnalisé pour colorer le résumé selon votre envie (ton spécifique, vocabulaire simple, etc.)",
+    placeholder="adopte un ton très formel.",
+    value="en français",
 )
 
 
