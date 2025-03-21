@@ -11,7 +11,9 @@ resolution-markers = [
 name = "abrege"
 version = "0.0.1"
 source = { virtual = "." }
-dependencies = [
+
+[package.dev-dependencies]
+abrege-api = [
     { name = "chromadb" },
     { name = "docx2txt" },
     { name = "fastapi" },
@@ -35,14 +37,15 @@ dependencies = [
     { name = "unstructured" },
     { name = "uvicorn" },
 ]
-
-[package.dev-dependencies]
 frontend = [
     { name = "streamlit" },
+    { name = "streamlit-dsfr" },
 ]
 
 [package.metadata]
-requires-dist = [
+
+[package.metadata.requires-dev]
+abrege-api = [
     { name = "chromadb", specifier = ">=0.5.23" },
     { name = "docx2txt", specifier = ">=0.8" },
     { name = "fastapi", specifier = ">=0.115.11" },
@@ -66,9 +69,10 @@ requires-dist = [
     { name = "unstructured", specifier = ">=0.17.2" },
     { name = "uvicorn", specifier = ">=0.34.0" },
 ]
-
-[package.metadata.requires-dev]
-frontend = [{ name = "streamlit", specifier = ">=1.43.2" }]
+frontend = [
+    { name = "streamlit", specifier = ">=1.43.2" },
+    { name = "streamlit-dsfr", specifier = ">=0.0.15" },
+]
 
 [[package]]
 name = "aiofiles"
@@ -2935,6 +2939,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/53/c6/c2a5a9037b583d7e48c8fe4ea07f72f59c1796c57f7c01f907a0a388e40a/streamlit-1.43.2.tar.gz", hash = "sha256:f3afa2af637d00154c6a4c560d2fde256d7dc8cc1f32a53cf20570c0967841bc", size = 9345475 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/3d/b0/031933cb253d757dfc8791707d413ce90ab52ec7fb4524ef955070136d31/streamlit-1.43.2-py2.py3-none-any.whl", hash = "sha256:c773ff70e8dd14066e49ba4b36740e4d36b0c534624f49abcc73b75389bf9420", size = 9734394 },
+]
+
+[[package]]
+name = "streamlit-dsfr"
+version = "0.0.15"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "streamlit" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e9/aa/d71d5bcbfe1128ff5571e8202db28956917572066a28eacf437616cd9e82/streamlit_dsfr-0.0.15.tar.gz", hash = "sha256:27d7fa9f7459b134e0d5b710e79ea513681419598c7f6a8efd592c55d7c6ff8b", size = 1395279 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/97/c5/7b6b4f354b66e070e0240b1ba45633eef67ee85c957f1280a8e6f11cd0da/streamlit_dsfr-0.0.15-py3-none-any.whl", hash = "sha256:56c6103c28a3c1eed8b67f2348cf349e5186b4dd688927daa487a2cd9e30d633", size = 1425170 },
 ]
 
 [[package]]

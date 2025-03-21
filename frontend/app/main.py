@@ -4,6 +4,10 @@ import os
 import requests
 import streamlit as st
 import streamlit_dsfr as stdsfr
+import logging
+
+logger = logging.getLogger(name=__name__)
+logger.setLevel(logging.DEBUG)
 
 INTREGRATION_MIRAI = True
 FOR_NEWBIES = True
@@ -11,25 +15,29 @@ FOR_NEWBIES = True
 api_service = os.environ["API_BASE"]
 base_api_url = f"http://{api_service}:8000"
 
+logger.debug("Load all app parameters")
 st.set_page_config(page_title="Demo abrege", initial_sidebar_state="collapsed")
 stdsfr.override_font_family()
+logger.debug("dsfr loaded")
 
 
 @st.cache_data
 def get_param():
     response = requests.get(base_api_url + "/default_params")
-    # assert response.status_code == 200, response.status_code 
+    # assert response.status_code == 200, response.status_code
     if response.status_code == 200:
         payload = json.loads(response.content)
         return payload
     else:
+        logger.error(f"{response.content} - {response.status_code}")
         return None
 
 
 try:
     available_params = get_param()
-except requests.exceptions.ConnectionError:
-    stdsfr.alert("Erreur lors du chargement de la configuration initiale", type="error")
+except requests.exceptions.ConnectionError as e:
+    stdsfr.alert(
+        f"Erreur lors du chargement de la configuration initiale {str(e)}", type="error")
     st.stop()
 
 assert "models" in available_params, repr(available_params)
@@ -38,7 +46,7 @@ params = {}
 
 st.sidebar.header("Paramètres")
 
-for m in ("summary", "vicuna-7b", "phi3"):
+for m in ("chat-leger",):
     if m in available_params["models"]:
         index_model = available_params["models"].index(m)
         break
@@ -250,5 +258,3 @@ if "summary" in st.session_state and not st.session_state.stream:
     if summary:
         st.write(f"**{len(summary.split())} mots générés**")
         st.write(summary)
-
-

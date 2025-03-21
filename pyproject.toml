@@ -5,6 +5,16 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    
+]
+
+[dependency-groups]
+frontend = [
+    "streamlit-dsfr>=0.0.15",
+    "streamlit>=1.43.2",
+]
+
+abrege-api = [
     "langchain-openai>=0.1.7",
     "langchain==0.1.16",
     "fastapi>=0.115.11",
@@ -27,9 +37,4 @@ dependencies = [
     "python-dotenv>=1.0.1",
     "pydantic-settings>=2.8.1",
     "toml>=0.10.2",
-]
-
-[dependency-groups]
-frontend = [
-    "streamlit>=1.43.2",
 ]

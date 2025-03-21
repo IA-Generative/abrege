@@ -11,10 +11,10 @@ COPY uv.lock /app/uv.lock
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV POETRY_VIRTUALENVS_CREATE=false
-RUN uv sync --no-cache
+RUN uv sync --no-cache --group abrege-api
 
-COPY api /app/
-
+COPY api /app/api
+ENV PYTHONPATH=PYTHONPATH:/app
 ################################
 # Step 2: "development" target #
 ################################
