@@ -15,6 +15,7 @@ RUN uv sync --no-cache --group abrege-api
 
 COPY api /app/api
 ENV PYTHONPATH=PYTHONPATH:/app
+CMD [ "uv", "run", "--no-cache", "python", "/app/api/main.py" ]
 ################################
 # Step 2: "development" target #
 ################################

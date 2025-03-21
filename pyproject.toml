@@ -49,3 +49,11 @@ version_scheme = "pep440"
 version_provider = "pep621"
 update_changelog_on_bump = true
 major_version_zero = true
+
+[tool.ruff]
+line-length = 150
+
+[tool.uv]
+dev-dependencies = [
+    "ruff>=0.8.3",
+]

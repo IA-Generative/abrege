@@ -23,7 +23,6 @@ services:
     build: 
       dockerfile: Dockerfiles/frontend/Dockerfile
       context: ./
-    command: uv run streamlit run ./app/main.py
     ports:
       - "8080:8080"
     environment:
@@ -35,7 +34,6 @@ services:
       dockerfile: Dockerfiles/api/Dockerfile
       target: base
       context: ./
-    command: uv run python /app/api/main.py
     env_file:
       - .env
     ports:

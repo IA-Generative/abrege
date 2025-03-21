@@ -37,4 +37,4 @@ app.include_router(health_router, prefix="/health")
 app.include_router(summarize_router, prefix='/api')
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", reload=True)
+    uvicorn.run("main:app", reload=True, port=8000, host="0.0.0.0")
