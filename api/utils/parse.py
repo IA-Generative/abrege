@@ -21,10 +21,14 @@ DOCUMENT_LOADER_DICT = {
 }
 
 
-def parse_files(file: UploadFile, pdf_mode_ocr: ModeOCR | None = None,) -> List[str]:
+def parse_files(
+    file: UploadFile,
+    pdf_mode_ocr: ModeOCR | None = None,
+) -> List[str]:
     if file.filename is not None:
         try:
             _, extension = os.path.splitext(file.filename)
+            extension = extension.lower()
         except Exception as err:
             raise HTTPException(
                 status_code=422,

@@ -9,15 +9,15 @@ ChunkType = Literal["sentences", "chunks"]
 
 
 class ParamsSummarize(BaseModel):
-    method: MethodType = "map_reduce",
-    model: str = "phi-3",
-    context_size: int = None,
-    temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
-    language: str = None,
-    size: int = None,
-    summarize_template: str | None = None,
-    map_template: str | None = None,
-    reduce_template: str | None = None,
-    question_template: str | None = None,
-    refine_template: str | None = None,
-    custom_prompt: str | None = None,
+    method: MethodType | None = ("map_reduce",)
+    model: str = ("phi-3",)
+    context_size: int | None = (None,)
+    temperature: Annotated[float, Query(ge=0, le=1.0)] = (0,)
+    language: str | None = (None,)
+    size: int | None = (None,)
+    summarize_template: str | None = (None,)
+    map_template: str | None = (None,)
+    reduce_template: str | None = (None,)
+    question_template: str | None = (None,)
+    refine_template: str | None = (None,)
+    custom_prompt: str | None = (None,)
