@@ -7,14 +7,10 @@ from schemas.params import MethodType
 from utils.url_parser import url_scrapper
 from utils.pdf_handler import ModeOCR
 from utils.parse import parse_files
+from config.openai import OpenAISettings
 
-
-OPENAI_API_BASE = ""
-OPENAI_API_KEY = ''
-
-PADDLE_OCR_TOKEN = os.environ.get("PADDLE_OCR_TOKEN")
-PADDLE_OCR_URL = os.environ.get("PADDLE_OCR_URL")
-client = OpenAI(api_key=OPENAI_API_KEY, base_url=OPENAI_API_BASE)
+client = OpenAI(api_key=OpenAISettings().OPENAI_API_KEY,
+                base_url=OpenAISettings().OPENAI_API_BASE)
 models_available = [model.id for model in client.models.list().data]
 
 context = {}

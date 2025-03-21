@@ -2,7 +2,6 @@ from typing import Literal
 import pymupdf
 from PIL import Image
 from io import BytesIO
-import base64
 import requests
 
 from langchain_core.documents import Document
@@ -63,35 +62,6 @@ def get_texts_from_images_paddle(list_image_pil: list) -> list[str]:
 
 def get_text_from_image(image_pil) -> str:
     return "\n".join(get_texts_from_images_paddle([image_pil]))
-
-    # Create a BytesIO object to store the image data
-    buffered = BytesIO()
-
-    # Save the image to the BytesIO object
-    image_pil.save(buffered, format="JPEG")
-
-    # Get the base64 encoded string from the BytesIO object
-    img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
-    # print(len(img_str), type(img_str))
-    max_retries = 10
-    for attempt in range(max_retries):
-        try:
-            res = requests.post(
-                url=os.environ["PADDLE_OCR_URL"],
-                json={"images": [img_str]},
-                headers={"Authorization": "Basic " + os.environ["PADDLE_OCR_TOKEN"]},
-            )
-            res.raise_for_status()
-        except Exception as e:
-            import logging
-
-            logging.error(repr(e))
-            import time
-
-            time.sleep(0.4)
-
-    output = res.json()
-    return get_text_from_output(output)[0]
 
 
 ModeOCR = Literal["full_ocr", "text_and_ocr", "full_text"]

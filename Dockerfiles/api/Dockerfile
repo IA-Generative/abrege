@@ -11,38 +11,12 @@ ENV PYTHONUNBUFFERED=1
 ENV POETRY_VIRTUALENVS_CREATE=false
 RUN uv sync --no-cache
 
+COPY api /app/
+
 ################################
 # Step 2: "development" target #
 ################################
 FROM base as dev
-
 WORKDIR /app
-# Copy everything for developpement purpose
-COPY . .
-
-WORKDIR /app/fastapi
-
-RUN poetry lock && poetry install --with dev
-# Sometimes src/abrege seems to be not installed in editable
-WORKDIR /app/src
-RUN pip install -e .
-WORKDIR /app/fastapi
-
-CMD [ "bash", "run.sh" ]
-
-################################
-# Step 3: "production" target  #
-################################
-FROM base as prod
-
-WORKDIR /app/src
-
-COPY ./src /app/src/
-
-WORKDIR /app/fastapi
-
-COPY ./fastapi /app/fastapi/
-
-RUN poetry lock && poetry install
-
-CMD ["bash", "run.sh"]
+RUN uv sync --no-cache --group tests
+COPY tests /app/tests

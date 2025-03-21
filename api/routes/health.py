@@ -1,10 +1,8 @@
-import logging
 from fastapi import APIRouter
 from api.schemas.health import Health
 from api import __version__, __name__
 import datetime
 
-logger = logging.getLogger("uvicorn.error")
 
 router = APIRouter()
 

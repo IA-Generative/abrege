@@ -1,4 +1,3 @@
-import logging
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,9 +17,6 @@ origins = (
 origin_regex = (
     'https://.*\.cloud-pi-native\.com'
 )
-
-logger = logging.getLogger("uvicorn.error")
-
 
 app = FastAPI(
     title=name, description="", version=__version__,
