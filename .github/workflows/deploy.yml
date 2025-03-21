@@ -168,7 +168,6 @@ jobs:
 
   build-abrege-api:
     runs-on: arc-runner
-    needs: [test]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -198,7 +197,6 @@ jobs:
 
   build-fastapi-old:
     runs-on: arc-runner
-    needs: [test]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -228,7 +226,6 @@ jobs:
 
   build-streamlit:
     runs-on: arc-runner
-    needs: [test]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
