@@ -6,8 +6,7 @@ name: Deploy abrege container
 on:
   push:
     branches:
-      - main
-      - staging
+      - "*"
     #tags:
     #    - 'v*'
 env:
@@ -98,6 +97,7 @@ jobs:
     # runs-on: arc-runner
 
     # needs: test
+    if: github.ref == 'refs/heads/main' ||  github.ref == 'refs/heads/staging'
     permissions:
       contents: read
       packages: write
@@ -211,6 +211,7 @@ jobs:
 
   docker-push-fastapi-old:
     runs-on: arc-runner
+    if: github.ref == 'refs/heads/main' ||  github.ref == 'refs/heads/staging'
     needs: [build-fastapi-old]
     steps:
       - name: Checkout repository
@@ -239,6 +240,7 @@ jobs:
         run: make docker-build-streamlit
   docker-push-streamlit:
     runs-on: arc-runner
+    if: github.ref == 'refs/heads/main' ||  github.ref == 'refs/heads/staging'
     needs: [build-streamlit]
     steps:
       - name: Checkout repository
@@ -322,6 +324,7 @@ jobs:
     # runs-on: arc-runner
     needs: build
     # Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job.
+    if: github.ref == 'refs/heads/main' ||  github.ref == 'refs/heads/staging'
     permissions:
       contents: read
     steps:
