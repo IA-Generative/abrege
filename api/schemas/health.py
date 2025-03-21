@@ -1,4 +1,4 @@
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Any, Optional, Literal
 from pydantic import BaseModel
 
 
@@ -13,5 +13,5 @@ class Health(BaseModel):
     version: str
     up_time: str
     extras: Optional[Dict[str, Any]] = None
-    status: Optional[str] = None
-    dependencies: Optional[List['Health']] = None
+    status: Literal["healthy", "healthy"] = "healthy"
+    dependencies: Optional[List["Health"]] = None
