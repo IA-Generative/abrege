@@ -1,43 +1,26 @@
+name: Deploy Additional Cluster
+
 on:
+  push:
+    branches:
+      - main
+      - staging
   workflow_dispatch:
-deploy-additional-cluster:
-  runs-on: ubuntu-latest
-  needs: build
-  permissions:
-    contents: read
-  steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-    
-    - uses: azure/setup-kubectl@v3
 
-    - name: Configure Kubernetes context (nouveau cluster)
-      uses: azure/k8s-set-context@v3
-      with:
-        method: kubeconfig
-        kubeconfig: ${{ secrets.KUBECONFIG_ADDITIONAL }}
-
-    - name: Create secret in Kubernetes (nouveau cluster)
-      uses: azure/k8s-create-secret@v4
-      with:
-        namespace: abrege
-        secret-name: secret-abrege
-        secret-type: 'generic'
-        string-data: ${{ secrets.APP_SECRETS }}
-
-    - name: Update deployment.yaml (nouveau cluster)
-      run: |
-        if [ "${{ github.ref_name }}" == "main" ]; then
-          NAME="abrege"
-        else
-          NAME="abrege-staging"
-        fi
-        IMAGE_HASH=${{ github.sha }}
-        IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main"
-        IMAGE_LOWERCASE=$(echo $IMAGE | tr '[:upper:]' '[:lower:]')
-        sed -i "s|PLACEHOLDER_FOR_IMAGE_HASH|${IMAGE_HASH}|g" deployment.yaml
-        sed -i "s|PLACEHOLDER_FOR_IMAGE|${IMAGE_LOWERCASE}|g" deployment.yaml
-        sed -i "s|PLACEHOLDER_FOR_NAME|${NAME}|g" deployment.yaml
-
-        cat ./deployment.yaml
-        kubectl apply -f ./deployment.yaml -n ${{ env.K8S_NAMESPACE }}
+jobs:
+  deploy-additional-cluster:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: azure/setup-kubectl@v3
+      
+      - name: Configure Kubernetes context (nouveau cluster)
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBECONFIG_ADDITIONAL }}
+      
+      - name: Apply deployment
+        run: |
+          kubectl apply -f ./deployment.yaml -n abrege
