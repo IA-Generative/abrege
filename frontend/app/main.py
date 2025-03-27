@@ -4,32 +4,41 @@ import os
 import requests
 import streamlit as st
 import streamlit_dsfr as stdsfr
+import logging
+
+logger = logging.getLogger(name=__name__)
+logger.setLevel(logging.DEBUG)
 
 INTREGRATION_MIRAI = True
 FOR_NEWBIES = True
 
 api_service = os.environ["API_BASE"]
-base_api_url = f"http://{api_service}:8000"
+base_api_url = f"http://{api_service}:8000/api"
 
+logger.debug("Load all app parameters")
 st.set_page_config(page_title="Demo abrege", initial_sidebar_state="collapsed")
 stdsfr.override_font_family()
+logger.debug("dsfr loaded")
 
 
 @st.cache_data
 def get_param():
     response = requests.get(base_api_url + "/default_params")
-    # assert response.status_code == 200, response.status_code 
+    # assert response.status_code == 200, response.status_code
     if response.status_code == 200:
         payload = json.loads(response.content)
         return payload
     else:
-        return None
+        logger.error(f"{response.content} - {response.status_code} - {base_api_url}")
+        raise Exception(f"Error usinf {base_api_url}")
 
 
 try:
     available_params = get_param()
-except requests.exceptions.ConnectionError:
-    stdsfr.alert("Erreur lors du chargement de la configuration initiale", type="error")
+except requests.exceptions.ConnectionError as e:
+    stdsfr.alert(
+        f"Erreur lors du chargement de la configuration initiale {str(e)}", type="error"
+    )
     st.stop()
 
 assert "models" in available_params, repr(available_params)
@@ -38,7 +47,7 @@ params = {}
 
 st.sidebar.header("Paramètres")
 
-for m in ("summary", "vicuna-7b", "phi3"):
+for m in ("chat-leger",):
     if m in available_params["models"]:
         index_model = available_params["models"].index(m)
         break
@@ -178,8 +187,9 @@ elif doc_type == "document":
 
 # Proposer de customiser le prompt
 params["custom_prompt"] = st.text_area(
-    label="Si vous le souhaitez, vous pouvez ajouter ici un prompt personnalisé pour colorer le résumé selon votre envie (ton spécifique, vocabulaire simple, etc.)", placeholder="adopte un ton très formel.",
-    value="en français"
+    label="Si vous le souhaitez, vous pouvez ajouter ici un prompt personnalisé pour colorer le résumé selon votre envie (ton spécifique, vocabulaire simple, etc.)",
+    placeholder="adopte un ton très formel.",
+    value="en français",
 )
 
 
@@ -250,5 +260,3 @@ if "summary" in st.session_state and not st.session_state.stream:
     if summary:
         st.write(f"**{len(summary.split())} mots générés**")
         st.write(summary)
-
-
