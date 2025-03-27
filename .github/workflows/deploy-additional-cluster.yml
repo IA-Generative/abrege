@@ -1,3 +1,5 @@
+on:
+  workflow_dispatch:
 deploy-additional-cluster:
   runs-on: ubuntu-latest
   needs: build
