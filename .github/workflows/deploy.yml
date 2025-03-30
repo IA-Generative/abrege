@@ -108,7 +108,7 @@ jobs:
         include:
           - image-name: ghcr.io/ia-generative/abrege-api
             dockerfile: Dockerfiles/api/Dockerfile
-            target: prod
+            target: base
           - image-name: ghcr.io/ia-generative/abrege-front
             dockerfile: Dockerfiles/frontend/Dockerfile
     
