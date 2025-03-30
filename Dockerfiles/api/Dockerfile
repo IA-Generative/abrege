@@ -1,7 +1,7 @@
 #######################
 # Step 1: Base target #
 #######################
-FROM python:3.11.9-slim as base
+FROM python:3.11.9-slim AS base
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 WORKDIR /app
@@ -19,7 +19,7 @@ CMD [ "uv", "run", "--no-cache", "python", "/app/api/main.py" ]
 ################################
 # Step 2: "development" target #
 ################################
-FROM base as dev
+FROM base AS dev
 WORKDIR /app
 RUN uv sync --no-cache --group tests
 COPY tests /app/tests
