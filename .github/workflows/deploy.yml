@@ -6,7 +6,8 @@ name: Deploy abrege container
 on:
   push:
     branches:
-      - "*"
+      - main
+      - staging
     #tags:
     #    - 'v*'
 env:
@@ -97,7 +98,6 @@ jobs:
     # runs-on: arc-runner
 
     # needs: test
-    if: github.ref == 'refs/heads/main' ||  github.ref == 'refs/heads/staging'
     permissions:
       contents: read
       packages: write
@@ -107,10 +107,10 @@ jobs:
       matrix:
         include:
           - image-name: ghcr.io/ia-generative/abrege-api
-            dockerfile: fastapi/Dockerfile
+            dockerfile: Dockerfiles/api/Dockerfile
             target: prod
           - image-name: ghcr.io/ia-generative/abrege-front
-            dockerfile: frontend/Dockerfile
+            dockerfile: Dockerfiles/frontend/Dockerfile
     
     steps:
       -
@@ -166,93 +166,6 @@ jobs:
           build-args: |
             APP_VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
 
-  build-abrege-api:
-    runs-on: arc-runner
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Install make on arc-runner
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y make
-      - name: Build Abrege API image
-        run: make docker-build-api
-
-  docker-push-abrege-api:
-    runs-on: arc-runner
-    needs: [build-abrege-api]
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Install make on arc-runner
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y make
-      - name: Push Abrege API image
-        run: make docker-push-api
-
-  build-fastapi-old:
-    runs-on: arc-runner
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Install make on arc-runner
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y make
-      - name: Build Abrege API image
-        run: make docker-build-fastapi-old
-
-  docker-push-fastapi-old:
-    runs-on: arc-runner
-    if: github.ref == 'refs/heads/main' ||  github.ref == 'refs/heads/staging'
-    needs: [build-fastapi-old]
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Install make on arc-runner
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y make
-      - name: Push fastpi Abrege API image
-        run: make docker-push-fastapi-old
-
-  build-streamlit:
-    runs-on: arc-runner
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Install make on arc-runner
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y make
-      - name: Build Abrege API image
-        run: make docker-build-streamlit
-  docker-push-streamlit:
-    runs-on: arc-runner
-    if: github.ref == 'refs/heads/main' ||  github.ref == 'refs/heads/staging'
-    needs: [build-streamlit]
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Install make on arc-runner
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y make
-      - name: Push fastpi Abrege API image
-        run: make docker-push-streamlit
 #   deploy-kube:
 #     runs-on: ubuntu-latest
 #     needs: check # todo
@@ -324,7 +237,6 @@ jobs:
     # runs-on: arc-runner
     needs: build
     # Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job.
-    if: github.ref == 'refs/heads/main' ||  github.ref == 'refs/heads/staging'
     permissions:
       contents: read
     steps:
