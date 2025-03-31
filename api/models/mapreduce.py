@@ -25,16 +25,27 @@ from langchain_core.prompts import ChatPromptTemplate
 from schemas.params import ParamsSummarize
 from schemas.response import SummaryResponse
 
-client = OpenAI(api_key=os.environ["OPENAI_API_KEY"], base_url=os.environ["OPENAI_API_BASE"])
+client = OpenAI(
+    api_key=os.environ["OPENAI_API_KEY"], base_url=os.environ["OPENAI_API_BASE"]
+)
 
 
 async def do_map_reduce(
-    list_str: list[str], params: ParamsSummarize, recursion_limit: int = 20, num_tokens_limit: int = 1226 * 300, max_concurrency: int = 15
+    list_str: list[str],
+    params: ParamsSummarize,
+    recursion_limit: int = 20,
+    num_tokens_limit: int = 1226 * 300,
+    max_concurrency: int = 15,
 ) -> SummaryResponse:
     """Peut faire un GraphRecursionError si recursion_limit est trop faible"""
 
     deb = perf_counter()
-    llm = ChatOpenAI(model=params.model, temperature=params.temperature, api_key=os.environ["OPENAI_API_KEY"], base_url=os.environ["OPENAI_API_BASE"])
+    llm = ChatOpenAI(
+        model=params.model,
+        temperature=params.temperature,
+        api_key=os.environ["OPENAI_API_KEY"],
+        base_url=os.environ["OPENAI_API_BASE"],
+    )
 
     concat_str = [list_str[0]]
     for index, str_ in enumerate(list_str[1:]):
@@ -68,7 +79,9 @@ async def do_map_reduce(
     map_chain = map_prompt | llm | StrOutputParser()
 
     try:
-        reduce_template = params.reduce_prompt.format(language=params.language, size=str(params.size), docs="{docs}")
+        reduce_template = params.reduce_prompt.format(
+            language=params.language, size=str(params.size), docs="{docs}"
+        )
     except Exception:
         raise HTTPException(
             status_code=500,
@@ -114,14 +127,21 @@ async def do_map_reduce(
         # We will return a list of `Send` objects
         # Each `Send` object consists of the name of a node in the graph
         # as well as the state to send to that node
-        return [Send("generate_summary", {"content": content}) for content in state["contents"]]
+        return [
+            Send("generate_summary", {"content": content})
+            for content in state["contents"]
+        ]
 
     def collect_summaries(state: OverallState):
-        return {"collapsed_summaries": [Document(summary) for summary in state["summaries"]]}
+        return {
+            "collapsed_summaries": [Document(summary) for summary in state["summaries"]]
+        }
 
     # Add node to collapse summaries
     async def collapse_summaries(state: OverallState):
-        doc_lists = split_list_of_docs(state["collapsed_summaries"], length_function, token_max)
+        doc_lists = split_list_of_docs(
+            state["collapsed_summaries"], length_function, token_max
+        )
         results = []
         for doc_list in doc_lists:
             results.append(await acollapse_docs(doc_list, reduce_chain.ainvoke))
