@@ -56,12 +56,9 @@ def merge_summaries(
         new_summaries = []
         for i in range(0, len(summaries), 2):
             if i + 1 < len(summaries):
-                combined_text = (
-                    f"Résumé 1 : {summaries[i]}\nRésumé 2 : {summaries[i+1]}"
-                )
+                combined_text = f"Résumé 1 : {summaries[i]}\nRésumé 2 : {summaries[i + 1]}"
                 new_summary = summarize_text(
-                    combined_text, model, client, params=params
-                )
+                    combined_text, model, client, params=params)
                 new_summaries.append(new_summary)
                 nb_call += 1
             else:
@@ -114,6 +111,5 @@ def process_documents(
     logger_app.debug(f"Partial summaries: {len(partial_summaries)} - {time.time() - t}")
     nb_call_llm = len(partial_summaries)
     final_summary, nb_call_llm_merge = merge_summaries(
-        partial_summaries, model, client, params=params
-    )
+        partial_summaries, model, client, params=params)
     return {"summary": final_summary, "nb_call": nb_call_llm + nb_call_llm_merge}

@@ -27,6 +27,9 @@ DEFAULT_CONTEXT_SIZE = 10_000
 DEFAULT_CUSTOM_PROMPT = "en français"
 
 
+DEFAULT_PARAM = ParamsSummarize()
+
+
 @router.post("/url")
 async def summarize_url(urlData: UrlData):
     if urlData.model not in models_available:
@@ -47,7 +50,7 @@ async def summarize_txt(
 
 
 @router.post("/doc")
-async def summarize_url(file: UploadFile, pdf_mode_ocr: ModeOCR = "text_and_ocr", params: Optional[ParamsSummarize] = None):
+async def summarize_doc(file: UploadFile, pdf_mode_ocr: ModeOCR = "text_and_ocr", params: ParamsSummarize = DEFAULT_PARAM):
     docs = parse_files(file=file, pdf_mode_ocr=pdf_mode_ocr)
 
     return await do_map_reduce(docs, params=params)

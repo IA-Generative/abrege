@@ -33,7 +33,7 @@ from schemas.params import ParamsSummarize
 async def do_map_reduce(list_str: list[str], params: ParamsSummarize, recursion_limit: int = 20) -> dict:
     """Peut faire un GraphRecursionError si recursion_limit est trop faible"""
 
-    llm = ChatOpenAI(model="chat-leger", temperature=0, api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE)
+    llm = ChatOpenAI(model=params.model, temperature=params.temperature, api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE)
 
     token_max = int(params.context_size)
 
