@@ -9,9 +9,12 @@ from api.utils.parse import parse_files
 from api.config.openai import OpenAISettings
 from api.models.map_reduce import do_map_reduce
 
-client = OpenAI(
-    api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE
-)
+from langchain_core.prompts import PromptTemplate
+from langchain.chains import LLMChain
+from langchain_core.output_parsers import StrOutputParser
+
+client = OpenAI(api_key=OpenAISettings().OPENAI_API_KEY,
+                base_url=OpenAISettings().OPENAI_API_BASE)
 models_available = [model.id for model in client.models.list().data]
 
 context = {}
@@ -41,6 +44,13 @@ async def summarize_txt(
     textData: TextData
 ):
     return await do_map_reduce([textData.text], params=textData)
+
+
+@router.post("/doc")
+async def summarize_url(file: UploadFile, pdf_mode_ocr: ModeOCR = "text_and_ocr", params: Optional[ParamsSummarize] = None):
+    docs = parse_files(file=file, pdf_mode_ocr=pdf_mode_ocr)
+
+    return await do_map_reduce(docs, params=params)
 
 
 @router.post(

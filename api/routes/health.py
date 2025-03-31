@@ -21,7 +21,8 @@ def get_marker_api_health() -> Union[Health, HealthError]:
     service_name = "marker_api"
     try:
         health_marker = client_marker.check_health()
-        health = Health(name=service_name, version="unknow", up_time=up_time, extras=health_marker.model_dump(), status="healthy")
+        health = Health(name=service_name, version="unknow", up_time=up_time,
+                        extras=health_marker.model_dump(), status="healthy")
         return health
     except Exception as e:
         error = HealthError(name=service_name, error=str(e), code_status=500)
@@ -33,7 +34,8 @@ def get_llm_health() -> Union[Health, HealthError]:
     try:
         dependencies = []
         for model in client.models.list():
-            health = Health(name=model.id, version=client._version, up_time=up_time, status="healthy")
+            health = Health(name=model.id, version=client._version,
+                            up_time=up_time, status="healthy")
             dependencies.append(health)
         return Health(name=service_name, version=client._version, up_time=up_time, status="healthy", dependencies=dependencies)
     except Exception as e:
