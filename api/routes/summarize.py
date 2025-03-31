@@ -18,16 +18,21 @@ context = {}
 
 router = APIRouter(tags=['Summarize'])
 
+DEFAULT_SIZE = 4_000
+DEFAULT_MODEL = "chat-leger"
+DEFAULT_CONTEXT_SIZE = 10_000
+DEFAULT_CUSTOM_PROMPT = "en français"
+
 
 @router.post("/url")
-async def summarize_url(urlData : UrlData):
+async def summarize_url(urlData: UrlData):
     if urlData.model not in models_available:
         raise HTTPException(
             status_code=500, detail=f"{urlData.model} not Found {models_available}"
         )
     data = url_scrapper(url=urlData.url)
     docs = [doc.page_content for doc in data]
-    
+
     return await do_map_reduce(docs, params=urlData)
 
 
@@ -44,10 +49,10 @@ async def summarize_txt(
 async def summarize_doc(
     docData: DocData = Body(...),
     file: UploadFile = File(...),
-    
+
 ):
     docs = parse_files(file=file, pdf_mode_ocr=docData.pdf_mode_ocr)
-   
+
     return await do_map_reduce(docs, params=docData)
 
 

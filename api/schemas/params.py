@@ -4,7 +4,8 @@ import json
 from pydantic import BaseModel, model_validator
 from fastapi import Query
 
-MethodType = Literal["map_reduce", "refine", "text_rank", "k-means", "stuff"]  # "text_rank2", "k-means2"
+MethodType = Literal["map_reduce", "refine", "text_rank",
+                     "k-means", "stuff"]  # "text_rank2", "k-means2"
 ChunkType = Literal["sentences", "chunks"]
 
 MAP_PROMPT = "Rédigez un résumé concis des éléments suivants :\\n\\n{context}"
@@ -13,6 +14,7 @@ Voici une série de résumés:
 {docs}
 Rassemblez ces éléments et faites-en un résumé final et consolidé dans {language} . Rédigez uniquement en {language}.
 """
+
 
 class ParamsSummarize(BaseModel):
     method: MethodType | None = "map_reduce"
@@ -26,7 +28,7 @@ class ParamsSummarize(BaseModel):
     # reduce_template: str | None = (None,)
     # question_template: str | None = (None,)
     # refine_template: str | None = (None,)
-    custom_prompt: str | None = None # param déprécié
+    custom_prompt: str | None = None  # param déprécié
     map_prompt: str = MAP_PROMPT
     reduce_prompt: str = REDUCE_PROMPT
 
@@ -38,9 +40,10 @@ class UrlData(ParamsSummarize):
 class TextData(ParamsSummarize):
     text: str
 
+
 class DocData(ParamsSummarize):
     pdf_mode_ocr: str | None = "text_and_ocr"
-    
+
     @model_validator(mode='before')
     @classmethod
     def validate_to_json(cls, value):

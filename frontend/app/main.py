@@ -13,7 +13,7 @@ INTREGRATION_MIRAI = True
 FOR_NEWBIES = True
 
 api_service = os.environ["API_BASE"]
-base_api_url = f"http://{api_service}:8000/api"
+base_api_url = f"http://{api_service}:8000"
 
 logger.debug("Load all app parameters")
 st.set_page_config(page_title="Demo abrege", initial_sidebar_state="collapsed")
@@ -248,6 +248,7 @@ def ask_llm_stream(request_type, params, user_input):
 st.session_state.stream = False
 
 if st.button("Générer un résumé") and user_input:
+    st.markdown(f"```\n{params}\n```")
     if params["method"] in ["text_rank", "k-means"] and doc_type == "url":
         st.write_stream(ask_llm_stream(doc_type, params, user_input))
         st.session_state.stream = True
