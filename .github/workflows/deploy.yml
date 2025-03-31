@@ -107,11 +107,13 @@ jobs:
       matrix:
         include:
           - image-name: ghcr.io/ia-generative/abrege-api
-            dockerfile: fastapi/Dockerfile
-            target: prod
+            dockerfile: Dockerfiles/api/Dockerfile
+            target: base
+            context: .
           - image-name: ghcr.io/ia-generative/abrege-front
-            dockerfile: frontend/Dockerfile
-    
+            dockerfile: Dockerfiles/frontend/Dockerfile
+            context: .
+            target: 
     steps:
       -
         uses: actions/checkout@v3
@@ -152,7 +154,8 @@ jobs:
         name: Build and Push (latest)
         uses: docker/build-push-action@v3
         with:
-          context: . # ${{ env.APPLICATION }}
+          context: ${{ matrix.context }} # ${{ env.APPLICATION }}
+          target: ${{ matrix.target }}
           file: ${{ matrix.dockerfile }}
           platforms: linux/amd64
           push: true
