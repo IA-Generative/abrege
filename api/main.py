@@ -5,22 +5,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from routes.health import router as health_router
 from routes.summarize import router as summarize_router
 from routes.summarize import deprecated_router
-from api import __version__, __name__ as name
+from __init__ import __version__, __name__ as name
 
 
-origins = (
-    "https://sie.numerique-interieur.com",
-    "http://localhost",
-    "http://localhost:8080",
-    "http://localhost:8501"
-)
+origins = ("https://sie.numerique-interieur.com", "http://localhost", "http://localhost:8080", "http://localhost:8501")
 
-origin_regex = (
-    'https://.*\.cloud-pi-native\.com'
-)
+origin_regex = "https://.*\.cloud-pi-native\.com"
 
 app = FastAPI(
-    title=name, description="", version=__version__,
+    title=name,
+    description="",
+    version=__version__,
 )
 
 
@@ -35,7 +30,7 @@ app.add_middleware(
 
 
 app.include_router(health_router, prefix="/health")
-app.include_router(summarize_router, prefix='/api')
+app.include_router(summarize_router, prefix="/api")
 app.include_router(deprecated_router, prefix="")
 
 if __name__ == "__main__":

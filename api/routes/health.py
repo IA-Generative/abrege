@@ -1,6 +1,6 @@
 from fastapi import APIRouter
-from api.schemas.health import Health
-from api import __version__, __name__
+from schemas.health import Health
+from __init__ import __version__, __name__
 import datetime
 
 
