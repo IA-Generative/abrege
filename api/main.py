@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from routes.health import router as health_router
 from routes.summarize import router as summarize_router
 from routes.summarize import deprecated_router
-from api import __version__, __name__ as name
+from __init__ import __version__, __name__ as name
 
 
 origins = (
