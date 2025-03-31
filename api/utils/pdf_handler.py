@@ -50,9 +50,7 @@ def get_texts_from_images_paddle(list_image_pil: list) -> list[str]:
             output = res.json()
 
             # Process the output
-            results.extend(
-                [clean_paddle_ocr_text(txt) for txt in get_text_from_output(output)]
-            )
+            results.extend([clean_paddle_ocr_text(txt) for txt in get_text_from_output(output)])
 
         except requests.exceptions.RequestException as e:
             print("Error during OCR request:", e)
@@ -75,9 +73,7 @@ class OCRPdfLoader:
     def __call__(cls, path):
         return cls(path)
 
-    def load(
-        self, mode: ModeOCR = "text_and_ocr", debug: bool = False
-    ) -> list[Document]:
+    def load(self, mode: ModeOCR = "text_and_ocr", debug: bool = False) -> list[Document]:
         assert mode in ModeOCR.__args__
         assert mode != "full_text"
         result = []
@@ -95,9 +91,7 @@ class OCRPdfLoader:
                 if use_OCR or mode == "full_ocr":
                     page = pdf_document.load_page(page_num)  # its 0-based page
                     image = page.get_pixmap(dpi=250)
-                    image_pil = Image.frombytes(
-                        "RGB", [image.width, image.height], image.samples
-                    )
+                    image_pil = Image.frombytes("RGB", [image.width, image.height], image.samples)
                     del image, page
                     text = get_text_from_image(image_pil)
                     del image_pil

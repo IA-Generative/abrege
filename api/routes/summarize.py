@@ -26,12 +26,16 @@ DEFAULT_CONTEXT_SIZE = 10_000
 DEFAULT_CUSTOM_PROMPT = "en français"
 
 
+DEFAULT_PARAM = ParamsSummarize()
+
 @router.post("/url")
-async def summarize_url(url: str, params: Optional[ParamsSummarize] = None):
+async def summarize_url(url: str, params: ParamsSummarize = DEFAULT_PARAM):
     data = url_scrapper(url=url)
     docs = [doc.page_content for doc in data]
-
+    #try:
     return await do_map_reduce(docs, params=params)
+    #except Exception as e:
+    #    raise HTTPException(status_code=500, detail=str(e))
 
 
 @deprecated_router.get("/url", deprecated=True)
@@ -62,14 +66,12 @@ async def old_summarize_url(
         refine_template=refine_template,
         custom_prompt=custom_prompt,
     )
-    try:
-        return await summarize_url(url=url, model=model, params=params)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+
+    return await summarize_url(url=url, params=params)
 
 
 @router.post("/text")
-async def summarize_txt(text: str, params: Optional[ParamsSummarize]):
+async def summarize_txt(text: str, params: ParamsSummarize = DEFAULT_PARAM):
     if len(text) <= 8192:  # TODO
         prompt = PromptTemplate.from_template("""Ce qui suit est une série d'extraits d'un texte (ou le texte entier lui-même)
 ```
@@ -114,11 +116,11 @@ async def old_summarize_txt(
         refine_template=refine_template,
         custom_prompt=custom_prompt,
     )
-    return await summarize_txt(text=text, model=model, params=params)
+    return await summarize_txt(text=text, params=params)
 
 
 @router.post("/doc")
-async def summarize_url(file: UploadFile, pdf_mode_ocr: ModeOCR = "text_and_ocr", params: Optional[ParamsSummarize] = None):
+async def summarize_doc(file: UploadFile, pdf_mode_ocr: ModeOCR = "text_and_ocr", params: ParamsSummarize = DEFAULT_PARAM):
     docs = parse_files(file=file, pdf_mode_ocr=pdf_mode_ocr)
 
     return await do_map_reduce(docs, params=params)
@@ -154,7 +156,7 @@ async def old_summarize_doc(
         custom_prompt=custom_prompt,
     )
 
-    return await summarize_url(file, pdf_mode_ocr, params)
+    return await summarize_doc(file, pdf_mode_ocr, params)
 
 
 @router.get("/models", response_model=List[str])
