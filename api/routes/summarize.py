@@ -14,10 +14,13 @@ client = OpenAI(
 )
 models_available = [model.id for model in client.models.list().data]
 
-context = {}
-
+deprecated_router = APIRouter()
 router = APIRouter()
 
+DEFAULT_SIZE = 4_000
+DEFAULT_MODEL = "chat-leger"
+DEFAULT_CONTEXT_SIZE = 10_000
+DEFAULT_CUSTOM_PROMPT = "en français"
 
 @router.post("/url")
 async def summarize_url(url: str, model: str, params: Optional[ParamsSummarize] = None):
@@ -31,20 +34,20 @@ async def summarize_url(url: str, model: str, params: Optional[ParamsSummarize] 
     return process_documents(docs=docs, model=model, client=client, params=params)
 
 
-@router.get("/url", deprecated=True)
+@deprecated_router.get("/url", deprecated=True)
 async def get_summarize_url(
     url: str,
-    model: str = "chat-leger",
-    context_size: int = None,
+    model: str = DEFAULT_MODEL,
+    context_size: int = DEFAULT_CONTEXT_SIZE,
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
     language: str = None,
-    size: int = None,
+    size: int = DEFAULT_SIZE,
     summarize_template: str | None = None,
     map_template: str | None = None,
     reduce_template: str | None = None,
     question_template: str | None = None,
     refine_template: str | None = None,
-    custom_prompt: str | None = None,
+    custom_prompt: str | None = DEFAULT_CUSTOM_PROMPT,
 ):
     params: ParamsSummarize = ParamsSummarize(
         model=model,
@@ -73,20 +76,20 @@ async def summarize_txt(
     return process_documents(docs=[text], model=model, client=client, params=params)
 
 
-@router.get("/text", deprecated=True)
+@deprecated_router.get("/text", deprecated=True)
 async def get_summarize_txt(
     text: str,
-    model: str = "chat-leger",
-    context_size: int = None,
+    model: str = DEFAULT_MODEL,
+    context_size: int = DEFAULT_CONTEXT_SIZE,
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
     language: str = None,
-    size: int = None,
+    size: int = DEFAULT_SIZE,
     summarize_template: str | None = None,
     map_template: str | None = None,
     reduce_template: str | None = None,
     question_template: str | None = None,
     refine_template: str | None = None,
-    custom_prompt: str | None = None,
+    custom_prompt: str | None = DEFAULT_CUSTOM_PROMPT,
 ):
 
     params: ParamsSummarize = ParamsSummarize(
@@ -105,21 +108,21 @@ async def get_summarize_txt(
     return await summarize_txt(text=text, model=model, params=params)
 
 
-@router.post("/doc", deprecated=True)
+@deprecated_router.post("/doc", deprecated=True)
 async def summarize_doc(
     file: UploadFile,
-    model: str,
+    model: str = DEFAULT_MODEL,
     pdf_mode_ocr: ModeOCR | None = None,
-    context_size: int = None,
+    context_size: int = DEFAULT_CONTEXT_SIZE,
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
     language: str = None,
-    size: int = None,
+    size: int = DEFAULT_SIZE,
     summarize_template: str | None = None,
     map_template: str | None = None,
     reduce_template: str | None = None,
     question_template: str | None = None,
     refine_template: str | None = None,
-    custom_prompt: str | None = None,
+    custom_prompt: str | None = DEFAULT_CUSTOM_PROMPT,
 ):
     docs = parse_files(file=file, pdf_mode_ocr=pdf_mode_ocr)
     params: ParamsSummarize = ParamsSummarize(
@@ -144,7 +147,7 @@ async def list_model():
     """Get a list a available mode for the api"""
     return models_available
 
-
+@deprecated_router.get("/default_params", deprecated=True)
 @router.get("/default_params", deprecated=True)
 async def param():
     """Generate a dict of default param of the app
