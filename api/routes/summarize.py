@@ -35,7 +35,7 @@ DEFAULT_CUSTOM_PROMPT = "en français"
 DEFAULT_PARAM = ParamsSummarize()
 
 @router.post("/url")
-async def summarize_url(url: str, params: ParamsSummarize = DEFAULT_PARAM):
+async def summarize_url(url: str, params: ParamsSummarize = DEFAULT_PARAM) -> SummaryResponse:
     data = url_scrapper(url=url)
     docs = [doc.page_content for doc in data]
     return await do_map_reduce(docs, params=params)
