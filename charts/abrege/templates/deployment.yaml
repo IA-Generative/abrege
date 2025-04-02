@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.name }}
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.name }}
+      annotations:
+        redeploy-hash: "{{ .Values.annotations.redeployHash }}"
+    spec:
+      containers:
+      - name: {{ .Values.name }}-api
+        image: {{ .Values.image.api }}
+        envFrom:
+          - secretRef:
+              name: secret-abrege
+        ports:
+          - containerPort: 8000
+            protocol: TCP
+      - name: {{ .Values.name }}-front
+        image: {{ .Values.image.front }}
+        env:
+          - name: API_BASE
+            value: 0.0.0.0
+        ports:
+          - containerPort: 8080
+            protocol: TCP
+      imagePullSecrets:
+        - name: {{ .Values.imagePullSecrets[0].name }}
