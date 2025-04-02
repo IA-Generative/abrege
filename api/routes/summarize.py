@@ -15,6 +15,10 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_openai import ChatOpenAI
 from time import perf_counter
+from fastapi import FastAPI, File, Form, UploadFile
+from typing import Annotated, Literal
+from fastapi import FastAPI, Query
+from pydantic import BaseModel, Field
 
 client = OpenAI(api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE)
 
@@ -32,14 +36,26 @@ DEFAULT_CONTEXT_SIZE = 10_000
 DEFAULT_CUSTOM_PROMPT = "en français"
 
 
-DEFAULT_PARAM = ParamsSummarize()
+class UrlData(ParamsSummarize):
+    url: str
+
+
+class TextData(ParamsSummarize):
+    text: str
+
+
+class DocData(ParamsSummarize):
+    file: UploadFile
+    pdf_mode_ocr: ModeOCR | None = None
+
 
 @router.post("/url")
-async def summarize_url(url: str, params: ParamsSummarize = DEFAULT_PARAM) -> SummaryResponse:
+async def summarize_url(urlData: UrlData) -> SummaryResponse:
+    url = urlData.url
     data = url_scrapper(url=url)
     docs = [doc.page_content for doc in data]
-    return await do_map_reduce(docs, params=params)
- 
+    return await do_map_reduce(docs, params=urlData)
+
 
 @deprecated_router.get("/url", deprecated=True)
 async def old_summarize_url(
@@ -56,7 +72,8 @@ async def old_summarize_url(
     refine_template: str | None = None,
     custom_prompt: str | None = DEFAULT_CUSTOM_PROMPT,
 ) -> SummaryResponse:
-    params: ParamsSummarize = ParamsSummarize(
+    params: UrlData = UrlData(
+        url=url,
         model=model,
         context_size=context_size,
         temperature=temperature,
@@ -74,9 +91,9 @@ async def old_summarize_url(
 
 
 @router.post("/text")
-async def summarize_txt(text: str, params: ParamsSummarize = DEFAULT_PARAM) -> SummaryResponse:
-    
-    
+async def summarize_txt(textData: TextData) -> SummaryResponse:
+    text = textData.text
+
     if len(text) <= 8192:  # TODO
         prompt = PromptTemplate.from_template("""Ce qui suit est une série d'extraits d'un texte (ou le texte entier lui-même)
 ```
@@ -84,7 +101,10 @@ async def summarize_txt(text: str, params: ParamsSummarize = DEFAULT_PARAM) -> S
 ```
 Rassemblez ces éléments et faites-en un résumé final et consolidé dans {language} en {size} mots au maximum. Rédigez uniquement en {language}.{custom_prompt}
 """)
-        llm = ChatOpenAI(model=params.model, temperature=params.temperature, api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE)
+        params = textData
+        llm = ChatOpenAI(
+            model=params.model, temperature=params.temperature, api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE
+        )
 
         llm_chain = prompt | llm | StrOutputParser()
         deb = perf_counter()
@@ -112,7 +132,8 @@ async def old_summarize_txt(
     refine_template: str | None = None,
     custom_prompt: str | None = DEFAULT_CUSTOM_PROMPT,
 ) -> SummaryResponse:
-    params: ParamsSummarize = ParamsSummarize(
+    params: TextData = TextData(
+        text=text,
         model=model,
         context_size=context_size,
         temperature=temperature,
@@ -129,17 +150,21 @@ async def old_summarize_txt(
 
 
 @router.post("/doc")
-async def summarize_doc(file: UploadFile, pdf_mode_ocr: ModeOCR = "text_and_ocr", params: ParamsSummarize = DEFAULT_PARAM) -> SummaryResponse:
+async def summarize_doc(docData: DocData) -> SummaryResponse:
+    pdf_mode_ocr = docData.pdf_mode_ocr
+    file = docData.file
+    if pdf_mode_ocr is None:
+        pdf_mode_ocr = "text_and_ocr"
     docs = parse_files(file=file, pdf_mode_ocr=pdf_mode_ocr)
 
-    return await do_map_reduce(docs, params=params)
+    return await do_map_reduce(docs, params=docData)
 
 
 @deprecated_router.post("/doc", deprecated=True)
 async def old_summarize_doc(
     file: UploadFile,
     model: str = DEFAULT_MODEL,
-    pdf_mode_ocr: ModeOCR = "text_and_ocr",
+    pdf_mode_ocr: ModeOCR | None = None,
     context_size: int = DEFAULT_CONTEXT_SIZE,
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
     language: str = None,
@@ -151,7 +176,9 @@ async def old_summarize_doc(
     refine_template: str | None = None,
     custom_prompt: str | None = DEFAULT_CUSTOM_PROMPT,
 ) -> SummaryResponse:
-    params: ParamsSummarize = ParamsSummarize(
+    params: DocData = DocData(
+        file=file,
+        pdf_mode_ocr=pdf_mode_ocr,
         model=model,
         context_size=context_size,
         temperature=temperature,

@@ -10,7 +10,7 @@ class ParamsSummarize(BaseModel):
     method: MethodType | None = "map_reduce"
     model: str = "chat-leger"
     context_size: int | None = 10_000
-    temperature: Annotated[float, Query(ge=0, le=1.0)] = 0
+    temperature: Annotated[float, Query(ge=0, le=1.0)] = 0.
     language: str | None = "French"
     size: int | None = 4_000
     # summarize_template: str | None = (None,)
