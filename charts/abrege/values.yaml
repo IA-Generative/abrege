@@ -1,0 +1,17 @@
+name: abrege
+namespace: abrege
+image:
+  api: ghcr.io/ia-generative/abrege-api:latest
+  front: ghcr.io/ia-generative/abrege-front:latest
+imagePullSecrets:
+  - name: github-regcred
+replicas: 1
+annotations:
+  redeployHash: ""
+ingress:
+  className: public
+  hostApi: abrege.c0.cloud-pi-native.com
+  hostStreamlit: abrege-streamlit.c0.cloud-pi-native.com
+tls:
+  secretApi: abrege.c0.cloud-pi-native.com-tls
+  secretStreamlit: abrege-streamlit.c0.cloud-pi-native.com-tls
