@@ -10,8 +10,8 @@ from api.config.openai import OpenAISettings
 from api.models.map_reduce import do_map_reduce
 
 from langchain_core.prompts import PromptTemplate
-from langchain.chains import LLMChain
 from langchain_core.output_parsers import StrOutputParser
+from langchain_openai import ChatOpenAI
 
 client = OpenAI(api_key=OpenAISettings().OPENAI_API_KEY,
                 base_url=OpenAISettings().OPENAI_API_BASE)
