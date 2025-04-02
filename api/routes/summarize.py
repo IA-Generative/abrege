@@ -1,5 +1,5 @@
 from typing import get_args, Annotated, Optional, List
-from openai import OpenAI
+from openai import OpenAI, APIConnectionError
 from fastapi import HTTPException, UploadFile, APIRouter, Query
 from models.naive import process_documents
 from models.mapreduce import do_map_reduce
@@ -9,13 +9,17 @@ from utils.url_parser import url_scrapper
 from utils.pdf_handler import ModeOCR
 from utils.parse import parse_files
 from config.openai import OpenAISettings
-
+import logging
 from langchain_core.prompts import PromptTemplate
-from langchain.chains import LLMChain
 from langchain_core.output_parsers import StrOutputParser
+from langchain_openai import ChatOpenAI
 
 client = OpenAI(api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE)
-models_available = [model.id for model in client.models.list().data]
+
+try:
+    models_available = [model.id for model in client.models.list().data]
+except APIConnectionError as e:
+    logging.error(f"Unable to access models, connection problems. {repr(e)}")
 
 deprecated_router = APIRouter()
 router = APIRouter()
@@ -79,13 +83,16 @@ async def summarize_txt(text: str, params: ParamsSummarize = DEFAULT_PARAM):
 ```
 Take these and distill it into a consolidated summary in {language} in at most {size} words.{custom_prompt}
 """)
+        llm = ChatOpenAI(model=params.model, temperature=params.temperature, api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE)
 
-        llm_chain = LLMChain(llm=client, prompt=prompt) | StrOutputParser()
-
+        llm_chain = prompt | llm | StrOutputParser()
+        import logging
+        logging.warning(f"{params=}")
         return llm_chain.invoke({"text": text, "language": params.language, "size": params.size, "custom_prompt": params.custom_prompt})
 
     # Sinon on fait le résumé le map reduce
-    return await do_map_reduce([text], params=params)
+    summary = await do_map_reduce([text], params=params)
+    return {"summary": summary}
 
 
 @deprecated_router.get("/text", deprecated=True)
