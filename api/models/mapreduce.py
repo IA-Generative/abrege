@@ -1,4 +1,5 @@
 import operator
+from time import perf_counter
 from typing import Annotated, List, Literal, TypedDict
 import asyncio
 from config.openai import OpenAISettings
@@ -28,11 +29,12 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
 from schemas.params import ParamsSummarize
+from schemas.response import SummaryResponse
 
-
-async def do_map_reduce(list_str: list[str], params: ParamsSummarize, recursion_limit: int = 20) -> dict:
+async def do_map_reduce(list_str: list[str], params: ParamsSummarize, recursion_limit: int = 20) -> SummaryResponse:
     """Peut faire un GraphRecursionError si recursion_limit est trop faible"""
 
+    deb = perf_counter()
     llm = ChatOpenAI(model=params.model, temperature=params.temperature, api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE)
 
     token_max = int(params.context_size)
@@ -140,7 +142,8 @@ async def do_map_reduce(list_str: list[str], params: ParamsSummarize, recursion_
         # print(list(step.keys()))
         list(step.keys())
         nb_call += 1
+    elapsed = perf_counter() - deb
 
     final_summary = step["generate_final_summary"]["final_summary"]
 
-    return {"summary": final_summary, "nb_call": nb_call}
+    return SummaryResponse(summary=final_summary, nb_call=nb_call, time=elapsed)
