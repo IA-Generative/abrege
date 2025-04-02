@@ -13,6 +13,10 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_openai import ChatOpenAI
 from time import perf_counter
+from fastapi import FastAPI, File, Form, UploadFile
+from typing import Annotated, Literal
+from fastapi import FastAPI, Query
+from pydantic import BaseModel, Field
 
 client = OpenAI(api_key=OpenAISettings().OPENAI_API_KEY,
                 base_url=OpenAISettings().OPENAI_API_BASE)
@@ -51,10 +55,14 @@ async def summarize_txt(
 
 
 @router.post("/doc")
-async def summarize_doc(file: UploadFile, pdf_mode_ocr: ModeOCR = "text_and_ocr", params: ParamsSummarize = DEFAULT_PARAM) -> SummaryResponse:
+async def summarize_doc(docData: DocData) -> SummaryResponse:
+    pdf_mode_ocr = docData.pdf_mode_ocr
+    file = docData.file
+    if pdf_mode_ocr is None:
+        pdf_mode_ocr = "text_and_ocr"
     docs = parse_files(file=file, pdf_mode_ocr=pdf_mode_ocr)
 
-    return await do_map_reduce(docs, params=params)
+    return await do_map_reduce(docs, params=docData)
 
 
 @router.post(
