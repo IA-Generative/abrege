@@ -4,6 +4,7 @@ from fastapi import HTTPException, UploadFile, APIRouter, Query
 from models.naive import process_documents
 from models.mapreduce import do_map_reduce
 from schemas.params import MethodType, ParamsSummarize
+from schemas.response import SummaryResponse
 from prompt.template import prompt_template
 from utils.url_parser import url_scrapper
 from utils.pdf_handler import ModeOCR
@@ -13,6 +14,7 @@ import logging
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_openai import ChatOpenAI
+from time import perf_counter
 
 client = OpenAI(api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE)
 
@@ -36,11 +38,8 @@ DEFAULT_PARAM = ParamsSummarize()
 async def summarize_url(url: str, params: ParamsSummarize = DEFAULT_PARAM):
     data = url_scrapper(url=url)
     docs = [doc.page_content for doc in data]
-    #try:
     return await do_map_reduce(docs, params=params)
-    #except Exception as e:
-    #    raise HTTPException(status_code=500, detail=str(e))
-
+ 
 
 @deprecated_router.get("/url", deprecated=True)
 async def old_summarize_url(
@@ -56,7 +55,7 @@ async def old_summarize_url(
     question_template: str | None = None,
     refine_template: str | None = None,
     custom_prompt: str | None = DEFAULT_CUSTOM_PROMPT,
-):
+) -> SummaryResponse:
     params: ParamsSummarize = ParamsSummarize(
         model=model,
         context_size=context_size,
@@ -75,24 +74,27 @@ async def old_summarize_url(
 
 
 @router.post("/text")
-async def summarize_txt(text: str, params: ParamsSummarize = DEFAULT_PARAM):
+async def summarize_txt(text: str, params: ParamsSummarize = DEFAULT_PARAM) -> SummaryResponse:
+    
+    
     if len(text) <= 8192:  # TODO
         prompt = PromptTemplate.from_template("""Ce qui suit est une série d'extraits d'un texte (ou le texte entier lui-même)
 ```
 {text}
 ```
-Take these and distill it into a consolidated summary in {language} in at most {size} words.{custom_prompt}
+Rassemblez ces éléments et faites-en un résumé final et consolidé dans {language} en {size} mots au maximum. Rédigez uniquement en {language}.{custom_prompt}
 """)
         llm = ChatOpenAI(model=params.model, temperature=params.temperature, api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE)
 
         llm_chain = prompt | llm | StrOutputParser()
-        import logging
-        logging.warning(f"{params=}")
-        return llm_chain.invoke({"text": text, "language": params.language, "size": params.size, "custom_prompt": params.custom_prompt})
+        deb = perf_counter()
+        summary = llm_chain.invoke({"text": text, "language": params.language, "size": params.size, "custom_prompt": params.custom_prompt})
+        elapsed = perf_counter() - deb
 
-    # Sinon on fait le résumé le map reduce
-    summary = await do_map_reduce([text], params=params)
-    return {"summary": summary}
+        return SummaryResponse(summary=summary, time=elapsed)
+    else:
+        # Sinon on fait le résumé le map reduce
+        return await do_map_reduce([text], params=params)
 
 
 @deprecated_router.get("/text", deprecated=True)
@@ -109,7 +111,7 @@ async def old_summarize_txt(
     question_template: str | None = None,
     refine_template: str | None = None,
     custom_prompt: str | None = DEFAULT_CUSTOM_PROMPT,
-):
+) -> SummaryResponse:
     params: ParamsSummarize = ParamsSummarize(
         model=model,
         context_size=context_size,
@@ -127,7 +129,7 @@ async def old_summarize_txt(
 
 
 @router.post("/doc")
-async def summarize_doc(file: UploadFile, pdf_mode_ocr: ModeOCR = "text_and_ocr", params: ParamsSummarize = DEFAULT_PARAM):
+async def summarize_doc(file: UploadFile, pdf_mode_ocr: ModeOCR = "text_and_ocr", params: ParamsSummarize = DEFAULT_PARAM) -> SummaryResponse:
     docs = parse_files(file=file, pdf_mode_ocr=pdf_mode_ocr)
 
     return await do_map_reduce(docs, params=params)
@@ -148,7 +150,7 @@ async def old_summarize_doc(
     question_template: str | None = None,
     refine_template: str | None = None,
     custom_prompt: str | None = DEFAULT_CUSTOM_PROMPT,
-):
+) -> SummaryResponse:
     params: ParamsSummarize = ParamsSummarize(
         model=model,
         context_size=context_size,
