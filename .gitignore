@@ -8,3 +8,4 @@
 notebook/*
 *.log
 *poetry.lock
+kubeconfig
