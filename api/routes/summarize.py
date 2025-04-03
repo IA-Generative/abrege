@@ -1,24 +1,28 @@
-from typing import get_args, Annotated, Optional, List
+from typing import get_args, Annotated, Optional, List, Literal
+from time import perf_counter
+import logging
+import json
+
+from utils.url_parser import url_scrapper
+from utils.pdf_handler import ModeOCR
+from utils.parse import parse_files
+
 from openai import OpenAI, APIConnectionError
-from fastapi import HTTPException, UploadFile, APIRouter, Query
+from fastapi import HTTPException, UploadFile, APIRouter, Query, FastAPI, status, Form, UploadFile, File, Depends, Request
 from models.naive import process_documents
 from models.mapreduce import do_map_reduce
 from schemas.params import MethodType, ParamsSummarize
 from schemas.response import SummaryResponse
 from prompt.template import prompt_template
-from utils.url_parser import url_scrapper
-from utils.pdf_handler import ModeOCR
-from utils.parse import parse_files
 from config.openai import OpenAISettings
-import logging
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_openai import ChatOpenAI
-from time import perf_counter
-from fastapi import FastAPI, File, Form, UploadFile
-from typing import Annotated, Literal
-from fastapi import FastAPI, Query
-from pydantic import BaseModel, Field
+from fastapi.encoders import jsonable_encoder
+from fastapi import FastAPI, File, Body, UploadFile, Request
+from pydantic import BaseModel, model_validator
+from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse
 
 client = OpenAI(api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE)
 
@@ -45,9 +49,14 @@ class TextData(ParamsSummarize):
 
 
 class DocData(ParamsSummarize):
-    file: UploadFile
     pdf_mode_ocr: ModeOCR | None = None
-
+    
+    @model_validator(mode='before')
+    @classmethod
+    def validate_to_json(cls, value):
+        if isinstance(value, str):
+            return cls(**json.loads(value))
+        return value
 
 @router.post("/url")
 async def summarize_url(urlData: UrlData) -> SummaryResponse:
@@ -148,17 +157,12 @@ async def old_summarize_txt(
     )
     return await summarize_txt(params)
 
-
 @router.post("/doc")
-async def summarize_doc(docData: DocData) -> SummaryResponse:
-    pdf_mode_ocr = docData.pdf_mode_ocr
-    file = docData.file
-    if pdf_mode_ocr is None:
-        pdf_mode_ocr = "text_and_ocr"
+async def summarize_doc(docData: DocData = Body(...), file : UploadFile = File(...)) -> SummaryResponse:
+    pdf_mode_ocr = docData.pdf_mode_ocr or "text_and_ocr"
     docs = parse_files(file=file, pdf_mode_ocr=pdf_mode_ocr)
 
     return await do_map_reduce(docs, params=docData)
-
 
 @deprecated_router.post("/doc", deprecated=True)
 async def old_summarize_doc(
@@ -192,7 +196,7 @@ async def old_summarize_doc(
         custom_prompt=custom_prompt,
     )
 
-    return await summarize_doc(params)
+    return await summarize_doc(docData=params, file=file)
 
 
 @router.get("/models", response_model=List[str])
