@@ -14,7 +14,7 @@ origins = (
     "http://localhost:8501",
 )
 
-origin_regex = "https://.*\.cloud-pi-native\.com"
+origin_regex = r"https:\/\/.*\.(?:cloud-pi-native|numerique-interieur)\.com"
 
 app = FastAPI(
     title=name,
