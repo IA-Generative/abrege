@@ -57,7 +57,8 @@ async def summarize_txt(
 @router.post("/doc")
 async def summarize_doc(docData: DocData = Body(...), file: UploadFile = File(...)) -> SummaryResponse:
     pdf_mode_ocr = docData.pdf_mode_ocr or "text_and_ocr"
-    docs = parse_files(file=file, pdf_mode_ocr=pdf_mode_ocr)
+    docs = parse_files(file=file, pdf_mode_ocr=pdf_mode_ocr,
+                       limit_pages_ocr=LIMIT_OCR_PAGES)
 
     return await do_map_reduce(docs, params=docData)
 

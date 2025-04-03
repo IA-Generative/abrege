@@ -27,6 +27,7 @@ DOCUMENT_LOADER_DICT = {
 def parse_files(
     file: UploadFile,
     pdf_mode_ocr: ModeOCR | None = None,
+    limit_pages_ocr=10
 ) -> List[str]:
     logger_app.debug(f"Parsing file - {file.content_type} - {file.filename}")
     if file.filename is not None:

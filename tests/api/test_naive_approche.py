@@ -1,5 +1,4 @@
 import unittest
-from typing import List
 from openai import OpenAI
 from api.models.naive import summarize_text, merge_summaries, process_documents
 
