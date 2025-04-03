@@ -87,7 +87,7 @@ async def old_summarize_url(
         custom_prompt=custom_prompt,
     )
 
-    return await summarize_url(url=url, params=params)
+    return await summarize_url(params)
 
 
 @router.post("/text")
@@ -146,7 +146,7 @@ async def old_summarize_txt(
         refine_template=refine_template,
         custom_prompt=custom_prompt,
     )
-    return await summarize_txt(text=text, params=params)
+    return await summarize_txt(params)
 
 
 @router.post("/doc")
@@ -192,7 +192,7 @@ async def old_summarize_doc(
         custom_prompt=custom_prompt,
     )
 
-    return await summarize_doc(file, pdf_mode_ocr, params)
+    return await summarize_doc(params)
 
 
 @router.get("/models", response_model=List[str])
