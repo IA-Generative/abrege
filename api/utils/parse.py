@@ -1,7 +1,6 @@
 import os
 from typing import List
 from fastapi import HTTPException, UploadFile
-import os
 import tempfile
 from langchain_community.document_loaders import (
     PyPDFLoader,
@@ -24,6 +23,7 @@ DOCUMENT_LOADER_DICT = {
 def parse_files(
     file: UploadFile,
     pdf_mode_ocr: ModeOCR | None = None,
+    limit_pages_ocr = 10
 ) -> List[str]:
     if file.filename is not None:
         try:
@@ -32,14 +32,13 @@ def parse_files(
         except Exception as err:
             raise HTTPException(
                 status_code=422,
-                detail=f"""Error while parsing the filename, {err} occured""",
+                detail=f"""Erreur lors de l'analyse du nom de fichier, {err} s'est produite""",
             )
 
     if extension not in DOCUMENT_LOADER_DICT:
         raise HTTPException(
             status_code=422,
-            detail=f"""file format not supported, file format supported are :
-              {tuple(DOCUMENT_LOADER_DICT.keys())}""",
+            detail=f"""Le format de fichier {extension} n'est pas supporté. Les formats supportés sont : {tuple(DOCUMENT_LOADER_DICT.keys())}""",
         )
 
     if extension == ".pdf" and pdf_mode_ocr is None:
@@ -49,7 +48,7 @@ def parse_files(
             ({repr(tuple(ModeOCR.__args__))})""",
         )
 
-    # Dirty method required: save content to a tempory file and read it...
+    # TODO Dirty method required: save content to a tempory file and read it...
     with tempfile.NamedTemporaryFile(mode="w+b") as tmp_file:
         tmp_file.write(file.file.read())
         if extension != ".pdf" or pdf_mode_ocr == "full_text":
@@ -57,6 +56,11 @@ def parse_files(
             docs = loader.load()
         else:
             loader = OCRPdfLoader(tmp_file.name)
-            docs = loader.load(mode=pdf_mode_ocr)
+            docs = loader.load(mode=pdf_mode_ocr, limit_pages_ocr=10)
+            if docs is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"""Le document semble contenir trop de pages scannées (plus de {limit_pages_ocr} pages)""",
+                )
 
     return [doc.page_content for doc in docs]

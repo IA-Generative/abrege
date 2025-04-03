@@ -8,7 +8,7 @@ ChunkType = Literal["sentences", "chunks"]
 
 class ParamsSummarize(BaseModel):
     method: MethodType | None = "map_reduce"
-    model: str = "chat-leger"
+    model: str = "qwen2.5"
     context_size: int | None = 10_000
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0.
     language: str | None = "French"

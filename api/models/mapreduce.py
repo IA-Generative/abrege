@@ -3,6 +3,7 @@ from time import perf_counter
 from typing import Annotated, List, Literal, TypedDict
 import asyncio
 from config.openai import OpenAISettings
+from fastapi import HTTPException, UploadFile
 
 from openai import OpenAI
 
@@ -16,26 +17,29 @@ from langgraph.graph import END, START, StateGraph
 
 from langchain_openai import ChatOpenAI
 
-
-from config.openai import OpenAISettings
-
 from langchain_core.prompts import PromptTemplate
-from langchain.chains import LLMChain
-from langchain_core.output_parsers import StrOutputParser
-
-client = OpenAI(api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE)
-
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
 from schemas.params import ParamsSummarize
 from schemas.response import SummaryResponse
 
-async def do_map_reduce(list_str: list[str], params: ParamsSummarize, recursion_limit: int = 20) -> SummaryResponse:
+client = OpenAI(api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE)
+
+
+async def do_map_reduce(list_str: list[str], params: ParamsSummarize, recursion_limit: int = 20, num_tokens_limit: int = 1226 * 15) -> SummaryResponse:
     """Peut faire un GraphRecursionError si recursion_limit est trop faible"""
 
     deb = perf_counter()
     llm = ChatOpenAI(model=params.model, temperature=params.temperature, api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE)
+
+    num_tokens = llm.get_num_tokens(" ".join(list_str))
+
+    if num_tokens > num_tokens_limit:
+        raise HTTPException(
+            status_code=422,
+            detail=f"""Le texte à résumer est trop long. (environ {num_tokens} tokens alors que la limite est à {num_tokens_limit} tokens)""",
+        )
 
     token_max = int(params.context_size)
 
