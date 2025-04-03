@@ -8,7 +8,8 @@ from routes.summarize import deprecated_router
 from __init__ import __version__, __name__ as name
 
 
-origins = ("https://sie.numerique-interieur.com", "http://localhost", "http://localhost:8080", "http://localhost:8501")
+#origins = ("https://sie.numerique-interieur.com", "http://localhost", "http://localhost:8080", "http://localhost:8501")
+origins = ['*']
 
 origin_regex = r"https:\/\/.*\.(?:cloud-pi-native|numerique-interieur)\.com"
 
@@ -22,7 +23,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_origin_regex=origin_regex,
+    #allow_origin_regex=origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
