@@ -34,11 +34,12 @@ except APIConnectionError as e:
 deprecated_router = APIRouter()
 router = APIRouter()
 
-DEFAULT_SIZE = 4_000
-DEFAULT_MODEL = "chat-leger"
-DEFAULT_CONTEXT_SIZE = 10_000
-DEFAULT_CUSTOM_PROMPT = "en français"
+DEFAULT_SIZE = ParamsSummarize().size
+DEFAULT_MODEL = ParamsSummarize().model
+DEFAULT_CONTEXT_SIZE = ParamsSummarize().context_size
+DEFAULT_CUSTOM_PROMPT = ParamsSummarize().custom_prompt
 
+LIMIT_OCR_PAGES = 10
 
 class UrlData(ParamsSummarize):
     url: str
@@ -102,7 +103,7 @@ async def old_summarize_url(
 @router.post("/text")
 async def summarize_txt(textData: TextData) -> SummaryResponse:
     text = textData.text
-
+    
     if len(text) <= 8192:  # TODO
         prompt = PromptTemplate.from_template("""Ce qui suit est une série d'extraits d'un texte (ou le texte entier lui-même)
 ```
@@ -110,20 +111,19 @@ async def summarize_txt(textData: TextData) -> SummaryResponse:
 ```
 Rassemblez ces éléments et faites-en un résumé final et consolidé dans {language} en {size} mots au maximum. Rédigez uniquement en {language}.{custom_prompt}
 """)
-        params = textData
         llm = ChatOpenAI(
-            model=params.model, temperature=params.temperature, api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE
+            model=textData.model, temperature=textData.temperature, api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE
         )
 
         llm_chain = prompt | llm | StrOutputParser()
         deb = perf_counter()
-        summary = llm_chain.invoke({"text": text, "language": params.language, "size": params.size, "custom_prompt": params.custom_prompt})
+        summary = llm_chain.invoke({"text": text, "language": textData.language, "size": textData.size, "custom_prompt": textData.custom_prompt})
         elapsed = perf_counter() - deb
 
         return SummaryResponse(summary=summary, time=elapsed)
     else:
         # Sinon on fait le résumé le map reduce
-        return await do_map_reduce([text], params=params)
+        return await do_map_reduce([text], params=textData)
 
 
 @deprecated_router.get("/text", deprecated=True)
@@ -160,7 +160,7 @@ async def old_summarize_txt(
 @router.post("/doc")
 async def summarize_doc(docData: DocData = Body(...), file : UploadFile = File(...)) -> SummaryResponse:
     pdf_mode_ocr = docData.pdf_mode_ocr or "text_and_ocr"
-    docs = parse_files(file=file, pdf_mode_ocr=pdf_mode_ocr)
+    docs = parse_files(file=file, pdf_mode_ocr=pdf_mode_ocr, limit_pages_ocr=LIMIT_OCR_PAGES)
 
     return await do_map_reduce(docs, params=docData)
 

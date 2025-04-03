@@ -73,22 +73,26 @@ class OCRPdfLoader:
     def __call__(cls, path):
         return cls(path)
 
-    def load(self, mode: ModeOCR = "text_and_ocr", debug: bool = False) -> list[Document]:
+    def load(self, mode: ModeOCR = "text_and_ocr", debug: bool = False, limit_pages_ocr:int = 10) -> list[Document] | None:
         assert mode in ModeOCR.__args__
         assert mode != "full_text"
         result = []
+        pages_in_ocr = 0
         with pymupdf.open(self.path) as pdf_document:
             for page_num in range(pdf_document.page_count):
                 use_OCR = False
                 if mode == "text_and_ocr":
                     text = pdf_document.get_page_text(page_num)
-                    use_OCR = len(text.strip()) <= 30
+                    use_OCR = len(re.split(r"\s+", text)) <= 20
                     if debug:
                         print(f"{page_num} {use_OCR=}")
                     if not use_OCR:
                         doc = Document(page_content=text, origin="plain-text-pdf")
 
                 if use_OCR or mode == "full_ocr":
+                    pages_in_ocr += 1
+                    if pages_in_ocr > limit_pages_ocr:
+                        return None
                     page = pdf_document.load_page(page_num)  # its 0-based page
                     image = page.get_pixmap(dpi=250)
                     image_pil = Image.frombytes("RGB", [image.width, image.height], image.samples)
