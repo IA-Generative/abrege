@@ -5,6 +5,12 @@ from fastapi import Query
 MethodType = Literal["map_reduce", "refine", "text_rank", "k-means", "stuff"]  # "text_rank2", "k-means2"
 ChunkType = Literal["sentences", "chunks"]
 
+MAP_PROMPT = "Rédigez un résumé concis des éléments suivants :\\n\\n{context}"
+REDUCE_PROMPT = """
+Voici une série de résumés:
+{docs}
+Rassemblez ces éléments et faites-en un résumé final et consolidé dans {language} en {size} mots au maximum. Rédigez uniquement en {language}.
+"""
 
 class ParamsSummarize(BaseModel):
     method: MethodType | None = "map_reduce"
@@ -18,4 +24,8 @@ class ParamsSummarize(BaseModel):
     # reduce_template: str | None = (None,)
     # question_template: str | None = (None,)
     # refine_template: str | None = (None,)
-    custom_prompt: str | None = "en français"
+    # custom_prompt: str | None = "en français"
+    map_prompt: str = MAP_PROMPT
+    reduce_prompt: str = REDUCE_PROMPT
+
+
