@@ -1,3 +1,7 @@
+import os
+import logging
+import re
+
 import uvicorn
 from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,10 +12,7 @@ from routes.summarize import deprecated_router
 from __init__ import __version__, __name__ as name
 
 
-#origins = ("https://sie.numerique-interieur.com", "http://localhost", "http://localhost:8080", "http://localhost:8501")
-origins = ['*']
-
-origin_regex = r"https:\/\/.*\.(?:cloud-pi-native|numerique-interieur)\.com"
+origins = ("http://localhost", "http://localhost:8000")
 
 app = FastAPI(
     title=name,
@@ -19,16 +20,28 @@ app = FastAPI(
     version=__version__,
 )
 
+if "CORS_REGEXP" in os.environ:
+    origin_regex = os.environ["CORS_REGEXP"]
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    #allow_origin_regex=origin_regex,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
+    try:
+        re.compile(origin_regex)
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=origins,
+            allow_origin_regex=origin_regex,
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+    except re.error:
+        logging.error(f"CORS_REGEXP = {origin_regex} is not a valid regex")
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=origins,
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
 
 app.include_router(health_router, prefix="/health")
 app.include_router(summarize_router, prefix="/api")

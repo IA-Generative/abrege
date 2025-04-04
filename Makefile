@@ -106,3 +106,6 @@ dev: exec-dev
 prod: exec-prod
 
 down: stop-dev stop-prod
+
+runapi:
+	@export $(shell grep -v '^#' .env | xargs) && uv run python api/main.py
