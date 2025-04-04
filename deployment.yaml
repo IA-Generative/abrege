@@ -63,7 +63,11 @@ spec:
             secretKeyRef:
               name: secret-abrege
               key: PADDLE_OCR_TOKEN
-        
+        - name: CORS_REGEXP
+          valueFrom:
+            secretKeyRef:
+              name: secret-abrege
+              key: CORS_REGEXP
         ports:
         - containerPort: 8000
           protocol: TCP
