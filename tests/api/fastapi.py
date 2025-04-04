@@ -10,7 +10,9 @@ class TestSummarizer(unittest.TestCase):
         pass
 
     def test_text(self):
-        test_text = (Path(__file__).resolve().parent / Path("../test_data/albert_camus.txt")).read_text()
+        test_text = (
+            Path(__file__).resolve().parent / Path("../test_data/albert_camus.txt")
+        ).read_text()
 
         headers = {
             "accept": "application/json",
@@ -29,7 +31,9 @@ class TestSummarizer(unittest.TestCase):
             "text": test_text,
         }
 
-        response = requests.post("http://0.0.0.0:8000/api/text", headers=headers, json=json_data)
+        response = requests.post(
+            "http://0.0.0.0:8000/api/text", headers=headers, json=json_data
+        )
         self.assertEqual(response.status_code, 200)
         data_dict = json.loads(response.content.decode())
 
@@ -56,7 +60,9 @@ class TestSummarizer(unittest.TestCase):
             "url": "https://fr.wikipedia.org/wiki/%C3%89lys%C3%A9e-Montmartre",
         }
 
-        response = requests.post("http://0.0.0.0:8000/api/url", headers=headers, json=json_data)
+        response = requests.post(
+            "http://0.0.0.0:8000/api/url", headers=headers, json=json_data
+        )
         self.assertEqual(response.status_code, 200)
         data_dict = json.loads(response.content.decode())
 
@@ -70,7 +76,14 @@ class TestSummarizer(unittest.TestCase):
             # 'Content-Type': 'multipart/form-data',
         }
 
-        path_doc = (Path(__file__).resolve().parent / Path("../test_data/Malo_Adler_Thesis.pdf")).resolve().absolute()
+        path_doc = (
+            (
+                Path(__file__).resolve().parent
+                / Path("../test_data/Malo_Adler_Thesis.pdf")
+            )
+            .resolve()
+            .absolute()
+        )
         assert path_doc.exists() and path_doc.is_file()
 
         files = {
@@ -78,10 +91,16 @@ class TestSummarizer(unittest.TestCase):
                 None,
                 '{"size":4000,"method":"map_reduce","map_prompt":"Rédigez un résumé concis des éléments suivants :\\\\n\\\\n{context}","model":"qwen2.5","pdf_mode_ocr":"full_ocr","context_size":10000,"temperature":0,"language":"French","reduce_prompt":"\\nVoici une série de résumés:\\n{docs}\\nRassemblez ces éléments et faites-en un résumé final et consolidé dans {language} en {size} mots au maximum. Rédigez uniquement en {language}.\\n"}',
             ),
-            "file": ("Malo_Adler_Thesis.pdf", open(str(path_doc), "rb"), "application/pdf"),
+            "file": (
+                "Malo_Adler_Thesis.pdf",
+                open(str(path_doc), "rb"),
+                "application/pdf",
+            ),
         }
 
-        response = requests.post("http://0.0.0.0:8000/api/doc", headers=headers, files=files)
+        response = requests.post(
+            "http://0.0.0.0:8000/api/doc", headers=headers, files=files
+        )
         self.assertEqual(response.status_code, 500)
         data_dict = json.loads(response.content.decode())
         self.assertIsInstance(data_dict["detail"], str)
@@ -94,7 +113,14 @@ class TestSummarizer(unittest.TestCase):
             # 'Content-Type': 'multipart/form-data',
         }
 
-        path_doc = (Path(__file__).resolve().parent / Path("../test_data/elysee-module-24161-fr.pdf")).resolve().absolute()
+        path_doc = (
+            (
+                Path(__file__).resolve().parent
+                / Path("../test_data/elysee-module-24161-fr.pdf")
+            )
+            .resolve()
+            .absolute()
+        )
         assert path_doc.exists() and path_doc.is_file()
 
         files = {
@@ -102,10 +128,16 @@ class TestSummarizer(unittest.TestCase):
                 None,
                 '{"size":4000,"method":"map_reduce","map_prompt":"Rédigez un résumé concis des éléments suivants :\\\\n\\\\n{context}","model":"qwen2.5","pdf_mode_ocr":"full_ocr","context_size":10000,"temperature":0,"language":"French","reduce_prompt":"\\nVoici une série de résumés:\\n{docs}\\nRassemblez ces éléments et faites-en un résumé final et consolidé dans {language} en {size} mots au maximum. Rédigez uniquement en {language}.\\n"}',
             ),
-            "file": ("elysee-module-24161-fr.pdf", open(str(path_doc), "rb"), "application/pdf"),
+            "file": (
+                "elysee-module-24161-fr.pdf",
+                open(str(path_doc), "rb"),
+                "application/pdf",
+            ),
         }
 
-        response = requests.post("http://0.0.0.0:8000/api/doc", headers=headers, files=files)
+        response = requests.post(
+            "http://0.0.0.0:8000/api/doc", headers=headers, files=files
+        )
         self.assertEqual(response.status_code, 200)
         data_dict = json.loads(response.content.decode())
         self.assertIsInstance(data_dict["time"], float)
@@ -118,7 +150,14 @@ class TestSummarizer(unittest.TestCase):
             # 'Content-Type': 'multipart/form-data',
         }
 
-        path_doc = (Path(__file__).resolve().parent / Path("../test_data/Séquence corpus albert camus.docx")).resolve().absolute()
+        path_doc = (
+            (
+                Path(__file__).resolve().parent
+                / Path("../test_data/Séquence corpus albert camus.docx")
+            )
+            .resolve()
+            .absolute()
+        )
         assert path_doc.exists() and path_doc.is_file()
 
         files = {
@@ -126,10 +165,16 @@ class TestSummarizer(unittest.TestCase):
                 None,
                 '{"size":4000,"method":"map_reduce","map_prompt":"Rédigez un résumé concis des éléments suivants :\\\\n\\\\n{context}","model":"qwen2.5","context_size":10000,"temperature":0,"language":"French","reduce_prompt":"\\nVoici une série de résumés:\\n{docs}\\nRassemblez ces éléments et faites-en un résumé final et consolidé dans {language} en {size} mots au maximum. Rédigez uniquement en {language}.\\n"}',
             ),
-            "file": ("Séquence corpus albert camus.docx", open(str(path_doc), "rb"), "application/pdf"),
+            "file": (
+                "Séquence corpus albert camus.docx",
+                open(str(path_doc), "rb"),
+                "application/pdf",
+            ),
         }
 
-        response = requests.post("http://0.0.0.0:8000/api/doc", headers=headers, files=files)
+        response = requests.post(
+            "http://0.0.0.0:8000/api/doc", headers=headers, files=files
+        )
         self.assertEqual(response.status_code, 200)
         data_dict = json.loads(response.content.decode())
         self.assertIsInstance(data_dict["time"], float)
@@ -142,7 +187,11 @@ class TestSummarizer(unittest.TestCase):
             # 'Content-Type': 'multipart/form-data',
         }
 
-        path_doc = (Path(__file__).resolve().parent / Path("../test_data/Lettre_de_Camus.odt")).resolve().absolute()
+        path_doc = (
+            (Path(__file__).resolve().parent / Path("../test_data/Lettre_de_Camus.odt"))
+            .resolve()
+            .absolute()
+        )
         assert path_doc.exists() and path_doc.is_file()
 
         files = {
@@ -150,10 +199,16 @@ class TestSummarizer(unittest.TestCase):
                 None,
                 '{"size":4000,"method":"map_reduce","map_prompt":"Rédigez un résumé concis des éléments suivants :\\\\n\\\\n{context}","model":"qwen2.5","pdf_mode_ocr":"full_ocr","context_size":10000,"temperature":0,"language":"French","reduce_prompt":"\\nVoici une série de résumés:\\n{docs}\\nRassemblez ces éléments et faites-en un résumé final et consolidé dans {language} en {size} mots au maximum. Rédigez uniquement en {language}.\\n"}',
             ),
-            "file": ("Lettre_de_Camus.odt", open(str(path_doc), "rb"), "application/pdf"),
+            "file": (
+                "Lettre_de_Camus.odt",
+                open(str(path_doc), "rb"),
+                "application/pdf",
+            ),
         }
 
-        response = requests.post("http://0.0.0.0:8000/api/doc", headers=headers, files=files)
+        response = requests.post(
+            "http://0.0.0.0:8000/api/doc", headers=headers, files=files
+        )
         self.assertEqual(response.status_code, 200)
         data_dict = json.loads(response.content.decode())
         self.assertIsInstance(data_dict["time"], float)
@@ -166,15 +221,24 @@ class TestSummarizer(unittest.TestCase):
             # 'Content-Type': 'multipart/form-data',
         }
 
-        path_doc = (Path(__file__).resolve().parent / Path("../test_data/albert_camus.txt")).resolve().absolute()
+        path_doc = (
+            (Path(__file__).resolve().parent / Path("../test_data/albert_camus.txt"))
+            .resolve()
+            .absolute()
+        )
         assert path_doc.exists() and path_doc.is_file()
 
         files = {
-            "docData": (None, '{"size":4000,"method":"map_reduce","context_size":10000,"temperature":0,"language":"French"}'),
+            "docData": (
+                None,
+                '{"size":4000,"method":"map_reduce","context_size":10000,"temperature":0,"language":"French"}',
+            ),
             "file": ("albert_camus.txt", open(str(path_doc), "rb"), "application/pdf"),
         }
 
-        response = requests.post("http://0.0.0.0:8000/api/doc", headers=headers, files=files)
+        response = requests.post(
+            "http://0.0.0.0:8000/api/doc", headers=headers, files=files
+        )
         self.assertEqual(response.status_code, 200)
         data_dict = json.loads(response.content.decode())
         self.assertIsInstance(data_dict["time"], float)
