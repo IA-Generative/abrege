@@ -43,15 +43,28 @@ async def do_map_reduce(list_str: list[str], params: ParamsSummarize, recursion_
 
     token_max = int(params.context_size)
 
-    map_prompt = ChatPromptTemplate.from_messages([("human", "Rédigez un résumé concis des éléments suivants :\\n\\n{context}")])
+    try:
+        # On vérifie qu'il y a bien une balise {context} dans params.map_prompt et pas d'autres balises
+        params.map_prompt.format(context="placeholder")
+    except Exception as e:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Erreur lors de l'utilisation du prompt \"map_prompt\" {repr(e)}",
+        )
+
+    map_prompt = ChatPromptTemplate.from_messages([("human", params.map_prompt)])
 
     map_chain = map_prompt | llm | StrOutputParser()
 
-    reduce_template = """
-    Voici une série de résumés:
-    {docs}
-    Rassemblez ces éléments et faites-en un résumé final et consolidé dans {language} en {size} mots au maximum. Rédigez uniquement en {language}.{custom_prompt}
-    """.format(language=params.language, size=str(params.size), custom_prompt=params.custom_prompt, docs="{docs}")
+    try:
+        reduce_template = params.reduce_prompt.format(language=params.language, size=str(params.size), docs="{docs}")
+    except Exception as e:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Erreur lors de l'utilisation du prompt \"reduce_prompt\" {repr(e)}",
+        )
+    if params.custom_prompt is not None:
+        reduce_template += params.custom_prompt
 
     reduce_prompt = ChatPromptTemplate([("human", reduce_template)])
 
