@@ -33,4 +33,4 @@ docker-build-api:
   extends:
     - .kaniko:build-push
   rules:
-    - if: '$CI_COMMIT_BRANCH == "cpin-stg"'
+    - if: '$CI_COMMIT_BRANCH == "stating-cpin"'
