@@ -19,7 +19,7 @@ CMD [ "uv", "run", "--no-cache", "python", "/app/api/main.py" ]
 ################################
 # Step 2: "development" target #
 ################################
-FROM base AS dev
-WORKDIR /app
-RUN uv sync --no-cache --group tests
-COPY tests /app/tests
+#FROM base AS dev
+#WORKDIR /app
+#RUN uv sync --no-cache --group tests
+#COPY tests /app/tests
