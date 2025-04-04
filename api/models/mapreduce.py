@@ -63,6 +63,9 @@ async def do_map_reduce(list_str: list[str], params: ParamsSummarize, recursion_
             status_code=422,
             detail=f"Erreur lors de l'utilisation du prompt \"reduce_prompt\" {repr(e)}",
         )
+    if params.custom_prompt is not None:
+        reduce_template += params.custom_prompt
+
     reduce_prompt = ChatPromptTemplate([("human", reduce_template)])
 
     reduce_chain = reduce_prompt | llm | StrOutputParser()

@@ -24,7 +24,7 @@ class ParamsSummarize(BaseModel):
     # reduce_template: str | None = (None,)
     # question_template: str | None = (None,)
     # refine_template: str | None = (None,)
-    # custom_prompt: str | None = "en français"
+    custom_prompt: str | None = None # param déprécié
     map_prompt: str = MAP_PROMPT
     reduce_prompt: str = REDUCE_PROMPT
 
