@@ -15,7 +15,6 @@ from langchain_openai import ChatOpenAI
 from fastapi.encoders import jsonable_encoder
 from fastapi import FastAPI, File, Body, UploadFile, Request
 from pydantic import BaseModel, model_validator
-from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 
 client = OpenAI(api_key=OpenAISettings().OPENAI_API_KEY,
