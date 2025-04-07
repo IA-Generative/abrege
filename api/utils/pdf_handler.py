@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 import os
 import re
-
+import logging
 
 def get_text_from_output(output: dict) -> list[str]:
     result = []
@@ -53,7 +53,7 @@ def get_texts_from_images_paddle(list_image_pil: list) -> list[str]:
             results.extend([clean_paddle_ocr_text(txt) for txt in get_text_from_output(output)])
 
         except requests.exceptions.RequestException as e:
-            print("Error during OCR request:", e)
+            logging.error(f"Error during OCR request: {e}")
 
     return results
 
