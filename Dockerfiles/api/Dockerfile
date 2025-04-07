@@ -17,6 +17,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 RUN uv sync --no-cache --group abrege-api
+RUN uv run python -c "from unstructured.nlp.tokenize import download_nltk_packages;download_nltk_packages()"
 
 COPY api /app/api
 ENV PYTHONPATH=PYTHONPATH:/app
