@@ -108,4 +108,5 @@ prod: exec-prod
 down: stop-dev stop-prod
 
 runapi:
-	@export $(shell grep -v '^#' .env | xargs) && uv run python api/main.py
+	uv run --env-file .env python api/main.py
+#	@export $(shell grep -v '^#' .env | xargs) && uv run python api/main.py

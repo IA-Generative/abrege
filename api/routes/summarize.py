@@ -57,7 +57,7 @@ class TextData(ParamsSummarize):
 
 
 class DocData(ParamsSummarize):
-    pdf_mode_ocr: ModeOCR | None = None
+    pdf_mode_ocr: ModeOCR | None = "text_and_ocr"
     
     @model_validator(mode='before')
     @classmethod
