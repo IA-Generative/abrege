@@ -33,6 +33,7 @@ if "CORS_REGEXP" in os.environ:
             allow_methods=["*"],
             allow_headers=["*"],
         )
+        logging.warning(f"allow_origin_regex={origin_regex}")
     except re.error:
         logging.error(f"CORS_REGEXP = {origin_regex} is not a valid regex")
         app.add_middleware(

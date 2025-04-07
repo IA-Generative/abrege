@@ -68,6 +68,11 @@ spec:
             secretKeyRef:
               name: secret-abrege
               key: CORS_REGEXP
+        - name: OPENAI_API_MODEL
+          valueFrom:
+            secretKeyRef:
+              name: secret-abrege
+              key: OPENAI_API_MODEL
         ports:
         - containerPort: 8000
           protocol: TCP
