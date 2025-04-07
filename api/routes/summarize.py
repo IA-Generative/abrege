@@ -2,6 +2,7 @@ from typing import get_args, Annotated, Optional, List, Literal
 from time import perf_counter
 import logging
 import json
+import os
 
 from utils.url_parser import url_scrapper
 from utils.pdf_handler import ModeOCR
@@ -28,7 +29,13 @@ client = OpenAI(api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings
 try:
     models_available = [model.id for model in client.models.list().data]
 except APIConnectionError as e:
+    models_available = None
     logging.error(f"Unable to access models, connection problems. {repr(e)}")
+
+
+if "OPENAI_API_MODEL" in os.environ and models_available is not None:
+    if os.environ["OPENAI_API_MODEL"] not in models_available:
+        logging.error(f"OPENAI_API_MODEL={os.environ['OPENAI_API_MODEL']} is not a available model. Available models are {models_available}")
 
 deprecated_router = APIRouter()
 router = APIRouter()

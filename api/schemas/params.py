@@ -1,4 +1,6 @@
 from typing import Literal, Annotated
+import os
+
 from pydantic import BaseModel
 from fastapi import Query
 
@@ -14,7 +16,7 @@ Rassemblez ces éléments et faites-en un résumé final et consolidé dans {lan
 
 class ParamsSummarize(BaseModel):
     method: MethodType | None = "map_reduce"
-    model: str = "qwen2.5"
+    model: str = os.environ["OPENAI_API_MODEL"]
     context_size: int | None = 10_000
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0.
     language: str | None = "French"
