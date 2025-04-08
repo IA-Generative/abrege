@@ -3,9 +3,10 @@ from time import perf_counter
 from typing import Annotated, List, Literal, TypedDict
 import asyncio
 from config.openai import OpenAISettings
-from fastapi import HTTPException, UploadFile
+from fastapi import HTTPException
 
 from openai import OpenAI
+import openai
 
 from langchain.chains.combine_documents.reduce import (
     acollapse_docs,
@@ -150,15 +151,22 @@ async def do_map_reduce(list_str: list[str], params: ParamsSummarize, recursion_
 
     app = graph.compile()
 
-    nb_call = 0
-    async for step in app.astream(
-        # {"contents": [doc.page_content for doc in split_docs]},
-        {"contents": list_str},
-        {"recursion_limit": recursion_limit},
-    ):
-        # print(list(step.keys()))
-        list(step.keys())
-        nb_call += 1
+    try:
+        nb_call = 0
+        async for step in app.astream(
+            # {"contents": [doc.page_content for doc in split_docs]},
+            {"contents": list_str},
+            {"recursion_limit": recursion_limit},
+        ):
+            # print(list(step.keys()))
+            list(step.keys())
+            nb_call += 1
+    except openai.InternalServerError as e:
+        raise HTTPException(
+            status_code=429,
+            detail="Surcharge du LLM",
+        )
+
     elapsed = perf_counter() - deb
 
     final_summary = step["generate_final_summary"]["final_summary"]
