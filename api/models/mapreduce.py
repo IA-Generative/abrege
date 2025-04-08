@@ -37,7 +37,7 @@ async def do_map_reduce(list_str: list[str], params: ParamsSummarize, recursion_
 
     if num_tokens > num_tokens_limit:
         raise HTTPException(
-            status_code=422,
+            status_code=500,
             detail=f"""Le texte à résumer est trop long. (environ {num_tokens} tokens alors que la limite est à {num_tokens_limit} tokens)""",
         )
 
@@ -48,8 +48,8 @@ async def do_map_reduce(list_str: list[str], params: ParamsSummarize, recursion_
         params.map_prompt.format(context="placeholder")
     except Exception as e:
         raise HTTPException(
-            status_code=422,
-            detail=f"Erreur lors de l'utilisation du prompt \"map_prompt\" {repr(e)}",
+            status_code=500,
+            detail="Erreur lors de l'utilisation du prompt \"map_prompt\". map_prompt ne peut pas contenir une balise autre que {context}",
         )
 
     map_prompt = ChatPromptTemplate.from_messages([("human", params.map_prompt)])
@@ -60,8 +60,8 @@ async def do_map_reduce(list_str: list[str], params: ParamsSummarize, recursion_
         reduce_template = params.reduce_prompt.format(language=params.language, size=str(params.size), docs="{docs}")
     except Exception as e:
         raise HTTPException(
-            status_code=422,
-            detail=f"Erreur lors de l'utilisation du prompt \"reduce_prompt\" {repr(e)}",
+            status_code=500,
+            detail="Erreur lors de l'utilisation du prompt \"reduce_prompt\". reduce_prompt ne peut pas contenir une balise autre que {language}, {size} ou {docs}",
         )
     if params.custom_prompt is not None:
         reduce_template += params.custom_prompt
