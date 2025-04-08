@@ -4,6 +4,7 @@ import unittest
 import requests
 from pathlib import Path
 import json
+import logging
 
 
 class TestSummarizer(unittest.TestCase):
@@ -82,10 +83,10 @@ class TestSummarizer(unittest.TestCase):
         }
 
         response = requests.post('http://0.0.0.0:8000/api/doc', headers=headers, files=files)
-        self.assertEqual(response.status_code, 422)
+        self.assertEqual(response.status_code, 500)
         data_dict = json.loads(response.content.decode())
         self.assertIsInstance(data_dict["detail"], str)
-
+        logging.warning(f"Pour la thèse : "+ data_dict["detail"])
 
     def test_doc(self):
         headers = {
@@ -108,6 +109,69 @@ class TestSummarizer(unittest.TestCase):
         self.assertIsInstance(data_dict["time"], float)
         self.assertIsInstance(data_dict["summary"], str)
 
+
+    def test_docx(self):
+        headers = {
+            'accept': 'application/json',
+            # requests won't add a boundary if this header is set when you pass files=
+            # 'Content-Type': 'multipart/form-data',
+        }
+
+        path_doc = (Path(__file__).resolve().parent / Path("../test_data/Séquence corpus albert camus.docx")).resolve().absolute()
+        assert path_doc.exists() and path_doc.is_file()
+
+        files = {
+            'docData': (None, '{"size":4000,"method":"map_reduce","map_prompt":"Rédigez un résumé concis des éléments suivants :\\\\n\\\\n{context}","model":"qwen2.5","context_size":10000,"temperature":0,"language":"French","reduce_prompt":"\\nVoici une série de résumés:\\n{docs}\\nRassemblez ces éléments et faites-en un résumé final et consolidé dans {language} en {size} mots au maximum. Rédigez uniquement en {language}.\\n"}'),
+            'file': ('Séquence corpus albert camus.docx', open(str(path_doc), 'rb'), 'application/pdf'),
+        }
+
+        response = requests.post('http://0.0.0.0:8000/api/doc', headers=headers, files=files)
+        self.assertEqual(response.status_code, 200)
+        data_dict = json.loads(response.content.decode())
+        self.assertIsInstance(data_dict["time"], float)
+        self.assertIsInstance(data_dict["summary"], str)
+
+    def test_odt(self):
+        headers = {
+            'accept': 'application/json',
+            # requests won't add a boundary if this header is set when you pass files=
+            # 'Content-Type': 'multipart/form-data',
+        }
+
+        path_doc = (Path(__file__).resolve().parent / Path("../test_data/Lettre_de_Camus.odt")).resolve().absolute()
+        assert path_doc.exists() and path_doc.is_file()
+
+        files = {
+            'docData': (None, '{"size":4000,"method":"map_reduce","map_prompt":"Rédigez un résumé concis des éléments suivants :\\\\n\\\\n{context}","model":"qwen2.5","pdf_mode_ocr":"full_ocr","context_size":10000,"temperature":0,"language":"French","reduce_prompt":"\\nVoici une série de résumés:\\n{docs}\\nRassemblez ces éléments et faites-en un résumé final et consolidé dans {language} en {size} mots au maximum. Rédigez uniquement en {language}.\\n"}'),
+            'file': ('Lettre_de_Camus.odt', open(str(path_doc), 'rb'), 'application/pdf'),
+        }
+
+        response = requests.post('http://0.0.0.0:8000/api/doc', headers=headers, files=files)
+        self.assertEqual(response.status_code, 200)
+        data_dict = json.loads(response.content.decode())
+        self.assertIsInstance(data_dict["time"], float)
+        self.assertIsInstance(data_dict["summary"], str)
+
+    def test_txt(self):
+        headers = {
+            'accept': 'application/json',
+            # requests won't add a boundary if this header is set when you pass files=
+            # 'Content-Type': 'multipart/form-data',
+        }
+
+        path_doc = (Path(__file__).resolve().parent / Path("../test_data/albert_camus.txt")).resolve().absolute()
+        assert path_doc.exists() and path_doc.is_file()
+
+        files = {
+            'docData': (None, '{"size":4000,"method":"map_reduce","context_size":10000,"temperature":0,"language":"French"}'),
+            'file': ('albert_camus.txt', open(str(path_doc), 'rb'), 'application/pdf'),
+        }
+
+        response = requests.post('http://0.0.0.0:8000/api/doc', headers=headers, files=files)
+        self.assertEqual(response.status_code, 200)
+        data_dict = json.loads(response.content.decode())
+        self.assertIsInstance(data_dict["time"], float)
+        self.assertIsInstance(data_dict["summary"], str)
 
 
 if __name__ == "__main__":

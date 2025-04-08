@@ -3,9 +3,10 @@ from time import perf_counter
 from typing import Annotated, List, Literal, TypedDict
 import asyncio
 from config.openai import OpenAISettings
-from fastapi import HTTPException, UploadFile
+from fastapi import HTTPException
 
 from openai import OpenAI
+import openai
 
 from langchain.chains.combine_documents.reduce import (
     acollapse_docs,
@@ -27,7 +28,7 @@ from schemas.response import SummaryResponse
 client = OpenAI(api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE)
 
 
-async def do_map_reduce(list_str: list[str], params: ParamsSummarize, recursion_limit: int = 20, num_tokens_limit: int = 1226 * 15) -> SummaryResponse:
+async def do_map_reduce(list_str: list[str], params: ParamsSummarize, recursion_limit: int = 20, num_tokens_limit: int = 1226 * 300) -> SummaryResponse:
     """Peut faire un GraphRecursionError si recursion_limit est trop faible"""
 
     deb = perf_counter()
@@ -37,7 +38,7 @@ async def do_map_reduce(list_str: list[str], params: ParamsSummarize, recursion_
 
     if num_tokens > num_tokens_limit:
         raise HTTPException(
-            status_code=422,
+            status_code=500,
             detail=f"""Le texte à résumer est trop long. (environ {num_tokens} tokens alors que la limite est à {num_tokens_limit} tokens)""",
         )
 
@@ -48,8 +49,8 @@ async def do_map_reduce(list_str: list[str], params: ParamsSummarize, recursion_
         params.map_prompt.format(context="placeholder")
     except Exception as e:
         raise HTTPException(
-            status_code=422,
-            detail=f"Erreur lors de l'utilisation du prompt \"map_prompt\" {repr(e)}",
+            status_code=500,
+            detail="Erreur lors de l'utilisation du prompt \"map_prompt\". map_prompt ne peut pas contenir une balise autre que {context}",
         )
 
     map_prompt = ChatPromptTemplate.from_messages([("human", params.map_prompt)])
@@ -60,8 +61,8 @@ async def do_map_reduce(list_str: list[str], params: ParamsSummarize, recursion_
         reduce_template = params.reduce_prompt.format(language=params.language, size=str(params.size), docs="{docs}")
     except Exception as e:
         raise HTTPException(
-            status_code=422,
-            detail=f"Erreur lors de l'utilisation du prompt \"reduce_prompt\" {repr(e)}",
+            status_code=500,
+            detail="Erreur lors de l'utilisation du prompt \"reduce_prompt\". reduce_prompt ne peut pas contenir une balise autre que {language}, {size} ou {docs}",
         )
     if params.custom_prompt is not None:
         reduce_template += params.custom_prompt
@@ -150,15 +151,22 @@ async def do_map_reduce(list_str: list[str], params: ParamsSummarize, recursion_
 
     app = graph.compile()
 
-    nb_call = 0
-    async for step in app.astream(
-        # {"contents": [doc.page_content for doc in split_docs]},
-        {"contents": list_str},
-        {"recursion_limit": recursion_limit},
-    ):
-        # print(list(step.keys()))
-        list(step.keys())
-        nb_call += 1
+    try:
+        nb_call = 0
+        async for step in app.astream(
+            # {"contents": [doc.page_content for doc in split_docs]},
+            {"contents": list_str},
+            {"recursion_limit": recursion_limit},
+        ):
+            # print(list(step.keys()))
+            list(step.keys())
+            nb_call += 1
+    except openai.InternalServerError as e:
+        raise HTTPException(
+            status_code=429,
+            detail="Surcharge du LLM",
+        )
+
     elapsed = perf_counter() - deb
 
     final_summary = step["generate_final_summary"]["final_summary"]

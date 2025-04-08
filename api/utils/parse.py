@@ -31,19 +31,19 @@ def parse_files(
             extension = extension.lower()
         except Exception as err:
             raise HTTPException(
-                status_code=422,
+                status_code=500,
                 detail=f"""Erreur lors de l'analyse du nom de fichier, {err} s'est produite""",
             )
 
     if extension not in DOCUMENT_LOADER_DICT:
         raise HTTPException(
-            status_code=422,
+            status_code=500,
             detail=f"""Le format de fichier {extension} n'est pas supporté. Les formats supportés sont : {tuple(DOCUMENT_LOADER_DICT.keys())}""",
         )
 
     if extension == ".pdf" and pdf_mode_ocr is None:
         raise HTTPException(
-            status_code=422,
+            status_code=500,
             detail=f"""for pdf files, the pdf_mode_ocr parameter must be specified
             ({repr(tuple(ModeOCR.__args__))})""",
         )
@@ -59,7 +59,7 @@ def parse_files(
             docs = loader.load(mode=pdf_mode_ocr, limit_pages_ocr=10)
             if docs is None:
                 raise HTTPException(
-                    status_code=422,
+                    status_code=500,
                     detail=f"""Le document semble contenir trop de pages scannées (plus de {limit_pages_ocr} pages)""",
                 )
 

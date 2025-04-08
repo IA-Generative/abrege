@@ -1,15 +1,17 @@
-from typing import Literal
-import pymupdf
-from PIL import Image
-from io import BytesIO
-import requests
-
-from langchain_core.documents import Document
-from dataclasses import dataclass
-
+import logging
 import os
 import re
-import logging
+from dataclasses import dataclass
+from io import BytesIO
+from typing import Literal
+
+import pymupdf
+import requests
+from langchain_core.documents import Document
+from PIL import Image
+
+from fastapi import HTTPException, UploadFile
+
 
 def get_text_from_output(output: dict) -> list[str]:
     result = []
@@ -54,6 +56,16 @@ def get_texts_from_images_paddle(list_image_pil: list) -> list[str]:
 
         except requests.exceptions.RequestException as e:
             logging.error(f"Error during OCR request: {e}")
+            if re.search(r"Gateway Time-out", repr(e), re.IGNORECASE):
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"""Surcharge de l'OCR""",
+                )
+            else:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"""Erreur lors de l'OCR""",
+                )
 
     return results
 
@@ -73,7 +85,7 @@ class OCRPdfLoader:
     def __call__(cls, path):
         return cls(path)
 
-    def load(self, mode: ModeOCR = "text_and_ocr", debug: bool = False, limit_pages_ocr:int = 10) -> list[Document] | None:
+    def load(self, mode: ModeOCR = "text_and_ocr", debug: bool = False, limit_pages_ocr: int = 100) -> list[Document] | None:
         assert mode in ModeOCR.__args__
         assert mode != "full_text"
         result = []

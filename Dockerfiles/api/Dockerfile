@@ -4,6 +4,8 @@
 FROM python:3.11.9-slim AS base
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
+ENV NLTK_DATA /nltk_data
+
 WORKDIR /app
 COPY pyproject.toml /app/pyproject.toml
 COPY uv.lock /app/uv.lock
@@ -11,8 +13,10 @@ COPY uv.lock /app/uv.lock
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV POETRY_VIRTUALENVS_CREATE=false
+
 RUN uv sync --no-cache --group abrege-api
 RUN uv run python -c "from unstructured.nlp.tokenize import download_nltk_packages;download_nltk_packages()"
+RUN mv /root/nltk_data/ /nltk_data
 
 COPY api /app/api
 ENV PYTHONPATH=PYTHONPATH:/app
