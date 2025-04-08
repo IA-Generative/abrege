@@ -7,6 +7,9 @@ from api.utils.url_parser import url_scrapper
 from api.utils.pdf_handler import ModeOCR
 from api.utils.parse import parse_files
 from api.config.openai import OpenAISettings
+from fastapi.responses import StreamingResponse
+import asyncio
+from typing import AsyncGenerator
 
 client = OpenAI(
     api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE
@@ -70,7 +73,19 @@ async def summarize_doc(
         custom_prompt=custom_prompt,
     )
 
-    return process_documents(docs=docs, model=model, client=client, params=params)
+    async def generate() -> AsyncGenerator[bytes, None]:
+        yield "Démarrage du résumé...\n"
+        await asyncio.sleep(1)  # Petit delay pour forcer l'envoi initial
+
+        result = await asyncio.to_thread(
+            process_documents, docs=docs, model=model, client=client, params=params
+        )
+
+        # Tu peux aussi rendre ça plus verbeux (ex: step by step)
+        yield f"{result}\n".encode()
+        yield "Résumé terminé.\n"
+
+    return StreamingResponse(generate(), media_type="text/plain")
 
 
 @router.get("/models", response_model=List[str])
