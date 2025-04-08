@@ -50,8 +50,7 @@ def parse_files(
         )
 
     if extension == ".pdf" and pdf_mode_ocr is None:
-        error_meassage = f"""for pdf files, the pdf_mode_ocr parameter must be specified
-            ({repr(tuple(ModeOCR.__args__))})"""
+        error_meassage = f"""for pdf files, the pdf_mode_ocr parameter must be specified"""
         logger_app.error(error_meassage)
         raise HTTPException(
             status_code=400,
