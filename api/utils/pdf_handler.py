@@ -1,14 +1,20 @@
-from typing import Literal
-import pymupdf
-from PIL import Image
-from io import BytesIO
-import requests
 
-from langchain_core.documents import Document
-from dataclasses import dataclass
-
-import os
+import time
 import re
+import concurrent.futures
+from dataclasses import dataclass
+from io import BytesIO
+from typing import Literal
+import traceback
+
+from PIL import Image
+import requests
+import pymupdf
+from langchain_core.documents import Document
+
+from api.utils.logger import logger_app
+from api.config.paddle import Settings
+settings = Settings()
 
 
 def get_text_from_output(output: dict) -> list[str]:
@@ -28,36 +34,55 @@ def clean_paddle_ocr_text(text_ocr: str) -> str:
     return result
 
 
+def get_ocr_from_iamge(image_pil, metadata=None) -> str:
+    buffered = BytesIO()
+    image_pil.save(buffered, format="JPEG")
+    buffered.seek(0)
+
+    files = {"file": ("image.jpg", buffered, "image/jpeg")}
+
+    try:
+        t = time.time()
+        res = requests.post(
+            url=settings.PADDLE_OCR_URL,
+            files=files,
+            headers={"Authorization": "Basic " + settings.PADDLE_OCR_TOKEN},
+        )
+        res.raise_for_status()
+        output = res.json()
+        result = [clean_paddle_ocr_text(txt) for txt in get_text_from_output(output)]
+        logger_app.debug(f"Time for OCR: {time.time() - t}")
+        return result
+
+    except requests.exceptions.RequestException as e:
+        logger_app.error(f"Error during OCR request: {e} - {traceback.format_exc()}")
+
+
+def process_images_in_parallel(list_image_pil):
+    results = []
+    t = time.time()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        futures = [executor.submit(get_ocr_from_iamge, img) for img in list_image_pil]
+
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                response = future.result()
+                results.extend(response)
+            except Exception as e:
+                print(f"Une exception s'est produite : {e}")
+                logger_app.error(
+                    f"Error during OCR processing: {e} - {traceback.format_exc()}")
+
+    logger_app.debug(
+        f"Time for all  OCR: {time.time() - t} - {len(list_image_pil)} images")
+    return results
+
+
 def get_texts_from_images_paddle(list_image_pil: list) -> list[str]:
     if not len(list_image_pil):
         return []
-    results = []
-
-    for image_pil in list_image_pil:
-        buffered = BytesIO()
-        image_pil.save(buffered, format="JPEG")
-        buffered.seek(0)
-
-        files = {"file": ("image.jpg", buffered, "image/jpeg")}
-
-        try:
-            res = requests.post(
-                url=os.environ["PADDLE_OCR_URL"],
-                files=files,
-                headers={"Authorization": "Basic " + os.environ["PADDLE_OCR_TOKEN"]},
-            )
-            res.raise_for_status()
-            output = res.json()
-
-            # Process the output
-            results.extend(
-                [clean_paddle_ocr_text(txt) for txt in get_text_from_output(output)]
-            )
-
-        except requests.exceptions.RequestException as e:
-            print("Error during OCR request:", e)
-
-    return results
+    restults_ocr = process_images_in_parallel(list_image_pil)
+    return restults_ocr
 
 
 def get_text_from_image(image_pil) -> str:
