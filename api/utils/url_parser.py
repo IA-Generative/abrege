@@ -9,9 +9,15 @@ def url_scrapper(url) -> List[Document]:
     parsed_url = urlparse(url)
     if not (parsed_url.scheme and parsed_url.netloc):
         raise HTTPException(
-            status_code=422,
+            status_code=500,
             detail=f"""{url} ne semble pas être une URL valide""",
         )
 
     loader = UnstructuredURLLoader(urls=[url])
-    return loader.load()
+    try:
+        return loader.load()
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"""Erreur lors de la lecture de l'url {url}""",
+        )
