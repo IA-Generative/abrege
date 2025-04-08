@@ -73,7 +73,7 @@ class OCRPdfLoader:
     def __call__(cls, path):
         return cls(path)
 
-    def load(self, mode: ModeOCR = "text_and_ocr", debug: bool = False, limit_pages_ocr:int = 10) -> list[Document] | None:
+    def load(self, mode: ModeOCR = "text_and_ocr", debug: bool = False, limit_pages_ocr:int = 100) -> list[Document] | None:
         assert mode in ModeOCR.__args__
         assert mode != "full_text"
         result = []
