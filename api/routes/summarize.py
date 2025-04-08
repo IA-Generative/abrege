@@ -1,4 +1,4 @@
-from typing import get_args, Annotated, Optional, List
+from typing import Annotated, Optional, List
 from openai import OpenAI
 from fastapi import HTTPException, UploadFile, APIRouter, Query
 from api.models.naive import process_documents
@@ -15,7 +15,7 @@ models_available = [model.id for model in client.models.list().data]
 
 context = {}
 
-router = APIRouter()
+router = APIRouter(tags=['Summarize'])
 
 
 @router.post("/url")

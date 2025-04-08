@@ -20,7 +20,7 @@ def get_status_paddle_ocr():
     return res.status_code == 200
 
 
-router = APIRouter()
+router = APIRouter(tags=['Health'])
 
 
 @router.get("/", status_code=200, response_model=Health)
