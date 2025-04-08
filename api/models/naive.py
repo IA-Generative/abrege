@@ -1,9 +1,9 @@
-from typing import List
 from typing import List, Optional
 from openai import OpenAI
-from api.schemas.params import ParamsSummarize
 import time
-import json
+
+from api.schemas.params import ParamsSummarize
+from api.utils.logger import logger_app
 
 SYSTEM_PROMPT = "Vous êtes un expert en résumé. Résumez le texte ci-dessous en conservant son sens principal et la langue du texte."
 
@@ -103,12 +103,15 @@ def process_documents(
     partial_summaries = []
 
     docs = split_texts_by_word_limit(docs, max_words=CONTEXT_LENGTH)
-
+    nb_words = 0
     for doc in docs:
+        nb_curr_words = len(doc.split())
+        nb_words += nb_curr_words
+        logger_app.debug(f"Current words: {nb_curr_words} - {nb_words}")
         partial_summary = summarize_text(doc, model, client, params=params)
         partial_summaries.append(partial_summary)
-
-    print(f"Partial summaries: {len(partial_summaries)} - {time.time() - t}")
+    logger_app.debug(f"Total words {nb_words}")
+    logger_app.debug(f"Partial summaries: {len(partial_summaries)} - {time.time() - t}")
     nb_call_llm = len(partial_summaries)
     final_summary, nb_call_llm_merge = merge_summaries(
         partial_summaries, model, client, params=params
