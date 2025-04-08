@@ -1,13 +1,12 @@
 from typing import get_args, Annotated, Optional, List
 from openai import OpenAI
 from fastapi import HTTPException, UploadFile, APIRouter, Query
-from models.naive import process_documents
-from schemas.params import MethodType, ParamsSummarize
-from prompt.template import prompt_template
-from utils.url_parser import url_scrapper
-from utils.pdf_handler import ModeOCR
-from utils.parse import parse_files
-from config.openai import OpenAISettings
+from api.models.naive import process_documents
+from api.schemas.params import ParamsSummarize
+from api.utils.url_parser import url_scrapper
+from api.utils.pdf_handler import ModeOCR
+from api.utils.parse import parse_files
+from api.config.openai import OpenAISettings
 
 client = OpenAI(
     api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE
@@ -31,41 +30,6 @@ async def summarize_url(url: str, model: str, params: Optional[ParamsSummarize] 
     return process_documents(docs=docs, model=model, client=client, params=params)
 
 
-@router.get("/url", deprecated=True)
-async def get_summarize_url(
-    url: str,
-    model: str = "chat-leger",
-    context_size: int = None,
-    temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
-    language: str = None,
-    size: int = None,
-    summarize_template: str | None = None,
-    map_template: str | None = None,
-    reduce_template: str | None = None,
-    question_template: str | None = None,
-    refine_template: str | None = None,
-    custom_prompt: str | None = None,
-):
-    params: ParamsSummarize = ParamsSummarize(
-        model=model,
-        context_size=context_size,
-        temperature=temperature,
-        language=language,
-        size=size,
-        summarize_template=summarize_template,
-        map_template=map_template,
-        reduce_template=reduce_template,
-        question_template=question_template,
-        refine_template=refine_template,
-        custom_prompt=custom_prompt,
-    )
-    try:
-
-        return await summarize_url(url=url, model=model, params=params)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
 @router.post("/text")
 async def summarize_txt(
     text: str, model: str, params: Optional[ParamsSummarize] = None
@@ -73,39 +37,9 @@ async def summarize_txt(
     return process_documents(docs=[text], model=model, client=client, params=params)
 
 
-@router.get("/text", deprecated=True)
-async def get_summarize_txt(
-    text: str,
-    model: str = "chat-leger",
-    context_size: int = None,
-    temperature: Annotated[float, Query(ge=0, le=1.0)] = 0,
-    language: str = None,
-    size: int = None,
-    summarize_template: str | None = None,
-    map_template: str | None = None,
-    reduce_template: str | None = None,
-    question_template: str | None = None,
-    refine_template: str | None = None,
-    custom_prompt: str | None = None,
-):
-
-    params: ParamsSummarize = ParamsSummarize(
-        model=model,
-        context_size=context_size,
-        temperature=temperature,
-        language=language,
-        size=size,
-        summarize_template=summarize_template,
-        map_template=map_template,
-        reduce_template=reduce_template,
-        question_template=question_template,
-        refine_template=refine_template,
-        custom_prompt=custom_prompt,
-    )
-    return await summarize_txt(text=text, model=model, params=params)
-
-
-@router.post("/doc", deprecated=True)
+@router.post(
+    "/doc",
+)
 async def summarize_doc(
     file: UploadFile,
     model: str,
@@ -143,14 +77,3 @@ async def summarize_doc(
 async def list_model():
     """Get a list a available mode for the api"""
     return models_available
-
-
-@router.get("/default_params", deprecated=True)
-async def param():
-    """Generate a dict of default param of the app
-    Return the available models, available methods and default prompt_template"""
-    return {
-        "models": models_available,
-        "methods": get_args(MethodType),
-        "prompt_template": prompt_template,
-    }

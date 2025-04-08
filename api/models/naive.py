@@ -1,6 +1,14 @@
+from typing import List
 from typing import List, Optional
 from openai import OpenAI
-from schemas.params import ParamsSummarize
+from api.schemas.params import ParamsSummarize
+import time
+import json
+
+SYSTEM_PROMPT = "Vous êtes un expert en résumé. Résumez le texte ci-dessous en conservant son sens principal et la langue du texte."
+
+
+CONTEXT_LENGTH = 128_000  # For qwen
 
 
 def summarize_text(
@@ -9,7 +17,7 @@ def summarize_text(
     """
     Résume un texte donné en utilisant l'API OpenAI.
     """
-    prompt = "Vous êtes un expert en résumé. Résumez le texte ci-dessous en conservant son sens principal et la langue du texte."
+    prompt = SYSTEM_PROMPT
     if params:
         if params.size:
             prompt += f"\n le résumé doit faire moins de {params.size}"
@@ -30,6 +38,7 @@ def summarize_text(
             },
         ],
     )
+
     return completion.choices[0].message.content
 
 
@@ -61,6 +70,26 @@ def merge_summaries(
     return summaries[0], nb_call
 
 
+def split_texts_by_word_limit(texts: List[str], max_words: int) -> List[str]:
+    all_chunks = []
+    chunk = []
+
+    for i, text in enumerate(texts):
+        text = f"Page{i + 1}: {text}"
+        words = text.split()
+
+        for word in words:
+            chunk.append(word)
+            if len(chunk) >= max_words:
+                all_chunks.append(" ".join(chunk))
+                chunk = []
+
+    if chunk:
+        all_chunks.append(f"Page{i + 1}:" + " ".join(chunk))
+
+    return all_chunks
+
+
 def process_documents(
     docs: List[str],
     model: str,
@@ -70,9 +99,16 @@ def process_documents(
     """
     Traite une liste de documents pour produire un résumé final.
     """
-    partial_summaries = [
-        summarize_text(doc, model, client, params=params) for doc in docs
-    ]
+    t = time.time()
+    partial_summaries = []
+
+    docs = split_texts_by_word_limit(docs, max_words=CONTEXT_LENGTH)
+
+    for doc in docs:
+        partial_summary = summarize_text(doc, model, client, params=params)
+        partial_summaries.append(partial_summary)
+
+    print(f"Partial summaries: {len(partial_summaries)} - {time.time() - t}")
     nb_call_llm = len(partial_summaries)
     final_summary, nb_call_llm_merge = merge_summaries(
         partial_summaries, model, client, params=params
