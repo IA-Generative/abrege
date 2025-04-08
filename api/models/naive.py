@@ -1,3 +1,4 @@
+from typing import List
 from typing import List, Optional
 from openai import OpenAI
 import time
