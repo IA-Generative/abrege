@@ -1,11 +1,13 @@
 
 import time
 import re
+import os
 import concurrent.futures
 from dataclasses import dataclass
 from io import BytesIO
-from typing import Literal
+from typing import List
 import traceback
+from enum import Enum
 
 from PIL import Image
 import requests
@@ -58,10 +60,10 @@ def get_ocr_from_iamge(image_pil, metadata=None) -> str:
         logger_app.error(f"Error during OCR request: {e} - {traceback.format_exc()}")
 
 
-def process_images_in_parallel(list_image_pil):
+def process_images_in_parallel(list_image_pil: List[Image.Image], workers: int = min(50, (os.cpu_count() or 1) * 5)) -> list[str]:
     results = []
     t = time.time()
-    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
         futures = [executor.submit(get_ocr_from_iamge, img) for img in list_image_pil]
 
         for future in concurrent.futures.as_completed(futures):
@@ -78,18 +80,10 @@ def process_images_in_parallel(list_image_pil):
     return results
 
 
-def get_texts_from_images_paddle(list_image_pil: list) -> list[str]:
-    if not len(list_image_pil):
-        return []
-    restults_ocr = process_images_in_parallel(list_image_pil)
-    return restults_ocr
-
-
-def get_text_from_image(image_pil) -> str:
-    return "\n".join(get_texts_from_images_paddle([image_pil]))
-
-
-ModeOCR = Literal["full_ocr", "text_and_ocr", "full_text"]
+class ModeOCR(Enum):
+    FULL_OCR: str = "full_ocr"
+    TEXT_AND_OCR: str = "text_and_ocr"
+    FULL_TEXT: str = "full_text"
 
 
 @dataclass
@@ -100,32 +94,38 @@ class OCRPdfLoader:
     def __call__(cls, path):
         return cls(path)
 
+    @staticmethod
+    def retrieve_image(page: pymupdf.Page) -> Image:
+        image = page.get_pixmap(dpi=250)
+        image_pil = Image.frombytes(
+            "RGB", [image.width, image.height], image.samples
+        )
+        return image_pil
+
     def load(
-        self, mode: ModeOCR = "text_and_ocr", debug: bool = False
+        self, mode: ModeOCR = "text_and_ocr"
     ) -> list[Document]:
-        assert mode in ModeOCR.__args__
         assert mode != "full_text"
+        logger_app.debug(f"Mode {mode}")
         result = []
+        image_for_ocr = []
         with pymupdf.open(self.path) as pdf_document:
+            t = time.time()
             for page_num in range(pdf_document.page_count):
-                use_OCR = False
-                if mode == "text_and_ocr":
+                page = pdf_document.load_page(page_num)
+                if mode == ModeOCR.FULL_OCR:
+                    image_pil = self.retrieve_image(page)
+                    image_for_ocr.append(image_pil)
+                else:
                     text = pdf_document.get_page_text(page_num)
                     use_OCR = len(text.strip()) <= 30
-                    if debug:
-                        print(f"{page_num} {use_OCR=}")
                     if not use_OCR:
                         doc = Document(page_content=text, origin="plain-text-pdf")
-
-                if use_OCR or mode == "full_ocr":
-                    page = pdf_document.load_page(page_num)  # its 0-based page
-                    image = page.get_pixmap(dpi=250)
-                    image_pil = Image.frombytes(
-                        "RGB", [image.width, image.height], image.samples
-                    )
-                    del image, page
-                    text = get_text_from_image(image_pil)
-                    del image_pil
-                    doc = Document(page_content=text, origin="paddle-ocr-pdf")
-                result.append(doc)
+                        result.append(doc)
+                    else:
+                        image_pil = self.retrieve_image(page)
+                        image_for_ocr.append(image_pil)
+            logger_app.debug(f'time to retrieve images: {time.time() - t}')
+            result.extend([Document(page_content=text)
+                          for text in process_images_in_parallel(image_for_ocr, 2)])
         return result
