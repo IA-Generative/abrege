@@ -46,7 +46,7 @@ DEFAULT_CONTEXT_SIZE = ParamsSummarize().context_size
 DEFAULT_MAP_PROMPT = ParamsSummarize().map_prompt
 DEFAULT_REDUCE_PROMPT = ParamsSummarize().reduce_prompt
 
-LIMIT_OCR_PAGES = 10
+LIMIT_OCR_PAGES = 2
 
 class UrlData(ParamsSummarize):
     url: str
