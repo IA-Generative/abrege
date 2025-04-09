@@ -1,5 +1,7 @@
 import operator
 from time import perf_counter
+import logging
+import traceback
 from typing import Annotated, List, Literal, TypedDict
 import asyncio
 from config.openai import OpenAISettings
@@ -166,10 +168,18 @@ async def do_map_reduce(
             list(step.keys())
             nb_call += 1
     except openai.InternalServerError as e:
+        logging.error(f"{e}\n{traceback.format_exc()}")
         raise HTTPException(
             status_code=429,
             detail="Surcharge du LLM",
         )
+    except openai.RateLimitError as e:
+        logging.error(f"{e}\n{traceback.format_exc()}")
+        raise HTTPException(
+            status_code=429,
+            detail="Surcharge du LLM",
+        )
+
 
     elapsed = perf_counter() - deb
 
