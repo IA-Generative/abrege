@@ -264,7 +264,7 @@ jobs:
       - name: CORS to * for staging
         if: github.ref_name == 'staging'
         run: |
-          kubectl patch secret my-secret \
+          kubectl patch secret secret-abrege \
             --namespace=${{env.K8S_NAMESPACE}} \
             --type=merge \
             -p "{\"data\":{\"CORS_REGEXP\":\".*\"}}"
@@ -301,7 +301,7 @@ jobs:
       - name: CORS to * for staging
         if: github.ref_name == 'staging'
         run: |
-          kubectl patch secret my-secret \
+          kubectl patch secret secret-abrege \
             --namespace=${{env.K8S_NAMESPACE}} \
             --type=merge \
             -p "{\"data\":{\"CORS_REGEXP\":\".*\"}}"
