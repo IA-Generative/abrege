@@ -28,18 +28,22 @@ from schemas.response import SummaryResponse
 client = OpenAI(api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE)
 
 
-async def do_map_reduce(list_str: list[str], params: ParamsSummarize, recursion_limit: int = 20, num_tokens_limit: int = 1226 * 300) -> SummaryResponse:
+async def do_map_reduce(
+    list_str: list[str], params: ParamsSummarize, recursion_limit: int = 20, num_tokens_limit: int = 1226 * 300
+) -> SummaryResponse:
     """Peut faire un GraphRecursionError si recursion_limit est trop faible"""
 
     deb = perf_counter()
-    llm = ChatOpenAI(model=params.model, temperature=params.temperature, api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE)
+    llm = ChatOpenAI(
+        model=params.model, temperature=params.temperature, api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE
+    )
 
     num_tokens = llm.get_num_tokens(" ".join(list_str))
 
     if num_tokens > num_tokens_limit:
         raise HTTPException(
             status_code=500,
-            detail=f"""Le texte à résumer est trop long. (environ {num_tokens} tokens alors que la limite est à {num_tokens_limit} tokens)""",
+            detail=f"Le texte à résumer est trop long. (environ {num_tokens} tokens alors que la limite est à {num_tokens_limit} tokens)",
         )
 
     token_max = int(params.context_size)
@@ -50,7 +54,7 @@ async def do_map_reduce(list_str: list[str], params: ParamsSummarize, recursion_
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail="Erreur lors de l'utilisation du prompt \"map_prompt\". map_prompt ne peut pas contenir une balise autre que {context}",
+            detail='Erreur lors de l\'utilisation du prompt "map_prompt". map_prompt ne peut pas contenir une balise autre que {context}',
         )
 
     map_prompt = ChatPromptTemplate.from_messages([("human", params.map_prompt)])
@@ -62,7 +66,7 @@ async def do_map_reduce(list_str: list[str], params: ParamsSummarize, recursion_
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail="Erreur lors de l'utilisation du prompt \"reduce_prompt\". reduce_prompt ne peut pas contenir une balise autre que {language}, {size} ou {docs}",
+            detail='Erreur lors de l\'utilisation du prompt "reduce_prompt". reduce_prompt ne peut pas contenir une balise autre que {language}, {size} ou {docs}',
         )
     if params.custom_prompt is not None:
         reduce_template += params.custom_prompt
