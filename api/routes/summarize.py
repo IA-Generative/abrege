@@ -68,10 +68,19 @@ class DocData(ParamsSummarize):
 
 @router.post("/url")
 async def summarize_url(urlData: UrlData) -> SummaryResponse:
+    logging.info(f"Début du résumé d'URL: {urlData.url}")
+    start_time = perf_counter()
+    
     url = urlData.url
     data = url_scrapper(url=url)
     docs = [doc.page_content for doc in data]
-    return await do_map_reduce(docs, params=urlData)
+    
+    logging.info(f"URL scrappée avec succès, {len(docs)} documents extraits")
+    result = await do_map_reduce(docs, params=urlData)
+    
+    elapsed_time = perf_counter() - start_time
+    logging.info(f"Résumé d'URL terminé en {elapsed_time:.2f} secondes")
+    return result
 
 
 @deprecated_router.get("/url", deprecated=True)
@@ -81,9 +90,13 @@ async def old_summarize_url(urlData : Annotated[UrlData, Query()]) -> SummaryRes
 
 @router.post("/text")
 async def summarize_txt(textData: TextData) -> SummaryResponse:
+    logging.info(f"Début du résumé de texte, taille: {len(textData.text)} caractères")
+    start_time = perf_counter()
+    
     text = textData.text
     
     if 0 and len(text) <= 8192:  # TODO
+        logging.info("Utilisation de la méthode directe pour le résumé")
         prompt = PromptTemplate.from_template("""Ce qui suit est une série d'extraits d'un texte (ou le texte entier lui-même)
 ```
 {text}
@@ -99,10 +112,14 @@ Rassemblez ces éléments et faites-en un résumé final et consolidé dans {lan
         summary = llm_chain.invoke({"text": text, "language": textData.language, "size": textData.size, "custom_prompt": textData.custom_prompt})
         elapsed = perf_counter() - deb
 
+        logging.info(f"Résumé de texte terminé en {elapsed:.2f} secondes")
         return SummaryResponse(summary=summary, time=elapsed)
     else:
-        # Sinon on fait le résumé le map reduce
-        return await do_map_reduce([text], params=textData)
+        logging.info("Utilisation de la méthode map-reduce pour le résumé")
+        result = await do_map_reduce([text], params=textData)
+        elapsed_time = perf_counter() - start_time
+        logging.info(f"Résumé de texte terminé en {elapsed_time:.2f} secondes")
+        return result
 
 
 @deprecated_router.get("/text", deprecated=True)
@@ -111,10 +128,19 @@ async def old_summarize_txt(params: Annotated[TextData, Query()]) -> SummaryResp
 
 @router.post("/doc")
 async def summarize_doc(docData: DocData = Body(...), file : UploadFile = File(...)) -> SummaryResponse:
+    logging.info(f"Début du résumé de document: {file.filename}")
+    start_time = perf_counter()
+    
     pdf_mode_ocr = docData.pdf_mode_ocr or "text_and_ocr"
+    logging.info(f"Mode OCR sélectionné: {pdf_mode_ocr}")
+    
     docs = parse_files(file=file, pdf_mode_ocr=pdf_mode_ocr, limit_pages_ocr=LIMIT_OCR_PAGES)
+    logging.info(f"Document parsé avec succès, {len(docs)} pages traitées")
 
-    return await do_map_reduce(docs, params=docData)
+    result = await do_map_reduce(docs, params=docData)
+    elapsed_time = perf_counter() - start_time
+    logging.info(f"Résumé de document terminé en {elapsed_time:.2f} secondes")
+    return result
 
 @deprecated_router.post("/doc", deprecated=True)
 async def old_summarize_doc(params: Annotated[DocData, Query()], file : UploadFile) -> SummaryResponse:
@@ -124,6 +150,7 @@ async def old_summarize_doc(params: Annotated[DocData, Query()], file : UploadFi
 @router.get("/models", response_model=List[str])
 async def list_model():
     """Get a list a available mode for the api"""
+    logging.info("Récupération des modèles disponibles")
     return models_available
 
 

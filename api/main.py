@@ -2,10 +2,21 @@ import logging
 import os
 import re
 import traceback
+import sys
 
 import uvicorn
 from __init__ import __name__ as name
 from __init__ import __version__
+
+
+logging.basicConfig(
+    level=os.environ.get('LOG_LEVEL', "INFO"),
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+
 from routes.health import router as health_router
 from routes.summarize import deprecated_router
 from routes.summarize import router as summarize_router
