@@ -267,7 +267,7 @@ jobs:
           kubectl patch secret secret-abrege \
             --namespace=${{env.K8S_NAMESPACE}} \
             --type=merge \
-            -p "{\"data\":{\"CORS_REGEXP\":\".*\"}}"
+            -p "{\"stringData\":{\"CORS_REGEXP\":\".*\"}}"
 
       - name: Update deployment.yaml (with the image and the new image hash)
         run: |
@@ -304,7 +304,7 @@ jobs:
           kubectl patch secret secret-abrege \
             --namespace=${{env.K8S_NAMESPACE}} \
             --type=merge \
-            -p "{\"data\":{\"CORS_REGEXP\":\".*\"}}"
+            -p "{\"stringData\":{\"CORS_REGEXP\":\".*\"}}"
 
       - name: Update deployment.yaml (with the image and the new image hash)
         run: |
