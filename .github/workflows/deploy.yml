@@ -261,6 +261,14 @@ jobs:
           secret-type: 'generic'
           string-data: ${{ secrets.APP_SECRETS }}
   
+      - name: CORS to * for staging
+        if: github.ref_name == 'staging'
+        run: |
+          kubectl patch secret my-secret \
+            --namespace=${{env.K8S_NAMESPACE}} \
+            --type=merge \
+            -p "{\"data\":{\"CORS_REGEXP\":\".*\"}}"
+
       - name: Update deployment.yaml (with the image and the new image hash)
         run: |
           if [ "${{ github.ref_name }}" == "main" ]; then
@@ -289,7 +297,15 @@ jobs:
           secret-name: secret-abrege
           secret-type: 'generic'
           string-data: ${{ secrets.APP_SECRETS }}
-  
+
+      - name: CORS to * for staging
+        if: github.ref_name == 'staging'
+        run: |
+          kubectl patch secret my-secret \
+            --namespace=${{env.K8S_NAMESPACE}} \
+            --type=merge \
+            -p "{\"data\":{\"CORS_REGEXP\":\".*\"}}"
+
       - name: Update deployment.yaml (with the image and the new image hash)
         run: |
           if [ "${{ github.ref_name }}" == "main" ]; then
