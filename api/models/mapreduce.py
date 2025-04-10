@@ -59,7 +59,7 @@ async def do_map_reduce(
         )
 
     list_str = split_texts_by_word_limit(
-        texts=list_str, max_words=int(num_tokens * ratio_word_token)
+        texts=list_str, max_words=int(num_tokens_limit * ratio_word_token)
     )
     for i, text in enumerate(list_str):
         num_tokens = llm.get_num_tokens(text)
