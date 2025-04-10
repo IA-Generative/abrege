@@ -26,24 +26,46 @@ from langchain_core.prompts import ChatPromptTemplate
 
 from schemas.params import ParamsSummarize
 from schemas.response import SummaryResponse
+from utils.text_process import split_texts_by_word_limit
 
-client = OpenAI(api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE)
+client = OpenAI(
+    api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE
+)
 
 
 async def do_map_reduce(
-    list_str: list[str], params: ParamsSummarize, recursion_limit: int = 20, num_tokens_limit: int = 1226 * 300
+    list_str: list[str],
+    params: ParamsSummarize,
+    recursion_limit: int = 20,
+    num_tokens_limit: int = 1226 * 300,
+    ratio_word_token: float = 0.75,
 ) -> SummaryResponse:
     """Peut faire un GraphRecursionError si recursion_limit est trop faible"""
 
     deb = perf_counter()
     logging.info(f"Début du processus de map-reduce avec {len(list_str)} documents")
-    
+
     llm = ChatOpenAI(
-        model=params.model, temperature=params.temperature, api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE
+        model=params.model,
+        temperature=params.temperature,
+        api_key=OpenAISettings().OPENAI_API_KEY,
+        base_url=OpenAISettings().OPENAI_API_BASE,
     )
 
-    num_tokens = llm.get_num_tokens(" ".join(list_str))
-    logging.info(f"Nombre total de tokens: {num_tokens}")
+    for i, text in enumerate(list_str):
+        num_tokens = llm.get_num_tokens(text)
+        logging.info(
+            f"Before optim : Danse la page {i+1} Nombre de tokens: {num_tokens}"
+        )
+
+    list_str = split_texts_by_word_limit(
+        texts=list_str, max_words=int(num_tokens * ratio_word_token)
+    )
+    for i, text in enumerate(list_str):
+        num_tokens = llm.get_num_tokens(text)
+        logging.info(
+            f"After optim : Danse la page {i+1} Nombre de tokens: {num_tokens}"
+        )
 
     if num_tokens > num_tokens_limit:
         logging.error(f"Limite de tokens dépassée: {num_tokens} > {num_tokens_limit}")
@@ -69,7 +91,9 @@ async def do_map_reduce(
     map_chain = map_prompt | llm | StrOutputParser()
 
     try:
-        reduce_template = params.reduce_prompt.format(language=params.language, size=str(params.size), docs="{docs}")
+        reduce_template = params.reduce_prompt.format(
+            language=params.language, size=str(params.size), docs="{docs}"
+        )
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -106,7 +130,9 @@ async def do_map_reduce(
 
     # Here we generate a summary, given a document
     async def generate_summary(state: SummaryState):
-        logging.debug(f"Génération du résumé pour un document de {len(state['content'])} caractères")
+        logging.debug(
+            f"Génération du résumé pour un document de {len(state['content'])} caractères"
+        )
         response = await map_chain.ainvoke(state["content"])
         logging.debug("Résumé généré avec succès")
         return {"summaries": [response]}
@@ -117,15 +143,22 @@ async def do_map_reduce(
         # We will return a list of `Send` objects
         # Each `Send` object consists of the name of a node in the graph
         # as well as the state to send to that node
-        return [Send("generate_summary", {"content": content}) for content in state["contents"]]
+        return [
+            Send("generate_summary", {"content": content})
+            for content in state["contents"]
+        ]
 
     def collect_summaries(state: OverallState):
-        return {"collapsed_summaries": [Document(summary) for summary in state["summaries"]]}
+        return {
+            "collapsed_summaries": [Document(summary) for summary in state["summaries"]]
+        }
 
     # Add node to collapse summaries
     async def collapse_summaries(state: OverallState):
         logging.info(f"Collapse des {len(state['collapsed_summaries'])} résumés")
-        doc_lists = split_list_of_docs(state["collapsed_summaries"], length_function, token_max)
+        doc_lists = split_list_of_docs(
+            state["collapsed_summaries"], length_function, token_max
+        )
         logging.info(f"Résumés divisés en {len(doc_lists)} groupes")
         results = []
         for i, doc_list in enumerate(doc_lists):
@@ -190,7 +223,9 @@ async def do_map_reduce(
         )
 
     elapsed = perf_counter() - deb
-    logging.info(f"Processus de map-reduce terminé en {elapsed:.2f} secondes avec {nb_call} appels")
+    logging.info(
+        f"Processus de map-reduce terminé en {elapsed:.2f} secondes avec {nb_call} appels"
+    )
 
     final_summary = step["generate_final_summary"]["final_summary"]
     logging.info(f"Résumé final généré avec {len(final_summary)} caractères")
