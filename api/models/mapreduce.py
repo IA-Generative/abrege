@@ -27,6 +27,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from schemas.params import ParamsSummarize
 from schemas.response import SummaryResponse
 from utils.text_process import split_texts_by_word_limit
+from utils.logger import logger_abrege
 
 client = OpenAI(
     api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE
@@ -43,7 +44,7 @@ async def do_map_reduce(
     """Peut faire un GraphRecursionError si recursion_limit est trop faible"""
 
     deb = perf_counter()
-    logging.info(f"Début du processus de map-reduce avec {len(list_str)} documents")
+    logger_abrege.info(f"Début du processus de map-reduce avec {len(list_str)} documents")
 
     llm = ChatOpenAI(
         model=params.model,
@@ -54,7 +55,7 @@ async def do_map_reduce(
 
     for i, text in enumerate(list_str):
         num_tokens = llm.get_num_tokens(text)
-        logging.info(
+        logger_abrege.info(
             f"Before optim : Danse la page {i+1} Nombre de tokens: {num_tokens}"
         )
 
@@ -63,19 +64,19 @@ async def do_map_reduce(
     )
     for i, text in enumerate(list_str):
         num_tokens = llm.get_num_tokens(text)
-        logging.info(
+        logger_abrege.info(
             f"After optim : Danse la page {i+1} Nombre de tokens: {num_tokens}"
         )
 
     if num_tokens > num_tokens_limit:
-        logging.error(f"Limite de tokens dépassée: {num_tokens} > {num_tokens_limit}")
+        logger_abrege.error(f"Limite de tokens dépassée: {num_tokens} > {num_tokens_limit}")
         raise HTTPException(
             status_code=500,
             detail=f"Le texte à résumer est trop long. (environ {num_tokens} tokens alors que la limite est à {num_tokens_limit} tokens)",
         )
 
     token_max = int(params.context_size)
-    logging.info(f"Taille maximale de contexte: {token_max} tokens")
+    logger_abrege.info(f"Taille maximale de contexte: {num_tokens_limit} tokens")
 
     try:
         # On vérifie qu'il y a bien une balise {context} dans params.map_prompt et pas d'autres balises
@@ -130,11 +131,11 @@ async def do_map_reduce(
 
     # Here we generate a summary, given a document
     async def generate_summary(state: SummaryState):
-        logging.debug(
+        logger_abrege.debug(
             f"Génération du résumé pour un document de {len(state['content'])} caractères"
         )
         response = await map_chain.ainvoke(state["content"])
-        logging.debug("Résumé généré avec succès")
+        logger_abrege.debug("Résumé généré avec succès")
         return {"summaries": [response]}
 
     # Here we define the logic to map out over the documents
@@ -155,16 +156,16 @@ async def do_map_reduce(
 
     # Add node to collapse summaries
     async def collapse_summaries(state: OverallState):
-        logging.info(f"Collapse des {len(state['collapsed_summaries'])} résumés")
+        logger_abrege.info(f"Collapse des {len(state['collapsed_summaries'])} résumés")
         doc_lists = split_list_of_docs(
-            state["collapsed_summaries"], length_function, token_max
+            state["collapsed_summaries"], length_function, num_tokens_limit
         )
-        logging.info(f"Résumés divisés en {len(doc_lists)} groupes")
+        logger_abrege.info(f"Résumés divisés en {len(doc_lists)} groupes")
         results = []
         for i, doc_list in enumerate(doc_lists):
-            logging.debug(f"Traitement du groupe {i+1}/{len(doc_lists)}")
+            logger_abrege.debug(f"Traitement du groupe {i+1}/{len(doc_lists)}")
             results.append(await acollapse_docs(doc_list, reduce_chain.ainvoke))
-        logging.info("Collapse des résumés terminé")
+        logger_abrege.info("Collapse des résumés terminé")
         return {"collapsed_summaries": results}
 
     # This represents a conditional edge in the graph that determines
@@ -173,7 +174,7 @@ async def do_map_reduce(
         state: OverallState,
     ) -> Literal["collapse_summaries", "generate_final_summary"]:
         num_tokens = length_function(state["collapsed_summaries"])
-        if num_tokens > token_max:
+        if num_tokens > num_tokens_limit:
             return "collapse_summaries"
         else:
             return "generate_final_summary"
@@ -202,13 +203,13 @@ async def do_map_reduce(
 
     try:
         nb_call = 0
-        logging.info("Démarrage de l'exécution du graphe")
+        logger_abrege.info("Démarrage de l'exécution du graphe")
         async for step in app.astream(
             {"contents": list_str},
             {"recursion_limit": recursion_limit},
         ):
             nb_call += 1
-            logging.debug(f"Étape {nb_call} du graphe exécutée")
+            logger_abrege.debug(f"Étape {nb_call} du graphe exécutée")
     except openai.InternalServerError as e:
         logging.error(f"Erreur interne OpenAI: {e}\n{traceback.format_exc()}")
         raise HTTPException(
@@ -216,18 +217,19 @@ async def do_map_reduce(
             detail="Surcharge du LLM",
         )
     except openai.RateLimitError as e:
-        logging.error(f"Erreur de limite de taux OpenAI: {e}\n{traceback.format_exc()}")
+        logger_abrege.error(f"Erreur de limite de taux OpenAI: {e}\n{traceback.format_exc()}")
         raise HTTPException(
             status_code=429,
             detail="Surcharge du LLM",
         )
 
     elapsed = perf_counter() - deb
-    logging.info(
+    logger_abrege.info(
         f"Processus de map-reduce terminé en {elapsed:.2f} secondes avec {nb_call} appels"
     )
 
     final_summary = step["generate_final_summary"]["final_summary"]
-    logging.info(f"Résumé final généré avec {len(final_summary)} caractères")
+    nb_words = len(final_summary.split())
+    logger_abrege.info(f"Résumé final généré avec {len(final_summary)} caractères - nb words {nb_words}")
 
     return SummaryResponse(summary=final_summary, nb_call=nb_call, time=elapsed)

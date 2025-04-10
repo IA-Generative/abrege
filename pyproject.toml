@@ -39,6 +39,7 @@ abrege-api = [
     "langchain[openai]>=0.3.22",
     "langgraph>=0.3.21",
     "langchain-community>=0.3.20",
+    "python-json-logger==3.3.0",
 ]
 version = [
     "commitizen>=4.4.1",
