@@ -2,6 +2,7 @@ import logging
 import os
 import re
 import traceback
+import asyncio
 
 import uvicorn
 from __init__ import __name__ as name
@@ -12,6 +13,7 @@ from routes.summarize import router as summarize_router
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.responses import JSONResponse
 
 origins = ("http://localhost", "http://localhost:8000")
@@ -46,20 +48,21 @@ if "CORS_REGEXP" in os.environ:
             allow_headers=["*"],
         )
 
+class CatchExceptionsMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        try:
+            response = await asyncio.wait_for(call_next(request), timeout=40)
+            return response
+        except asyncio.TimeoutError:
+            return JSONResponse(status_code=504, content={"detail": "L'application ne répond pas"}) # Il ne faut pas utiliser de HTTPException ici
+        except Exception as e:
+            #logging.error(f"Erreur capturée au niveau du middleware : {e}\n{traceback.format_exc()}\n--------")
+            return JSONResponse(status_code=500, content={"detail": "Une erreur interne est survenue."}) # Il ne faut pas utiliser de HTTPException ici
+
+app.add_middleware(CatchExceptionsMiddleware) # CatchExceptionsMiddleware doit être ajouté APRES CORSMiddleware
 app.include_router(health_router, prefix="/health")
 app.include_router(summarize_router, prefix="/api")
 app.include_router(deprecated_router, prefix="")
-
-
-@app.middleware("http")
-async def catch_exceptions_middleware(request: Request, call_next):
-    try:
-        response = await call_next(request)
-        return response
-    except Exception as e:
-        logging.error(f"{e}\n{traceback.format_exc()}")
-
-        return JSONResponse(status_code=500, content={"detail": "Une erreur interne est survenue."})
 
 
 if __name__ == "__main__":
