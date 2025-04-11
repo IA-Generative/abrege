@@ -71,6 +71,11 @@ async def summarize_url(urlData: UrlData) -> SummaryResponse:
     url = urlData.url
     data = url_scrapper(url=url)
     docs = [doc.page_content for doc in data]
+    if len(docs) == 0:
+        raise HTTPException(
+            status_code=500,
+            detail="Erreur lors de la récupération du contenu de l'URL",
+        )
     return await do_map_reduce(docs, params=urlData)
 
 
@@ -113,7 +118,11 @@ async def old_summarize_txt(params: Annotated[TextData, Query()]) -> SummaryResp
 async def summarize_doc(docData: DocData = Body(...), file : UploadFile = File(...)) -> SummaryResponse:
     pdf_mode_ocr = docData.pdf_mode_ocr or "text_and_ocr"
     docs = parse_files(file=file, pdf_mode_ocr=pdf_mode_ocr, limit_pages_ocr=LIMIT_OCR_PAGES)
-
+    if len(docs) == 0:
+        raise HTTPException(
+            status_code=500,
+            detail="Erreur lors de la récupération du contenu du fichier",
+        )
     return await do_map_reduce(docs, params=docData)
 
 @deprecated_router.post("/doc", deprecated=True)
