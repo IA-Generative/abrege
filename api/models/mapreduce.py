@@ -44,7 +44,9 @@ async def do_map_reduce(
     """Peut faire un GraphRecursionError si recursion_limit est trop faible"""
 
     deb = perf_counter()
-    logger_abrege.info(f"Début du processus de map-reduce avec {len(list_str)} documents")
+    logger_abrege.info(
+        f"Début du processus de map-reduce avec {len(list_str)} documents"
+    )
 
     llm = ChatOpenAI(
         model=params.model,
@@ -69,7 +71,9 @@ async def do_map_reduce(
         )
 
     if num_tokens > num_tokens_limit:
-        logger_abrege.error(f"Limite de tokens dépassée: {num_tokens} > {num_tokens_limit}")
+        logger_abrege.error(
+            f"Limite de tokens dépassée: {num_tokens} > {num_tokens_limit}"
+        )
         raise HTTPException(
             status_code=500,
             detail=f"Le texte à résumer est trop long. (environ {num_tokens} tokens alors que la limite est à {num_tokens_limit} tokens)",
@@ -93,7 +97,7 @@ async def do_map_reduce(
 
     try:
         reduce_template = params.reduce_prompt.format(
-            language=params.language, size=str(params.size), docs="{docs}"
+            language=params.language, docs="{docs}"
         )
     except Exception as e:
         raise HTTPException(
@@ -217,7 +221,9 @@ async def do_map_reduce(
             detail="Surcharge du LLM",
         )
     except openai.RateLimitError as e:
-        logger_abrege.error(f"Erreur de limite de taux OpenAI: {e}\n{traceback.format_exc()}")
+        logger_abrege.error(
+            f"Erreur de limite de taux OpenAI: {e}\n{traceback.format_exc()}"
+        )
         raise HTTPException(
             status_code=429,
             detail="Surcharge du LLM",
@@ -230,6 +236,8 @@ async def do_map_reduce(
 
     final_summary = step["generate_final_summary"]["final_summary"]
     nb_words = len(final_summary.split())
-    logger_abrege.info(f"Résumé final généré avec {len(final_summary)} caractères - nb words {nb_words}")
+    logger_abrege.info(
+        f"Résumé final généré avec {len(final_summary)} caractères - nb words {nb_words}"
+    )
 
     return SummaryResponse(summary=final_summary, nb_call=nb_call, time=elapsed)
