@@ -16,6 +16,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi import FastAPI, File, Body, UploadFile, Request
 from pydantic import BaseModel, model_validator
 from fastapi.responses import HTMLResponse
+from api.schemas.response import SummaryResponse
 
 client = OpenAI(api_key=OpenAISettings().OPENAI_API_KEY,
                 base_url=OpenAISettings().OPENAI_API_BASE)
@@ -57,7 +58,7 @@ async def summarize_txt(
 async def summarize_doc(docData: DocData = Body(...), file: UploadFile = File(...)) -> SummaryResponse:
     pdf_mode_ocr = docData.pdf_mode_ocr or "text_and_ocr"
     docs = parse_files(file=file, pdf_mode_ocr=pdf_mode_ocr,
-                       limit_pages_ocr=LIMIT_OCR_PAGES)
+                       limit_pages_ocr=2)
 
     return await do_map_reduce(docs, params=docData)
 

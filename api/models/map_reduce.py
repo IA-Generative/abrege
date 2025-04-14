@@ -3,7 +3,7 @@ from time import perf_counter
 import logging
 import traceback
 from typing import Annotated, List, Literal, TypedDict
-from config.openai import OpenAISettings
+from api.config.openai import OpenAISettings
 from fastapi import HTTPException
 
 from openai import OpenAI
@@ -22,10 +22,10 @@ from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
-from schemas.params import ParamsSummarize
-from schemas.response import SummaryResponse
-from utils.text import split_texts_by_word_limit
-from utils.logger import logger_abrege
+from api.schemas.params import ParamsSummarize
+from api.schemas.response import SummaryResponse
+from api.utils.text import split_texts_by_word_limit
+from api.utils.logger import logger_abrege
 
 client = OpenAI(
     api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE
