@@ -6,7 +6,6 @@ from typing import Annotated, List, Literal, TypedDict
 from api.config.openai import OpenAISettings
 from fastapi import HTTPException
 
-from openai import OpenAI
 import openai
 
 from langchain.chains.combine_documents.reduce import (
@@ -26,10 +25,6 @@ from api.schemas.params import ParamsSummarize
 from api.schemas.response import SummaryResponse
 from api.utils.text import split_texts_by_word_limit
 from api.utils.logger import logger_abrege
-
-client = OpenAI(
-    api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE
-)
 
 
 async def do_map_reduce(
@@ -209,7 +204,7 @@ async def do_map_reduce(
         logger_abrege.info("Démarrage de l'exécution du graphe")
         async for step in app.astream(
             {"contents": list_str},
-            {"recursion_limit": recursion_limit},
+            {"recursion_limit": recursion_limit}, debug=logger_abrege.level == logging.DEBUG
         ):
             nb_call += 1
             logger_abrege.debug(f"Étape {nb_call} du graphe exécutée")
@@ -217,7 +212,7 @@ async def do_map_reduce(
         logging.error(f"Erreur interne OpenAI: {e}\n{traceback.format_exc()}")
         raise HTTPException(
             status_code=429,
-            detail="Surcharge du LLM",
+            detail="Surcharge du LLM - {e}",
         )
     except openai.RateLimitError as e:
         logger_abrege.error(traceback.format_exc())
@@ -240,4 +235,4 @@ async def do_map_reduce(
         f"Résumé final généré avec {len(final_summary)} caractères - nb words {nb_words}"
     )
 
-    return SummaryResponse(summary=final_summary, nb_call=nb_call, time=elapsed)
+    return SummaryResponse(summary=final_summary, nb_call=nb_call, time=elapsed, nb_words=nb_words)
