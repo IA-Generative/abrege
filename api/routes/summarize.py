@@ -1,24 +1,26 @@
-from typing import List
-from api.schemas.params import TextData, DocData
-from api.utils.parse import parse_files
+import traceback
+from fastapi import APIRouter, HTTPException
+
+from api.schemas.params import TextData
 from api.models.map_reduce import do_map_reduce
 from api.clients.openai import models_available
-from fastapi import File, Body, UploadFile, APIRouter
+
 from api.schemas.response import SummaryResponse
+from api.utils.logger import logger_abrege
 
-
-context = {}
 
 router = APIRouter(tags=['Text'])
 
-DEFAULT_SIZE = 4_000
-DEFAULT_MODEL = "chat-leger"
-DEFAULT_CONTEXT_SIZE = 10_000
-DEFAULT_CUSTOM_PROMPT = "en français"
 
-
-@router.post("/text")
+@router.post("/text", response_model=SummaryResponse)
 async def summarize_txt(
     textData: TextData
 ):
-    return await do_map_reduce([textData.text], params=textData)
+    if textData.model not in models_available:
+        raise HTTPException(status_code=404, detail=f"Model {textData.model} not found")
+    try:
+        return await do_map_reduce([textData.text], params=textData)
+
+    except Exception as e:
+        logger_abrege.error(f"{e} - trace : {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Error for summary text - {e}")
