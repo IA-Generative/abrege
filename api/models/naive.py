@@ -3,7 +3,7 @@ from openai import OpenAI
 import time
 
 from api.schemas.params import ParamsSummarize
-from api.utils.logger import logger_app
+from api.utils.logger import logger_abrege as logger_app
 
 SYSTEM_PROMPT = "Vous êtes un expert en résumé. Résumez le texte ci-dessous en conservant son sens principal et la langue du texte."
 

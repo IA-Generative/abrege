@@ -14,7 +14,7 @@ from langchain_community.document_loaders import (
 )
 
 from api.utils.pdf_handler import ModeOCR, OCRPdfLoader
-from api.utils.logger import logger_app
+from api.utils.logger import logger_abrege as logger_app
 
 DOCUMENT_LOADER_DICT = {
     ".pdf": PyPDFLoader,
