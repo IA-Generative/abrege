@@ -14,8 +14,8 @@ ENV POETRY_VIRTUALENVS_CREATE=false
 RUN uv sync --no-cache --group abrege-api
 
 COPY api /app/api
-ENV PYTHONPATH=PYTHONPATH:/app
-CMD [ "uv", "run", "--no-cache", "python", "/app/api/main.py" ]
+ENV PYTHONPATH=PYTHONPATH:/app/api
+CMD [ "uv", "run", "uvicorn", "api.main.app", "--host", "0.0.0.0", "--port", "5000" ]
 ################################
 # Step 2: "development" target #
 ################################
