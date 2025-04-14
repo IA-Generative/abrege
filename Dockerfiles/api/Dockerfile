@@ -16,10 +16,3 @@ RUN uv sync --no-cache --group abrege-api
 COPY api /app/api
 ENV PYTHONPATH=PYTHONPATH:/app/api
 CMD [ "uv", "run", "uvicorn", "api.main.app", "--host", "0.0.0.0", "--port", "5000" ]
-################################
-# Step 2: "development" target #
-################################
-FROM base as dev
-WORKDIR /app
-RUN uv sync --no-cache --group tests
-COPY tests /app/tests
