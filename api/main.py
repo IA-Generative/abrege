@@ -1,26 +1,12 @@
-import logging
-import os
-import re
-import traceback
-import asyncio
-
 import uvicorn
-from fastapi import FastAPI, File, Form, UploadFile
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI
 
 from api.routes.health import router as health_router
 from api.routes.summarize import router as summarize_router
+from api.routes.url_summary import router as url_router
 from api import __version__, __name__ as name
+from api.utils.cors import set_cors
 
-
-origins = (
-    "https://sie.numerique-interieur.com",
-    "http://localhost",
-    "http://localhost:8080",
-    "http://localhost:8501",
-)
-
-origin_regex = r"https:\/\/.*\.(?:cloud-pi-native|numerique-interieur)\.com"
 
 app = FastAPI(
     title=name,
@@ -29,18 +15,12 @@ app = FastAPI(
 )
 
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    # allow_origin_regex=origin_regex,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app = set_cors(app)
 
 
 app.include_router(health_router, prefix="/health")
 app.include_router(summarize_router, prefix="/api")
+app.include_router(url_router, prefix="/api")
 
 if __name__ == "__main__":
     uvicorn.run("main:app", reload=True, port=8000, host="0.0.0.0")
