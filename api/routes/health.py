@@ -5,7 +5,7 @@ from api import __version__, __name__
 import datetime
 import requests
 
-from .summarize import client
+from api.clients.openai import client
 from ..clients import client_marker
 
 from api.config.paddle import Settings
