@@ -17,15 +17,19 @@ logging.basicConfig(
     ]
 )
 
-from routes.health import router as health_router
-from routes.summarize import deprecated_router
-from routes.summarize import router as summarize_router
+from api.routes.health import router as health_router
+from api.routes.summarize import router as summarize_router
+from api import __version__, __name__ as name
 
-from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 
-origins = ("http://localhost", "http://localhost:8000")
+origins = (
+    "https://sie.numerique-interieur.com",
+    "http://localhost",
+    "http://localhost:8080",
+    "http://localhost:8501",
+)
+
+origin_regex = "https://.*\.cloud-pi-native\.com"
 
 app = FastAPI(
     title=name,
@@ -59,19 +63,6 @@ if "CORS_REGEXP" in os.environ:
 
 app.include_router(health_router, prefix="/health")
 app.include_router(summarize_router, prefix="/api")
-app.include_router(deprecated_router, prefix="")
-
-
-@app.middleware("http")
-async def catch_exceptions_middleware(request: Request, call_next):
-    try:
-        response = await call_next(request)
-        return response
-    except Exception as e:
-        logging.error(f"{e}\n{traceback.format_exc()}")
-
-        return JSONResponse(status_code=500, content={"detail": "Une erreur interne est survenue."})
-
 
 if __name__ == "__main__":
     uvicorn.run("main:app", reload=True, port=8000, host="0.0.0.0")

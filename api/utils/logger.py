@@ -19,3 +19,4 @@ formatter = jsonlogger.JsonFormatter(
 )
 handler.setFormatter(formatter)
 logger_abrege.addHandler(handler)
+
