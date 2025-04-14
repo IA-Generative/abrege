@@ -15,8 +15,7 @@ frontend = [
 ]
 
 abrege-api = [
-    "langchain-openai>=0.1.7",
-    "langchain==0.1.16",
+     "langchain-openai>=0.1.7",
     "fastapi>=0.115.11",
     "pypdf>=5.4.0",
     "docx2txt>=0.8",
@@ -37,6 +36,10 @@ abrege-api = [
     "python-dotenv>=1.0.1",
     "pydantic-settings>=2.8.1",
     "toml>=0.10.2",
+    "langchain[openai]>=0.3.22",
+    "langgraph>=0.3.21",
+    "langchain-community>=0.3.20",
+    "python-json-logger==3.3.0",
 ]
 version = [
     "commitizen>=4.4.1",
