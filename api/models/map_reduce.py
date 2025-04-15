@@ -25,6 +25,7 @@ from api.schemas.params import ParamsSummarize
 from api.schemas.response import SummaryResponse
 from api.utils.text import split_texts_by_word_limit
 from api.utils.logger import logger_abrege
+import nltk
 
 
 async def do_map_reduce(
@@ -37,9 +38,7 @@ async def do_map_reduce(
     """Peut faire un GraphRecursionError si recursion_limit est trop faible"""
 
     deb = perf_counter()
-    logger_abrege.info(
-        f"Début du processus de map-reduce avec {len(list_str)} documents"
-    )
+    logger_abrege.info(f"Début du processus de map-reduce avec {len(list_str)} documents")
 
     llm = ChatOpenAI(
         model=params.model,
@@ -50,27 +49,12 @@ async def do_map_reduce(
 
     for i, text in enumerate(list_str):
         num_tokens = llm.get_num_tokens(text)
-        logger_abrege.info(
-            f"Before optim : Danse la page {i+1} Nombre de tokens: {num_tokens}"
-        )
+        logger_abrege.info(f"Before optim : Danse la page {i + 1} Nombre de tokens: {num_tokens}")
 
-    list_str = split_texts_by_word_limit(
-        texts=list_str, max_words=int(num_tokens_limit * ratio_word_token)
-    )
+    list_str = split_texts_by_word_limit(texts=list_str, max_words=int(num_tokens_limit * ratio_word_token))
     for i, text in enumerate(list_str):
         num_tokens = llm.get_num_tokens(text)
-        logger_abrege.info(
-            f"After optim : Danse la page {i+1} Nombre de tokens: {num_tokens}"
-        )
-
-    if num_tokens > num_tokens_limit:
-        logger_abrege.error(
-            f"Limite de tokens dépassée: {num_tokens} > {num_tokens_limit}"
-        )
-        raise HTTPException(
-            status_code=500,
-            detail=f"Le texte à résumer est trop long. (environ {num_tokens} tokens alors que la limite est à {num_tokens_limit} tokens)",
-        )
+        logger_abrege.info(f"After optim : Danse la page {i + 1} Nombre de tokens: {num_tokens}")
 
     logger_abrege.info(f"Taille maximale de contexte: {num_tokens_limit} tokens")
 
@@ -81,7 +65,7 @@ async def do_map_reduce(
         logger_abrege.error(traceback.format_exc())
         raise HTTPException(
             status_code=500,
-            detail=f'{e}',
+            detail=f"{e}",
         )
 
     map_prompt = ChatPromptTemplate.from_messages([("human", params.map_prompt)])
@@ -89,9 +73,7 @@ async def do_map_reduce(
     map_chain = map_prompt | llm | StrOutputParser()
 
     try:
-        reduce_template = params.reduce_prompt.format(
-            language=params.language, docs="{docs}"
-        )
+        reduce_template = params.reduce_prompt.format(language=params.language, docs="{docs}")
     except Exception as e:
         logger_abrege.error(traceback.format_exc())
         raise HTTPException(
@@ -129,9 +111,7 @@ async def do_map_reduce(
 
     # Here we generate a summary, given a document
     async def generate_summary(state: SummaryState):
-        logger_abrege.debug(
-            f"Génération du résumé pour un document de {len(state['content'])} caractères"
-        )
+        logger_abrege.debug(f"Génération du résumé pour un document de {len(state['content'])} caractères")
         response = await map_chain.ainvoke(state["content"])
         logger_abrege.debug("Résumé généré avec succès")
         return {"summaries": [response]}
@@ -142,26 +122,19 @@ async def do_map_reduce(
         # We will return a list of `Send` objects
         # Each `Send` object consists of the name of a node in the graph
         # as well as the state to send to that node
-        return [
-            Send("generate_summary", {"content": content})
-            for content in state["contents"]
-        ]
+        return [Send("generate_summary", {"content": content}) for content in state["contents"]]
 
     def collect_summaries(state: OverallState):
-        return {
-            "collapsed_summaries": [Document(summary) for summary in state["summaries"]]
-        }
+        return {"collapsed_summaries": [Document(summary) for summary in state["summaries"]]}
 
     # Add node to collapse summaries
     async def collapse_summaries(state: OverallState):
         logger_abrege.info(f"Collapse des {len(state['collapsed_summaries'])} résumés")
-        doc_lists = split_list_of_docs(
-            state["collapsed_summaries"], length_function, num_tokens_limit
-        )
+        doc_lists = split_list_of_docs(state["collapsed_summaries"], length_function, num_tokens_limit)
         logger_abrege.info(f"Résumés divisés en {len(doc_lists)} groupes")
         results = []
         for i, doc_list in enumerate(doc_lists):
-            logger_abrege.debug(f"Traitement du groupe {i+1}/{len(doc_lists)}")
+            logger_abrege.debug(f"Traitement du groupe {i + 1}/{len(doc_lists)}")
             results.append(await acollapse_docs(doc_list, reduce_chain.ainvoke))
         logger_abrege.info("Collapse des résumés terminé")
         return {"collapsed_summaries": results}
@@ -202,10 +175,7 @@ async def do_map_reduce(
     try:
         nb_call = 0
         logger_abrege.info("Démarrage de l'exécution du graphe")
-        async for step in app.astream(
-            {"contents": list_str},
-            {"recursion_limit": recursion_limit}, debug=logger_abrege.level == logging.DEBUG
-        ):
+        async for step in app.astream({"contents": list_str}, {"recursion_limit": recursion_limit}, debug=logger_abrege.level == logging.DEBUG):
             nb_call += 1
             logger_abrege.debug(f"Étape {nb_call} du graphe exécutée")
     except openai.InternalServerError as e:
@@ -216,23 +186,17 @@ async def do_map_reduce(
         )
     except openai.RateLimitError as e:
         logger_abrege.error(traceback.format_exc())
-        logger_abrege.error(
-            f"Erreur de limite de taux OpenAI: {e}\n{traceback.format_exc()}"
-        )
+        logger_abrege.error(f"Erreur de limite de taux OpenAI: {e}\n{traceback.format_exc()}")
         raise HTTPException(
             status_code=429,
             detail="Surcharge du LLM",
         )
 
     elapsed = perf_counter() - deb
-    logger_abrege.info(
-        f"Processus de map-reduce terminé en {elapsed:.2f} secondes avec {nb_call} appels"
-    )
+    logger_abrege.info(f"Processus de map-reduce terminé en {elapsed:.2f} secondes avec {nb_call} appels")
 
     final_summary = step["generate_final_summary"]["final_summary"]
     nb_words = len(final_summary.split())
-    logger_abrege.info(
-        f"Résumé final généré avec {len(final_summary)} caractères - nb words {nb_words}"
-    )
+    logger_abrege.info(f"Résumé final généré avec {len(final_summary)} caractères - nb words {nb_words}")
 
     return SummaryResponse(summary=final_summary, nb_call=nb_call, time=elapsed, nb_words=nb_words)
