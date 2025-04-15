@@ -1,8 +1,28 @@
 import re
 import os
-from fastapi import FastAPI
+import asyncio
+import traceback
+from fastapi import FastAPI, Request, JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from .logger import logger_abrege
+
+
+class CatchExceptionsMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        try:
+            response = await asyncio.wait_for(call_next(request), timeout=40)
+            return response
+        except asyncio.TimeoutError as e:
+            logger_abrege.error(f"{e}")
+            return JSONResponse(status_code=504, content={"detail": "L'application ne répond pas"})
+            # Il ne faut pas utiliser de HTTPException ici
+        except Exception as e:
+            error_message = f"Erreur capturée au niveau du middleware : {e}\n{traceback.format_exc()}\n--------"
+            logger_abrege.error(error_message)
+            return JSONResponse(
+                status_code=500, content={"detail": "Une erreur interne est survenue."}
+            )  # Il ne faut pas utiliser de HTTPException ici
 
 
 def set_cors(app: FastAPI, origins=("http://localhost", "http://localhost:8000")):
@@ -29,4 +49,6 @@ def set_cors(app: FastAPI, origins=("http://localhost", "http://localhost:8000")
                 allow_methods=["*"],
                 allow_headers=["*"],
             )
+    app.add_middleware(CatchExceptionsMiddleware)
+    # CatchExceptionsMiddleware doit être ajouté APRES CORSMiddlewar
     return app

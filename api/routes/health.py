@@ -1,5 +1,6 @@
 from fastapi import APIRouter
-from typing import Tuple, Union
+from typing import Union
+import traceback
 from api.schemas.health import Health, HealthError
 from api import __version__, __name__
 import datetime
@@ -9,6 +10,7 @@ from api.clients.openai import client
 from ..clients import client_marker
 
 from api.config.paddle import Settings
+from api.utils.logger import logger_abrege
 
 settings = Settings()
 
@@ -20,11 +22,12 @@ up_time = datetime.datetime.now().isoformat()
 def get_marker_api_health() -> Union[Health, HealthError]:
     service_name = "marker_api"
     try:
+        logger_abrege.debug("Check if marker-api is available")
         health_marker = client_marker.check_health()
-        health = Health(name=service_name, version="unknow", up_time=up_time,
-                        extras=health_marker.model_dump(), status="healthy")
+        health = Health(name=service_name, version="unknow", up_time=up_time, extras=health_marker.model_dump(), status="healthy")
         return health
     except Exception as e:
+        logger_abrege.error(f"{e} - {traceback.format_exc()}")
         error = HealthError(name=service_name, error=str(e), code_status=500)
         return error
 
@@ -32,13 +35,14 @@ def get_marker_api_health() -> Union[Health, HealthError]:
 def get_llm_health() -> Union[Health, HealthError]:
     service_name = "llm"
     try:
+        logger_abrege.debug("Check if llm is available")
         dependencies = []
         for model in client.models.list():
-            health = Health(name=model.id, version=client._version,
-                            up_time=up_time, status="healthy")
+            health = Health(name=model.id, version=client._version, up_time=up_time, status="healthy")
             dependencies.append(health)
         return Health(name=service_name, version=client._version, up_time=up_time, status="healthy", dependencies=dependencies)
     except Exception as e:
+        logger_abrege.error(f"{e} - {traceback.format_exc()}")
         error = HealthError(name=service_name, error=str(e), code_status=500)
         return error
 
@@ -49,6 +53,7 @@ def get_paddle_ocr_health() -> Union[Health, HealthError]:
         url=settings.PADDLE_OCR_URL,
     )
     if res.status_code == 200:
+        logger_abrege.debug("Check Paddle")
         health = Health(
             name=service_name,
             version="",
@@ -56,6 +61,7 @@ def get_paddle_ocr_health() -> Union[Health, HealthError]:
         )
         return health
     else:
+        logger_abrege.error("Paddle not available")
         error = HealthError(name=service_name, error="", code_status=500)
 
         return error

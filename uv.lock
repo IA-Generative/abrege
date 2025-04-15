@@ -51,6 +51,9 @@ frontend = [
     { name = "streamlit" },
     { name = "streamlit-dsfr" },
 ]
+test = [
+    { name = "ruff" },
+]
 version = [
     { name = "commitizen" },
 ]
@@ -91,6 +94,7 @@ frontend = [
     { name = "streamlit", specifier = ">=1.43.2" },
     { name = "streamlit-dsfr", specifier = ">=0.0.15" },
 ]
+test = [{ name = "ruff", specifier = ">=0.11.2" }]
 version = [{ name = "commitizen", specifier = ">=4.4.1" }]
 
 [[package]]
