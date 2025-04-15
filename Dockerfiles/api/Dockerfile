@@ -7,7 +7,7 @@ ENV NLTK_DATA /app/nltk_data
 WORKDIR /app
 COPY pyproject.toml /app/pyproject.toml
 COPY uv.lock /app/uv.lock
-ENV UV_CACHE_DIR=/tmp/.cache
+ENV UV_CACHE_DIR=/app/.cache
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV POETRY_VIRTUALENVS_CREATE=false
