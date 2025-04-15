@@ -82,7 +82,7 @@ async def healthcheck():
     dependencies.append(health_marker_api)
     if not isinstance(health_marker_api, Health):
         status = "unhealthy"
-
+    logger_abrege.debug("Health avalaible")
     return Health(
         name=__name__, version=__version__, up_time=datetime.datetime.now().isoformat(), extras={}, status=status, dependencies=dependencies
     )
