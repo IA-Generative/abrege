@@ -1,3 +1,4 @@
+import os
 import operator
 from time import perf_counter
 import logging
@@ -26,6 +27,12 @@ from api.schemas.response import SummaryResponse
 from api.utils.text import split_texts_by_word_limit
 from api.utils.logger import logger_abrege
 import nltk
+
+nltk_data_dir = os.environ.get("NLTK_DATA", "/app/.cache/nltk_data")
+nltk.download("averaged_perceptron_tagger_eng", download_dir=nltk_data_dir)
+nltk.download("punkt_tab", download_dir=nltk_data_dir)
+
+nltk.data.path.append(nltk_data_dir)
 
 
 async def do_map_reduce(
