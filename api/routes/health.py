@@ -7,7 +7,6 @@ import datetime
 import requests
 
 from api.clients.openai import client
-from ..clients import client_marker
 
 from api.config.paddle import Settings
 from api.utils.logger import logger_abrege
@@ -17,19 +16,6 @@ settings = Settings()
 
 router = APIRouter(tags=["Health"])
 up_time = datetime.datetime.now().isoformat()
-
-
-def get_marker_api_health() -> Union[Health, HealthError]:
-    service_name = "marker_api"
-    try:
-        logger_abrege.debug("Check if marker-api is available")
-        health_marker = client_marker.check_health()
-        health = Health(name=service_name, version="unknow", up_time=up_time, extras=health_marker.model_dump(), status="healthy")
-        return health
-    except Exception as e:
-        logger_abrege.error(f"{e} - {traceback.format_exc()}")
-        error = HealthError(name=service_name, error=str(e), code_status=500)
-        return error
 
 
 def get_llm_health() -> Union[Health, HealthError]:
@@ -78,11 +64,6 @@ async def healthcheck():
     health_paddle_api = get_paddle_ocr_health()
     if not isinstance(health_paddle_api, Health):
         status = "unhealthy"
-    health_marker_api = get_marker_api_health()
-    dependencies.append(health_marker_api)
-    if not isinstance(health_marker_api, Health):
-        status = "unhealthy"
+
     logger_abrege.debug("Health avalaible")
-    return Health(
-        name=__name__, version=__version__, up_time=datetime.datetime.now().isoformat(), extras={}, status=status, dependencies=dependencies
-    )
+    return Health(name=__name__, version=__version__, up_time=up_time, extras={}, status=status, dependencies=dependencies)
