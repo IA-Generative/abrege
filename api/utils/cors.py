@@ -50,6 +50,6 @@ def set_cors(app: FastAPI, origins=("http://localhost", "http://localhost:8000")
                 allow_methods=["*"],
                 allow_headers=["*"],
             )
-    app.add_middleware(CatchExceptionsMiddleware)
+    # app.add_middleware(CatchExceptionsMiddleware)
     # CatchExceptionsMiddleware doit être ajouté APRES CORSMiddlewar
     return app
