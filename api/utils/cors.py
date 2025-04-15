@@ -2,9 +2,10 @@ import re
 import os
 import asyncio
 import traceback
-from fastapi import FastAPI, Request, JSONResponse
+from fastapi import FastAPI, Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from .logger import logger_abrege
 
 
