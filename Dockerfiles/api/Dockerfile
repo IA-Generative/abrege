@@ -14,7 +14,7 @@ ENV POETRY_VIRTUALENVS_CREATE=false
 ENV AUTO_DOWNLOAD_NLTK=false
 
 RUN uv sync --no-cache --group abrege-api
-RUN uv run python -m nltk.downloader -d /app/.cache/nltk_data all
+RUN uv run python -m nltk.downloader -d /app/.cache/nltk_data averaged_perceptron_tagger_eng punkt_tab
 
 COPY api /app/api
 ENV PYTHONPATH=PYTHONPATH:/app/api
