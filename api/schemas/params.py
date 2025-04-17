@@ -20,7 +20,7 @@ settings = OpenAISettings()
 
 class ParamsSummarize(BaseModel):
     method: MethodType | None = "map_reduce"
-    model: str = settings.DEFAULT_MODEL_NAME
+    model: str = settings.OPENAI_API_MODEL
     context_size: int | None = 10_000
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0.
     language: str | None = "French"

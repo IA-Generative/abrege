@@ -5,4 +5,4 @@ from .base import Base
 class OpenAISettings(Base):
     OPENAI_API_BASE: str
     OPENAI_API_KEY: str
-    DEFAULT_MODEL_NAME: Optional[str] = "gemma3"
+    OPENAI_API_MODEL: Optional[str] = "gemma3"
