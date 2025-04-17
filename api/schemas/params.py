@@ -1,6 +1,6 @@
 from typing import Literal, Annotated
 import json
-
+from api.config.openai import OpenAISettings
 from pydantic import BaseModel, model_validator
 from fastapi import Query
 
@@ -15,10 +15,12 @@ Voici une série de résumés:
 Rassemblez ces éléments et faites-en un résumé final et consolidé dans {language} . Rédigez uniquement en {language}.
 """
 
+settings = OpenAISettings()
+
 
 class ParamsSummarize(BaseModel):
     method: MethodType | None = "map_reduce"
-    model: str = "gemma3"
+    model: str = settings.DEFAULT_MODEL_NAME
     context_size: int | None = 10_000
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0.
     language: str | None = "French"
