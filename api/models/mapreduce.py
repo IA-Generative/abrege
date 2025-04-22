@@ -159,7 +159,7 @@ async def do_map_reduce(
 
     try:
         nb_call = 0
-        async for step in app.astream(
+        for step in app.stream(
             # {"contents": [doc.page_content for doc in split_docs]},
             {"contents": list_str},
             {"recursion_limit": recursion_limit},
@@ -180,9 +180,4 @@ async def do_map_reduce(
             detail="Surcharge du LLM",
         )
 
-
-    elapsed = perf_counter() - deb
-
-    final_summary = step["generate_final_summary"]["final_summary"]
-
-    return SummaryResponse(summary=final_summary, nb_call=nb_call, time=elapsed)
+    return SummaryResponse(summary=step["generate_final_summary"]["final_summary"], nb_call=nb_call, time=perf_counter() - deb)
