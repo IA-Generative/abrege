@@ -56,7 +56,7 @@ def parse_files(
             docs = loader.load()
         else:
             loader = OCRPdfLoader(tmp_file.name)
-            docs = loader.load(mode=pdf_mode_ocr, limit_pages_ocr=10)
+            docs = loader.load(mode=pdf_mode_ocr, limit_pages_ocr=limit_pages_ocr)
             if docs is None:
                 raise HTTPException(
                     status_code=500,
