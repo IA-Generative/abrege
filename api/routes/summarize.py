@@ -3,6 +3,7 @@ from time import perf_counter
 import logging
 import json
 import os
+import sys
 
 from utils.url_parser import url_scrapper
 from utils.pdf_handler import ModeOCR
@@ -23,19 +24,40 @@ from fastapi.encoders import jsonable_encoder
 from fastapi import FastAPI, File, Body, UploadFile, Request
 from pydantic import BaseModel, model_validator
 from fastapi.responses import HTMLResponse
+from utils.url_parser import is_url_process_available, get_content_type, download_content_to_tempfile
 
 client = OpenAI(api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE)
+model_list = [ model.id for model in  client.models.list()]
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
+
+# Supprimer les handlers existants (au cas où tu recharges le module, par exemple)
+if logger.hasHandlers():
+    logger.handlers.clear()
+
+# Handler pour la sortie standard (console)
+stream_handler = logging.StreamHandler(sys.stdout)
+stream_handler.setLevel(logging.DEBUG)
+
+# Format du log
+formatter = logging.Formatter(
+    "[%(asctime)s] [%(levelname)s] %(name)s - %(message)s", "%Y-%m-%d %H:%M:%S"
+)
+stream_handler.setFormatter(formatter)
+
+# Ajout du handler au logger
+logger.addHandler(stream_handler)
 
 try:
     models_available = [model.id for model in client.models.list().data]
 except APIConnectionError as e:
     models_available = None
-    logging.error(f"Unable to access models, connection problems. {repr(e)}")
+    logger.error(f"Unable to access models, connection problems. {repr(e)}")
 
 
 if "OPENAI_API_MODEL" in os.environ and models_available is not None:
     if os.environ["OPENAI_API_MODEL"] not in models_available:
-        logging.error(f"OPENAI_API_MODEL={os.environ['OPENAI_API_MODEL']} is not a available model. Available models are {models_available}")
+        logger.error(f"OPENAI_API_MODEL={os.environ['OPENAI_API_MODEL']} is not a available model. Available models are {models_available}")
 
 deprecated_router = APIRouter()
 router = APIRouter()
@@ -46,7 +68,9 @@ DEFAULT_CONTEXT_SIZE = ParamsSummarize().context_size
 DEFAULT_MAP_PROMPT = ParamsSummarize().map_prompt
 DEFAULT_REDUCE_PROMPT = ParamsSummarize().reduce_prompt
 
-LIMIT_OCR_PAGES = 2
+logger.debug(model_list)
+assert DEFAULT_MODEL in model_list, f"{DEFAULT_MODEL} not found"
+LIMIT_OCR_PAGES = 200
 
 class UrlData(ParamsSummarize):
     url: str
@@ -69,9 +93,27 @@ class DocData(ParamsSummarize):
 @router.post("/url")
 async def summarize_url(urlData: UrlData) -> SummaryResponse:
     url = urlData.url
-    data = url_scrapper(url=url)
-    docs = [doc.page_content for doc in data]
-    return await do_map_reduce(docs, params=urlData)
+    
+    content_type = await get_content_type(url=url)
+    logger.info(f"url: {url} is on process (content type {content_type})")
+    is_direct_processable = is_url_process_available(content_type=content_type)
+    is_pdf_processable = is_url_process_available(content_type=content_type, allow_content_types=['application/pdf'])
+    if is_direct_processable:
+        logger.debug(f"url: {url} parsable directly")
+        data = url_scrapper(url=url)
+        docs = [doc.page_content for doc in data]
+        return await do_map_reduce(docs, params=urlData)
+
+    if is_pdf_processable:
+        logger.debug(f"url: {url}  parsable as pdf with ocr (that use summarize_doc)")
+        file = await download_content_to_tempfile(url=url, suffix=".pdf", content_type="application/pdf")
+        tmp_url = urlData.model_dump()
+        del tmp_url['url']
+        tmp_url['pdf_mode_ocr'] = "full_ocr"
+        docData = DocData(**tmp_url)
+        return await summarize_doc(docData=docData,file=file)
+    
+    return HTTPException(status_code=500, detail=f'url: {url} is not available')
 
 
 @deprecated_router.get("/url", deprecated=True)
