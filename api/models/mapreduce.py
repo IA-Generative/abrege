@@ -159,7 +159,7 @@ async def do_map_reduce(
 
     try:
         nb_call = 0
-        for step in app.stream(
+        for step in await app.astream(
             # {"contents": [doc.page_content for doc in split_docs]},
             {"contents": list_str},
             {"recursion_limit": recursion_limit},
