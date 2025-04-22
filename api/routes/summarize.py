@@ -70,7 +70,7 @@ DEFAULT_REDUCE_PROMPT = ParamsSummarize().reduce_prompt
 
 logger.debug(model_list)
 assert DEFAULT_MODEL in model_list, f"{DEFAULT_MODEL} not found"
-LIMIT_OCR_PAGES = 200
+LIMIT_OCR_PAGES = os.environ.get('LIMIT_OCR_PAGES', 20)
 
 class UrlData(ParamsSummarize):
     url: str
@@ -156,7 +156,10 @@ async def summarize_doc(docData: DocData = Body(...), file : UploadFile = File(.
     pdf_mode_ocr = docData.pdf_mode_ocr or "text_and_ocr"
     docs = parse_files(file=file, pdf_mode_ocr=pdf_mode_ocr, limit_pages_ocr=LIMIT_OCR_PAGES)
 
-    return await do_map_reduce(docs, params=docData)
+    result = await do_map_reduce(docs, params=docData)
+    logger.debug(result)
+
+    return result
 
 @deprecated_router.post("/doc", deprecated=True)
 async def old_summarize_doc(params: Annotated[DocData, Query()], file : UploadFile) -> SummaryResponse:
