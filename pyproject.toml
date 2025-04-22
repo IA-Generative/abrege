@@ -6,6 +6,8 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "pip>=25.0.1",
+    "requests>=2.32.3",
+    "toml>=0.10.2",
 ]
 
 [dependency-groups]
@@ -39,9 +41,13 @@ abrege-api = [
     "langchain[openai]>=0.3.22",
     "langgraph>=0.3.21",
     "langchain-community>=0.3.20",
+    "httpx>=0.28.1",
 ]
 version = [
     "commitizen>=4.4.1",
+]
+tests = [
+    "pytest>=8.3.5",
 ]
 
 [tool.commitizen]
