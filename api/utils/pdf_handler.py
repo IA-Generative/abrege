@@ -44,7 +44,7 @@ def get_texts_from_images_paddle(list_image_pil: list) -> list[str]:
 
         try:
             res = requests.post(
-                url=os.environ["PADDLE_OCR_URL"],
+                url=f"{os.environ["PADDLE_OCR_URL"]}?max_height=1500&grayscale=true&return_image=false,
                 files=files,
                 headers={"Authorization": "Basic " + os.environ["PADDLE_OCR_TOKEN"]},
             )
