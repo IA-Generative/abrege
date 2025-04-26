@@ -1,9 +1,17 @@
 from typing import Union
-from fastapi import APIRouter, status
-from api.schemas.content import UrlContent, TextContent
-from src.schemas.content import URLModel, TextModel
-from src.schemas.task import task_table, TaskModel, TaskForm
+import json
 from datetime import datetime
+
+from fastapi import APIRouter, status, HTTPException
+
+from api.schemas.content import UrlContent, TextContent
+from api.clients import celery_app
+from api.utils.url import check_url
+
+from src.schemas.content import URLModel, TextModel
+from src.schemas.task import task_table, TaskModel, TaskForm, TaskStatus
+from src.logger.logger import logger
+
 
 router = APIRouter(tags=["Text"])
 
@@ -11,14 +19,36 @@ router = APIRouter(tags=["Text"])
 @router.post("/content/{user_id}", status_code=status.HTTP_201_CREATED, response_model=TaskModel)
 async def summarize_content(user_id: str, content: Union[UrlContent, TextContent]):
     if isinstance(content, UrlContent):
-        model_to_send = URLModel(created_at=int(datetime.now().timestamp()), extras=content.extras, url=content.url)
+        model_to_send = URLModel(
+            created_at=int(datetime.now().timestamp()),
+            extras=content.extras,
+            url=content.url,
+        )
+        if not check_url(url=model_to_send.url):
+            raise HTTPException(status_code=500, detail=f"url {model_to_send.url} is not valid")
 
-    if isinstance(content, TextModel):
-        model_to_send = URLModel(created_at=int(datetime.now().timestamp()), extras=content.extras, text=content.text)
+    elif isinstance(content, TextContent):
+        model_to_send = TextModel(
+            created_at=int(datetime.now().timestamp()),
+            extras=content.extras,
+            text=content.text,
+        )
+    else:
+        raise HTTPException(status_code=500, detail=f" {content} is not available")
 
     model_to_send.extras = model_to_send.extras if model_to_send.extras is not None else {}
     model_to_send.extras["prompt"] = content.prompt
 
-    task = task_table.insert_new_task(user_id=user_id, form_data=TaskForm(type="summary", status=None, content=model_to_send))
+    task = task_table.insert_new_task(
+        user_id=user_id,
+        form_data=TaskForm(type="summary", status=TaskStatus.CREATED.value, content=model_to_send),
+    )
+    logger.debug({"task_id": task.id, "time": task.created_at})
+    celery_app.send_task(
+        "worker.tasks.abrege",
+        args=[json.dumps(task.model_dump())],
+        retries=2,
+        task_id=task.id,
+    )
 
     return task
