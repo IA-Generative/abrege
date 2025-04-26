@@ -5,9 +5,10 @@ from datetime import datetime
 from fastapi import APIRouter, status, HTTPException
 
 from api.schemas.content import UrlContent, TextContent
-from api.clients import celery_app
+
 from api.utils.url import check_url
 
+from src.clients import celery_app
 from src.schemas.content import URLModel, TextModel
 from src.schemas.task import task_table, TaskModel, TaskForm, TaskStatus
 from src.logger.logger import logger

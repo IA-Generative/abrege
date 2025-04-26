@@ -15,7 +15,10 @@ class URLModel(ContentModel):
 
 
 class DocumentModel(ContentModel):
-    doc_path: str
+    file_path: str
+    raw_filename: str
+    content_type: str
+    ext: str
     type: str = "document"
 
 

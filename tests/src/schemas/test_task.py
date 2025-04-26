@@ -35,10 +35,25 @@ def test_insert_new_task_content():
     user_id = "user123"
 
     content_model_url = URLModel(url="https://lll", created_at=0, extras=None)
-    content_model_doc = DocumentModel(doc_path="/add/dsdqs.txt", created_at=0, extras=None)
+    content_model_doc = DocumentModel(
+        file_path="/add/dsdqs.txt",
+        raw_filename="dada",
+        content_type="",
+        created_at=0,
+        ext="",
+        extras=None,
+    )
     content_model_text = TextModel(text="/add/dsdqs.txt", created_at=0, extras=None)
 
-    result_summary = SummaryModel(summary="bonjour", word_count=1, created_at=0, model_name="summe", model_version="1", percentage=0.0, extras=None)
+    result_summary = SummaryModel(
+        summary="bonjour",
+        word_count=1,
+        created_at=0,
+        model_name="summe",
+        model_version="1",
+        percentage=0.0,
+        extras=None,
+    )
     for content_model in [content_model_doc, content_model_url, content_model_text]:
         for result_tmp in [result_summary, None]:
             form_data = TaskForm(

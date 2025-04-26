@@ -20,30 +20,27 @@ services:
       - "6379:6379"
     restart: unless-stopped
 
-  # abrege_api:
-  #   image: abrege-api
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfiles/ocr_backend/Dockerfile
-  #   ports:
-  #   - 5000:5000
-  #   container_name: abrege-api
-  #   volumes:
-  #   - ./ocr_backend/:/app/ocr_backend/
-  #   - ./src/:/app/src/
-  #   environment:
-  #     REDIS_HOST: redis
-  #     DEV_MODE: "true"
-  #     REDIS_PORT: 6379
-  #     CELERY_APP_NAME: default
-  #     MINIO_BUCKET_NAME: test
-  #     MINIO_END_POINT: minio3:9000
-  #     MINIO_ACCESS_KEY: minioadmin
-  #     MINIO_SECRET_KEY: minioadmin
-  #     DATABASE_URL: postgresql://postgres:secret@postgres:5432/example_db
-  #   depends_on:
-  #     - redis
-  #     - minio
+  abrege_api:
+    image: abrege-api
+    build:
+      context: .
+      dockerfile: Dockerfiles/api/Dockerfile
+    ports:
+    - 8000:8000
+    container_name: abrege-api
+    environment:
+      REDIS_HOST: redis
+      DEV_MODE: "true"
+      REDIS_PORT: 6379
+      CELERY_APP_NAME: default
+      MINIO_BUCKET_NAME: test
+      MINIO_END_POINT: minio3:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      DATABASE_URL: postgresql://postgres:secret@postgres:5432/example_db
+    depends_on:
+      - redis
+      - minio
 
   db:
     image: postgres:15
