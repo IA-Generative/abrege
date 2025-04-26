@@ -2,7 +2,6 @@ from api.utils.url import check_url, is_accessible_url, is_valid_url
 
 
 def test_is_valid_url():
-
     actual = is_valid_url(url="dsqdsqd")
     assert not actual
     actual = is_valid_url(url="http://google.fr")
