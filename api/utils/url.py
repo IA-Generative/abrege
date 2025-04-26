@@ -20,11 +20,3 @@ def is_accessible_url(url: str, timeout: int = 5) -> bool:
 
 def check_url(url: str) -> bool:
     return is_valid_url(url) and is_accessible_url(url)
-
-
-# Exemple d'utilisation :
-url = "https://www.google.com"
-if check_url(url):
-    print("URL valide et accessible ✅")
-else:
-    print("URL invalide ou inaccessible ❌")
