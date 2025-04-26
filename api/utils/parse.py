@@ -1,7 +1,6 @@
 import os
 from typing import List
 import traceback
-import os
 import tempfile
 import time
 from fastapi import HTTPException, UploadFile
@@ -24,11 +23,7 @@ DOCUMENT_LOADER_DICT = {
 }
 
 
-def parse_files(
-    file: UploadFile,
-    pdf_mode_ocr: ModeOCR | None = None,
-    limit_pages_ocr=10
-) -> List[str]:
+def parse_files(file: UploadFile, pdf_mode_ocr: ModeOCR | None = None, limit_pages_ocr=10) -> List[str]:
     logger_app.debug(f"Parsing file - {file.content_type} - {file.filename}")
     if file.filename is not None:
         try:
@@ -42,8 +37,7 @@ def parse_files(
             )
 
     if extension not in DOCUMENT_LOADER_DICT:
-        logger_app.error(
-            f"Parsing file failed : extenstion nor supported  {file.filename} - {DOCUMENT_LOADER_DICT.keys()}")
+        logger_app.error(f"Parsing file failed : extenstion nor supported  {file.filename} - {DOCUMENT_LOADER_DICT.keys()}")
         raise HTTPException(
             status_code=415,
             detail=f"""Unsupported Media Type: file format not supported, file format supported are :
@@ -51,7 +45,7 @@ def parse_files(
         )
 
     if extension == ".pdf" and pdf_mode_ocr is None:
-        error_meassage = f"""for pdf files, the pdf_mode_ocr parameter must be specified"""
+        error_meassage = """for pdf files, the pdf_mode_ocr parameter must be specified"""
         logger_app.error(error_meassage)
         raise HTTPException(
             status_code=400,

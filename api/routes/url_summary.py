@@ -7,18 +7,15 @@ from api.clients.openai import models_available
 from api.utils.logger import logger_abrege
 from api.schemas.response import SummaryResponse
 
-router = APIRouter(tags=['Url'])
+router = APIRouter(tags=["Url"])
 
 
 @router.post("/url", response_model=SummaryResponse)
 async def summarize_url(urlData: UrlData):
     if urlData.model not in models_available:
-        raise HTTPException(
-            status_code=404, detail=f"{urlData.model} not Found {models_available}"
-        )
+        raise HTTPException(status_code=404, detail=f"{urlData.model} not Found {models_available}")
 
     try:
-
         data = url_scrapper(url=urlData.url)
         docs = [doc.page_content for doc in data]
 

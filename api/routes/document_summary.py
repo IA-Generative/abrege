@@ -9,16 +9,13 @@ from api.utils.logger import logger_abrege
 from api.clients.openai import models_available
 
 
-router = APIRouter(tags=['Documents'])
+router = APIRouter(tags=["Documents"])
 
 
-@router.post(
-    "/doc", response_model=SummaryResponse
-)
+@router.post("/doc", response_model=SummaryResponse)
 async def summarize_doc(
     docData: DocData = Body(...),
     file: UploadFile = File(...),
-
 ):
     if docData.model not in models_available:
         raise HTTPException(status_code=404, detail=f"Model {docData.model} not found")

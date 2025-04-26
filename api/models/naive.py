@@ -11,9 +11,7 @@ SYSTEM_PROMPT = "Vous êtes un expert en résumé. Résumez le texte ci-dessous 
 CONTEXT_LENGTH = 128_000  # For qwen
 
 
-def summarize_text(
-    text: str, model: str, client: OpenAI, params: Optional[ParamsSummarize] = None
-) -> str:
+def summarize_text(text: str, model: str, client: OpenAI, params: Optional[ParamsSummarize] = None) -> str:
     """
     Résume un texte donné en utilisant l'API OpenAI.
     """
@@ -57,8 +55,7 @@ def merge_summaries(
         for i in range(0, len(summaries), 2):
             if i + 1 < len(summaries):
                 combined_text = f"Résumé 1 : {summaries[i]}\nRésumé 2 : {summaries[i + 1]}"
-                new_summary = summarize_text(
-                    combined_text, model, client, params=params)
+                new_summary = summarize_text(combined_text, model, client, params=params)
                 new_summaries.append(new_summary)
                 nb_call += 1
             else:
@@ -110,6 +107,5 @@ def process_documents(
     logger_app.debug(f"Total words {nb_words}")
     logger_app.debug(f"Partial summaries: {len(partial_summaries)} - {time.time() - t}")
     nb_call_llm = len(partial_summaries)
-    final_summary, nb_call_llm_merge = merge_summaries(
-        partial_summaries, model, client, params=params)
+    final_summary, nb_call_llm_merge = merge_summaries(partial_summaries, model, client, params=params)
     return {"summary": final_summary, "nb_call": nb_call_llm + nb_call_llm_merge}

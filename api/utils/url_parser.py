@@ -16,7 +16,7 @@ def url_scrapper(url) -> List[Document]:
     loader = UnstructuredURLLoader(urls=[url])
     try:
         return loader.load()
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=500,
             detail=f"""Erreur lors de la lecture de l'url {url}""",

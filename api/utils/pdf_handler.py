@@ -1,4 +1,3 @@
-
 import time
 import re
 import os
@@ -16,6 +15,7 @@ from langchain_core.documents import Document
 
 from api.utils.logger import logger_abrege as logger_app
 from api.config.paddle import Settings
+
 settings = Settings()
 
 
@@ -62,8 +62,8 @@ def get_ocr_from_iamge(image_pil, metadata=None) -> str:
 
 def process_images_in_parallel(list_image_pil: List[Image.Image], workers: int = min(50, (os.cpu_count() or 1) * 5)) -> list[str]:
     results = []
-    logger_app.debug(f'Taille of images {list_image_pil}')
-    logger_app.debug(79*'*')
+    logger_app.debug(f"Taille of images {list_image_pil}")
+    logger_app.debug(79 * "*")
     t = time.time()
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
         futures = [executor.submit(get_ocr_from_iamge, img) for img in list_image_pil]
@@ -74,11 +74,9 @@ def process_images_in_parallel(list_image_pil: List[Image.Image], workers: int =
                 results.extend(response)
             except Exception as e:
                 print(f"Une exception s'est produite : {e}")
-                logger_app.error(
-                    f"Error during OCR processing: {e} - {traceback.format_exc()}")
+                logger_app.error(f"Error during OCR processing: {e} - {traceback.format_exc()}")
 
-    logger_app.debug(
-        f"Time for all  OCR: {time.time() - t} - {len(list_image_pil)} images")
+    logger_app.debug(f"Time for all  OCR: {time.time() - t} - {len(list_image_pil)} images")
     return results
 
 
@@ -99,22 +97,18 @@ class OCRPdfLoader:
     @staticmethod
     def retrieve_image(page: pymupdf.Page) -> Image:
         image = page.get_pixmap(dpi=250)
-        image_pil = Image.frombytes(
-            "RGB", [image.width, image.height], image.samples
-        )
+        image_pil = Image.frombytes("RGB", [image.width, image.height], image.samples)
         return image_pil
 
-    def load(
-        self, mode: ModeOCR = "text_and_ocr"
-    ) -> list[Document]:
+    def load(self, mode: ModeOCR = "text_and_ocr") -> list[Document]:
         assert mode != "full_text"
         logger_app.debug(f"Mode {mode}")
         result = []
         image_for_ocr = []
         with pymupdf.open(self.path) as pdf_document:
             t = time.time()
-            logger_app.debug(f'Number of page {pdf_document.page_count}')
-            logger_app.debug(79*'-')
+            logger_app.debug(f"Number of page {pdf_document.page_count}")
+            logger_app.debug(79 * "-")
             for page_num in range(pdf_document.page_count):
                 page = pdf_document.load_page(page_num)
                 if mode == ModeOCR.FULL_OCR.value:
@@ -129,7 +123,6 @@ class OCRPdfLoader:
                     else:
                         image_pil = self.retrieve_image(page)
                         image_for_ocr.append(image_pil)
-            logger_app.debug(f'time to retrieve images: {time.time() - t}')
-            result.extend([Document(page_content=text)
-                          for text in process_images_in_parallel(image_for_ocr, 2)])
+            logger_app.debug(f"time to retrieve images: {time.time() - t}")
+            result.extend([Document(page_content=text) for text in process_images_in_parallel(image_for_ocr, 2)])
         return result

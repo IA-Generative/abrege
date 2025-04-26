@@ -14,7 +14,7 @@ services:
   #       target: /app
 
   frontend:
-    build: 
+    build:
       dockerfile: Dockerfiles/frontend/Dockerfile
       context: ./
     environment:
@@ -27,7 +27,7 @@ services:
     #    target: /app
 
   abrege-api:
-    build: 
+    build:
       dockerfile: Dockerfiles/api/Dockerfile
       target: base
       context: ./

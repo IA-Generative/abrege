@@ -36,7 +36,7 @@ test-dev:
 
 build-prod: network
 	$(COMPOSE) -f docker-compose.yaml build $(DC_BUILD_ARGS)
-	
+
 exec-prod:
 	$(COMPOSE) -f docker-compose.yaml up $(DC_UP_ARGS)
 

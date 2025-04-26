@@ -9,13 +9,11 @@ from api.schemas.response import SummaryResponse
 from api.utils.logger import logger_abrege
 
 
-router = APIRouter(tags=['Text'])
+router = APIRouter(tags=["Text"])
 
 
 @router.post("/text", response_model=SummaryResponse)
-async def summarize_txt(
-    textData: TextData
-):
+async def summarize_txt(textData: TextData):
     if textData.model not in models_available:
         raise HTTPException(status_code=404, detail=f"Model {textData.model} not found")
     try:

@@ -81,7 +81,7 @@ async def do_map_reduce(
 
     try:
         reduce_template = params.reduce_prompt.format(language=params.language, docs="{docs}")
-    except Exception as e:
+    except Exception:
         logger_abrege.error(traceback.format_exc())
         raise HTTPException(
             status_code=500,

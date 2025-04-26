@@ -4,8 +4,7 @@ from api.config.openai import OpenAISettings
 from pydantic import BaseModel, model_validator
 from fastapi import Query
 
-MethodType = Literal["map_reduce", "refine", "text_rank",
-                     "k-means", "stuff"]  # "text_rank2", "k-means2"
+MethodType = Literal["map_reduce", "refine", "text_rank", "k-means", "stuff"]  # "text_rank2", "k-means2"
 ChunkType = Literal["sentences", "chunks"]
 
 MAP_PROMPT = "Rédigez un résumé concis des éléments suivants :\\n\\n{context}"
@@ -22,7 +21,7 @@ class ParamsSummarize(BaseModel):
     method: MethodType | None = "map_reduce"
     model: str = settings.OPENAI_API_MODEL
     context_size: int | None = 10_000
-    temperature: Annotated[float, Query(ge=0, le=1.0)] = 0.
+    temperature: Annotated[float, Query(ge=0, le=1.0)] = 0.0
     language: str | None = "French"
     size: int | None = 4_000
     # summarize_template: str | None = (None,)
@@ -46,7 +45,7 @@ class TextData(ParamsSummarize):
 class DocData(ParamsSummarize):
     pdf_mode_ocr: str | None = "text_and_ocr"
 
-    @model_validator(mode='before')
+    @model_validator(mode="before")
     @classmethod
     def validate_to_json(cls, value):
         if isinstance(value, str):

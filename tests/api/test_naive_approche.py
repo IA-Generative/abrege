@@ -5,8 +5,7 @@ from api.models.naive import summarize_text, merge_summaries, process_documents
 
 class TestSummarizer(unittest.TestCase):
     def setUp(self):
-        self.client = OpenAI(api_key="",
-                             base_url="")
+        self.client = OpenAI(api_key="", base_url="")
         self.model = "chat-leger"
 
     def test_summarize_text(self):

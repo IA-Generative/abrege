@@ -46,7 +46,7 @@ jobs:
 #        run: |
 #          echo "One or more files in the docs folder has changed."
 #          echo "List all the files that have changed: ${{ steps.changed-files-specific.outputs.all_changed_files }}"
- 
+
   test:
     name: ✅ Test with pytest
     if: 0
@@ -64,7 +64,7 @@ jobs:
         python-version: "3.11.9"
     - name: Install dependencies
       run: |
-        export 
+        export
         python -m pip install --upgrade pip
         pip install flake8 pytest poetry
         cd fastapi
@@ -113,8 +113,8 @@ jobs:
           - image-name: ghcr.io/ia-generative/abrege-front
             dockerfile: Dockerfiles/frontend/Dockerfile
             context: .
-            target: 
-    
+            target:
+
     steps:
       -
         uses: actions/checkout@v3
@@ -179,7 +179,7 @@ jobs:
 #     steps:
 #       - name: Checkout repository
 #         uses: actions/checkout@v4
-      
+
 #       - uses: azure/setup-kubectl@v3
 
 #       - uses: azure/k8s-set-context@v3
@@ -246,7 +246,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
+
       - uses: azure/setup-kubectl@v3
 
       - uses: azure/k8s-set-context@v3
@@ -260,7 +260,7 @@ jobs:
           secret-name: secret-abrege
           secret-type: 'generic'
           string-data: ${{ secrets.APP_SECRETS }}
-  
+
       - name: CORS to * for staging
         if: github.ref_name == 'staging'
         run: |
@@ -354,7 +354,7 @@ jobs:
   #         method: service-account
   #         k8s-url: https://${{ secrets.KUBERNETES_URL }}
   #         k8s-secret: ${{ secrets.KUBERNETES_TOKEN }}
-          
+
   #     - name: Checkout source code
   #       uses: actions/checkout@v3
 
