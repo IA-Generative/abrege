@@ -9,3 +9,5 @@ notebook/*
 *.log
 *poetry.lock
 kubeconfig
+.coverage
+*.db
