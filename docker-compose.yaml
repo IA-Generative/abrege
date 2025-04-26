@@ -1,49 +1,66 @@
 services:
-  fastapi:
-    build:
-      dockerfile: ./fastapi/Dockerfile
-      target: prod
-      context: ./
-      # args:
-      #   - http_proxy=${http_proxy}
-      #   - https_proxy=${http_proxy}
-      #   - ${BACKEND_PORT}
-    env_file:
-      - .env
-    # environment:
-    #   - http_proxy=${http_proxy}
-    #   - https_proxy=${http_proxy}
-    #   - no_proxy=${no_proxy}
+  minio:
+    image: minio/minio:latest
+    container_name: minio_dev
     ports:
-      - "8000:8000"
-    networks:
-      - ia-foule
-
-  frontend:
-    build:
-      dockerfile: Dockerfiles/frontend/Dockerfile
-      context: ./
-    ports:
-      - "8080:8080"
+      - "9000:9000"
+      - "9001:9001"
     environment:
-      - API_BASE=abrege-api
-    networks:
-      - ia-foule
-  abrege-api:
-    build:
-      dockerfile: Dockerfiles/api/Dockerfile
-      target: base
-      context: ./
-    env_file:
-      - .env
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    command: server /data
+    restart: unless-stopped
+
+  redis:
+    image: redis:latest
+    container_name: redis_dev
     ports:
-      - "8000:8000"
+      - "6379:6379"
+    restart: unless-stopped
 
-    networks:
-      - ia-foule
+  # abrege_api:
+  #   image: abrege-api
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfiles/ocr_backend/Dockerfile
+  #   ports:
+  #   - 5000:5000
+  #   container_name: abrege-api
+  #   volumes:
+  #   - ./ocr_backend/:/app/ocr_backend/
+  #   - ./src/:/app/src/
+  #   environment:
+  #     REDIS_HOST: redis
+  #     DEV_MODE: "true"
+  #     REDIS_PORT: 6379
+  #     CELERY_APP_NAME: default
+  #     MINIO_BUCKET_NAME: test
+  #     MINIO_END_POINT: minio3:9000
+  #     MINIO_ACCESS_KEY: minioadmin
+  #     MINIO_SECRET_KEY: minioadmin
+  #     DATABASE_URL: postgresql://postgres:secret@postgres:5432/example_db
+  #   depends_on:
+  #     - redis
+  #     - minio
 
+  db:
+    image: postgres:15
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: example_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
+volumes:
+  minio_data:
+    driver: local
 
-networks:
-  ia-foule:
-    external: true
+  postgres_data:
+    driver: local
