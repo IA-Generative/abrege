@@ -111,6 +111,11 @@ runapi:
 	uv run --env-file .env python api/main.py
 #	@export $(shell grep -v '^#' .env | xargs) && uv run python api/main.py
 
+up-env:
+	docker compose up -d
+	@echo "Attente de 5 secondes pour laisser les conteneurs démarrer..."
+	sleep 5
+
 
 install-test:
 	curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -118,5 +123,5 @@ install-test:
 install-test-dep: install-test
 	uv sync --group test --group abrege-api
 
-tests: install-test-dep
+tests: install-test-dep up-env
 	export PYTHONPATH=$(PWD) && env $(shell grep -v '^#' .env.sample | xargs) uv run pytest --cov-report=term-missing --cov=./src --cov=./api tests/
