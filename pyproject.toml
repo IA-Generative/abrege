@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "celery[redis]>=5.5.2",
     "psycopg2-binary==2.9.10",
     "pydantic-settings==2.9.1",
     "python-json-logger==3.3.0",
@@ -15,9 +16,11 @@ dependencies = [
 [dependency-groups]
 
 abrege-api = [
+    "aiohttp>=3.11.18",
     "fastapi>=0.115.12",
     "python-multipart>=0.0.20",
     "requests>=2.32.3",
+    "tqdm>=4.67.1",
     "uvicorn>=0.34.2",
 ]
 version = [

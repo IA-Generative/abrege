@@ -116,7 +116,7 @@ install-test:
 	curl -LsSf https://astral.sh/uv/install.sh | sh
 
 install-test-dep: install-test
-	uv sync --group test
+	uv sync --group test --group abrege-api
 
 tests: install-test-dep
-	export PYTHONPATH=$(PWD) && env $(shell grep -v '^#' .env.sample | xargs) uv run pytest --cov=./src tests/
+	export PYTHONPATH=$(PWD) && env $(shell grep -v '^#' .env.sample | xargs) uv run pytest --cov=./src --cov=./api tests/
