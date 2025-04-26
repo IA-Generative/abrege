@@ -1,24 +1,24 @@
-import traceback
-from fastapi import APIRouter, HTTPException
-
-from api.schemas.params import TextData
-from api.models.map_reduce import do_map_reduce
-from api.clients.openai import models_available
-
-from api.schemas.response import SummaryResponse
-from api.utils.logger import logger_abrege
-
+from typing import Union
+from fastapi import APIRouter, status
+from api.schemas.content import UrlContent, TextContent
+from src.schemas.content import URLModel, TextModel
+from src.schemas.task import task_table, TaskModel, TaskForm
+from datetime import datetime
 
 router = APIRouter(tags=["Text"])
 
 
-@router.post("/text", response_model=SummaryResponse)
-async def summarize_txt(textData: TextData):
-    if textData.model not in models_available:
-        raise HTTPException(status_code=404, detail=f"Model {textData.model} not found")
-    try:
-        return await do_map_reduce([textData.text], params=textData)
+@router.post("/content/{user_id}", status_code=status.HTTP_201_CREATED, response_model=TaskModel)
+async def summarize_content(user_id: str, content: Union[UrlContent, TextContent]):
+    if isinstance(content, UrlContent):
+        model_to_send = URLModel(created_at=int(datetime.now().timestamp()), extras=content.extras, url=content.url)
 
-    except Exception as e:
-        logger_abrege.error(f"{e} - trace : {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"Error for summary text - {e}")
+    if isinstance(content, TextModel):
+        model_to_send = URLModel(created_at=int(datetime.now().timestamp()), extras=content.extras, text=content.text)
+
+    model_to_send.extras = model_to_send.extras if model_to_send.extras is not None else {}
+    model_to_send.extras["prompt"] = content.prompt
+
+    task = task_table.insert_new_task(user_id=user_id, form_data=TaskForm(type="summary", status=None, content=model_to_send))
+
+    return task
