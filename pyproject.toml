@@ -5,46 +5,24 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "pip>=25.0.1",
+    "psycopg2-binary>=2.9.10",
+    "pydantic-settings>=2.9.1",
+    "python-json-logger>=3.3.0",
+    "sqlalchemy>=2.0.40",
+    "toml>=0.10.2",
 ]
 
 [dependency-groups]
-frontend = [
-    "streamlit-dsfr>=0.0.15",
-    "streamlit>=1.43.2",
-]
+
 
 abrege-api = [
-     "langchain-openai>=0.1.7",
-    "fastapi>=0.115.11",
-    "pypdf>=5.4.0",
-    "docx2txt>=0.8",
-    "unstructured>=0.17.2",
-    "python-docx>=1.1.2",
-    "pypandoc-binary>=1.15",
-    "tenacity>=8.5.0",
-    "pymupdf>=1.25.4",
-    "uvicorn>=0.34.0",
-    "networkx>=3.4.2",
-    "scikit-learn>=1.6.1",
-    "transformers==4.40.2",
-    "tiktoken>=0.9.0",
-    "langchain-chroma>=0.1.4",
-    "chromadb>=0.5.23",
-    "pillow>=11.1.0",
-    "python-multipart>=0.0.20",
-    "python-dotenv>=1.0.1",
-    "pydantic-settings>=2.8.1",
-    "toml>=0.10.2",
-    "langchain[openai]>=0.3.22",
-    "langgraph>=0.3.21",
-    "langchain-community>=0.3.20",
-    "python-json-logger==3.3.0",
 ]
 version = [
     "commitizen>=4.4.1",
 ]
 test = [
+    "pytest>=8.3.5",
+    "pytest-cov>=6.1.1",
     "ruff>=0.11.2",
 ]
 

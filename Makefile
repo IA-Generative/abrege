@@ -110,3 +110,13 @@ down: stop-dev stop-prod
 runapi:
 	uv run --env-file .env python api/main.py
 #	@export $(shell grep -v '^#' .env | xargs) && uv run python api/main.py
+
+
+install-test:
+	curl -LsSf https://astral.sh/uv/install.sh | sh
+
+install-test-dep: install-test
+	uv sync --group test
+
+tests: install-test-dep
+	export PYTHONPATH=$(PWD) && env $(shell grep -v '^#' .env.sample | xargs) uv run pytest --cov=./src tests/
