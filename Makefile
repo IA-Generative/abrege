@@ -121,7 +121,11 @@ install-test:
 	curl -LsSf https://astral.sh/uv/install.sh | sh
 
 install-test-dep: install-test
-	uv sync --group test --group abrege-api
+	uv sync --group test --group abrege-api --group abrege-service
 
 tests: install-test-dep up-env
-	export PYTHONPATH=$(PWD) && env $(shell grep -v '^#' .env.sample | xargs) uv run pytest --cov-report=term-missing --cov=./src --cov=./api tests/
+	export PYTHONPATH=$(PWD) && env $(shell grep -v '^#' .env.sample | xargs) uv run pytest --cov-report=term-missing --cov=./src --cov=./api --cov=./abrege_service tests/
+
+clean:
+	find . -type d -name "__pycache__" -exec rm -r {} +
+	find . -type f -name "*.pyc" -delete
