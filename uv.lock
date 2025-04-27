@@ -27,11 +27,13 @@ dependencies = [
 abrege-api = [
     { name = "aiohttp" },
     { name = "fastapi" },
-    { name = "python-magic" },
     { name = "python-multipart" },
     { name = "requests" },
     { name = "tqdm" },
     { name = "uvicorn" },
+]
+abrege-service = [
+    { name = "python-magic" },
 ]
 dev = [
     { name = "ruff" },
@@ -63,12 +65,12 @@ requires-dist = [
 abrege-api = [
     { name = "aiohttp", specifier = ">=3.11.18" },
     { name = "fastapi", specifier = ">=0.115.12" },
-    { name = "python-magic", specifier = "==0.4.27" },
     { name = "python-multipart", specifier = ">=0.0.20" },
     { name = "requests", specifier = ">=2.32.3" },
     { name = "tqdm", specifier = ">=4.67.1" },
     { name = "uvicorn", specifier = ">=0.34.2" },
 ]
+abrege-service = [{ name = "python-magic", specifier = ">=0.4.27" }]
 dev = [{ name = "ruff", specifier = ">=0.8.3" }]
 test = [
     { name = "httpx", specifier = ">=0.28.1" },
