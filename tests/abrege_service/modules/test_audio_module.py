@@ -4,7 +4,7 @@ from abrege_service.modules.audio import AudioService, AudioModel
 
 
 @pytest.mark.skipif(
-    os.parth.exists("abrege_service/data/models/vosk-model-small-fr-0.22") is False,
+    os.path.exists("abrege_service/data/models/vosk-model-small-fr-0.22") is False,
     reason="Model not found",
 )
 def test_audio_service():
