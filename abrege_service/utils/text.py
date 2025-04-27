@@ -13,9 +13,9 @@ def split_texts_by_word_limit(texts: List[str], max_words: int) -> List[str]:
             chunk.append(word)
             if len(chunk) >= max_words:
                 all_chunks.append(" ".join(chunk))
-                chunk = []
+                chunk = [f"Page{i + 1}:"]
 
     if chunk:
-        all_chunks.append(f"Page{i + 1}:" + " ".join(chunk))
+        all_chunks.append(" ".join(chunk))
 
     return all_chunks
