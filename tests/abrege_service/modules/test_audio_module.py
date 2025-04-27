@@ -1,6 +1,6 @@
 import os
 import pytest
-from abrege_service.modules.audio import AudioService, AudioModel
+from abrege_service.modules.audio import AudioService, AudioModel, AudioBaseService
 
 
 @pytest.mark.skipif(
@@ -20,3 +20,21 @@ def test_audio_service():
         audio_service.transform_to_text("tests/data/audio/1.wav", content_type="audio/mpeg"),
         str,
     )
+    with pytest.raises(NotImplementedError):
+        audio_service.transform_to_text("tests/data/audio/1.wav", content_type="application/pdf")
+
+
+def test_AudioBaseService_is_available():
+    class MockAudioService(AudioBaseService):
+        def audio_to_text(self, file_path: str, **kwargs) -> str:
+            return "mocked text"
+
+        def transform_to_text(self, file_path, content_type, **kwargs):
+            return "mocked text"
+
+    mock_service = MockAudioService()
+
+    assert mock_service.is_availble("audio/mpeg") is True
+    assert mock_service.is_availble("application/pdf") is False
+    assert mock_service.audio_to_text("mocked_file_path") == "mocked text"
+    assert mock_service.transform_to_text("mocked_file_path", content_type="audio/mpeg") == "mocked text"

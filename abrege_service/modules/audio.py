@@ -6,33 +6,13 @@ from pydub import AudioSegment
 import wave
 
 from abrege_service.schemas import AUDIO_CONTENT_TYPES
+from abrege_service.schemas.audio import AudioModel
 from abrege_service.modules.base import BaseService
-from pydantic import BaseModel
 from typing import List
 
 # audio dataset : https://github.com/facebookresearch/voxpopuli
 # https://lbourdois.github.io/blog/audio/dataset_audio_fr/
 # SAMPLE https://github.com/UniData-pro/french-speech-recognition-dataset/tree/main
-
-
-class Words(BaseModel):
-    """
-    Model for words in audio processing.
-    """
-
-    word: str
-    start: float
-    end: float
-    conf: float
-
-
-class AudioModel(BaseModel):
-    """
-    Model for audio processing.
-    """
-
-    result: List[Words]
-    text: str
 
 
 def convertir_audio(chemin_entree, chemin_sortie):
@@ -69,26 +49,10 @@ class AudioService(AudioBaseService):
         self.rec = KaldiRecognizer(self.model, 16000)
         self.rec.SetWords(True)
 
-    def is_availble(self, content_type: str) -> bool:
-        """
-        Check if the content type is available for processing.
-
-        Args:
-            content_type (str): The content type to check.
-
-        Returns:
-            bool: True if the content type is available for processing, False otherwise.
-        """
-        return content_type in AUDIO_CONTENT_TYPES
-
     def audio_to_text(self, file_path: str, **kwargs) -> List[AudioModel]:
         convertir_audio(file_path, "temp.wav")
         file_path = "temp.wav"
         wf = wave.open(file_path, "rb")
-        print(f"Audio file: {file_path} - Channels: {wf.getnchannels()} - Sample Width: {wf.getsampwidth()} - Frame Rate: {wf.getframerate()}")
-
-        if wf.getnchannels() != 1 or wf.getsampwidth() != 2 or wf.getframerate() != 16000:
-            raise Exception("Audio file must be WAV format mono PCM.")
 
         rec = KaldiRecognizer(self.model, wf.getframerate())
         rec.SetWords(True)
