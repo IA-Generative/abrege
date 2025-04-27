@@ -66,6 +66,7 @@ async def summarize_doc(
             raw_filename=os.path.basename(file.filename),
             content_type=file.content_type,
             ext=extension,
+            size=file.size,
             extras=content.extras,
         )
 

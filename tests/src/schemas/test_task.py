@@ -40,6 +40,7 @@ def test_insert_new_task_content():
         raw_filename="dada",
         content_type="",
         created_at=0,
+        size=0,
         ext="",
         extras=None,
     )

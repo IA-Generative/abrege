@@ -19,6 +19,7 @@ class DocumentModel(ContentModel):
     raw_filename: str
     content_type: str
     ext: str
+    size: int
     type: str = "document"
 
 
