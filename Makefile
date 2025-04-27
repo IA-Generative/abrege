@@ -122,6 +122,9 @@ install-test:
 
 install-test-dep: install-test
 	uv sync --group test --group abrege-api --group abrege-service
+	# wget https://alphacephei.com/vosk/models/vosk-model-small-fr-0.22.zip
+    # unzip vosk-model-small-fr-0.22.zip -d abrege_service/data/models
+	# rm vosk-model-small-fr-0.22.zip
 
 tests: install-test-dep up-env
 	export PYTHONPATH=$(PWD) && env $(shell grep -v '^#' .env.sample | xargs) uv run pytest --cov-report=term-missing --cov=./src --cov=./api --cov=./abrege_service tests/

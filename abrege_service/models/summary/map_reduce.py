@@ -4,7 +4,7 @@ from time import perf_counter
 import logging
 import traceback
 from typing import Annotated, List, Literal, TypedDict
-from api.config.openai import OpenAISettings
+from abrege_service.config.openai import OpenAISettings
 from fastapi import HTTPException
 
 import openai
@@ -22,9 +22,8 @@ from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
-from api.schemas.params import ParamsSummarize
-from api.schemas.response import SummaryResponse
-from api.utils.text import split_texts_by_word_limit
+from abrege_service.schemas.params import ParamsSummarize
+from abrege_service.utils.text import split_texts_by_word_limit
 from api.utils.logger import logger_abrege
 import nltk
 
@@ -41,15 +40,17 @@ async def do_map_reduce(
     recursion_limit: int = 20,
     num_tokens_limit: int = 1226 * 300,
     ratio_word_token: float = 0.75,
-) -> SummaryResponse:
+    model: str = "gpt-3.5-turbo",
+    temperature: float = 0.0,
+) -> dict[str, str]:
     """Peut faire un GraphRecursionError si recursion_limit est trop faible"""
 
     deb = perf_counter()
     logger_abrege.info(f"Début du processus de map-reduce avec {len(list_str)} documents")
 
     llm = ChatOpenAI(
-        model=params.model,
-        temperature=params.temperature,
+        model=model,
+        temperature=temperature,
         api_key=OpenAISettings().OPENAI_API_KEY,
         base_url=OpenAISettings().OPENAI_API_BASE,
     )
@@ -182,7 +183,11 @@ async def do_map_reduce(
     try:
         nb_call = 0
         logger_abrege.info("Démarrage de l'exécution du graphe")
-        async for step in app.astream({"contents": list_str}, {"recursion_limit": recursion_limit}, debug=logger_abrege.level == logging.DEBUG):
+        async for step in app.astream(
+            {"contents": list_str},
+            {"recursion_limit": recursion_limit},
+            debug=logger_abrege.level == logging.DEBUG,
+        ):
             nb_call += 1
             logger_abrege.debug(f"Étape {nb_call} du graphe exécutée")
     except openai.InternalServerError as e:
@@ -206,4 +211,4 @@ async def do_map_reduce(
     nb_words = len(final_summary.split())
     logger_abrege.info(f"Résumé final généré avec {len(final_summary)} caractères - nb words {nb_words}")
 
-    return SummaryResponse(summary=final_summary, nb_call=nb_call, time=elapsed, nb_words=nb_words)
+    return dict(summary=final_summary, nb_call=nb_call, time=elapsed, nb_words=nb_words)
