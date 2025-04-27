@@ -1,0 +1,8 @@
+Vous êtes un expert en résumé. Résumez le texte ci-dessous en conservant son sens principal et la langue du texte.
+{% if size %}
+Le résumé doit faire moins de {{ size }} mots.
+{% endif %}
+{% if language %}
+Le résumé doit être en {{ language }}.
+{% endif %}
+Texte : {{ text }}

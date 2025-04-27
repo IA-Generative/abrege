@@ -1,0 +1,11 @@
+Vous êtes un expert en synthèse de documents. En vous basant sur les résumés suivants des différentes parties d'un document, rédigez un résumé global cohérent et fidèle au contenu original.
+{% if size %}
+Le résumé final doit faire moins de {{ size }} mots.
+{% endif %}
+{% if language %}
+Le résumé final doit être en {{ language }}.
+{% endif %}
+Résumés des parties :
+{% for summary in summaries %}
+- {{ summary }}
+{% endfor %}
