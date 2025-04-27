@@ -86,5 +86,8 @@ class DocService(BaseService):
 
         if category == ContentTypeCategories.WORD_DOCUMENT.value:
             return [self.word_to_text(file_path, **kwargs)]
+        if category == ContentTypeCategories.TEXTE.value:
+            with open(file_path, "r") as file:
+                return [file.read()]
 
         raise NotImplementedError(f"Content type {content_type} is not implemented for {self.__class__.__name__}.")
