@@ -12,3 +12,4 @@ kubeconfig
 .coverage
 *.db
 abrege_service/data/models/vosk-model-small-fr-0.22
+tests/data/*.md

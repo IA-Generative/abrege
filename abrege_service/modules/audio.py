@@ -66,6 +66,8 @@ class AudioService(AudioBaseService):
                 results.append(AudioModel.model_validate(res))
 
         final_res = json.loads(rec.FinalResult())
+        if "result" not in final_res:
+            final_res["result"] = []
         results.append(AudioModel.model_validate(final_res))
         wf.close()
 
