@@ -53,6 +53,11 @@ VIDEO_CONTENT_TYPES = [
     "video/x-msvideo",  # AVI
     "video/x-flv",  # FLV
     "video/mp4",  # MP4
+    "video/mpeg",  # MPEG
+    "video/webm",  # WEBM
+    "video/ogg",  # OGG
+    "video/3gpp",  # 3GP
+    "video/quicktime",  # MOV
 ]
 
 ALL_CONTENT_TYPES = (
