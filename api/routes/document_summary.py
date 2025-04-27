@@ -8,6 +8,7 @@ from fastapi import APIRouter, File, UploadFile, HTTPException, status, Form
 from pydantic import ValidationError
 
 from api.schemas.content import Content
+from api.utils.content_type import get_content_type
 
 from src.clients import file_connector, celery_app
 from src.logger.logger import logger
@@ -64,7 +65,7 @@ async def summarize_doc(
             file_path=saved_path,
             prompt=content.prompt,
             raw_filename=os.path.basename(file.filename),
-            content_type=file.content_type,
+            content_type=get_content_type(file),
             ext=extension,
             size=file.size,
             extras=content.extras,
