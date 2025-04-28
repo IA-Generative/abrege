@@ -8,8 +8,6 @@ from abrege_service.prompts.prompting import generate_prompt
 from src.schemas.result import SummaryModel
 from src.schemas.task import TaskModel, task_table, TaskStatus, TaskUpdateForm
 
-CONTEXT_LENGTH = 128_000  # For qwen
-
 
 def summarize_text(model: str, client: OpenAI, prompt: str, temperature: float = 0.0) -> str:
     """
@@ -38,6 +36,7 @@ def merge_summaries(
     client: OpenAI,
     size: Optional[int] = 300,
     language: Optional[str] = None,
+    tempature: Optional[float] = 0.0,
 ) -> Tuple[TaskModel, int]:
     """
     Combine récursivement les résumés en un seul.
@@ -82,7 +81,7 @@ def merge_summaries(
                     },
                 )
                 t = time.time()
-                new_summary = summarize_text(model, client, prompt)
+                new_summary = summarize_text(model, client, prompt, temperature=tempature)
                 time_merge = time.time() - t
                 previous_summaries["time"] = time_merge
                 partial_summary.extras["previous_summary"].append(previous_summaries)
@@ -102,8 +101,6 @@ def merge_summaries(
                     ),
                 )
                 logger_app.debug(f"New summary: {new_summary} - Time: {time_merge} - Call: {nb_call}")
-                print(task.result)
-                print(79 * "+")
             else:
                 new_summaries.append(summaries[i])
         summaries = new_summaries
