@@ -1,6 +1,6 @@
 import os
 import pytest
-from abrege_service.modules.video import VideoService
+from abrege_service.modules.video import VideoService, TextModel
 from abrege_service.modules.audio import AudioService
 
 
@@ -13,8 +13,11 @@ def test_video_service():
     video_service = VideoService(audio_service)
     assert video_service.is_availble("video/mp4") is True
     assert video_service.is_availble("application/pdf") is False
-    assert isinstance(video_service.video_audio_to_text("tests/data/audio/1.wav"), str)
+    for text in video_service.video_audio_to_text("tests/data/audio/1.wav"):
+        assert isinstance(text, TextModel)
     actual = video_service.transform_to_text("tests/data/video/bonjour.mp4", content_type="video/mp4")
-    assert isinstance(actual, str)
+    for text in actual:
+        assert isinstance(text, TextModel)
+
     with pytest.raises(NotImplementedError):
         video_service.transform_to_text("tests/data/video/bonjour.mp4", content_type="application/pdf")

@@ -1,20 +1,5 @@
 import os
-from datasets import load_dataset
-from evaluate import load
-from abrege_service.models.summary.naive import summarize_text
-from abrege_service.prompts.prompting import generate_prompt
-import openai
 import pytest
-
-# Chargement en streaming du sous-ensemble français
-dataset_stream = load_dataset(
-    "csebuetnlp/xlsum",
-    "french",
-    cache_dir="tests/data/text",
-    streaming=True,
-)
-
-rouge_metric = load("rouge")
 
 
 @pytest.mark.skipif(
@@ -25,6 +10,22 @@ def test_prompt_summary_process():
     """
     Test the naive process of loading a dataset in streaming mode.
     """
+    from datasets import load_dataset
+    from evaluate import load
+    from abrege_service.models.summary.naive import summarize_text
+    from abrege_service.prompts.prompting import generate_prompt
+    import openai
+
+    # Chargement en streaming du sous-ensemble français
+    dataset_stream = load_dataset(
+        "csebuetnlp/xlsum",
+        "french",
+        cache_dir="tests/data/text",
+        streaming=True,
+    )
+
+    rouge_metric = load("rouge")
+
     # Load the first batch of data
     client = openai.OpenAI(
         api_key=os.environ.get("OPENAI_API_KEY"),

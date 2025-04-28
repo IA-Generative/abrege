@@ -1,6 +1,6 @@
 import os
 import pytest
-from abrege_service.modules.audio import AudioService, AudioModel, AudioBaseService
+from abrege_service.modules.audio import AudioService, AudioModel, AudioBaseService, TextModel
 
 
 @pytest.mark.skipif(
@@ -15,11 +15,11 @@ def test_audio_service():
     assert audio_service.is_availble("application/pdf") is False
     for audio in audio_service.audio_to_text("tests/data/audio/1.wav"):
         assert isinstance(audio, AudioModel)
-
-    assert isinstance(
-        audio_service.transform_to_text("tests/data/audio/1.wav", content_type="audio/mpeg"),
-        str,
-    )
+    for item in audio_service.transform_to_text("tests/data/audio/1.wav", content_type="audio/mpeg"):
+        assert isinstance(
+            item,
+            TextModel,
+        )
     with pytest.raises(NotImplementedError):
         audio_service.transform_to_text("tests/data/audio/1.wav", content_type="application/pdf")
 
