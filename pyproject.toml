@@ -46,6 +46,7 @@ abrege-service = [
     "pydub==0.25.1",
     "pymupdf4llm==0.0.21",
     "python-magic==0.4.27",
+    "unstructured==0.17.2",
     "vosk==0.3.45",
 ]
 evaluation = [

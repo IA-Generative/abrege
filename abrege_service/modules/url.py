@@ -5,6 +5,9 @@ from abrege_service.modules.audio import AudioBaseService
 from abrege_service.modules.doc import DocService
 from abrege_service.modules.video import VideoService
 from abrege_service.modules.base import BaseService
+from abrege_service.schemas.content_type_categories import ContentTypeCategories
+from abrege_service.utils.content_type import get_content_category, get_content_type_from_file
+
 from api.utils.url import check_url
 
 
@@ -71,9 +74,21 @@ class URLService(URLBaseService):
                     for chunk in response.iter_content(chunk_size=8192):
                         if chunk:  # filtrer les keep-alive
                             f.write(chunk)
-            print(f"Fichier téléchargé avec succès sous : {filename}")
+            return filename
         except requests.RequestException as e:
             print(f"Erreur lors du téléchargement : {e}")
 
     def transform_to_text(self, file_path: str, **kwargs) -> str:
         assert self.is_valid_url(file_path), f"{file_path} is not a valid URL"
+        filename = self.download_file(url=file_path)
+        content_type_calculated = get_content_type_from_file(filename)
+        category = get_content_category(content_type=content_type_calculated)
+        if category in [ContentTypeCategories.PDF.value, ContentTypeCategories.WORD_DOCUMENT.value, ContentTypeCategories.TEXTE.value]:
+            return self.doc_service.transform_to_text(filename, content_type=content_type_calculated)
+        if category in [ContentTypeCategories.AUDIO.value]:
+            return self.audio_service.transform_to_text(file_path=filename, content_type=content_type_calculated)
+
+        if category in [ContentTypeCategories.VIDEO.value]:
+            return self.video_service.transform_to_text(file_path=filename, content_type=content_type_calculated)
+
+        raise NotImplementedError(f"{file_path} can not be abrege - {category} - {content_type_calculated}")

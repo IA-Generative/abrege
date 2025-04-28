@@ -1,3 +1,4 @@
+from typing import List
 from abc import abstractmethod
 import json
 
@@ -8,7 +9,7 @@ import wave
 from abrege_service.schemas import AUDIO_CONTENT_TYPES
 from abrege_service.schemas.audio import AudioModel
 from abrege_service.modules.base import BaseService
-from typing import List
+from abrege_service.schemas.text import TextModel
 
 # audio dataset : https://github.com/facebookresearch/voxpopuli
 # https://lbourdois.github.io/blog/audio/dataset_audio_fr/
@@ -73,8 +74,8 @@ class AudioService(AudioBaseService):
 
         return results
 
-    def transform_to_text(self, file_path, content_type, **kwargs) -> str:
+    def transform_to_text(self, file_path, content_type, **kwargs) -> List[TextModel]:
         if not self.is_availble(content_type):
             raise NotImplementedError(f"Content type {content_type} is not implemented for {self.__class__.__name__}.")
 
-        return "\n".join([audio.text for audio in self.audio_to_text(file_path, **kwargs)])
+        return [TextModel(text=audio.text, extras=audio.model_dump()) for audio in self.audio_to_text(file_path, **kwargs)]

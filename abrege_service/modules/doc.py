@@ -10,6 +10,7 @@ from abrege_service.schemas import (
     TEXT_CONTENT_TYPES,
 )
 from abrege_service.schemas.content_type_categories import ContentTypeCategories
+from abrege_service.schemas.text import TextModel
 from abrege_service.utils.content_type import get_content_category
 
 md = MarkItDown(enable_plugins=False)
@@ -68,7 +69,7 @@ class DocService(BaseService):
         # This is a placeholder implementation
         return md.convert(source=file_path).text_content
 
-    def transform_to_text(self, file_path: str, content_type: str, **kwargs) -> List[str]:
+    def transform_to_text(self, file_path: str, content_type: str, **kwargs) -> List[TextModel]:
         """
         Transform the document to text.
         Args:
@@ -82,12 +83,12 @@ class DocService(BaseService):
         # This is a placeholder implementation
         category = get_content_category(content_type)
         if category == ContentTypeCategories.PDF.value:
-            return self.pdf_to_text(file_path, **kwargs)
+            return [TextModel(text=item["text"], extras=item) for item in self.pdf_to_text(file_path, **kwargs)]
 
         if category == ContentTypeCategories.WORD_DOCUMENT.value:
-            return [self.word_to_text(file_path, **kwargs)]
+            return [TextModel(text=self.word_to_text(file_path, **kwargs))]
         if category == ContentTypeCategories.TEXTE.value:
             with open(file_path, "r") as file:
-                return [file.read()]
+                return [TextModel(text=file.read(), extras={})]
 
         raise NotImplementedError(f"Content type {content_type} is not implemented for {self.__class__.__name__}.")
