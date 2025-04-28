@@ -83,7 +83,7 @@ async def summarize_doc(
         os.remove(temp_file_path)
 
         celery_app.send_task(
-            "worker.tasks.ocr",
+            "worker.tasks.abrege",
             args=[json.dumps(task_data.model_dump())],
             task_id=task_data.id,
             retries=2,
