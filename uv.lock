@@ -107,7 +107,7 @@ abrege-service = [
     { name = "pydub", specifier = "==0.25.1" },
     { name = "pymupdf4llm", specifier = "==0.0.21" },
     { name = "python-magic", specifier = "==0.4.27" },
-    { name = "unstructured", specifier = ">=0.17.2" },
+    { name = "unstructured", specifier = "==0.17.2" },
     { name = "vosk", specifier = "==0.3.45" },
 ]
 dev = [{ name = "ruff", specifier = ">=0.8.3" }]
