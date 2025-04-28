@@ -29,14 +29,10 @@ version = [
     "commitizen>=4.4.1",
 ]
 test = [
-    "datasets==3.5.0",
-    "evaluate==0.4.3",
     "httpx>=0.28.1",
-    "nltk==3.9.1",
     "pytest>=8.3.5",
     "pytest-asyncio>=0.26.0",
     "pytest-cov>=6.1.1",
-    "rouge-score>=0.1.2",
     "ruff>=0.11.2",
 ]
 abrege-service = [
@@ -51,6 +47,21 @@ abrege-service = [
     "pymupdf4llm==0.0.21",
     "python-magic==0.4.27",
     "vosk==0.3.45",
+]
+evaluation = [
+    "bert-score>=0.3.13",
+    "datasets==3.5.0",
+    "evaluate==0.4.3",
+    "fastapi>=0.115.12",
+    "hf-xet>=1.0.5",
+    "langchain>=0.3.24",
+    "langchain-openai>=0.3.14",
+    "langgraph>=0.3.34",
+    "nltk==3.9.1",
+    "rouge-score>=0.1.2",
+]
+openai = [
+    "openai>=1.76.0",
 ]
 
 

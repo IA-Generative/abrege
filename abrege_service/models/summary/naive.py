@@ -10,7 +10,7 @@ from abrege_service.prompts.prompting import generate_prompt
 CONTEXT_LENGTH = 128_000  # For qwen
 
 
-def summarize_text(model: str, client: OpenAI, prompt: str) -> str:
+def summarize_text(model: str, client: OpenAI, prompt: str, temperature: float = 0.0) -> str:
     """
     Résume un texte donné en utilisant l'API OpenAI.
     """
@@ -24,6 +24,7 @@ def summarize_text(model: str, client: OpenAI, prompt: str) -> str:
             },
             {"role": "user", "content": prompt},
         ],
+        temperature=temperature,
     )
 
     return completion.choices[0].message.content
