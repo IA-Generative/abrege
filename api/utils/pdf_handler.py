@@ -1,5 +1,3 @@
-import base64
-import json
 import logging
 import os
 import re
@@ -33,11 +31,11 @@ def clean_paddle_ocr_text(text_ocr: str) -> str:
     return result
 
 
-def get_texts_from_images_paddle(list_image_pil: list) -> list[str]:
+def get_texts_from_images_paddle(list_image_pil: list, max_height: int) -> list[str]:
     if not len(list_image_pil):
         return []
     results = []
-
+    assert int(max_height)
     for image_pil in list_image_pil:
         buffered = BytesIO()
         image_pil.save(buffered, format="JPEG")
@@ -47,7 +45,7 @@ def get_texts_from_images_paddle(list_image_pil: list) -> list[str]:
 
         try:
             res = requests.post(
-                url=f"{os.environ['PADDLE_OCR_URL']}?max_height=1500&grayscale=true&return_image=false",
+                url=f"{os.environ['PADDLE_OCR_URL']}?max_height={max_height}&grayscale=true&return_image=false",
                 files=files,
                 headers={"Authorization": "Basic " + os.environ["PADDLE_OCR_TOKEN"]},
             )
@@ -73,11 +71,11 @@ def get_texts_from_images_paddle(list_image_pil: list) -> list[str]:
     return results
 
 
-def get_text_from_image(image_pil) -> str:
-    return "\n".join(get_texts_from_images_paddle([image_pil]))
+def get_text_from_image(image_pil, max_height: int) -> str:
+    return "\n".join(get_texts_from_images_paddle([image_pil], max_height=max_height))
 
 
-ModeOCR = Literal["full_ocr", "text_and_ocr", "full_text", "marker"]
+ModeOCR = Literal["full_ocr", "text_and_ocr", "full_text"]
 
 
 @dataclass
@@ -88,11 +86,13 @@ class OCRPdfLoader:
     def __call__(cls, path):
         return cls(path)
 
-    def load(self, mode: ModeOCR = "text_and_ocr", debug: bool = False, limit_pages_ocr: int = 100) -> list[Document] | None:
+    def load(self, mode: ModeOCR = "text_and_ocr", debug: bool = False, limit_pages_ocr: int = 100, dpi: int = 250) -> list[Document] | None:
+        """dpi=250 => taille image de [2067, 2924] ;  dpi=500 => taille image de  [4132, 5848]"""
         assert mode in ModeOCR.__args__
         assert mode != "full_text"
         result = []
         pages_in_ocr = 0
+
         with pymupdf.open(self.path) as pdf_document:
             for page_num in range(pdf_document.page_count):
                 use_OCR = False
@@ -109,10 +109,10 @@ class OCRPdfLoader:
                     if pages_in_ocr > limit_pages_ocr:
                         return None
                     page = pdf_document.load_page(page_num)  # its 0-based page
-                    image = page.get_pixmap(dpi=250)
+                    image = page.get_pixmap(dpi=dpi)
                     image_pil = Image.frombytes("RGB", [image.width, image.height], image.samples)
                     del image, page
-                    text = get_text_from_image(image_pil)
+                    text = get_text_from_image(image_pil, max_height=dpi * 3000 / 250)
                     del image_pil
                     doc = Document(page_content=text, origin="paddle-ocr-pdf")
                 result.append(doc)
