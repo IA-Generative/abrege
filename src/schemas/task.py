@@ -113,10 +113,14 @@ class TaskTable:
                 return None
 
             updates = form_data.model_dump(exclude_unset=True)
-
             for key, value in updates.items():
                 if hasattr(task, key):
                     setattr(task, key, value)
+
+            if form_data.result:
+                task.result = form_data.result.model_dump()
+            if form_data.content:
+                task.content = form_data.content.model_dump()
 
             task.updated_at = int(time.time())
             db.commit()
