@@ -112,7 +112,7 @@ runapi:
 #	@export $(shell grep -v '^#' .env | xargs) && uv run python api/main.py
 
 up-env:
-	docker compose up -d
+	docker compose up -d || true
 	@echo "Attente de 5 secondes pour laisser les conteneurs démarrer..."
 	sleep 5
 
