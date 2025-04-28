@@ -65,6 +65,7 @@ openai = [
     { name = "openai" },
 ]
 test = [
+    { name = "datasets" },
     { name = "httpx" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -125,6 +126,7 @@ evaluation = [
 ]
 openai = [{ name = "openai", specifier = ">=1.76.0" }]
 test = [
+    { name = "datasets", specifier = "==3.5.0" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "pytest", specifier = ">=8.3.5" },
     { name = "pytest-asyncio", specifier = ">=0.26.0" },

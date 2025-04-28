@@ -29,6 +29,7 @@ version = [
     "commitizen>=4.4.1",
 ]
 test = [
+    "datasets==3.5.0",
     "httpx>=0.28.1",
     "pytest>=8.3.5",
     "pytest-asyncio>=0.26.0",
