@@ -1,8 +1,11 @@
+import base64
+import json
 import logging
 import os
 import re
 from dataclasses import dataclass
 from io import BytesIO
+from pathlib import Path
 from typing import Literal
 
 import pymupdf
@@ -10,7 +13,7 @@ import requests
 from langchain_core.documents import Document
 from PIL import Image
 
-from fastapi import HTTPException, UploadFile
+from fastapi import HTTPException
 
 
 def get_text_from_output(output: dict) -> list[str]:
@@ -44,7 +47,7 @@ def get_texts_from_images_paddle(list_image_pil: list) -> list[str]:
 
         try:
             res = requests.post(
-                url=f"{os.environ["PADDLE_OCR_URL"]}?max_height=1500&grayscale=true&return_image=false,
+                url=f"{os.environ['PADDLE_OCR_URL']}?max_height=1500&grayscale=true&return_image=false",
                 files=files,
                 headers={"Authorization": "Basic " + os.environ["PADDLE_OCR_TOKEN"]},
             )
@@ -74,7 +77,7 @@ def get_text_from_image(image_pil) -> str:
     return "\n".join(get_texts_from_images_paddle([image_pil]))
 
 
-ModeOCR = Literal["full_ocr", "text_and_ocr", "full_text"]
+ModeOCR = Literal["full_ocr", "text_and_ocr", "full_text", "marker"]
 
 
 @dataclass
