@@ -117,6 +117,8 @@ async def old_summarize_txt(params: Annotated[TextData, Query()]) -> SummaryResp
 @router.post("/doc")
 async def summarize_doc(docData: DocData = Body(...), file : UploadFile = File(...)) -> SummaryResponse:
     pdf_mode_ocr = docData.pdf_mode_ocr or "text_and_ocr"
+    pdf_mode_ocr = "full_text" # TODO : pad d'ocr pour le moment
+
     docs = parse_files(file=file, pdf_mode_ocr=pdf_mode_ocr, limit_pages_ocr=LIMIT_OCR_PAGES)
     if len(docs) == 0:
         raise HTTPException(
