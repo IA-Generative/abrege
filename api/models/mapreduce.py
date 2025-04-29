@@ -31,7 +31,7 @@ client = OpenAI(api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings
 
 
 async def do_map_reduce(
-    list_str: list[str], params: ParamsSummarize, recursion_limit: int = 20, num_tokens_limit: int = 1226 * 300
+    list_str: list[str], params: ParamsSummarize, recursion_limit: int = 20, num_tokens_limit: int = 1226 * 300, max_concurrency: int = 15
 ) -> SummaryResponse:
     """Peut faire un GraphRecursionError si recursion_limit est trop faible"""
 
@@ -162,7 +162,7 @@ async def do_map_reduce(
         async for step in app.astream(
             # {"contents": [doc.page_content for doc in split_docs]},
             {"contents": list_str},
-            {"recursion_limit": recursion_limit},
+            {"recursion_limit": recursion_limit, "max_concurrency": max_concurrency}
         ):
             # print(list(step.keys()))
             list(step.keys())

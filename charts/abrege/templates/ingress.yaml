@@ -1,0 +1,40 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/affinity: cookie
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/session-cookie-hash: sha1
+    nginx.ingress.kubernetes.io/session-cookie-name: route
+  name: {{ .Values.name }}.c0.cloud-pi-native.com
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+  - host: {{ .Values.ingress.hostApi }}
+    http:
+      paths:
+      - backend:
+          service:
+            name: {{ .Values.name }}-service
+            port:
+              number: 80
+        path: /
+        pathType: Prefix
+  - host: {{ .Values.ingress.hostStreamlit }}
+    http:
+      paths:
+      - backend:
+          service:
+            name: {{ .Values.name }}-streamlit-service
+            port:
+              number: 80
+        path: /
+        pathType: Prefix
+  tls:
+  - hosts:
+    - {{ .Values.ingress.hostApi }}
+    secretName: {{ .Values.tls.secretApi }}
+  - hosts:
+    - {{ .Values.ingress.hostStreamlit }}
+    secretName: {{ .Values.tls.secretStreamlit }}
