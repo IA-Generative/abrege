@@ -11,7 +11,7 @@ import openai
 from datasets import load_dataset
 
 is_openai_available = (
-    not os.environ.get("OPENAI_API_KEY", None) or not os.environ.get("OPENAI_API_BASE", None) or not os.environ.get("OPENAI_API_MODEL", None)
+    not os.environ.get("OPENAI_API_KEY", None) and not os.environ.get("OPENAI_API_BASE", None) and not os.environ.get("OPENAI_API_MODEL", None)
 )
 
 message = "API key and url not set"

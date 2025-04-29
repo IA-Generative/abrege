@@ -4,7 +4,7 @@ import pytest
 
 
 def test_doc_service():
-    doc_service = DocService()
+    doc_service = DocService(audio_service=None, video_service=None)
 
     # Test for PDF content type
     assert doc_service.is_availble("application/pdf") is True
@@ -45,5 +45,5 @@ def test_doc_service():
     with pytest.raises(NotImplementedError):
         doc_service.transform_to_text(
             file_path="tests/test_data/2106.11520v2.pdf",
-            content_type="video/mp4",
+            content_type="dsds/mp4",
         )

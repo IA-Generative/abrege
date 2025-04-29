@@ -1,9 +1,10 @@
 import os
-
-from src.schemas.task import task_table, TaskForm, TaskModel, TaskStatus
-from src.schemas.content import TextModel, URLModel
-from abrege_service.main import launch
 import json
+
+from src.clients import file_connector
+from src.schemas.task import task_table, TaskForm, TaskModel, TaskStatus
+from src.schemas.content import TextModel, URLModel, DocumentModel
+from abrege_service.main import launch
 
 
 def test_task_process_text():
@@ -23,6 +24,7 @@ def test_task_process_text():
     actual = TaskModel.model_validate(result)
     assert actual.id == task.id
     assert actual.status == TaskStatus.COMPLETED.value
+    assert "texts" in actual.extras
 
 
 def test_task_process_url():
@@ -45,6 +47,7 @@ def test_task_process_url():
     actual = TaskModel.model_validate(result)
     assert actual.id == task.id
     assert actual.status == TaskStatus.COMPLETED.value
+    assert "texts" in actual.extras
     task_table.delete_task_by_id(task.id)
     os.remove("google.com")
     #############################################################
@@ -72,6 +75,7 @@ def test_task_process_url_pdf():
     assert actual.status == TaskStatus.COMPLETED.value
     assert actual.result.percentage == 1
     assert len(actual.result.summary.split()) > 0
+    assert "texts" in actual.extras
     task_table.delete_task_by_id(task.id)
     os.remove("chap1.pdf")
     #############################################################
@@ -98,7 +102,6 @@ def test_task_process_url_png():
     assert task.id == task.id
     assert task.status == TaskStatus.FAILED.value
     task_table.delete_task_by_id(task.id)
-    os.remove("googlelogo_color_272x92dp.png")
     #############################################################
 
 
@@ -123,6 +126,7 @@ def test_task_process_url_mp4():
     actual = TaskModel.model_validate(result)
     assert actual.id == task.id
     assert actual.status == TaskStatus.COMPLETED.value
+    assert "texts" in actual.extras
     task_table.delete_task_by_id(task.id)
     os.remove("bolt-detection.mp4")
     #############################################################
@@ -150,6 +154,7 @@ def test_task_process_url_ppt():
     assert actual.id == task.id
     assert actual.status == TaskStatus.COMPLETED.value
     assert actual.result.percentage == 1
+    assert "texts" in actual.extras
     assert len(actual.result.summary.split()) > 0
     task_table.delete_task_by_id(task.id)
     os.remove("ppt_philosophie_et_ecologie.pptx")
@@ -177,7 +182,177 @@ def test_task_process_url_audio():
     actual = TaskModel.model_validate(result)
     assert actual.id == task.id
     assert actual.status == TaskStatus.COMPLETED.value
+    assert "texts" in actual.extras
     assert actual.result.percentage == 1
     task_table.delete_task_by_id(task.id)
     os.remove("1.wav")
     #############################################################
+
+
+def test_audio_document():
+    audio_path = "tests/data/audio/1.wav"
+    user_id = "test"
+    task = task_table.insert_new_task(
+        user_id=user_id,
+        form_data=TaskForm(
+            type="summary",
+            status=TaskStatus.CREATED.value,
+            extras={},
+        ),
+    )
+
+    save_path = file_connector.save(user_id=task.user_id, task_id=task.id, file_path=audio_path)
+    document = DocumentModel(
+        created_at=0,
+        file_path=save_path,
+        raw_filename="2.wav",
+        content_type="audio/wav",
+        ext="wav",
+        size=0,
+    )
+    task = task_table.update_task(
+        task_id=task.id,
+        form_data=TaskForm(
+            type="summary",
+            content=document,
+            status=TaskStatus.CREATED.value,
+            updated_at=1,
+            extras={},
+        ),
+    )
+
+    result = launch.apply(args=[json.dumps(task.model_dump())])
+    result = result.get()
+    actual = TaskModel.model_validate(result)
+    assert actual.id == task.id
+    assert actual.status == TaskStatus.COMPLETED.value
+    assert "que" in actual.result.summary
+    assert "texts" in actual.extras
+    assert actual.result.percentage == 1
+    task_table.delete_task_by_id(task.id)
+
+
+def test_video_document():
+    video_path = "tests/data/video/bonjour.mp4"
+    user_id = "test"
+    task = task_table.insert_new_task(
+        user_id=user_id,
+        form_data=TaskForm(
+            type="summary",
+            status=TaskStatus.CREATED.value,
+            extras={},
+        ),
+    )
+
+    save_path = file_connector.save(user_id=task.user_id, task_id=task.id, file_path=video_path)
+    document = DocumentModel(
+        created_at=0,
+        file_path=save_path,
+        raw_filename="2.mp4",
+        content_type="video/mp4",
+        ext="mp4",
+        size=0,
+    )
+    task = task_table.update_task(
+        task_id=task.id,
+        form_data=TaskForm(
+            type="summary",
+            content=document,
+            status=TaskStatus.CREATED.value,
+            updated_at=1,
+            extras={},
+        ),
+    )
+
+    result = launch.apply(args=[json.dumps(task.model_dump())])
+    result = result.get()
+    actual = TaskModel.model_validate(result)
+    assert actual.id == task.id
+    assert actual.status == TaskStatus.COMPLETED.value
+    assert actual.result.percentage == 1
+    assert "texts" in actual.extras
+    task_table.delete_task_by_id(task.id)
+
+
+def test_pdf_document():
+    video_path = "tests/test_data/elysee-module-24161-fr.pdf"
+    user_id = "test"
+    task = task_table.insert_new_task(
+        user_id=user_id,
+        form_data=TaskForm(
+            type="summary",
+            status=TaskStatus.CREATED.value,
+            extras={},
+        ),
+    )
+
+    save_path = file_connector.save(user_id=task.user_id, task_id=task.id, file_path=video_path)
+    document = DocumentModel(
+        created_at=0,
+        file_path=save_path,
+        raw_filename="2.pdf",
+        content_type="application/pdf",
+        ext="pdf",
+        size=0,
+    )
+    task = task_table.update_task(
+        task_id=task.id,
+        form_data=TaskForm(
+            type="summary",
+            content=document,
+            status=TaskStatus.CREATED.value,
+            updated_at=1,
+            extras={},
+        ),
+    )
+
+    result = launch.apply(args=[json.dumps(task.model_dump())])
+    result = result.get()
+    actual = TaskModel.model_validate(result)
+    assert actual.id == task.id
+    assert actual.status == TaskStatus.COMPLETED.value
+    assert actual.result.percentage == 1
+    assert "texts" in actual.extras
+    task_table.delete_task_by_id(task.id)
+
+
+def test_docx_document():
+    video_path = "tests/test_data/Cadrage.docx"
+    user_id = "test"
+    task = task_table.insert_new_task(
+        user_id=user_id,
+        form_data=TaskForm(
+            type="summary",
+            status=TaskStatus.CREATED.value,
+            extras={},
+        ),
+    )
+
+    save_path = file_connector.save(user_id=task.user_id, task_id=task.id, file_path=video_path)
+    document = DocumentModel(
+        created_at=0,
+        file_path=save_path,
+        raw_filename="2.docx",
+        content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ext="docx",
+        size=0,
+    )
+    task = task_table.update_task(
+        task_id=task.id,
+        form_data=TaskForm(
+            type="summary",
+            content=document,
+            status=TaskStatus.CREATED.value,
+            updated_at=1,
+            extras={},
+        ),
+    )
+
+    result = launch.apply(args=[json.dumps(task.model_dump())])
+    result = result.get()
+    actual = TaskModel.model_validate(result)
+    assert actual.id == task.id
+    assert actual.status == TaskStatus.COMPLETED.value
+    assert actual.result.percentage == 1
+    assert "texts" in actual.extras
+    task_table.delete_task_by_id(task.id)

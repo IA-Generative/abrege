@@ -6,7 +6,7 @@ from abrege_service.modules.doc import DocService
 
 audio_service = AudioService()
 video_service = VideoService(audio_service=audio_service)
-doc_service = DocService()
+doc_service = DocService(audio_service=audio_service, video_service=video_service)
 
 
 def test_url_service_is_valid_url():

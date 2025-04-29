@@ -8,7 +8,11 @@ from abrege_service.schemas import (
     MICROSOFT_SPREADSHEET_CONTENT_TYPES,
     MICROSOFT_PRESENTATION_CONTENT_TYPES,
     TEXT_CONTENT_TYPES,
+    AUDIO_CONTENT_TYPES,
+    VIDEO_CONTENT_TYPES,
 )
+from abrege_service.modules.audio import AudioBaseService
+from abrege_service.modules.video import VideoBaseService
 from abrege_service.schemas.content_type_categories import ContentTypeCategories
 from abrege_service.schemas.text import TextModel
 from abrege_service.utils.content_type import get_content_category
@@ -17,6 +21,10 @@ md = MarkItDown(enable_plugins=False)
 
 
 class DocService(BaseService):
+    def __init__(self, audio_service: AudioBaseService, video_service: VideoBaseService):
+        self.audio_service = audio_service
+        self.video_service = video_service
+
     def is_availble(self, content_type: str) -> bool:
         """
         Check if the content type is available for processing.
@@ -34,6 +42,8 @@ class DocService(BaseService):
             + MICROSOFT_SPREADSHEET_CONTENT_TYPES
             + MICROSOFT_PRESENTATION_CONTENT_TYPES
             + TEXT_CONTENT_TYPES
+            + AUDIO_CONTENT_TYPES
+            + VIDEO_CONTENT_TYPES
         )
 
     def pdf_to_text(
@@ -90,5 +100,10 @@ class DocService(BaseService):
         if category == ContentTypeCategories.TEXTE.value:
             with open(file_path, "r", encoding="utf-8", errors="ignore") as file:
                 return [TextModel(text=file.read(), extras={})]
+
+        if category == ContentTypeCategories.AUDIO.value:
+            return self.audio_service.transform_to_text(file_path=file_path, content_type=content_type)
+        if category == ContentTypeCategories.VIDEO.value:
+            return self.video_service.transform_to_text(file_path=file_path, content_type=content_type)
 
         raise NotImplementedError(f"Content type {content_type} is not implemented for {self.__class__.__name__}.")

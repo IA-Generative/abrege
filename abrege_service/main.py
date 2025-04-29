@@ -1,3 +1,4 @@
+import os
 import time
 import json
 
@@ -17,14 +18,16 @@ from src.schemas.content import URLModel, DocumentModel, TextModel
 from src.clients import celery_app, file_connector
 
 
-document_service = DocService()
 audio_service = AudioService()
 video_service = VideoService(audio_service=audio_service)
+document_service = DocService(audio_service=audio_service, video_service=video_service)
+# TODO: transform to url service to use only doc service for document process
 url_service = URLService(
     audio_service=audio_service,
     video_service=video_service,
     doc_service=document_service,
 )
+
 
 openai_settings = OpenAISettings()
 client = openai.OpenAI(
@@ -51,20 +54,26 @@ def launch(self, task: str):
             texts = url_service.transform_to_text(file_path=task.content.url)
 
         elif isinstance(task.content, DocumentModel):
-            file_connector.get_by_task_id(user_id=task.user_id, task_id=task.id)
-            texts = document_service.transform_to_text(task.content.file_path, content_type=task.content.content_type)
+            file_data = file_connector.get_by_task_id(user_id=task.user_id, task_id=task.id)
+            with open(task.content.raw_filename, "wb") as f:
+                f.write(file_data.read())
+            texts = document_service.transform_to_text(task.content.raw_filename, content_type=task.content.content_type)
+            if os.path.exists(task.content.raw_filename):
+                os.remove(task.content.raw_filename)
 
         elif isinstance(task.content, TextModel):
-            texts = [TextModelService(text=task.content.text, extras=task.model_dump())]
+            texts = [TextModelService(text=task.content.text, extras=task.content.model_dump())]
 
         else:
             raise NotImplementedError("Content type not supported")
 
+        task.extras["texts"] = [text.model_dump() for text in texts]
         task_table.update_task(
             task_id=task.id,
             form_data=TaskUpdateForm(
                 status=TaskStatus.IN_PROGRESS.value,
                 updated_at=int(time.time()),
+                extras=task.extras,
             ),
         )
 
