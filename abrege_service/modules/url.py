@@ -11,7 +11,7 @@ from abrege_service.utils.content_type import (
     get_content_type_from_file,
 )
 
-from api.utils.url import check_url
+from src.utils.url import check_url
 
 
 class URLBaseService(BaseService):

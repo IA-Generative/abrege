@@ -3,7 +3,7 @@ from openai import OpenAI
 import time
 import math
 
-from api.utils.logger import logger_abrege as logger_app
+from src.utils.logger import logger_abrege as logger_app
 from abrege_service.prompts.prompting import generate_prompt
 from src.schemas.result import SummaryModel
 from src.schemas.task import TaskModel, task_table, TaskStatus, TaskUpdateForm
