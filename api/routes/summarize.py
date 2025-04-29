@@ -24,7 +24,7 @@ from fastapi import FastAPI, File, Body, UploadFile, Request
 from pydantic import BaseModel, model_validator
 from fastapi.responses import HTMLResponse
 
-client = OpenAI(api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE)
+client = OpenAI(api_key=os.environ["OPENAI_API_KEY"], base_url=os.environ["OPENAI_API_BASE"])
 
 try:
     models_available = [model.id for model in client.models.list().data]
