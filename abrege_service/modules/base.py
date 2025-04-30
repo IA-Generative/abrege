@@ -1,25 +1,45 @@
+from typing import List, Optional
 from abc import ABC, abstractmethod
+import time
+from src.schemas.task import TaskModel, task_table, TaskStatus, TaskUpdateForm
+from src.schemas.result import ResultModel
+
+
+class NoGivenInput(Exception): ...
 
 
 class BaseService(ABC):
-    @abstractmethod
-    def is_availble(self, content_type: str) -> bool: ...
+    def __init__(self, content_type_allowed: List[str] = []):
+        self.task_table = task_table
+        self.content_type_allowed = content_type_allowed
+
+    def is_availble(self, content_type: str) -> bool:
+        return content_type in self.content_type_allowed
+
+    def update_task(
+        self,
+        task: TaskModel,
+        result: Optional[ResultModel] = None,
+        status: Optional[TaskStatus] = None,
+    ) -> TaskModel:
+        return self.task_table.update_task(
+            task_id=task.id,
+            form_data=TaskUpdateForm(
+                status=status,
+                result=result,
+                updated_at=int(time.time()),
+                extras=task.extras,
+            ),
+        )
 
     @abstractmethod
-    def transform_to_text(self, file_path: str, content_type: str, **kwargs) -> str: ...
+    def task_to_text(self, task: TaskModel, **kwargs) -> TaskModel: ...
 
-    def process(self, file_path: str, content_type: str, **kwargs):
-        """
-        Process the file and return the result.
+    def process_task(self, task: TaskModel, **kwargs):
+        if task.content is None:
+            raise NoGivenInput("No input is given")
 
-        Args:
-            file_path (str): The path to the file.
-            content_type (str): The content type of the file.
-            **kwargs: Additional arguments for processing.
-
-        Returns:
-            str: The processed result.
-        """
+        content_type: str = task.content.content_type
         if not self.is_availble(content_type):
-            raise ValueError(f"Content type {content_type} is not available for processing.")
-        return self.transform_to_text(file_path, content_type, **kwargs)
+            raise NotImplementedError(f"Content type {content_type} is not available for processing.")
+        return self.task_to_text(task, **kwargs)
