@@ -54,7 +54,7 @@ class CatchExceptionsMiddleware(BaseHTTPMiddleware):
             response = await asyncio.wait_for(call_next(request), timeout=280)
             return response
         except asyncio.TimeoutError:
-            return JSONResponse(status_code=504, content={"detail": "Le résumé n'a pas pu être produit en 280 secondes"}) # Il ne faut pas utiliser de HTTPException ici
+            return JSONResponse(status_code=500, content={"detail": "Le résumé n'a pas pu être produit en 280 secondes"}) # Il ne faut pas utiliser de HTTPException ici
         except Exception as e:
             #logging.error(f"Erreur capturée au niveau du middleware : {e}\n{traceback.format_exc()}\n--------")
             return JSONResponse(status_code=500, content={"detail": "Une erreur interne est survenue."}) # Il ne faut pas utiliser de HTTPException ici
