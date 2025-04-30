@@ -87,7 +87,7 @@ class AudioVoskTranscriptionService(AudioBaseService):
             task.result.percentage = self.service_ratio_representaion * (red_frames / frames)
             task.extras["audio"] = {"result": results}
             logger_abrege.debug(f"{task.id}: percentage : {task.result.percentage} - {red_frames}/{frames}")
-
+            task.result.texts_found = [item.get("text") for item in results]
             task = self.update_task(task=task, status=TaskStatus.IN_PROGRESS.value, result=task.result)
 
         final_res = json.loads(rec.FinalResult())
@@ -97,6 +97,7 @@ class AudioVoskTranscriptionService(AudioBaseService):
         wf.close()
         logger_abrege.debug(f"{task.id}: percentage : {task.result.percentage} - {red_frames}/{frames}")
         task.extras["audio"] = {"result": results}
+        task.result.texts_found = [item.get("text") for item in results]
 
         task = self.update_task(task=task, status=TaskStatus.IN_PROGRESS.value, result=task.result)
 
