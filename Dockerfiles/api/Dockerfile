@@ -2,6 +2,11 @@ FROM python:3.11.9-slim
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
+RUN apt-get update -y && \
+    apt-get install -y --no-install-recommends libmagic1 && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 COPY pyproject.toml /app/pyproject.toml
 COPY uv.lock /app/uv.lock
