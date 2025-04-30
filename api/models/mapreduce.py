@@ -6,6 +6,7 @@ from typing import Annotated, List, Literal, TypedDict
 import asyncio
 from config.openai import OpenAISettings
 from fastapi import HTTPException
+import os
 
 from openai import OpenAI
 import openai
@@ -27,7 +28,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from schemas.params import ParamsSummarize
 from schemas.response import SummaryResponse
 
-client = OpenAI(api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE)
+client = OpenAI(api_key=os.environ["OPENAI_API_KEY"], base_url=os.environ["OPENAI_API_BASE"])
 
 
 async def do_map_reduce(
@@ -37,7 +38,7 @@ async def do_map_reduce(
 
     deb = perf_counter()
     llm = ChatOpenAI(
-        model=params.model, temperature=params.temperature, api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE
+        model=params.model, temperature=params.temperature, api_key=os.environ["OPENAI_API_KEY"], base_url=os.environ["OPENAI_API_BASE"]
     )
 
     num_tokens = llm.get_num_tokens(" ".join(list_str))
