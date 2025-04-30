@@ -7,6 +7,7 @@ from abrege_service.schemas import (
     MICROSOFT_WORD_CONTENT_TYPES,
     MICROSOFT_SPREADSHEET_CONTENT_TYPES,
     MICROSOFT_PRESENTATION_CONTENT_TYPES,
+    TEXT_CONTENT_TYPES,
 )
 from src.schemas.task import TaskModel, TaskStatus
 from src.schemas.result import ResultModel
@@ -81,6 +82,37 @@ class MicrosoftDocumnentToMdService(MicrosoftDocumentService):
             )
 
         task.result.texts_found = [md.convert(source=task.content.file_path).text_content]
+
+        task.result.percentage = 1
+        task = self.update_task(
+            task=task,
+            status=TaskStatus.IN_PROGRESS.value,
+            result=task.result,
+        )
+
+        return task
+
+
+class FlatTextService(BaseService):
+    def __init__(self, content_type_allowed=TEXT_CONTENT_TYPES):
+        super().__init__(content_type_allowed)
+
+    def task_to_text(self, task: TaskModel, **kwargs) -> TaskModel:
+        if task.extras is None:
+            task.extras = {}
+        if task.result is None:
+            task.result = ResultModel(
+                type="plain-text",
+                created_at=int(time.time()),
+                model_name=markitdown.__name__,
+                model_version=markitdown.__version__,
+                updated_at=int(time.time()),
+                percentage=0,
+                extras={},
+            )
+
+        with open(task.content.file_path) as f:
+            task.result.texts_found = [f.read()]
 
         task.result.percentage = 1
         task = self.update_task(

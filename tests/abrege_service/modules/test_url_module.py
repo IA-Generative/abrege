@@ -1,126 +1,92 @@
 import os
 from abrege_service.modules.url import URLService
-from abrege_service.modules.audio import AudioService
-from abrege_service.modules.video import VideoService
-from abrege_service.modules.doc import DocService
-
-audio_service = AudioService()
-video_service = VideoService(audio_service=audio_service)
-doc_service = DocService(audio_service=audio_service, video_service=video_service)
+from src.schemas.task import TaskModel, TaskForm, task_table, TaskStatus
+from src.schemas.content import URLModel
+import pytest
 
 
-def test_url_service_is_valid_url():
-    url_service = URLService(
-        audio_service=None,
-        video_service=None,
-        doc_service=None,
-    )
-    assert url_service.is_valid_url("https://google.com")
-
-
-def test_get_contetnt_type():
-    url_service = URLService(
-        audio_service=None,
-        video_service=None,
-        doc_service=None,
-    )
-    assert url_service.get_content_type("https://google.com").split(";")[0] == "text/html"
-    assert (
-        url_service.get_content_type("https://www-fourier.ujf-grenoble.fr/~demailly/L3_topologie_B/topologie_nier_iftimie.pdf") == "application/pdf"
-    )
-    assert url_service.get_content_type("https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png") == "image/png"
-    assert (
-        url_service.get_content_type("https://www.youtube.com/watch?v=Ggq0c4e2hjA&list=PL8egiwZE1Lk5TPhNuXHprwMSCbMHTbOjz&index=3").split(";")[0]
-        == "text/html"
-    )
-    assert (
-        url_service.get_content_type("https://github.com/intel-iot-devkit/sample-videos/raw/master/bolt-detection.mp4") == "application/octet-stream"
-    )
-    assert url_service.get_content_type("https://www.google.com/robots.txt") == "text/plain"
-    assert (
-        url_service.get_content_type("https://github.com/UniData-pro/french-speech-recognition-dataset/raw/refs/heads/main/audio/1.wav")
-        == "audio/wav"
+def mock_task(url) -> TaskModel:
+    task = task_table.insert_new_task(
+        user_id="1",
+        form_data=TaskForm(
+            type="summary",
+            status=TaskStatus.CREATED.value,
+            updated_at=0,
+            content=URLModel(created_at=0, url=url),
+        ),
     )
 
+    return task
 
-def test_download_type():
-    url_service = URLService(
-        audio_service=None,
-        video_service=None,
-        doc_service=None,
-    )
+
+def test_task_not_implemented():
+    url_service = URLService()
 
     # Test donwload html
-    url_html = "https://google.com"
-    url_service.download_file(url=url_html)
-    assert os.path.exists("google.com")
-    os.remove("google.com")
+    dummy_task = mock_task("https://this-is-tobi.com/")
+    with pytest.raises(NotImplementedError):
+        url_service.task_to_text(dummy_task)
+
+    if os.path.exists("downloaded_file"):
+        os.remove("downloaded_file")
+
+
+def test_get_text_from_pdf():
+    from abrege_service.modules.doc import PDFTOMD4LLMService
+
+    url_service = URLService(services=[PDFTOMD4LLMService()])
 
     # Test download pdf
-    url_pdf = "https://www-fourier.ujf-grenoble.fr/~demailly/L3_topologie_B/topologie_nier_iftimie.pdf"
-    url_service.download_file(url=url_pdf)
-    assert os.path.exists("topologie_nier_iftimie.pdf")
+    dummy_task = mock_task("https://www-fourier.ujf-grenoble.fr/~demailly/L3_topologie_B/topologie_nier_iftimie.pdf")
+    actual = url_service.task_to_text(dummy_task)
+    assert "topologie" in "\n".join([item for item in actual.result.texts_found])
     os.remove("topologie_nier_iftimie.pdf")
 
-    # Test png :
-    url_png = "https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png"
-    url_service.download_file(url=url_png)
-    assert os.path.exists("googlelogo_color_272x92dp.png")
-    os.remove("googlelogo_color_272x92dp.png")
 
-    # Test mp4 :
-    url_mp4 = "https://github.com/intel-iot-devkit/sample-videos/raw/master/bolt-detection.mp4"
-    url_service.download_file(url=url_mp4)
-    assert os.path.exists("bolt-detection.mp4")
-    os.remove("bolt-detection.mp4")
+def test_get_text_from_microsoft():
+    from abrege_service.modules.doc import MicrosoftDocumnentToMdService
 
+    url_service = URLService(services=[MicrosoftDocumnentToMdService()])
     # Test pptx
-    url_ppt = "https://pedagogie.ac-toulouse.fr/philosophie/sites/default/files/fichiers/ppt_philosophie_et_ecologie.pptx"
-    url_service.download_file(url=url_ppt)
-    assert os.path.exists("ppt_philosophie_et_ecologie.pptx")
+    dummy_task = mock_task("https://pedagogie.ac-toulouse.fr/philosophie/sites/default/files/fichiers/ppt_philosophie_et_ecologie.pptx")
+    actual = url_service.task_to_text(dummy_task)
+
+    assert "biologiste" in "\n".join([item for item in actual.result.texts_found])
     os.remove("ppt_philosophie_et_ecologie.pptx")
 
+
+def test_get_text_from_audio():
+    from abrege_service.modules.audio import AudioVoskTranscriptionService
+
+    url_service = URLService(services=[AudioVoskTranscriptionService(second_per_process=0.5)])
     # test audio
-    url_audio = "https://github.com/UniData-pro/french-speech-recognition-dataset/raw/refs/heads/main/audio/1.wav"
-    url_service.download_file(url=url_audio)
-    assert os.path.exists("1.wav")
+    dummy_task = mock_task("https://github.com/UniData-pro/french-speech-recognition-dataset/raw/refs/heads/main/audio/1.wav")
+    actual = url_service.task_to_text(dummy_task)
+    print(actual.result)
+    print(79 * "*")
+    assert "que" in "\n".join([item for item in actual.result.texts_found])
     os.remove("1.wav")
 
 
-def test_get_text():
-    url_service = URLService(
-        audio_service=audio_service,
-        video_service=video_service,
-        doc_service=doc_service,
-    )
+def test_get_text_from_audio_video():
+    from abrege_service.modules.video import VideoTranscriptionService
+
+    url_service = URLService(services=[VideoTranscriptionService()])
+    # Test mp4 :
+    dummy_task = mock_task("https://github.com/intel-iot-devkit/sample-videos/raw/master/bolt-detection.mp4")
+    actual = url_service.task_to_text(dummy_task)
+    assert "que" in "\n".join([item for item in actual.result.texts_found])
+    os.remove("bolt-detection.mp4")
+
+
+def test_get_text_html():
+    from abrege_service.modules.doc import FlatTextService
+
+    url_service = URLService(services=[FlatTextService()])
 
     # Test donwload html
-    url_html = "https://this-is-tobi.com/"
-    actual = url_service.transform_to_text(url_html)
-    assert "Tobi's projects" in "\n".join([item.text for item in actual])
+    dummy_task = mock_task("https://this-is-tobi.com/")
+
+    actual = url_service.task_to_text(dummy_task)
+    assert "Tobi's projects" in "\n".join([item for item in actual.result.texts_found])
     os.remove("downloaded_file")
-
-    # Test download pdf
-    url_pdf = "https://www-fourier.ujf-grenoble.fr/~demailly/L3_topologie_B/topologie_nier_iftimie.pdf"
-    actual = url_service.transform_to_text(url_pdf)
-    assert "topologie" in "\n".join([item.text for item in actual])
-    os.remove("topologie_nier_iftimie.pdf")
-
-    # Test pptx
-    url_ppt = "https://pedagogie.ac-toulouse.fr/philosophie/sites/default/files/fichiers/ppt_philosophie_et_ecologie.pptx"
-    actual = url_service.transform_to_text(url_ppt)
-
-    assert "biologiste" in "\n".join([item.text for item in actual])
-    os.remove("ppt_philosophie_et_ecologie.pptx")
-
-    # test audio
-    url_audio = "https://github.com/UniData-pro/french-speech-recognition-dataset/raw/refs/heads/main/audio/1.wav"
-    actual = url_service.transform_to_text(url_audio)
-    assert "que" in "\n".join([item.text for item in actual])
-    os.remove("1.wav")
-
-    # Test mp4 :
-    url_mp4 = "https://github.com/intel-iot-devkit/sample-videos/raw/master/bolt-detection.mp4"
-    actual = url_service.transform_to_text(url_mp4)
-    assert "" in "\n".join([item.text for item in actual])
-    os.remove("bolt-detection.mp4")
