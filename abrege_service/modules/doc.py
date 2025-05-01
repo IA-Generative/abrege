@@ -111,7 +111,7 @@ class FlatTextService(BaseService):
                 extras={},
             )
 
-        with open(task.content.file_path) as f:
+        with open(task.content.file_path, encoding="utf8", errors="ignore") as f:
             task.result.texts_found = [f.read()]
 
         task.result.percentage = 1
