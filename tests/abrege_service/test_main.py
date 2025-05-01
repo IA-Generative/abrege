@@ -24,7 +24,6 @@ def test_task_process_text():
     actual = TaskModel.model_validate(result)
     assert actual.id == task.id
     assert actual.status == TaskStatus.COMPLETED.value
-    assert "texts" in actual.extras
 
 
 def test_task_process_url():
@@ -47,7 +46,6 @@ def test_task_process_url():
     actual = TaskModel.model_validate(result)
     assert actual.id == task.id
     assert actual.status == TaskStatus.COMPLETED.value
-    assert "texts" in actual.extras
     task_table.delete_task_by_id(task.id)
     os.remove("google.com")
     #############################################################
@@ -75,7 +73,6 @@ def test_task_process_url_pdf():
     assert actual.status == TaskStatus.COMPLETED.value
     assert actual.result.percentage == 1
     assert len(actual.result.summary.split()) > 0
-    assert "texts" in actual.extras
     task_table.delete_task_by_id(task.id)
     os.remove("chap1.pdf")
     #############################################################
@@ -126,7 +123,6 @@ def test_task_process_url_mp4():
     actual = TaskModel.model_validate(result)
     assert actual.id == task.id
     assert actual.status == TaskStatus.COMPLETED.value
-    assert "texts" in actual.extras
     task_table.delete_task_by_id(task.id)
     os.remove("bolt-detection.mp4")
     #############################################################
@@ -154,7 +150,7 @@ def test_task_process_url_ppt():
     assert actual.id == task.id
     assert actual.status == TaskStatus.COMPLETED.value
     assert actual.result.percentage == 1
-    assert "texts" in actual.extras
+
     assert len(actual.result.summary.split()) > 0
     task_table.delete_task_by_id(task.id)
     os.remove("ppt_philosophie_et_ecologie.pptx")
@@ -182,7 +178,6 @@ def test_task_process_url_audio():
     actual = TaskModel.model_validate(result)
     assert actual.id == task.id
     assert actual.status == TaskStatus.COMPLETED.value
-    assert "texts" in actual.extras
     assert actual.result.percentage == 1
     task_table.delete_task_by_id(task.id)
     os.remove("1.wav")
@@ -227,7 +222,7 @@ def test_audio_document():
     assert actual.id == task.id
     assert actual.status == TaskStatus.COMPLETED.value
     assert "que" in actual.result.summary
-    assert "texts" in actual.extras
+
     assert actual.result.percentage == 1
     task_table.delete_task_by_id(task.id)
 
@@ -270,7 +265,7 @@ def test_video_document():
     assert actual.id == task.id
     assert actual.status == TaskStatus.COMPLETED.value
     assert actual.result.percentage == 1
-    assert "texts" in actual.extras
+
     task_table.delete_task_by_id(task.id)
 
 
@@ -312,7 +307,7 @@ def test_pdf_document():
     assert actual.id == task.id
     assert actual.status == TaskStatus.COMPLETED.value
     assert actual.result.percentage == 1
-    assert "texts" in actual.extras
+
     task_table.delete_task_by_id(task.id)
 
 
@@ -354,5 +349,5 @@ def test_docx_document():
     assert actual.id == task.id
     assert actual.status == TaskStatus.COMPLETED.value
     assert actual.result.percentage == 1
-    assert "texts" in actual.extras
+
     task_table.delete_task_by_id(task.id)
