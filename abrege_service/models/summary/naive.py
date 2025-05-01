@@ -1,12 +1,14 @@
-from typing import List, Optional, Tuple
+from typing import List, Optional
 from openai import OpenAI
 import time
 import math
+import hashlib
 
 from src.utils.logger import logger_abrege as logger_app
 from abrege_service.prompts.prompting import generate_prompt
-from src.schemas.result import SummaryModel
-from src.schemas.task import TaskModel, task_table, TaskStatus, TaskUpdateForm
+from src.schemas.result import SummaryModel, Text, PartialSummary
+from src.schemas.task import TaskModel, TaskStatus
+from abrege_service.models.base import BaseSummaryService
 
 
 def summarize_text(model: str, client: OpenAI, prompt: str, temperature: float = 0.0) -> str:
@@ -29,93 +31,106 @@ def summarize_text(model: str, client: OpenAI, prompt: str, temperature: float =
     return completion.choices[0].message.content
 
 
-def merge_summaries(
-    task: TaskModel,
-    summaries: List[str],
-    model: str,
-    client: OpenAI,
-    size: Optional[int] = 300,
-    language: Optional[str] = None,
-    tempature: Optional[float] = 0.0,
-) -> Tuple[TaskModel, int]:
-    """
-    Combine récursivement les résumés en un seul.
-    """
-    # Theoretically, the number of calls to the LLM is log2(n) + 1
-    nb_call = 0
-    total_call = int(math.log(len(summaries), 2)) + 1
-    partial_summary: SummaryModel = task.result
-    if partial_summary is None:
-        partial_summary = SummaryModel(
-            created_at=int(time.time()),
+class NaiveSummaryService(BaseSummaryService):
+    def __init__(
+        self,
+        model_name: str,
+        client: OpenAI,
+        size: Optional[int] = 300,
+        language: Optional[str] = None,
+        temperature: Optional[float] = 0.0,
+    ):
+        super().__init__()
+
+        self.model_name = model_name
+        self.client = client
+        self.size = size
+        self.language = language
+        self.temperature = temperature
+
+    def summarize(self, task: TaskModel, *args, **kwargs) -> TaskModel:
+        # Theoretically, the number of calls to the LLM is log2(n) + 1 if not odds
+        nb_call = 0
+        total_call = int(math.log(len(task.result.texts_found), 2)) + 1
+        task.result = SummaryModel(
+            created_at=task.result.created_at,
             updated_at=int(time.time()),
             summary="",
             word_count=0,
             percentage=0,
-            model_name=model,
-            model_version=model,
+            model_name=self.model_name,
+            model_version=self.model_name,
             status=TaskStatus.IN_PROGRESS.value,
-            extras={"previous_summary": []},
+            texts_found=task.result.texts_found,
+            extras={},
         )
 
-    while len(summaries) > 1:
-        new_summaries = []
-        for i in range(0, len(summaries), 2):
-            if i + 1 < len(summaries):
-                summary1 = summaries[i]
-                summary2 = summaries[i + 1]
-                previous_summaries = {
-                    "sumaries_id": [summary1, summary2],
-                    "summaries": [summary1, summary2],
-                    "word_count": [len(summary1.split()), len(summary2.split())],
-                    "model_name": model,
-                    "step": nb_call,
-                }
+        texts = [Text(id=hashlib.md5(item.encode()).hexdigest(), text=item, word_count=len(item.split())) for item in task.result.texts_found]
+        task.result.partial_summaries = texts
+        if len(texts) == 1:
+            prompt = generate_prompt(
+                template_name="segement_summary_promt.jinja2",
+                context={
+                    "size": self.size,
+                    "language": self.language,
+                    "text": texts[0].text,
+                },
+            )
+            summary = summarize_text(self.model_name, self.client, prompt=prompt)
+            task.result.summary = summary
+            task.result.word_count = len(summary.split())
+            task.result.percentage = 1
+            task.result.nb_llm_calls = 1
+            task = self.update_result_task(task=task, result=task.result, status=TaskStatus.COMPLETED.value)
 
-                prompt = generate_prompt(
-                    template_name="segement_summary_promt.jinja2",
-                    context={
-                        "size": size,
-                        "language": language,
-                        "summaries": [summary1, summary2],
-                    },
-                )
-                t = time.time()
-                new_summary = summarize_text(model, client, prompt, temperature=tempature)
-                time_merge = time.time() - t
-                previous_summaries["time"] = time_merge
-                partial_summary.extras["previous_summary"].append(previous_summaries)
-                new_summaries.append(new_summary)
-                nb_call += 1
+            return task
 
-                partial_summary.updated_at = int(time.time())
-                partial_summary.percentage = nb_call / total_call
-                partial_summary.word_count = len(new_summary.split())
-                partial_summary.summary = new_summary
-                task = task_table.update_task(
-                    task_id=task.id,
-                    form_data=TaskUpdateForm(
-                        status=TaskStatus.IN_PROGRESS.value,
-                        result=partial_summary,
-                        updated_at=int(time.time()),
-                    ),
-                )
-                logger_app.debug(f"New summary: {new_summary} - Time: {time_merge} - Call: {nb_call}")
-            else:
-                new_summaries.append(summaries[i])
-        summaries = new_summaries
+        task = self.update_result_task(task=task, result=task.result, status=TaskStatus.IN_PROGRESS.value)
 
-    final_summary = summaries[0]
-    partial_summary.updated_at = int(time.time())
-    partial_summary.percentage = 1
-    partial_summary.word_count = len(final_summary.split())
-    partial_summary.summary = final_summary
-    task = task_table.update_task(
-        task_id=task.id,
-        form_data=TaskUpdateForm(
-            status=TaskStatus.COMPLETED.value,
-            result=partial_summary,
-            updated_at=int(time.time()),
-        ),
-    )
-    return task, nb_call
+        while len(texts) > 1:
+            new_summaries: List[Text] = []
+            for i in range(0, len(texts), 2):
+                if i + 1 < len(texts):
+                    summary1 = texts[i].text
+                    summary2 = texts[i + 1].text
+
+                    prompt = generate_prompt(
+                        template_name="final_summary_prompt.jinja2",
+                        context={
+                            "size": self.size,
+                            "language": self.language,
+                            "summaries": [summary1, summary2],
+                        },
+                    )
+                    t = time.time()
+                    new_summary = summarize_text(self.model_name, self.client, prompt, temperature=self.temperature)
+                    word_count = len(new_summary.split())
+                    partial_sum = PartialSummary(
+                        id=hashlib.md5(new_summary.encode()).hexdigest(), text=new_summary, word_count=word_count, text1=texts[i], text2=texts[i + 1]
+                    )
+                    task.result.partial_summaries.append(partial_sum)
+                    time_merge = time.time() - t
+
+                    new_summaries.append(partial_sum)
+                    nb_call += 1
+
+                    task.result.updated_at = int(time.time())
+                    task.result.nb_llm_calls = nb_call
+                    task.result.percentage = nb_call / total_call
+                    task.result.word_count = word_count
+                    task.result.summary = new_summary
+
+                    logger_app.debug(f"New summary: {new_summary} - Time: {time_merge} - Call: {nb_call}")
+                    task = self.update_result_task(task=task, result=task.result, status=TaskStatus.IN_PROGRESS.value)
+                else:
+                    new_summaries.append(texts[i])
+            texts = new_summaries
+
+        assert len(texts) == 1, f"Final text should be only one item with the summary - nb texts {len(texts)} we get "
+        final_summary = texts[0]
+        task.result.updated_at = int(time.time())
+        task.result.percentage = 1
+        task.result.word_count = len(final_summary.text.split())
+        task.result.summary = final_summary.text
+        task = self.update_result_task(task=task, result=task.result, status=TaskStatus.COMPLETED.value)
+        return task
