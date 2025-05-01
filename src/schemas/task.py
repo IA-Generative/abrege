@@ -9,6 +9,7 @@ from sqlalchemy import Column, String, JSON, BigInteger
 from src.internal.db import get_db, Base
 from src.schemas.content import URLModel, DocumentModel, TextModel
 from src.schemas.result import ResultModel, SummaryModel
+from src.schemas.parameters import SummaryParameters
 from src.logger.logger import logger
 
 
@@ -28,6 +29,7 @@ class Task(Base):
     )
     content = Column(JSON, nullable=True)
     result = Column(JSON, nullable=True)
+    parameters = Column(JSON, nullable=True)
     extras = Column(JSON, nullable=True)
 
 
@@ -39,6 +41,7 @@ class TaskModel(BaseModel):
     status: str = "queued"
     content: Optional[Union[URLModel, DocumentModel, TextModel]] = None
     result: Optional[Union[ResultModel, SummaryModel]] = None
+    parameters: Optional[SummaryParameters] = SummaryParameters()
 
     created_at: int
     updated_at: int
@@ -52,6 +55,7 @@ class TaskForm(BaseModel):
 
     content: Optional[Union[URLModel, DocumentModel, TextModel]] = None
     result: Optional[Union[ResultModel, SummaryModel]] = None
+    parameters: Optional[SummaryParameters] = None
     updated_at: Optional[int] = None
     extras: Optional[Dict[str, Any]] = None
 
@@ -62,6 +66,7 @@ class TaskUpdateForm(BaseModel):
 
     content: Optional[Union[URLModel, DocumentModel, TextModel]] = None
     result: Optional[Union[ResultModel, SummaryModel]] = None
+    parameters: Optional[SummaryParameters] = None
     updated_at: Optional[int] = None
     extras: Optional[Dict[str, Any]] = None
 
@@ -121,6 +126,8 @@ class TaskTable:
                 task.result = form_data.result.model_dump()
             if form_data.content:
                 task.content = form_data.content.model_dump()
+            if form_data.parameters:
+                task.parameters = form_data.content.model_dump()
 
             task.updated_at = int(time.time())
             db.commit()
