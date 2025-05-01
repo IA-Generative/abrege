@@ -14,7 +14,7 @@ class BaseSummaryService(ABC):
         task: TaskModel,
         result: Optional[SummaryModel] = None,
         status: Optional[TaskStatus] = None,
-    ) -> TaskStatus:
+    ) -> TaskModel:
         return task_table.update_task(
             task_id=task.id,
             form_data=TaskUpdateForm(
