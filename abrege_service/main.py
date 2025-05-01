@@ -15,7 +15,7 @@ from abrege_service.modules.doc import (
     PDFTOMD4LLMService,
 )
 
-from abrege_service.models.summary.naive import merge_summaries
+from abrege_service.models.summary.naive import NaiveSummaryService
 from abrege_service.utils.text import split_texts_by_word_limit
 from abrege_service.config.openai import OpenAISettings
 
@@ -26,7 +26,6 @@ from src.clients import celery_app, file_connector
 from src import __version__
 
 
-# TODO: transform to url service to use only doc service for document process
 audio_service = AudioVoskTranscriptionService()
 video_service = VideoTranscriptionService()
 microsof_service = MicrosoftDocumnentToMdService()
@@ -48,6 +47,8 @@ client = openai.OpenAI(
     base_url=openai_settings.OPENAI_API_BASE,
 )
 model_context_length = openai_settings.MAX_TOKENS
+
+summary_service = NaiveSummaryService(client=client, model_name=openai_settings.OPENAI_API_MODEL)
 
 
 @celery_app.task(name="worker.tasks.abrege", bind=True)
@@ -96,16 +97,8 @@ def launch(self, task: str):
             [text for text in task.result.texts_found],
             max_words=int(model_context_length / 2),
         )
-
-        task, _ = merge_summaries(
-            task=task,
-            summaries=splitted_text,
-            model=task.extras.get("model_name", openai_settings.OPENAI_API_MODEL),
-            client=client,
-            size=task.extras.get("max_word", 4000),
-            language=task.extras.get("language", "français"),
-            tempature=task.extras.get("temperature", 0.0),
-        )
+        task.result.texts_found = splitted_text
+        task = summary_service.process_task(task=task)
         return task.model_dump()
 
     except Exception as e:
