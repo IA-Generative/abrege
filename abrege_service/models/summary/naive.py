@@ -8,6 +8,7 @@ from src.utils.logger import logger_abrege as logger_app
 from abrege_service.prompts.prompting import generate_prompt
 from src.schemas.result import SummaryModel, Text, PartialSummary
 from src.schemas.task import TaskModel, TaskStatus
+from src.schemas.parameters import SummaryParameters
 from abrege_service.models.base import BaseSummaryService
 
 
@@ -64,15 +65,25 @@ class NaiveSummaryService(BaseSummaryService):
             texts_found=task.result.texts_found,
             extras={},
         )
+        params = task.parameters
+        if task.parameters is None:
+            params = SummaryParameters(size=self.size, language=self.language, temperature=self.temperature)
 
-        texts = [Text(id=hashlib.md5(item.encode()).hexdigest(), text=item, word_count=len(item.split())) for item in task.result.texts_found]
+        texts = [
+            Text(
+                id=hashlib.md5(item.encode()).hexdigest(),
+                text=item,
+                word_count=len(item.split()),
+            )
+            for item in task.result.texts_found
+        ]
         task.result.partial_summaries = texts
         if len(texts) == 1:
             prompt = generate_prompt(
                 template_name="segement_summary_promt.jinja2",
                 context={
-                    "size": self.size,
-                    "language": self.language,
+                    "size": params.size,
+                    "language": params.language,
                     "text": texts[0].text,
                 },
             )
@@ -97,16 +108,25 @@ class NaiveSummaryService(BaseSummaryService):
                     prompt = generate_prompt(
                         template_name="final_summary_prompt.jinja2",
                         context={
-                            "size": self.size,
-                            "language": self.language,
+                            "size": params.size,
+                            "language": params.language,
                             "summaries": [summary1, summary2],
                         },
                     )
                     t = time.time()
-                    new_summary = summarize_text(self.model_name, self.client, prompt, temperature=self.temperature)
+                    new_summary = summarize_text(
+                        self.model_name,
+                        self.client,
+                        prompt,
+                        temperature=self.temperature,
+                    )
                     word_count = len(new_summary.split())
                     partial_sum = PartialSummary(
-                        id=hashlib.md5(new_summary.encode()).hexdigest(), text=new_summary, word_count=word_count, text1=texts[i], text2=texts[i + 1]
+                        id=hashlib.md5(new_summary.encode()).hexdigest(),
+                        text=new_summary,
+                        word_count=word_count,
+                        text1=texts[i],
+                        text2=texts[i + 1],
                     )
                     task.result.partial_summaries.append(partial_sum)
                     time_merge = time.time() - t
@@ -121,7 +141,11 @@ class NaiveSummaryService(BaseSummaryService):
                     task.result.summary = new_summary
 
                     logger_app.debug(f"New summary: {new_summary} - Time: {time_merge} - Call: {nb_call}")
-                    task = self.update_result_task(task=task, result=task.result, status=TaskStatus.IN_PROGRESS.value)
+                    task = self.update_result_task(
+                        task=task,
+                        result=task.result,
+                        status=TaskStatus.IN_PROGRESS.value,
+                    )
                 else:
                     new_summaries.append(texts[i])
             texts = new_summaries
