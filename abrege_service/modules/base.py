@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 import time
 from src.schemas.task import TaskModel, task_table, TaskStatus, TaskUpdateForm
 from src.schemas.result import ResultModel
+from src.schemas.content import DocumentModel
 
 
 class NoGivenInput(Exception): ...
@@ -39,7 +40,8 @@ class BaseService(ABC):
         if task.content is None:
             raise NoGivenInput("No input is given")
 
-        content_type: str = task.content.content_type
-        if not self.is_availble(content_type):
-            raise NotImplementedError(f"Content type {content_type} is not available for processing.")
+        if isinstance(task.content, DocumentModel):
+            content_type: str = task.content.content_type
+            if not self.is_availble(content_type):
+                raise NotImplementedError(f"Content type {content_type} is not available for processing.")
         return self.task_to_text(task, **kwargs)
