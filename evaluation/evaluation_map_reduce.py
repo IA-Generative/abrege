@@ -1,11 +1,11 @@
 import time
 import asyncio
-from abrege_service.models.summary.map_reduce import do_map_reduce
-from abrege_service.schemas.params import ParamsSummarize
+from src.schemas.parameters import SummaryParameters
 from tqdm import tqdm
 from evaluation.client import dataset, rouge_metric, model_name
 from src import __version__, __name__ as package_name
 from bert_score import score
+from .mapreduce import do_map_reduce
 
 
 predictions = []
@@ -16,7 +16,7 @@ def evaluate_summarization(dataset, model_name: str = model_name):
     """
     Evaluate the summarization model using Rouge and BertScore metrics.
     """
-    params = ParamsSummarize()
+    params = SummaryParameters()
     nb_calls = 0
     time_start = time.time()
     for data in tqdm(dataset):
