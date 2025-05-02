@@ -41,6 +41,15 @@ async def do_map_reduce(
         model=params.model, temperature=params.temperature, api_key=os.environ["OPENAI_API_KEY"], base_url=os.environ["OPENAI_API_BASE"]
     )
 
+    concat_str = [list_str[0]]
+    for index, str_ in enumerate(list_str[1:]):
+        candidat = concat_str[-1] + "\n---\n" + str_
+        if llm.get_num_tokens(candidat) > params.context_size:
+            concat_str.append(str_)
+        else:
+            concat_str[-1] = candidat
+
+
     num_tokens = llm.get_num_tokens(" ".join(list_str))
 
     if num_tokens > num_tokens_limit:
@@ -162,7 +171,7 @@ async def do_map_reduce(
         nb_call = 0
         async for step in app.astream(
             # {"contents": [doc.page_content for doc in split_docs]},
-            {"contents": list_str},
+            {"contents": list_str if 0 else concat_str},
             {"recursion_limit": recursion_limit, "max_concurrency": max_concurrency}
         ):
             # print(list(step.keys()))

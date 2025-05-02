@@ -17,7 +17,7 @@ Rassemblez ces éléments et faites-en un résumé final et consolidé dans {lan
 class ParamsSummarize(BaseModel):
     method: MethodType | None = "map_reduce"
     model: str = os.environ["OPENAI_API_MODEL"]
-    context_size: int | None = 10_000
+    context_size: int | None = 16_000
     temperature: Annotated[float, Query(ge=0, le=1.0)] = 0.
     language: str | None = "French"
     size: int | None = 4_000
