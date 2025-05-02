@@ -4,8 +4,9 @@ import shutil
 import os
 import traceback
 from datetime import datetime
+from typing import Optional
 from fastapi import APIRouter, File, UploadFile, HTTPException, status, Form
-from pydantic import ValidationError
+from pydantic import ValidationError, BaseModel
 
 from api.schemas.content import Content
 from api.utils.content_type import get_content_type
@@ -20,21 +21,33 @@ from src.schemas.task import (
     TaskStatus,
 )
 from src.schemas.content import DocumentModel
+from src.schemas.parameters import SummaryParameters
 
 router = APIRouter(tags=["Document"])
+
+
+class SummarizeDocModel(BaseModel):
+    content: Content
+    parameters: Optional[SummaryParameters] = None
+
+
+@router.post("/doc/summarize-validator", response_model=SummarizeDocModel)
+async def validate_content(summarize_content: SummarizeDocModel):
+    return summarize_content
 
 
 @router.post("/doc/{user_id}", status_code=status.HTTP_201_CREATED, response_model=TaskModel)
 async def summarize_doc(
     user_id: str,
-    content: str = Form(...),
+    summarize_content: str = Form(..., description=f"Should be in {SummarizeDocModel.__name__} format"),
     file: UploadFile = File(...),
 ):
     try:
-        content: Content = Content.model_validate_json(content)
+        summarize_content: SummarizeDocModel = SummarizeDocModel.model_validate_json(summarize_content)
     except ValidationError as e:
-        raise HTTPException(status_code=400, detail=e.errors())
-
+        raise HTTPException(status_code=422, detail=e.errors())
+    parameters = summarize_content.parameters
+    content = summarize_content.content
     extras = {}
     task_data = task_table.insert_new_task(
         user_id=user_id,
@@ -42,6 +55,7 @@ async def summarize_doc(
             user_id=user_id,
             type="summary",
             status=TaskStatus.CREATED.value,
+            parameters=parameters,
             extras=extras,
         ),
     )

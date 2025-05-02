@@ -13,14 +13,14 @@ from src.clients import celery_app
 from src.schemas.content import URLModel, TextModel
 from src.schemas.task import task_table, TaskModel, TaskForm, TaskStatus
 from src.logger.logger import logger
-from src.schemas.parameters import BaseParameters
+from src.schemas.parameters import SummaryParameters
 
 router = APIRouter(tags=["Text"])
 
 
 class SummarizeModel(BaseModel):
     content: Union[UrlContent, TextContent]
-    parameters: Optional[BaseParameters] = None
+    parameters: Optional[SummaryParameters] = None
 
 
 @router.post("/content/{user_id}", status_code=status.HTTP_201_CREATED, response_model=TaskModel)

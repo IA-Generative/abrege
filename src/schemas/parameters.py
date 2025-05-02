@@ -25,3 +25,4 @@ class SummaryParameters(BaseParameters):
     map_prompt: str | None = MAP_PROMPT
     reduce_prompt: str | None = REDUCE_PROMPT
     extras: dict | None = {}
+    custom_prompt: str | None = None
