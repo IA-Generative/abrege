@@ -11,14 +11,17 @@ Rassemblez ces éléments et faites-en un résumé final et consolidé dans {lan
 """
 
 
-class SummaryParameters(BaseModel):
-    method: MethodType | None = "map_reduce"
-    model: str = "qwen2.5"
-    context_size: int | None = 10_000
+class BaseParameters(BaseModel):
     temperature: float = 0.0
     language: str | None = "French"
     size: int | None = 4_000
-    custom_prompt: str | None = None  # param déprécié
+    extras: dict | None = {}
+
+
+class SummaryParameters(BaseParameters):
+    method: MethodType | None = "map_reduce"
+    model: str = "qwen2.5"
+    context_size: int | None = 10_000
     map_prompt: str | None = MAP_PROMPT
     reduce_prompt: str | None = REDUCE_PROMPT
     extras: dict | None = {}
