@@ -19,7 +19,7 @@ help:
 install: install-uv ## Installation de l'environnement pour du développement local (gestionnaire de dépendances)
 	@if [ ! -d ".venv" ]; then \
 		echo "Synchronisation des dépendances..."; \
-		uv sync --group test --group backend --group service-transcription --group service-diarization; \
+		uv sync --group test --group abrege-api --group abrege-service; \
 	else \
 		echo "Dépendances déjà synchronisées (suppose .venv existant)"; \
 	fi
