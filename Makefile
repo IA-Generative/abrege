@@ -48,6 +48,7 @@ install-local: ## Installation des dépendances systèmes
 	endif
 
 lint: install ## Lint le code du dépôt
+	uv add ruff
 	uv run ruff check .
 
 up: ## Lance l'environnement de développement en conteneurs

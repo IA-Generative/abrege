@@ -10,8 +10,45 @@ env:
   OPENAI_API_MODEL: ${{ vars.OPENAI_API_MODEL }}
 
 jobs:
-  run-tests:
+  linter:
+    name: Linter
     runs-on: actions-runner-controller
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.x
+
+      - name: Install dependencies
+        run: make install
+
+      - name: Run linter
+        run: make lint
+
+  build-backend:
+    name: Build Backend
+    needs: linter
+    runs-on: actions-runner-controller
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build backend
+        run: make build-abrege-api
+
+  build-abrege-service:
+    name: Build Abrege Service
+    needs: linter
+    runs-on: actions-runner-controller
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Service
+        run: make build-abrege-service
+
+  run-test-src:
+    runs-on: actions-runner-controller
+    needs:
+      - build-backend
     permissions:
       contents: read
     steps:
@@ -25,4 +62,42 @@ jobs:
 
       - name: Install dependencies and run tests
         run: |
-          make tests
+          make test-src
+
+  run-test-abrege-api:
+    runs-on: actions-runner-controller
+    needs:
+      - build-backend
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.x
+
+      - name: Install dependencies and run abrege api tests
+        run: |
+          make test-abrege-api
+
+  run-test-abrege-service:
+    runs-on: actions-runner-controller
+    needs:
+      - build-abrege-service
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.x
+
+      - name: Install dependencies and run abrege service tests
+        run: |
+          make test-abrege-service
