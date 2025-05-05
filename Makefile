@@ -118,7 +118,7 @@ up-env:
 
 
 install-test:
-	curl -LsSf https://astral.sh/uv/install.sh | sh
+	curl -LsSf https://astral.sh/uv/install.sh | sh || true
 
 install-test-dep: install-test
 	uv sync --group test --group abrege-api --group abrege-service

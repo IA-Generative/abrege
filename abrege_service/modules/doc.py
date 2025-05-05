@@ -1,7 +1,7 @@
-from typing import List, Union
+import time
 import pymupdf4llm
 from abrege_service.modules.base import BaseService
-from markitdown import MarkItDown
+import markitdown
 from abrege_service.schemas import (
     PDF_CONTENT_TYPES,
     MICROSOFT_WORD_CONTENT_TYPES,
@@ -9,85 +9,116 @@ from abrege_service.schemas import (
     MICROSOFT_PRESENTATION_CONTENT_TYPES,
     TEXT_CONTENT_TYPES,
 )
-from abrege_service.schemas.content_type_categories import ContentTypeCategories
-from abrege_service.utils.content_type import get_content_category
+from src.schemas.task import TaskModel, TaskStatus
+from src.schemas.result import ResultModel
 
-md = MarkItDown(enable_plugins=False)
+md = markitdown.MarkItDown(enable_plugins=False)
 
 
-class DocService(BaseService):
-    def is_availble(self, content_type: str) -> bool:
-        """
-        Check if the content type is available for processing.
+class PDFService(BaseService):
+    def __init__(self, content_type_allowed=PDF_CONTENT_TYPES):
+        super().__init__(content_type_allowed)
 
-        Args:
-            content_type (str): The content type to check.
 
-        Returns:
-            bool: True if the content type is available for processing, False otherwise.
-        """
-        return (
-            content_type
-            in PDF_CONTENT_TYPES
-            + MICROSOFT_WORD_CONTENT_TYPES
-            + MICROSOFT_SPREADSHEET_CONTENT_TYPES
-            + MICROSOFT_PRESENTATION_CONTENT_TYPES
-            + TEXT_CONTENT_TYPES
+class PDFTOMD4LLMService(PDFService):
+    def __init__(self):
+        super().__init__()
+
+    def task_to_text(self, task: TaskModel, **kwargs):
+        if task.extras is None:
+            task.extras = {}
+        if task.result is None:
+            task.result = ResultModel(
+                type="pdf",
+                created_at=int(time.time()),
+                model_name=pymupdf4llm.__name__,
+                model_version=pymupdf4llm.__version__,
+                updated_at=int(time.time()),
+                percentage=0,
+                extras={},
+            )
+
+        partial_result = pymupdf4llm.to_markdown(
+            task.content.file_path,
+            page_chunks=kwargs.get("page_chunks", True),
+            embed_images=kwargs.get("embed_images", True),
+        )
+        task.result.texts_found = [item.get("text") for item in partial_result]
+
+        task.result.extras["pdftomd"] = partial_result
+        task.result.percentage = 1
+        task = self.update_task(
+            task=task,
+            status=TaskStatus.IN_PROGRESS.value,
+            result=task.result,
+        )
+        return task
+
+
+class MicrosoftDocumentService(BaseService):
+    def __init__(
+        self,
+        content_type_allowed=MICROSOFT_WORD_CONTENT_TYPES + MICROSOFT_SPREADSHEET_CONTENT_TYPES + MICROSOFT_PRESENTATION_CONTENT_TYPES,
+    ):
+        super().__init__(content_type_allowed)
+
+
+class MicrosoftDocumnentToMdService(MicrosoftDocumentService):
+    def __init__(self):
+        super().__init__()
+
+    def task_to_text(self, task: TaskModel, **kwargs):
+        if task.extras is None:
+            task.extras = {}
+        if task.result is None:
+            task.result = ResultModel(
+                type="microsoft",
+                created_at=int(time.time()),
+                model_name=markitdown.__name__,
+                model_version=markitdown.__version__,
+                updated_at=int(time.time()),
+                percentage=0,
+                extras={},
+            )
+
+        task.result.texts_found = [md.convert(source=task.content.file_path).text_content]
+
+        task.result.percentage = 1
+        task = self.update_task(
+            task=task,
+            status=TaskStatus.IN_PROGRESS.value,
+            result=task.result,
         )
 
-    def pdf_to_text(
-        self,
-        file_path: str,
-        page_chunks: bool = True,
-        embed_images: bool = True,
-        **kwargs,
-    ) -> Union[str, List[str]]:
-        """
-        Convert PDF to text.
-        Args:
-            file_path (str): The path to the PDF file.
-            **kwargs: Additional arguments for processing.
-        Returns:
-            str: The processed result.
-        """
-        # Implement the logic to convert PDF to text
-        # This is a placeholder implementation
+        return task
 
-        return pymupdf4llm.to_markdown(file_path, page_chunks=page_chunks, embed_images=embed_images)
 
-    def word_to_text(self, file_path: str, **kwargs) -> str:
-        """
-        Convert Word document to text.
-        Args:
-            file_path (str): The path to the Word document.
-            **kwargs: Additional arguments for processing.
-        Returns:
-            str: The processed result.
-        """
-        # Implement the logic to convert Word document to text
-        # This is a placeholder implementation
-        return md.convert(source=file_path).text_content
+class FlatTextService(BaseService):
+    def __init__(self, content_type_allowed=TEXT_CONTENT_TYPES):
+        super().__init__(content_type_allowed)
 
-    def transform_to_text(self, file_path: str, content_type: str, **kwargs) -> List[str]:
-        """
-        Transform the document to text.
-        Args:
-            file_path (str): The path to the file.
-            content_type (str): The content type of the file.
-            **kwargs: Additional arguments for processing.
-        Returns:
-            str: The processed result.
-        """
-        # Implement the logic to transform the document to text
-        # This is a placeholder implementation
-        category = get_content_category(content_type)
-        if category == ContentTypeCategories.PDF.value:
-            return self.pdf_to_text(file_path, **kwargs)
+    def task_to_text(self, task: TaskModel, **kwargs) -> TaskModel:
+        if task.extras is None:
+            task.extras = {}
+        if task.result is None:
+            task.result = ResultModel(
+                type="plain-text",
+                created_at=int(time.time()),
+                model_name=markitdown.__name__,
+                model_version=markitdown.__version__,
+                updated_at=int(time.time()),
+                percentage=0,
+                extras={},
+            )
 
-        if category == ContentTypeCategories.WORD_DOCUMENT.value:
-            return [self.word_to_text(file_path, **kwargs)]
-        if category == ContentTypeCategories.TEXTE.value:
-            with open(file_path, "r") as file:
-                return [file.read()]
+        with open(task.content.file_path, encoding="utf8", errors="ignore") as f:
+            task.result.texts_found = [f.read()]
 
-        raise NotImplementedError(f"Content type {content_type} is not implemented for {self.__class__.__name__}.")
+        task.result.percentage = 1
+        task = self.update_task(
+            task=task,
+            status=TaskStatus.IN_PROGRESS.value,
+            result=task.result,
+        )
+
+        return task

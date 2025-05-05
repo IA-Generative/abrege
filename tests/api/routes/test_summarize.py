@@ -13,9 +13,11 @@ def test_summarize_content_url():
     response = client.post(
         "/content/test_user",
         json={
-            "url": "https://google.com",
-            "extras": {"key": "value"},
-            "prompt": "Summarize this page",
+            "content": {
+                "url": "https://google.com",
+                "extras": {"key": "value"},
+                "prompt": "Summarize this page",
+            }
         },
     )
 
@@ -34,9 +36,11 @@ def test_summarize_content_text():
     response = client.post(
         "/content/test_user",
         json={
-            "text": "https://example.com",
-            "extras": {"key": "value"},
-            "prompt": "Summarize this page",
+            "content": {
+                "text": "https://example.com",
+                "extras": {"key": "value"},
+                "prompt": "Summarize this page",
+            }
         },
     )
 
@@ -55,9 +59,11 @@ def test_summarize_content_body_error():
     response = client.post(
         "/content/test_user",
         json={
-            "stext": "https://example.com",
-            "extras": {"key": "value"},
-            "prompt": "Summarize this page",
+            "content": {
+                "stext": "https://example.com",
+                "extras": {"key": "value"},
+                "prompt": "Summarize this page",
+            }
         },
     )
 
@@ -72,9 +78,11 @@ def test_summarize_content_url_error():
     response = client.post(
         "/content/test_user",
         json={
-            "url": "https://22222.24",
-            "extras": {"key": "value"},
-            "prompt": "Summarize this page",
+            "content": {
+                "url": "https://22222.24",
+                "extras": {"key": "value"},
+                "prompt": "Summarize this page",
+            }
         },
     )
 

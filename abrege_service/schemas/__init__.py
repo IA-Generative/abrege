@@ -22,6 +22,7 @@ MICROSOFT_PRESENTATION_CONTENT_TYPES = [
 AUDIO_CONTENT_TYPES = [
     "audio/mpeg",
     "audio/wav",
+    "audio/x-wav",
     "audio/ogg",
     "audio/mp4",
     "audio/x-m4a",

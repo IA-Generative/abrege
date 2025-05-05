@@ -20,6 +20,48 @@ services:
       - "6379:6379"
     restart: unless-stopped
 
+  abrege_service:
+    deploy:
+      replicas: 1
+    command: ["celery", "-A", "abrege_service.main", "worker", "--pool=prefork","--concurrency=4", "-E"]
+    image: abrege-service
+    volumes:
+    - ./abrege_service/:/app/abrege_service/
+    - ./src/:/app/src/
+    build:
+      context: .
+      dockerfile: Dockerfiles/abrege_service/Dockerfile
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_QUEUE_NAME: redis-queue
+      MINIO_BUCKET_NAME: test
+      MINIO_END_POINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      DATABASE_URL: postgresql://postgres:secret@postgres:5432/example_db
+      OPENAI_API_BASE: https://localhost/v1
+      OPENAI_API_KEY: EMPTY
+
+  flower_abrege:
+    image: abrege-service
+    environment:
+      CELERY_BROKER_URL: redis://redis
+      CELERY_RESULT_BACKEND: redis://redis
+      MINIO_BUCKET_NAME: test
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      MINIO_END_POINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      DATABASE_URL: postgresql://postgres:secret@postgres:5432/example_db
+      OPENAI_API_BASE: https://localhost/v1
+      OPENAI_API_KEY: EMPTY
+    ports:
+      - "5555:5555"
+    command: ["celery", "-A", "abrege_service.main", "flower", "--address=0.0.0.0", "--port=5555"]
+
+
   abrege_api:
     image: abrege-api
     build:
@@ -34,7 +76,7 @@ services:
       REDIS_PORT: 6379
       CELERY_APP_NAME: default
       MINIO_BUCKET_NAME: test
-      MINIO_END_POINT: minio3:9000
+      MINIO_END_POINT: minio:9000
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
       DATABASE_URL: postgresql://postgres:secret@postgres:5432/example_db

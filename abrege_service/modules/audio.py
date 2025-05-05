@@ -1,4 +1,4 @@
-from abc import abstractmethod
+import time
 import json
 
 from vosk import Model, KaldiRecognizer
@@ -6,9 +6,11 @@ from pydub import AudioSegment
 import wave
 
 from abrege_service.schemas import AUDIO_CONTENT_TYPES
-from abrege_service.schemas.audio import AudioModel
 from abrege_service.modules.base import BaseService
-from typing import List
+from src.schemas.task import TaskModel, TaskStatus
+from src.schemas.result import ResultModel
+from src.utils.logger import logger_abrege
+
 
 # audio dataset : https://github.com/facebookresearch/voxpopuli
 # https://lbourdois.github.io/blog/audio/dataset_audio_fr/
@@ -27,54 +29,76 @@ def convertir_audio(chemin_entree, chemin_sortie):
 
 
 class AudioBaseService(BaseService):
-    def is_availble(self, content_type: str) -> bool:
-        """
-        Check if the content type is available for processing.
-
-        Args:
-            content_type (str): The content type to check.
-
-        Returns:
-            bool: True if the content type is available for processing, False otherwise.
-        """
-        return content_type in AUDIO_CONTENT_TYPES
-
-    @abstractmethod
-    def audio_to_text(self, file_path: str, **kwargs) -> str: ...
+    def __init__(self, content_type_allowed=AUDIO_CONTENT_TYPES):
+        super().__init__(content_type_allowed)
 
 
-class AudioService(AudioBaseService):
-    def __init__(self, path_model: str = "abrege_service/data/models/vosk-model-small-fr-0.22"):
+class AudioVoskTranscriptionService(AudioBaseService):
+    def __init__(
+        self,
+        path_model: str = "abrege_service/data/models/vosk-model-small-fr-0.22",
+        second_per_process: float = 4000 / 16000.0,
+        service_ratio_representaion: float = 1.0,
+    ):
+        super().__init__()
+
         self.model = Model(path_model)
         self.rec = KaldiRecognizer(self.model, 16000)
         self.rec.SetWords(True)
+        self.second_per_process = second_per_process
+        self.service_ratio_representaion = service_ratio_representaion
 
-    def audio_to_text(self, file_path: str, **kwargs) -> List[AudioModel]:
-        convertir_audio(file_path, "temp.wav")
+    def task_to_text(self, task: TaskModel, **kwargs) -> TaskModel:
+        logger_abrege.debug(f"Start transciption for {task.id}")
+        if task.extras is None:
+            task.extras = {}
+        if task.result is None:
+            task.result = ResultModel(
+                type="audio",
+                created_at=int(time.time()),
+                model_name="vosk",
+                model_version="vosk-model-small-fr-0.22",
+                updated_at=int(time.time()),
+                percentage=0,
+            )
+
+        convertir_audio(task.content.file_path, "temp.wav")
         file_path = "temp.wav"
         wf = wave.open(file_path, "rb")
-
+        frames = wf.getnframes()
+        framerate = wf.getframerate()
+        duration = frames / float(framerate)
+        task.extras["audio_duration"] = duration
         rec = KaldiRecognizer(self.model, wf.getframerate())
         rec.SetWords(True)
         results = []
+        read_frames = int(self.second_per_process * framerate)
+        red_frames = 0
         while True:
-            data = wf.readframes(4000)
+            data = wf.readframes(read_frames)
             if len(data) == 0:
                 break
             if rec.AcceptWaveform(data):
                 res = json.loads(rec.Result())
-                results.append(AudioModel.model_validate(res))
+                results.append(res)
+            red_frames += read_frames
+            if red_frames > frames:
+                red_frames = frames
+            task.result.percentage = self.service_ratio_representaion * (red_frames / frames)
+            task.extras["audio"] = {"result": results}
+            logger_abrege.debug(f"{task.id}: percentage : {task.result.percentage} - {red_frames}/{frames}")
+            task.result.texts_found = [item.get("text") for item in results]
+            task = self.update_task(task=task, status=TaskStatus.IN_PROGRESS.value, result=task.result)
 
         final_res = json.loads(rec.FinalResult())
         if "result" not in final_res:
             final_res["result"] = []
-        results.append(AudioModel.model_validate(final_res))
+        results.append(final_res)
         wf.close()
+        logger_abrege.debug(f"{task.id}: percentage : {task.result.percentage} - {red_frames}/{frames}")
+        task.extras["audio"] = {"result": results}
+        task.result.texts_found = [item.get("text") for item in results]
 
-        return results
+        task = self.update_task(task=task, status=TaskStatus.IN_PROGRESS.value, result=task.result)
 
-    def transform_to_text(self, file_path, content_type, **kwargs) -> str:
-        if not self.is_availble(content_type):
-            raise NotImplementedError(f"Content type {content_type} is not implemented for {self.__class__.__name__}.")
-
-        return "\n".join([audio.text for audio in self.audio_to_text(file_path, **kwargs)])
+        return task

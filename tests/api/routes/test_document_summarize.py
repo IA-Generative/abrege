@@ -24,7 +24,7 @@ def test_upload_file(client):
     for img_path in glob.glob("tests/test_data/*"):
         with open(img_path, "rb") as image_file:
             files = {"file": (img_path, image_file, "multipart/form-data")}
-            data = {"content": json.dumps({"prompt": "Votre texte ici"})}
+            data = {"summarize_content": json.dumps({"content": {"prompt": "Votre texte ici"}})}
 
             response = client.post(f"/doc/{user_id}", files=files, data=data)
 
