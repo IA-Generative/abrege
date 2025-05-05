@@ -2,7 +2,7 @@ from fastapi import APIRouter
 import datetime
 
 from api.utils.logger import logger_abrege
-from api.schemas.health import Health
+from src.schemas.health import Health
 from src import __version__, __name__
 
 

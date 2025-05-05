@@ -1,7 +1,7 @@
 import requests
 from abc import ABC, abstractmethod
 import magic
-from api.schemas.health import Health
+from src.schemas.health import Health
 
 
 class BaseBackend(ABC):
