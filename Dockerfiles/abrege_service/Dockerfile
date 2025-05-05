@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.11-slim AS builder
 
 # Copier les binaires uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
@@ -39,4 +39,11 @@ RUN mkdir -p /app/abrege_service/data/models && \
 ENV PYTHONPATH=/app
 ENV PATH="/app/.venv/bin:$PATH"
 
+CMD ["uv", "run", "abrege_service/main.py"]
+
+
+FROM builder AS test
+WORKDIR /app
+COPY tests tests
+RUN uv sync --no-cache --group test --group abrege-service
 CMD ["uv", "run", "abrege_service/main.py"]

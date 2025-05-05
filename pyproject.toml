@@ -66,6 +66,9 @@ evaluation = [
 openai = [
     "openai>=1.76.0",
 ]
+migration = [
+    "alembic>=1.15.2",
+]
 
 
 [tool.ruff]

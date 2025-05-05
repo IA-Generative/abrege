@@ -1,136 +1,93 @@
-SHELL = /bin/bash
-
-export APP = abrege
-export LATEST_TAG := $(shell git describe --tags --abbrev=0 || echo "latest")
-export CURRENT_PATH := $(shell pwd)
-export IMAGE_API_BASE_NAME = ia-generative/abrege
-export IMAGE_API_OLD_NAME = ia-generative/old-abrege
-export IMAGE_STREAMLIT_BASE_NAME = ia-generative/streamlit-abrege
-
-export COMPOSE ?= docker compose
-export DC_UP_ARGS = #--build --force-recreate
-export DC_BUILD_ARGS = #--no-cache
-
-#BACKEND
-export BACKEND_PORT = 8000
-
-# NETWORK
-export DC_NETWORK_OPT = --opt com.docker.network.driver.mtu=1450 # In RIE network
-export DC_NETWORK = ia-foule
+PYTHONPATH=$(PWD)
+BACKEND_CONTAINER=talktomi-backend
+TRANSCRIPTION_SERVICE_CONTAINER=talktomi-transcription-service
+DIARIZATION_SERVICE_CONTAINER=talktomi-diarization-service
 
 
-network:
-	docker network create ${DC_NETWORK_OPT} ${DC_NETWORK} 2> /dev/null; true
+.PHONY: install-uv install-local linter test-bakend \
+        up down tests build-talktomi-backend build-talktomi-transcription-service build-talktomi-diarization-service build \
+        upgrade-db upgrade-revision cluster help test-service-transcription
+
+.DEFAULT_GOAL := help
+
+help:
+	@echo "Usage: make <command>"
+	@echo ""
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-25s\033[0m %s\n", $$1, $$2}'
+
+install: install-uv ## Installation de l'environnement pour du développement local (gestionnaire de dépendances)
+	@if [ ! -d ".venv" ]; then \
+		echo "Synchronisation des dépendances..."; \
+		uv sync --group test --group backend --group service-transcription --group service-diarization; \
+	else \
+		echo "Dépendances déjà synchronisées (suppose .venv existant)"; \
+	fi
+
+install-uv:
+	@if ! command -v uv >/dev/null 2>&1; then \
+		echo "uv non trouvé, installation..."; \
+		curl -LsSf https://astral.sh/uv/install.sh | sh; \
+	else \
+		echo "uv déjà installé"; \
+	fi
+
+install-linux:
+	sudo apt update && sudo apt install -y poppler-utils ffmpeg
+
+install-mac:
+	brew install poppler ffmpeg
+
+install-local: ## Installation des dépendances systèmes
+	ifeq ($(shell uname), Linux)
+		@$(MAKE) install-linux
+	else ifeq ($(shell uname), Darwin)
+		@$(MAKE) install-mac
+	else
+		@echo "Installation automatique non supportée sur cette plateforme"
+	endif
+
+lint: install ## Lint le code du dépôt
+	uv run ruff check .
+
+up: ## Lance l'environnement de développement en conteneurs
+	docker compose up -d
+
+down: ## Eteint l'environnement de développement en conteneurs
+	docker compose down || true
 
 
-build-dev: network
-	$(COMPOSE) -f docker-compose.yaml -f docker-compose-dev.yaml build $(DC_BUILD_ARGS)
-
-exec-dev:
-	$(COMPOSE) -f docker-compose-dev.yaml up $(DC_UP_ARGS)
-stop-dev:
-	$(COMPOSE) -f docker-compose-dev.yaml down
-
-test-dev:
-	$(COMPOSE) exec -i fastapi bash -c "cd ../ && pytest --runslow"
-
-build-prod: network
-	$(COMPOSE) -f docker-compose.yaml build $(DC_BUILD_ARGS)
-
-exec-prod:
-	$(COMPOSE) -f docker-compose.yaml up $(DC_UP_ARGS)
-
-stop-prod:
-	$(COMPOSE) -f docker-compose.yaml down
-
-test-prod:
-	$(COMPOSE) cp ./tests fastapi:/app
-	$(COMPOSE) cp ./pyproject.toml fastapi:/app
-	$(COMPOSE) exec -i fastapi bash -c "cd ../ && pytest --runslow"
-	$(COMPOSE) exec -i fastapi bash -c "cd ../ && rm -r tests && rm pyproject.toml"
+clean: ## Nettoyage du dépôt
+	find . -type d -name "__pycache__" -exec rm -r {} +
+	find . -type f -name "*.pyc" -delete
+	find . -type d -name ".ruff_cache" -exec rm -r {} +
+	find . -type d -name ".pytest_cache" -exec rm -r {} +
+	find . -type d -name ".mypy_cache" -exec rm -r {} +
+	rm *.db
+	$(MAKE) down
 
 
-docker-login:
-	@echo "Connexion à la registry Docker $(DOCKER_REGISTRY)..."
-	docker login "$(DOCKER_REGISTRY)" -u "$(DOCKER_USERNAME)" -p "$(DOCKER_PASSWORD)"
-	@echo "Connexion réussie !"
+########################### DOCKER BUILD ###########################
 
-##################### abrege-api #####################
-docker-build-api:
-	@echo "Building $(IMAGE_API_BASE_NAME) image..."
-	docker build -t $(DOCKER_REGISTRY)/$(IMAGE_API_BASE_NAME):$(LATEST_TAG) -f Dockerfiles/api/Dockerfile .
+build-abrege-api: ## Lance la construction de l'image Docker backend
+	docker compose build abrege_api
 
-docker-push-api: docker-login docker-build-api
-	@echo "Push de l'image $(DOCKER_REGISTRY)/$(IMAGE_API_BASE_NAME):$(LATEST_TAG)..."
-	docker push "$(DOCKER_REGISTRY)/$(IMAGE_API_BASE_NAME):$(LATEST_TAG)"
-	@echo "Image poussée avec succès : $(DOCKER_REGISTRY)/$(IMAGE_API_BASE_NAME):$(LATEST_TAG)"
-
-##################### end abrege-api #####################
-
-##################### abrege-streamlit #####################
-docker-build-streamlit:
-	@echo "Building $(IMAGE_STREAMLIT_BASE_NAME) image..."
-	docker build -t $(DOCKER_REGISTRY)/$(IMAGE_STREAMLIT_BASE_NAME):$(LATEST_TAG) -f Dockerfiles/frontend/Dockerfile .
-
-docker-push-streamlit: docker-login docker-build-streamlit
-	@echo "Push de l'image $(DOCKER_REGISTRY)/$(IMAGE_STREAMLIT_BASE_NAME):$(LATEST_TAG)..."
-	docker push "$(DOCKER_REGISTRY)/$(IMAGE_STREAMLIT_BASE_NAME):$(LATEST_TAG)"
-	@echo "Image poussée avec succès : $(DOCKER_REGISTRY)/$(IMAGE_STREAMLIT_BASE_NAME):$(LATEST_TAG)"
-
-##################### end abrege-frontend #####################
+build-abrege-service:
+	docker compose build abrege_service
 
 
-##################### abrege-fastapi-old #####################
-docker-build-fastapi-old:
-	@echo "Building $(IMAGE_API_OLD_NAME) image..."
-	docker build -t $(DOCKER_REGISTRY)/$(IMAGE_API_OLD_NAME):$(LATEST_TAG) -f fastapi/Dockerfile .
-
-docker-push-fastapi-old: docker-login docker-build-fastapi-old
-	@echo "Push de l'image $(DOCKER_REGISTRY)/$(IMAGE_API_OLD_NAME):$(LATEST_TAG)..."
-	docker push "$(DOCKER_REGISTRY)/$(IMAGE_API_OLD_NAME):$(LATEST_TAG)"
-	@echo "Image poussée avec succès : $(DOCKER_REGISTRY)/$(IMAGE_API_OLD_NAME):$(LATEST_TAG)"
-
-##################### end abrege-fastapi-old #####################
-
-shell:
-	$(COMPOSE) exec -it fastapi bash -c "/bin/bash"
+build: build-talktomi-backend build-ocr-service ## Lance la construction de toutes les images Docker
 
 
+####################################################################
 
-#############
-#  General  #
-#############
-
-dev: exec-dev
-
-prod: exec-prod
-
-down: stop-dev stop-prod
-
-runapi:
-	uv run --env-file .env python api/main.py
-#	@export $(shell grep -v '^#' .env | xargs) && uv run python api/main.py
-
-up-env:
-	docker compose up -d || true
-	@echo "Attente de 5 secondes pour laisser les conteneurs démarrer..."
+init-db:
+	docker compose up -d redis db minio abrege_api
 	sleep 5
 
 
-install-test:
-	curl -LsSf https://astral.sh/uv/install.sh | sh || true
+test-src: init-db
+	docker compose exec abrege_api uv run pytest --cov=./src --cov-report=term-missing tests/src/ -ra -v --maxfail=0
 
-install-test-dep: install-test
-	uv sync --group test --group abrege-api --group abrege-service
-	mkdir -p abrege_service/data/models
-	curl -L -o vosk-model-small-fr-0.22.zip https://alphacephei.com/vosk/models/vosk-model-small-fr-0.22.zip
-	unzip vosk-model-small-fr-0.22.zip -d abrege_service/data/models
-	rm vosk-model-small-fr-0.22.zip
-
-
-tests: install-test-dep up-env
-	export PYTHONPATH=$(PWD) && env $(shell grep -v '^#' .env.sample | xargs) uv run pytest --cov-report=term-missing --cov=./src --cov=./api --cov=./abrege_service tests/
-
-clean:
-	find . -type d -name "__pycache__" -exec rm -r {} +
-	find . -type f -name "*.pyc" -delete
+test-abrege-api: init-db
+	docker compose exec abrege_api uv run pytest --cov=./api --cov-report=term-missing tests/api/ -ra -v --maxfail=0
