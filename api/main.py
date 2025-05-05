@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from api.routes.health import router as health_router
 from api.routes.summarize import router as summarize_router
 from api.routes.document_summary import router as document_router
-from api import __version__, __name__ as name
+from src import __version__, __name__ as name
 from api.utils.cors import set_cors
 
 

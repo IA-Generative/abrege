@@ -3,7 +3,7 @@ import datetime
 
 from api.utils.logger import logger_abrege
 from api.schemas.health import Health
-from api import __version__, __name__
+from src import __version__, __name__
 
 
 router = APIRouter(tags=["Health"])
