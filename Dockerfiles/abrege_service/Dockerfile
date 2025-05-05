@@ -28,13 +28,13 @@ COPY pyproject.toml uv.lock ./
 
 RUN uv sync --no-cache --group abrege-service
 
-COPY abrege_service /app/abrege_service
-COPY src /app/src
-
 RUN mkdir -p /app/abrege_service/data/models && \
     curl -L -o vosk-model-small-fr-0.22.zip https://alphacephei.com/vosk/models/vosk-model-small-fr-0.22.zip && \
     unzip vosk-model-small-fr-0.22.zip -d /app/abrege_service/data/models && \
     rm vosk-model-small-fr-0.22.zip
+
+COPY abrege_service /app/abrege_service
+COPY src /app/src
 
 ENV PYTHONPATH=/app
 ENV PATH="/app/.venv/bin:$PATH"
@@ -44,6 +44,6 @@ CMD ["uv", "run", "abrege_service/main.py"]
 
 FROM builder AS test
 WORKDIR /app
-COPY tests tests
 RUN uv sync --no-cache --group test --group abrege-service
+COPY tests tests
 CMD ["uv", "run", "abrege_service/main.py"]

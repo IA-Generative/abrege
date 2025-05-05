@@ -6,7 +6,6 @@ import logging
 import traceback
 import hashlib
 from typing import Annotated, List, Literal, TypedDict
-from fastapi import HTTPException
 
 import openai
 
@@ -29,7 +28,7 @@ from src.schemas.task import TaskModel, TaskStatus
 
 
 from abrege_service.utils.text import split_texts_by_word_limit
-from api.utils.logger import logger_abrege
+from src.utils.logger import logger_abrege
 import nltk
 
 nltk_data_dir = os.environ.get("NLTK_DATA", "/app/.cache/nltk_data")
@@ -95,10 +94,7 @@ class LangChainMapReduceService(BaseSummaryService):
             params.map_prompt.format(context="placeholder")
         except Exception as e:
             logger_abrege.error(traceback.format_exc())
-            raise HTTPException(
-                status_code=500,
-                detail=f"{e}",
-            )
+            raise e
 
         map_prompt = ChatPromptTemplate.from_messages([("human", params.map_prompt)])
 
@@ -106,12 +102,9 @@ class LangChainMapReduceService(BaseSummaryService):
 
         try:
             reduce_template = params.reduce_prompt.format(language=params.language, docs="{docs}", size=params.size)
-        except Exception:
+        except Exception as e:
             logger_abrege.error(traceback.format_exc())
-            raise HTTPException(
-                status_code=500,
-                detail='Erreur lors de l\'utilisation du prompt "reduce_prompt". reduce_prompt ne peut pas contenir une balise autre que {language}, {size} ou {docs}',
-            )
+            raise e
         if params.custom_prompt is not None:
             reduce_template += params.custom_prompt
 

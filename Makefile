@@ -64,25 +64,24 @@ clean: ## Nettoyage du dépôt
 	find . -type d -name ".pytest_cache" -exec rm -r {} +
 	find . -type d -name ".mypy_cache" -exec rm -r {} +
 	rm *.db
-	$(MAKE) down
 
 
 ########################### DOCKER BUILD ###########################
 
-build-abrege-api: ## Lance la construction de l'image Docker backend
+build-abrege-api:
 	docker compose build abrege_api
 
 build-abrege-service:
 	docker compose build abrege_service
 
 
-build: build-talktomi-backend build-ocr-service ## Lance la construction de toutes les images Docker
+build: build-abrege-api build-abrege-service ## Lance la construction de toutes les images Docker
 
 
 ####################################################################
 
 init-db:
-	docker compose up -d redis db minio abrege_api
+	docker compose up -d redis db minio abrege_api abrege_service
 	sleep 5
 
 
@@ -91,3 +90,6 @@ test-src: init-db
 
 test-abrege-api: init-db
 	docker compose exec abrege_api uv run pytest --cov=./api --cov-report=term-missing tests/api/ -ra -v --maxfail=0
+
+test-abrege-service: init-db
+	docker compose exec abrege_service uv run pytest --cov=./abrege_service --cov-report=term-missing tests/abrege_service/ -ra -v --maxfail=0

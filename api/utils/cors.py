@@ -6,7 +6,7 @@ from fastapi import FastAPI, Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from .logger import logger_abrege
+from src.utils.logger import logger_abrege
 
 
 class CatchExceptionsMiddleware(BaseHTTPMiddleware):

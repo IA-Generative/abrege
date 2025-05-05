@@ -31,35 +31,16 @@ services:
     build:
       context: .
       dockerfile: Dockerfiles/abrege_service/Dockerfile
-    environment:
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_QUEUE_NAME: redis-queue
-      MINIO_BUCKET_NAME: test
-      MINIO_END_POINT: minio:9000
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin
-      DATABASE_URL: postgresql://postgres:secret@postgres:5432/example_db
-      OPENAI_API_BASE: https://localhost/v1
-      OPENAI_API_KEY: EMPTY
+    env_file:
+      - .env
 
   flower_abrege:
     image: abrege-service
-    environment:
-      CELERY_BROKER_URL: redis://redis
-      CELERY_RESULT_BACKEND: redis://redis
-      MINIO_BUCKET_NAME: test
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      MINIO_END_POINT: minio:9000
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin
-      DATABASE_URL: postgresql://postgres:secret@postgres:5432/example_db
-      OPENAI_API_BASE: https://localhost/v1
-      OPENAI_API_KEY: EMPTY
     ports:
       - "5555:5555"
     command: ["celery", "-A", "abrege_service.main", "flower", "--address=0.0.0.0", "--port=5555"]
+    env_file:
+      - .env
 
 
   abrege_api:
@@ -71,23 +52,13 @@ services:
     - 8000:8000
     container_name: abrege-api
     environment:
-      REDIS_HOST: redis
       DEV_MODE: "true"
-      REDIS_PORT: 6379
       CELERY_APP_NAME: default
-      MINIO_BUCKET_NAME: test
-      MINIO_END_POINT: minio:9000
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin
-      AWS_ACCESS_KEY_ID: minioadmin
-      AWS_SECRET_ACCESS_KEY: minioadmin
-      AWS_ENDPOINT_URL: http://minio:9000
-      AWS_DEFAULT_REGION: us-east-1
-      DATABASE_URL: postgresql://postgres:secret@postgres:5432/example_db
     depends_on:
       - redis
       - minio
-
+    env_file:
+      - .env
   db:
     image: postgres:15
     container_name: postgres
