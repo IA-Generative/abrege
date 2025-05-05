@@ -9,7 +9,6 @@ from fastapi import APIRouter, File, UploadFile, HTTPException, status, Form
 from pydantic import ValidationError, BaseModel
 
 from api.schemas.content import Content
-from api.utils.content_type import get_content_type
 
 from src.clients import file_connector, celery_app
 from src.logger.logger import logger
@@ -27,7 +26,7 @@ router = APIRouter(tags=["Document"])
 
 
 class SummarizeDocModel(BaseModel):
-    content: Content
+    content: Optional[Content] = None
     parameters: Optional[SummaryParameters] = None
 
 
@@ -39,13 +38,16 @@ async def validate_content(summarize_content: SummarizeDocModel):
 @router.post("/doc/{user_id}", status_code=status.HTTP_201_CREATED, response_model=TaskModel)
 async def summarize_doc(
     user_id: str,
-    summarize_content: str = Form(..., description=f"Should be in {SummarizeDocModel.__name__} format"),
+    summarize_content: Optional[str] = Form(None, description=f"Should be in {SummarizeDocModel.__name__} format"),
     file: UploadFile = File(...),
 ):
-    try:
-        summarize_content: SummarizeDocModel = SummarizeDocModel.model_validate_json(summarize_content)
-    except ValidationError as e:
-        raise HTTPException(status_code=422, detail=e.errors())
+    if summarize_content is not None and summarize_content.strip() != "":
+        try:
+            summarize_content: SummarizeDocModel = SummarizeDocModel.model_validate_json(summarize_content)
+        except ValidationError as e:
+            raise HTTPException(status_code=422, detail=e.errors())
+    else:
+        summarize_content = SummarizeDocModel()
     parameters = summarize_content.parameters
     content = summarize_content.content
     extras = {}
@@ -77,12 +79,11 @@ async def summarize_doc(
         document_content = DocumentModel(
             created_at=int(datetime.now().timestamp()),
             file_path=saved_path,
-            prompt=content.prompt,
             raw_filename=os.path.basename(file.filename),
-            content_type=get_content_type(file),
+            content_type=file.content_type,
             ext=extension,
             size=file.size,
-            extras=content.extras,
+            extras=content.extras if content else {},
         )
 
         task_data = task_table.update_task(

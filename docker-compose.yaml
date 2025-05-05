@@ -29,6 +29,7 @@ services:
     - ./abrege_service/:/app/abrege_service/
     - ./src/:/app/src/
     build:
+      target: test
       context: .
       dockerfile: Dockerfiles/abrege_service/Dockerfile
     env_file:
@@ -37,7 +38,7 @@ services:
   flower_abrege:
     image: abrege-service
     ports:
-      - "5555:5555"
+      - "5558:5555"
     command: ["celery", "-A", "abrege_service.main", "flower", "--address=0.0.0.0", "--port=5555"]
     env_file:
       - .env
@@ -46,10 +47,14 @@ services:
   abrege_api:
     image: abrege-api
     build:
+      target: test
       context: .
       dockerfile: Dockerfiles/api/Dockerfile
     ports:
     - 8000:8000
+    volumes:
+    - ./api/:/app/api/
+    - ./src/:/app/src/
     container_name: abrege-api
     environment:
       DEV_MODE: "true"
