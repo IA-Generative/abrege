@@ -49,7 +49,7 @@ install-local: ## Installation des dépendances systèmes
 
 lint: install ## Lint le code du dépôt
 	uv add ruff
-	uv run ruff check .
+	uv run ruff check --exclude '**/*.ipynb' .
 
 up: ## Lance l'environnement de développement en conteneurs
 	docker compose up -d
