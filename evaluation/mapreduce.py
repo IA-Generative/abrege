@@ -1,38 +1,79 @@
-import os
-import operator
-from time import perf_counter
 import logging
+import operator
+import os
 import traceback
+from time import perf_counter
 from typing import Annotated, List, Literal, TypedDict
-from fastapi import HTTPException
 
 import openai
-
+from fastapi import HTTPException, Query
 from langchain.chains.combine_documents.reduce import (
     acollapse_docs,
     split_list_of_docs,
 )
 from langchain_core.documents import Document
-from langgraph.constants import Send
-from langgraph.graph import END, START, StateGraph
-
-from langchain_openai import ChatOpenAI
-
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_openai import ChatOpenAI
+from langgraph.constants import Send
+from langgraph.graph import END, START, StateGraph
+from openai import OpenAI
+from pydantic import BaseModel
 
-from src.schemas.parameters import SummaryParameters
+MethodType = Literal["map_reduce", "refine", "text_rank", "k-means", "stuff"]  # "text_rank2", "k-means2"
+ChunkType = Literal["sentences", "chunks"]
+
+MAP_PROMPT = "Rédigez un résumé concis des éléments suivants :\\n\\n{context}"
+REDUCE_PROMPT = """
+Voici une série de résumés:
+{docs}
+Rassemblez ces éléments et faites-en un résumé final et consolidé dans {language} en {size} mots au maximum. Rédigez uniquement en {language}.
+"""
 
 
-api_key = (os.environ["OPENAI_API_KEY"],)
-base_url = (os.environ["OPENAI_API_BASE"],)
+class ParamsSummarize(BaseModel):
+    method: MethodType | None = "map_reduce"
+    model: str = os.environ["OPENAI_API_MODEL"]
+    context_size: int | None = 16_000
+    temperature: Annotated[float, Query(ge=0, le=1.0)] = 0.0
+    language: str | None = "French"
+    size: int | None = 4_000
+    # summarize_template: str | None = (None,)
+    # map_template: str | None = (None,)
+    # reduce_template: str | None = (None,)
+    # question_template: str | None = (None,)
+    # refine_template: str | None = (None,)
+    custom_prompt: str | None = None  # param déprécié
+    map_prompt: str = MAP_PROMPT
+    reduce_prompt: str = REDUCE_PROMPT
 
 
-async def do_map_reduce(list_str: list[str], params: SummaryParameters, recursion_limit: int = 20, num_tokens_limit: int = 1226 * 300) -> dict:
+
+
+class SummaryResponse(BaseModel):
+    summary: str
+    nb_call: int | None = None
+    time: float | None = None
+
+
+client = OpenAI(api_key=os.environ["OPENAI_API_KEY"], base_url=os.environ["OPENAI_API_BASE"])
+
+
+async def do_map_reduce(
+    list_str: list[str], params: ParamsSummarize, recursion_limit: int = 20, num_tokens_limit: int = 1226 * 300, max_concurrency: int = 15
+) -> SummaryResponse:
     """Peut faire un GraphRecursionError si recursion_limit est trop faible"""
 
     deb = perf_counter()
-    llm = ChatOpenAI(model=params.model, temperature=params.temperature, api_key=api_key, base_url=base_url)
+    llm = ChatOpenAI(model=params.model, temperature=params.temperature, api_key=os.environ["OPENAI_API_KEY"], base_url=os.environ["OPENAI_API_BASE"])
+
+    concat_str = [list_str[0]]
+    for index, str_ in enumerate(list_str[1:]):
+        candidat = concat_str[-1] + "\n---\n" + str_
+        if llm.get_num_tokens(candidat) > params.context_size:
+            concat_str.append(str_)
+        else:
+            concat_str[-1] = candidat
 
     num_tokens = llm.get_num_tokens(" ".join(list_str))
 
@@ -56,9 +97,9 @@ async def do_map_reduce(list_str: list[str], params: SummaryParameters, recursio
     map_prompt = ChatPromptTemplate.from_messages([("human", params.map_prompt)])
 
     map_chain = map_prompt | llm | StrOutputParser()
-
+    size = min(params.size, len(" ".join(list_str).split(" ")))
     try:
-        reduce_template = params.reduce_prompt.format(language=params.language, size=str(params.size), docs="{docs}")
+        reduce_template = params.reduce_prompt.format(language=params.language, size=str(size), docs="{docs}")
     except Exception:
         raise HTTPException(
             status_code=500,
@@ -155,8 +196,8 @@ async def do_map_reduce(list_str: list[str], params: SummaryParameters, recursio
         nb_call = 0
         async for step in app.astream(
             # {"contents": [doc.page_content for doc in split_docs]},
-            {"contents": list_str},
-            {"recursion_limit": recursion_limit},
+            {"contents": list_str if 0 else concat_str},
+            {"recursion_limit": recursion_limit, "max_concurrency": max_concurrency},
         ):
             # print(list(step.keys()))
             list(step.keys())
@@ -178,4 +219,4 @@ async def do_map_reduce(list_str: list[str], params: SummaryParameters, recursio
 
     final_summary = step["generate_final_summary"]["final_summary"]
 
-    return dict(summary=final_summary, nb_call=nb_call, time=elapsed)
+    return SummaryResponse(summary=final_summary, nb_call=nb_call, time=elapsed)

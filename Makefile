@@ -36,7 +36,7 @@ test-dev:
 
 build-prod: network
 	$(COMPOSE) -f docker-compose.yaml build $(DC_BUILD_ARGS)
-
+	
 exec-prod:
 	$(COMPOSE) -f docker-compose.yaml up $(DC_UP_ARGS)
 
@@ -108,9 +108,8 @@ prod: exec-prod
 down: stop-dev stop-prod
 
 runapi:
-	uv run --env-file .env python api/main.py
-#	@export $(shell grep -v '^#' .env | xargs) && uv run python api/main.py
-
+	# uv run --env-file .env python api/main.py
+	uv run --env-file .env uvicorn api.main:app --host 0.0.0.0 --port 8000
 up-env:
 	docker compose up -d || true
 	@echo "Attente de 5 secondes pour laisser les conteneurs démarrer..."
@@ -132,3 +131,7 @@ tests: install-test-dep up-env
 clean:
 	find . -type d -name "__pycache__" -exec rm -r {} +
 	find . -type f -name "*.pyc" -delete
+
+
+runtest:
+	uv run --env-file .env python tests/api/fastapi.py

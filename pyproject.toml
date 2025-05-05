@@ -58,10 +58,13 @@ evaluation = [
     "fastapi>=0.115.12",
     "hf-xet>=1.0.5",
     "langchain>=0.3.24",
+    "langchain-huggingface>=0.1.2",
     "langchain-openai>=0.3.14",
     "langgraph>=0.3.34",
     "nltk==3.9.1",
     "rouge-score>=0.1.2",
+    "langchain-chroma>=0.2.3",
+    "langchain-community>=0.3.23",
 ]
 openai = [
     "openai>=1.76.0",
