@@ -82,6 +82,8 @@ services:
       context: .
       dockerfile: Dockerfiles/migration/Dockerfile
     command:
+    - uv
+    - run
     - alembic
     - upgrade
     - head
