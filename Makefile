@@ -82,11 +82,7 @@ build: build-abrege-api build-abrege-service ## Lance la construction de toutes 
 ####################################################################
 
 init-db:
-	docker compose up -d redis db minio abrege_api abrege_service
-	sleep 5
-	uv sync --group migration
-	env $(shell grep -v '^#' .env.sample | xargs) uv run alembic upgrade head
-
+	docker compose up -d redis db minio abrege_api abrege_service migration
 
 test-src: init-db
 	docker compose exec abrege_api uv run pytest --cov=./src --cov-report=term-missing tests/src/ -ra -v --maxfail=0
