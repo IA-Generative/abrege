@@ -7,7 +7,7 @@ from src.utils.logger import logger_abrege
 router = APIRouter(tags=["Tasks"])
 
 
-@router.post("/task/{id}", response_model=TaskModel)
+@router.get("/task/{id}", response_model=TaskModel)
 async def read(id: str) -> TaskModel:
     task = task_table.get_task_by_id(task_id=id)
     if task is None:
@@ -15,7 +15,7 @@ async def read(id: str) -> TaskModel:
     return task
 
 
-@router.post("/task/user/{user_id}", response_model=List[TaskModel])
+@router.get("/task/user/{user_id}", response_model=List[TaskModel])
 async def read_user(user_id: str, offset: int = 1, limit: int = 10) -> List[TaskModel]:
     try:
         tasks = task_table.get_tasks_by_user_id(user_id=user_id, page=offset, page_size=limit)
