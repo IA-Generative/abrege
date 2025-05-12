@@ -69,16 +69,18 @@ def launch(self, task: str):
 
         elif isinstance(task.content, DocumentModel):
             file_data = file_connector.get_by_task_id(user_id=task.user_id, task_id=task.id)
-            with open(task.content.raw_filename, "wb") as f:
+            tmp_folder = os.environ.get("URL_TMP_FOLDER")
+            file_path = os.path.join(tmp_folder, task.content.raw_filename) if tmp_folder else task.content.raw_filename
+            with open(file_path, "wb") as f:
                 f.write(file_data.read())
-            task.content.file_path = task.content.raw_filename
+            task.content.file_path = file_path
 
             for service in services:
                 if service.is_availble(task.content.content_type):
                     task = service.process_task(task=task)
 
-            if os.path.exists(task.content.raw_filename):
-                os.remove(task.content.raw_filename)
+            if os.path.exists(file_path):
+                os.remove(file_path)
 
         elif isinstance(task.content, TextModel):
             task.result = ResultModel(
