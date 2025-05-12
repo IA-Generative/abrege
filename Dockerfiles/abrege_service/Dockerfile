@@ -23,6 +23,7 @@ RUN apt-get update -y && \
     rm -rf /var/lib/apt/lists/*
 
 ENV UV_CACHE_DIR=/app/.cache
+ENV URL_TMP_FOLDER=/app/.cache
 
 COPY pyproject.toml uv.lock ./
 

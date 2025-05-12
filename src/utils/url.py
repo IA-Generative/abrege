@@ -1,3 +1,4 @@
+import os
 import re
 import requests
 
@@ -40,11 +41,14 @@ def get_content_type(url: str) -> str:
         print(f"Erreur lors de la requête : {e}")
 
 
-def download_file(url: str, filename=None):
+def download_file(url: str, filename=None, folder_dest: str = None):
+    if folder_dest and not os.path.exists(folder_dest):
+        os.makedirs(folder_dest, exist_ok=True)
     try:
         with requests.get(url, stream=True) as response:
             response.raise_for_status()
             filename = url.split("/")[-1] or "downloaded_file"
+            filename = os.path.join(folder_dest, filename) if folder_dest else filename
             with open(filename, "wb") as f:
                 for chunk in response.iter_content(chunk_size=8192):
                     if chunk:  # filtrer les keep-alive
