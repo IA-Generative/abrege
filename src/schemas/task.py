@@ -4,7 +4,8 @@ import time
 from typing import Dict, List, Optional, Any, Union
 from enum import Enum
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import Column, String, JSON, BigInteger
+from sqlalchemy import Column, String, JSON, BigInteger, select
+from sqlalchemy.exc import SQLAlchemyError
 
 from src.internal.db import get_db, Base
 from src.schemas.content import URLModel, DocumentModel, TextModel
@@ -84,6 +85,14 @@ class TaskStatus(str, Enum):
 
 
 class TaskTable:
+    def health_check(self) -> bool:
+        with get_db() as db:
+            try:
+                db.execute(select(Task).limit(1))
+                return True, None
+            except SQLAlchemyError as e:
+                return False, str(e)
+
     def insert_new_task(self, user_id: str, form_data: TaskForm) -> Optional[TaskModel]:
         with get_db() as db:
             knowledge = TaskModel(
