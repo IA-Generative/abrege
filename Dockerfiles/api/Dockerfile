@@ -19,10 +19,10 @@ RUN uv sync --no-cache --group abrege-api
 COPY api /app/api
 COPY src/ /app/src
 ENV PYTHONPATH=/app
-CMD [ "uv", "run", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD [ "uv", "run", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "5000"]
 
 FROM builder AS test
 WORKDIR /app
 RUN uv sync --no-cache --group test --group abrege-api
 COPY tests tests
-CMD [ "uv", "run", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD [ "uv", "run", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "5000", "--reload"]

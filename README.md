@@ -22,7 +22,7 @@ Before running the application, ensure that you have the following software inst
 2. **Environment Configuration:**
    Create an `.env` file in the root directory of your project if it doesn't already exist. Populate it with the necessary environment variables. An example `.env` file might look like this:
    ```env
-   BACKEND_PORT=8000
+   BACKEND_PORT=5000
    TAG=latest
    ```
 
