@@ -64,6 +64,8 @@ evaluation = [
 ]
 migration = [
     { name = "alembic" },
+    { name = "psycopg2-binary" },
+    { name = "sqlalchemy" },
 ]
 openai = [
     { name = "openai" },
@@ -129,7 +131,11 @@ evaluation = [
     { name = "nltk", specifier = "==3.9.1" },
     { name = "rouge-score", specifier = ">=0.1.2" },
 ]
-migration = [{ name = "alembic", specifier = ">=1.15.2" }]
+migration = [
+    { name = "alembic", specifier = ">=1.15.2" },
+    { name = "psycopg2-binary", specifier = "==2.9.10" },
+    { name = "sqlalchemy", specifier = "==2.0.40" },
+]
 openai = [{ name = "openai", specifier = ">=1.76.0" }]
 test = [
     { name = "datasets", specifier = "==3.5.0" },

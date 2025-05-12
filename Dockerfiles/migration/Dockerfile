@@ -7,9 +7,7 @@ COPY migration /app/migration
 COPY src/ /app/src/
 COPY pyproject.toml uv.lock ./
 
-RUN uv sync --no-cache --group abrege-service --group migration
+RUN uv sync --no-cache --group migration
 
-# Ajout du répertoire des outils uv au PATH
-
-
+ENV PATH=$PATH:/app/.venv/bin/
 ENV PYTHONPATH=/app
