@@ -16,7 +16,7 @@ from abrege_service.modules.doc import (
 )
 
 from abrege_service.models.summary.naive import NaiveSummaryService
-from abrege_service.utils.text import split_texts_by_word_limit
+from abrege_service.utils.text import split_texts_by_token_limit
 from abrege_service.config.openai import OpenAISettings
 
 from src.schemas.task import TaskModel, task_table, TaskStatus, TaskUpdateForm
@@ -46,7 +46,7 @@ client = openai.OpenAI(
     api_key=openai_settings.OPENAI_API_KEY,
     base_url=openai_settings.OPENAI_API_BASE,
 )
-model_context_length = openai_settings.MAX_CONTEXT_SIZE
+
 
 summary_service = NaiveSummaryService(client=client, model_name=openai_settings.OPENAI_API_MODEL)
 
@@ -95,9 +95,11 @@ def launch(self, task: str):
         else:
             raise NotImplementedError("Content type not supported")
 
-        splitted_text = split_texts_by_word_limit(
+        splitted_text = split_texts_by_token_limit(
             [text for text in task.result.texts_found],
-            max_words=int(model_context_length / 2),
+            max_tokens=int(openai_settings.MAX_CONTEXT_SIZE * 0.75),  # Secure number of token
+            model=openai_settings.TOKENIZER_MODEL_NAME,
+            cache_dir=os.environ.get("CACHE_FOLDER"),
         )
         task.result.texts_found = splitted_text
         task = summary_service.process_task(task=task)
