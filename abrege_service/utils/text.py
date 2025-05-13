@@ -1,5 +1,7 @@
-from typing import List
+from typing import List, Union
 import tiktoken
+from transformers import AutoTokenizer
+from .tokenizer import get_tokenizer_model
 
 
 def split_texts_by_word_limit(texts: List[str], max_words: int) -> List[str]:
@@ -22,8 +24,8 @@ def split_texts_by_word_limit(texts: List[str], max_words: int) -> List[str]:
     return all_chunks
 
 
-def split_texts_by_token_limit(texts: List[str], max_tokens: int, model: str = "gpt-4") -> List[str]:
-    encoding = tiktoken.encoding_for_model(model)
+def split_texts_by_token_limit(texts: List[str], max_tokens: int, model: str = "gpt-4", cache_dir: str = None) -> List[str]:
+    encoding: Union[tiktoken.Encoding, AutoTokenizer] = get_tokenizer_model(model, cache_dir=cache_dir)
     all_chunks = []
 
     for i, text in enumerate(texts):
