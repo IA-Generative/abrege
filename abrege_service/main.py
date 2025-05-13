@@ -46,7 +46,7 @@ client = openai.OpenAI(
     api_key=openai_settings.OPENAI_API_KEY,
     base_url=openai_settings.OPENAI_API_BASE,
 )
-model_context_length = openai_settings.MAX_TOKENS
+model_context_length = openai_settings.MAX_CONTEXT_SIZE
 
 summary_service = NaiveSummaryService(client=client, model_name=openai_settings.OPENAI_API_MODEL)
 
@@ -69,7 +69,7 @@ def launch(self, task: str):
 
         elif isinstance(task.content, DocumentModel):
             file_data = file_connector.get_by_task_id(user_id=task.user_id, task_id=task.id)
-            tmp_folder = os.environ.get("URL_TMP_FOLDER")
+            tmp_folder = os.environ.get("CACHE_FOLDER")
             file_path = os.path.join(tmp_folder, task.content.raw_filename) if tmp_folder else task.content.raw_filename
             with open(file_path, "wb") as f:
                 f.write(file_data.read())

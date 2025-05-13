@@ -7,4 +7,4 @@ class OpenAISettings(BaseSettings):
     OPENAI_API_BASE: str
     OPENAI_API_KEY: str
     OPENAI_API_MODEL: Optional[str] = "gemma3"
-    MAX_TOKENS: Optional[int] = 128_000  # for qwen
+    MAX_CONTEXT_SIZE: Optional[int] = 128_000  # for qwen

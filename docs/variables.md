@@ -10,7 +10,7 @@ Ce projet utilise plusieurs fichiers de configuration via `pydantic_settings` po
 | `OPENAI_API_BASE`  | URL de base de l'API OpenAI         | -                 |
 | `OPENAI_API_KEY`   | Clé d'API OpenAI                    | -                 |
 | `OPENAI_API_MODEL` | Modèle à utiliser                   | `"gemma3"`        |
-| `MAX_TOKENS`       | Nombre maximum de tokens (ex: Qwen) | `128000`          |
+| `MAX_CONTEXT_SIZE`       | Nombre maximum de tokens (ex: Qwen) | `128000`          |
 
 ---
 
