@@ -44,6 +44,8 @@ abrege-service = [
     { name = "openai" },
     { name = "pydub" },
     { name = "pymupdf4llm" },
+    { name = "tiktoken" },
+    { name = "transformers" },
     { name = "unstructured" },
     { name = "vosk" },
 ]
@@ -115,6 +117,8 @@ abrege-service = [
     { name = "openai", specifier = "==1.76.0" },
     { name = "pydub", specifier = "==0.25.1" },
     { name = "pymupdf4llm", specifier = "==0.0.21" },
+    { name = "tiktoken", specifier = ">=0.9.0" },
+    { name = "transformers", specifier = ">=4.51.3" },
     { name = "unstructured", specifier = "==0.17.2" },
     { name = "vosk", specifier = "==0.3.45" },
 ]
