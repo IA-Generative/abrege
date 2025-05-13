@@ -62,7 +62,7 @@ class AudioVoskTranscriptionService(AudioBaseService):
                 updated_at=int(time.time()),
                 percentage=0,
             )
-        folder_dest = os.environ.get("URL_TMP_FOLDER")
+        folder_dest = os.environ.get("CACHE_FOLDER")
         file_path = os.path.join(folder_dest, "temp.wav") if folder_dest else "temp.wav"
         convertir_audio(task.content.file_path, file_path)
         wf = wave.open(file_path, "rb")

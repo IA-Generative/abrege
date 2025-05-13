@@ -36,7 +36,7 @@ class URLService(URLBaseService):
         assert isinstance(task.content, URLModel)
         url = task.content.url
         assert check_url(url), f"{url} is not a valid URL"
-        filename = download_file(url=url, folder_dest=os.environ.get("URL_TMP_FOLDER"))
+        filename = download_file(url=url, folder_dest=os.environ.get("CACHE_FOLDER"))
         content_type_calculated = get_content_type_from_file(filename)
         _, ext = os.path.split(filename)
 
