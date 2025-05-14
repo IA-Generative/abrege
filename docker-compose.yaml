@@ -23,7 +23,7 @@ services:
   abrege_service:
     deploy:
       replicas: 1
-    command: ["celery", "-A", "abrege_service.main", "worker", "--pool=prefork","--concurrency=4", "-E"]
+    command: ["celery", "-A", "abrege_service.main", "worker","--loglevel=info", "--pool=prefork","--concurrency=4", "-E"]
     image: abrege-service
     volumes:
     - ./abrege_service/:/app/abrege_service/
