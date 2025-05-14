@@ -2,6 +2,7 @@ from typing import List, Union
 import tiktoken
 from transformers import AutoTokenizer
 from .tokenizer import get_tokenizer_model
+from src.utils.logger import logger_abrege
 
 
 def split_texts_by_word_limit(texts: List[str], max_words: int) -> List[str]:
@@ -33,6 +34,7 @@ def split_texts_by_token_limit(texts: List[str], max_tokens: int, model: str = "
 
         full_text = prefix + text
         tokens = encoding.encode(full_text)
+        logger_abrege.info(prefix + f"input token size {len(tokens)}")
 
         if len(tokens) <= max_tokens:
             all_chunks.append(full_text)
@@ -41,6 +43,7 @@ def split_texts_by_token_limit(texts: List[str], max_tokens: int, model: str = "
             while start < len(tokens):
                 end = min(start + max_tokens, len(tokens))
                 chunk_tokens = tokens[start:end]
+                logger_abrege.info(prefix + f"Input Chunk token size {len(chunk_tokens)}")
                 chunk_text = encoding.decode(chunk_tokens)
                 all_chunks.append(chunk_text)
                 start = end
