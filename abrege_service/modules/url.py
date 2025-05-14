@@ -10,6 +10,8 @@ from src.schemas.task import TaskModel
 from src.schemas.content import URLModel, DocumentModel
 from src.utils.url import check_url, download_file
 
+from src.utils.logger import logger_abrege
+
 
 class URLBaseService(BaseService):
     def __init__(self, content_type_allowed=[]):
@@ -49,7 +51,7 @@ class URLService(URLBaseService):
             size=-1,
             ext=ext,
         )
-
+        logger_abrege.info(f"{task.id} - content_type {content_type_calculated}")
         for service in self.services:
             if service.is_availble(content_type=content_type_calculated):
                 return service.task_to_text(task=task)

@@ -3,6 +3,7 @@ from openai import OpenAI
 import time
 import math
 import hashlib
+import os
 
 from src.utils.logger import logger_abrege as logger_app
 from abrege_service.prompts.prompting import generate_prompt
@@ -10,6 +11,10 @@ from src.schemas.result import SummaryModel, Text, PartialSummary
 from src.schemas.task import TaskModel, TaskStatus
 from src.schemas.parameters import SummaryParameters
 from abrege_service.models.base import BaseSummaryService
+from abrege_service.utils.text import split_texts_by_token_limit
+from abrege_service.config.openai import OpenAISettings
+
+openai_settings = OpenAISettings()
 
 
 def summarize_text(model: str, client: OpenAI, prompt: str, temperature: float = 0.0) -> str:
@@ -51,8 +56,19 @@ class NaiveSummaryService(BaseSummaryService):
 
     def summarize(self, task: TaskModel, *args, **kwargs) -> TaskModel:
         # Theoretically, the number of calls to the LLM is log2(n) + 1 if not odds
+        task_id = task.id
         nb_call = 0
+        logger_app.info(f"Start task {task_id} - nb texts {len(task.result.texts_found)}")
+        splitted_text = split_texts_by_token_limit(
+            [text for text in task.result.texts_found],
+            max_tokens=int(openai_settings.MAX_CONTEXT_SIZE * 0.75),  # Secure number of token
+            model=openai_settings.TOKENIZER_MODEL_NAME,
+            cache_dir=os.environ.get("CACHE_FOLDER"),
+        )
+        task.result.texts_found = splitted_text
         total_call = int(math.log(len(task.result.texts_found), 2)) + 1
+        logger_app.info(f"Start task {task_id} - theory nb calls {total_call} - nb texts {len(task.result.texts_found)}")
+        t_start = time.time()
         task.result = SummaryModel(
             created_at=task.result.created_at,
             updated_at=int(time.time()),
@@ -79,6 +95,7 @@ class NaiveSummaryService(BaseSummaryService):
         ]
         task.result.partial_summaries = texts
         if len(texts) == 1:
+            logger_app.info(f"task {task_id} - only one text detected")
             prompt = generate_prompt(
                 template_name="segement_summary_promt.jinja2",
                 context={
@@ -93,14 +110,17 @@ class NaiveSummaryService(BaseSummaryService):
             task.result.percentage = 1
             task.result.nb_llm_calls = 1
             task = self.update_result_task(task=task, result=task.result, status=TaskStatus.COMPLETED.value)
-
+            logger_app.info(f"task {task_id} - Done {time.time() - t_start}")
             return task
 
         task = self.update_result_task(task=task, result=task.result, status=TaskStatus.IN_PROGRESS.value)
-
+        start_size = len(texts)
         while len(texts) > 1:
+            logger_app.info(f"task {task_id} - {len(texts)}/{start_size} process")
             new_summaries: List[Text] = []
+            logger_app.info(79 * "*")
             for i in range(0, len(texts), 2):
+                logger_app.info(f"task {task_id} [{i}:{i+1}]({len(texts)}) start")
                 if i + 1 < len(texts):
                     summary1 = texts[i].text
                     summary2 = texts[i + 1].text
@@ -140,15 +160,20 @@ class NaiveSummaryService(BaseSummaryService):
                     task.result.word_count = word_count
                     task.result.summary = new_summary
 
-                    logger_app.debug(f"New summary: {new_summary} - Time: {time_merge} - Call: {nb_call}")
+                    logger_app.debug(f"task {task_id} [{i}:{i+1}]({len(texts)}), Time: {time_merge} - Call: {nb_call}/ {total_call}")
                     task = self.update_result_task(
                         task=task,
                         result=task.result,
                         status=TaskStatus.IN_PROGRESS.value,
                     )
+                    logger_app.debug(f"task {task_id} - partial saved")
                 else:
+                    logger_app.debug(f"task {task_id} [{i}]({len(texts)})")
                     new_summaries.append(texts[i])
+            logger_app.info(79 * "*")
+
             texts = new_summaries
+            logger_app.info(f"task {task_id} - {nb_call} calls - {total_call} - {len(texts)}")
 
         assert len(texts) == 1, f"Final text should be only one item with the summary - nb texts {len(texts)} we get "
         final_summary = texts[0]
