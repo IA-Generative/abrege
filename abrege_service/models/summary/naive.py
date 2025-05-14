@@ -59,13 +59,18 @@ class NaiveSummaryService(BaseSummaryService):
         task_id = task.id
         nb_call = 0
         logger_app.info(f"Start task {task_id} - nb texts {len(task.result.texts_found)}")
+        logger_app.info(
+            f"task {task_id} - MAX_CONTEXT_SIZE {openai_settings.MAX_CONTEXT_SIZE * 0.75} - MODEL {openai_settings.TOKENIZER_MODEL_NAME} "
+        )
+
         splitted_text = split_texts_by_token_limit(
-            [text for text in task.result.texts_found],
+            task.result.texts_found,
             max_tokens=int(openai_settings.MAX_CONTEXT_SIZE * 0.75),  # Secure number of token
             model=openai_settings.TOKENIZER_MODEL_NAME,
             cache_dir=os.environ.get("CACHE_FOLDER"),
         )
         task.result.texts_found = splitted_text
+        logger_app.info(f"Start task {task_id} - nb texts {len(splitted_text)} -- ")
         total_call = int(math.log(len(task.result.texts_found), 2)) + 1
         logger_app.info(f"Start task {task_id} - theory nb calls {total_call} - nb texts {len(task.result.texts_found)}")
         t_start = time.time()

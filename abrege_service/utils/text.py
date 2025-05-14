@@ -28,7 +28,7 @@ def split_texts_by_word_limit(texts: List[str], max_words: int) -> List[str]:
 def split_texts_by_token_limit(texts: List[str], max_tokens: int, model: str = "gpt-4", cache_dir: str = None) -> List[str]:
     encoding: Union[tiktoken.Encoding, AutoTokenizer] = get_tokenizer_model(model, cache_dir=cache_dir)
     all_chunks = []
-
+    chunk_token_id = []
     for i, text in enumerate(texts):
         prefix = f"Page{i + 1}: "
 
@@ -36,16 +36,17 @@ def split_texts_by_token_limit(texts: List[str], max_tokens: int, model: str = "
         tokens = encoding.encode(full_text)
         logger_abrege.info(prefix + f"input token size {len(tokens)}")
 
-        if len(tokens) <= max_tokens:
-            all_chunks.append(full_text)
-        else:
-            start = 0
-            while start < len(tokens):
-                end = min(start + max_tokens, len(tokens))
-                chunk_tokens = tokens[start:end]
-                logger_abrege.info(prefix + f"Input Chunk token size {len(chunk_tokens)}")
-                chunk_text = encoding.decode(chunk_tokens)
+        for token in tokens:
+            chunk_token_id.append(token)
+            if len(chunk_token_id) >= max_tokens:
+                chunk_text = encoding.decode(chunk_token_id)
+                logger_abrege.info(f"output {len(chunk_token_id)}")
                 all_chunks.append(chunk_text)
-                start = end
+                chunk_token_id = encoding.encode(" " + prefix)
+
+    if chunk_token_id != [encoding.encode(prefix)]:
+        chunk_text = encoding.decode(chunk_token_id)
+        all_chunks.append(chunk_text)
+        logger_abrege.info(f"output {len(chunk_token_id)} ")
 
     return all_chunks

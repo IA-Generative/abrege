@@ -44,3 +44,18 @@ def test_reconstructed_content_includes_original():
         assert prefix in joined
         for word in text.split():
             assert word in joined
+
+
+def test_reconstructed_content_long_text_original():
+    texts = [
+        " ".join([str(i) for i in range(100)]),
+        " ".join([str(i) for i in range(100)]),
+    ]
+    max_tokens = 50
+    segments = split_texts_by_token_limit(texts, max_tokens, model="gpt-4")
+    joined = " ".join(segments)
+    for i, text in enumerate(texts):
+        prefix = f"Page{i + 1}: "
+        assert prefix in joined
+        for word in text.split():
+            assert word in joined
