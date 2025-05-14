@@ -43,9 +43,11 @@ ARCHIVE_CONTENT_TYPES = [
     "application/x-7z-compressed",
     "application/x-rar-compressed",
 ]
+HTML_CONTENT_TYPE = [
+    "text/html",
+]
 TEXT_CONTENT_TYPES = [
     "text/plain",
-    "text/html",
     "text/csv",
     "text/xml",
     "text/markdown",

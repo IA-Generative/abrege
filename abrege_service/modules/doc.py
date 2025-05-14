@@ -8,6 +8,7 @@ from abrege_service.schemas import (
     MICROSOFT_SPREADSHEET_CONTENT_TYPES,
     MICROSOFT_PRESENTATION_CONTENT_TYPES,
     TEXT_CONTENT_TYPES,
+    HTML_CONTENT_TYPE,
 )
 from src.schemas.task import TaskModel, TaskStatus
 from src.schemas.result import ResultModel
@@ -58,7 +59,10 @@ class PDFTOMD4LLMService(PDFService):
 class MicrosoftDocumentService(BaseService):
     def __init__(
         self,
-        content_type_allowed=MICROSOFT_WORD_CONTENT_TYPES + MICROSOFT_SPREADSHEET_CONTENT_TYPES + MICROSOFT_PRESENTATION_CONTENT_TYPES,
+        content_type_allowed=MICROSOFT_WORD_CONTENT_TYPES
+        + MICROSOFT_SPREADSHEET_CONTENT_TYPES
+        + MICROSOFT_PRESENTATION_CONTENT_TYPES
+        + HTML_CONTENT_TYPE,
     ):
         super().__init__(content_type_allowed)
 
