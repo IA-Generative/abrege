@@ -28,6 +28,7 @@ services:
     volumes:
     - ./abrege_service/:/app/abrege_service/
     - ./src/:/app/src/
+    - ./tests/:/app/tests/
     build:
       target: test
       context: .
@@ -55,6 +56,7 @@ services:
     volumes:
     - ./api/:/app/api/
     - ./src/:/app/src/
+    - ./tests/:/app/tests/
     container_name: abrege-api
     environment:
       DEV_MODE: "true"
