@@ -37,4 +37,5 @@ def test_upload_file(client):
 
         task_id = response_model.id
         file_from_minio = file_connector.get_by_task_id(user_id, task_id)
-        assert isinstance(file_from_minio.read(), bytes)
+        with open(file_from_minio, "rb") as f:
+            assert isinstance(f.read(), bytes)

@@ -36,7 +36,8 @@ def test_save_and_get_file(s3_connector):
         assert object_key == f"{user_id}/{task_id}"
 
         file_data = s3_connector.get_by_task_id(user_id, task_id)
-        assert file_data.read() == b"Hello World!"
+        with open(file_data, "rb") as f:
+            assert f.read() == b"Hello World!"
     finally:
         os.remove(tmp_path)
 
