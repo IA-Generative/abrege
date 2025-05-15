@@ -41,8 +41,8 @@ class VideoTranscriptionService(VideoBaseService):
         extraire_audio(task.content.file_path, tmp_file)
         if not os.path.exists(tmp_file):
             raise FileExistsError(f"audio {tmp_file} create from video {task.content.file_path} don't exist")
-
-        task.content = DocumentModel(
+        task_audio = task.model_copy()
+        task_audio.content = DocumentModel(
             created_at=task.content.created_at,
             file_path=tmp_file,
             raw_filename=task.content.raw_filename,
@@ -50,7 +50,7 @@ class VideoTranscriptionService(VideoBaseService):
             ext="wav",
             size=task.content.size,
         )
-        task_audio = self.audio_service.task_to_text(task=task)
+        task_audio = self.audio_service.task_to_text(task=task_audio)
         task.result = task_audio.result
         task.status = task_audio.status
 

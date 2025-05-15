@@ -1,13 +1,17 @@
+import os
 import time
-from abrege_service.clients.ocr_client import OCRClient
+from abrege_service.clients.ocr_client import OCRClient, sort_reader, OCRResult
 from abrege_service.schemas import IMAGE_CONTENT_TYPES, PDF_CONTENT_TYPES
 from abrege_service.modules.base import BaseService
 from src.schemas.task import TaskModel, TaskStatus
 from src.schemas.result import ResultModel
+from src.logger.logger import logger
+
+url = os.getenv("OCR_BACKEND_URL", "https://mirai-ocr-staging.sdid-app.cpin.numerique-interieur.com/")
 
 
 class OCRMIService(BaseService):
-    def __init__(self, url_ocr: str, content_type_allowed=IMAGE_CONTENT_TYPES + PDF_CONTENT_TYPES):
+    def __init__(self, url_ocr: str = url, content_type_allowed=IMAGE_CONTENT_TYPES + PDF_CONTENT_TYPES):
         super().__init__(content_type_allowed)
         self.ocr_mi_client = OCRClient(url=url_ocr)
 
@@ -18,33 +22,53 @@ class OCRMIService(BaseService):
             task.result = ResultModel(
                 type="ocr",
                 created_at=int(time.time()),
-                model_name=self.ocr_mi_client.get_health().name,
-                model_version=self.ocr_mi_client.get_health().version,
+                model_name=self.ocr_mi_client.get_health().get("name"),
+                model_version=self.ocr_mi_client.get_health().get("version"),
                 updated_at=int(time.time()),
                 percentage=0,
                 extras={},
             )
-
+        logger.info(f"{task.id} send to ocr")
         task_ocr = self.ocr_mi_client.send(user_id=task.user_id, file_path=task.content.file_path)
+        task_ocr_id = task_ocr["id"]
+        logger.info(f"{task.id} send to ocr OK")
+
+        task.result.extras["task_ocr_id"] = task_ocr_id
+        task = self.update_task(task=task, status=TaskStatus.IN_PROGRESS.value, result=task.result)
 
         task_status_finish = [
-            TaskStatus.CANCELED.value,
             TaskStatus.COMPLETED.value,
-            TaskStatus.FAILED.value,
-            TaskStatus.TIMEOUT,
         ]
+        task_finish_on_error = [
+            TaskStatus.CANCELED.value,
+            TaskStatus.FAILED.value,
+            TaskStatus.TIMEOUT.value,
+        ]
+
+        task_status_finish += task_finish_on_error
+
         # WARNING: Here no timeout we need to check here if any timeout occur
-        while task_ocr.get("status") not in task_status_finish:
+
+        logger.debug(f"{task.id} get {task_ocr_id} as ocr id")
+        task_ocr: dict = self.ocr_mi_client.get_tasks(task_ocr_id)
+
+        status = task_ocr.get("status")
+        while status not in task_status_finish:
             task_ocr = self.ocr_mi_client.get_tasks(task_id=task_ocr["id"])
+            status = task_ocr.get("status")
             percentage = task_ocr.get("percentage", 0)
-            pages_ocr = task_ocr.get("output", {}).get("pages", [])
             task.result.percentage = percentage
             text_found = []
-            for page in pages_ocr:
-                for bbox in page.get("bboxes", []):
-                    text = bbox.get("text", "")
-                    text_found.append(text)
+            if task_ocr.get("output") is not None:
+                result = OCRResult(**task_ocr.get("output"))
+                for page in result.pages:
+                    text_found.append(sort_reader(page=page))
             task.result.texts_found = text_found
             task = self.update_task(task=task, status=TaskStatus.IN_PROGRESS.value, result=task.result)
+            logger.debug(f"{task.id} current status for ocr {status} - percentage {100* percentage}%")
+            time.sleep(5)
+
+        if status in task_finish_on_error:
+            task = self.update_task(task=task, status=status, result=task.result)
 
         return task

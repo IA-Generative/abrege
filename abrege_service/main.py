@@ -8,11 +8,12 @@ import openai
 from abrege_service.modules.base import BaseService
 from abrege_service.modules.url import URLService
 from abrege_service.modules.audio import AudioVoskTranscriptionService
+from abrege_service.modules.ocr import OCRMIService
 from abrege_service.modules.video import VideoTranscriptionService
 from abrege_service.modules.doc import (
     MicrosoftDocumnentToMdService,
     FlatTextService,
-    PDFTOMD4LLMService,
+    # PDFTOMD4LLMService,
 )
 
 from abrege_service.models.summary.naive import NaiveSummaryService
@@ -29,13 +30,14 @@ audio_service = AudioVoskTranscriptionService()
 video_service = VideoTranscriptionService()
 microsof_service = MicrosoftDocumnentToMdService()
 flat_text_service = FlatTextService()
-pdf_service = PDFTOMD4LLMService()
+# pdf_service = PDFTOMD4LLMService()
+ocr_service = OCRMIService()
 services: List[BaseService] = [
     audio_service,
     video_service,
     microsof_service,
     flat_text_service,
-    pdf_service,
+    ocr_service,
 ]
 url_service = URLService(services=services)
 
@@ -48,6 +50,8 @@ client = openai.OpenAI(
 
 
 summary_service = NaiveSummaryService(client=client, model_name=openai_settings.OPENAI_API_MODEL)
+tmp_folder = os.environ.get("CACHE_FOLDER")
+os.makedirs(tmp_folder, exist_ok=True)
 
 
 @celery_app.task(name="worker.tasks.abrege", bind=True)
@@ -67,13 +71,8 @@ def launch(self, task: str):
             task = url_service.process_task(task=task)
 
         elif isinstance(task.content, DocumentModel):
-            file_data = file_connector.get_by_task_id(user_id=task.user_id, task_id=task.id)
-            tmp_folder = os.environ.get("CACHE_FOLDER")
-            file_path = os.path.join(tmp_folder, task.content.raw_filename) if tmp_folder else task.content.raw_filename
-            with open(file_path, "wb") as f:
-                f.write(file_data.read())
+            file_path = file_connector.get_by_task_id(user_id=task.user_id, task_id=task.id)
             task.content.file_path = file_path
-
             for service in services:
                 if service.is_availble(task.content.content_type):
                     task = service.process_task(task=task)
