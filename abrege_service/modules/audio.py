@@ -12,6 +12,7 @@ from src.schemas.task import TaskModel, TaskStatus
 from src.schemas.result import ResultModel
 from src.utils.logger import logger_abrege
 
+folder_dest = os.environ.get("CACHE_FOLDER")
 
 # audio dataset : https://github.com/facebookresearch/voxpopuli
 # https://lbourdois.github.io/blog/audio/dataset_audio_fr/
@@ -62,7 +63,6 @@ class AudioVoskTranscriptionService(AudioBaseService):
                 updated_at=int(time.time()),
                 percentage=0,
             )
-        folder_dest = os.environ.get("CACHE_FOLDER")
         file_path = os.path.join(folder_dest, "temp.wav") if folder_dest else "temp.wav"
         convertir_audio(task.content.file_path, file_path)
         wf = wave.open(file_path, "rb")
