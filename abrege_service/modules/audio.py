@@ -101,5 +101,7 @@ class AudioVoskTranscriptionService(AudioBaseService):
         task.result.texts_found = [item.get("text") for item in results]
 
         task = self.update_task(task=task, status=TaskStatus.IN_PROGRESS.value, result=task.result)
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
         return task
