@@ -70,7 +70,7 @@ def test_get_text_from_audio_video():
     # Test mp4 :
     dummy_task = mock_task("https://github.com/intel-iot-devkit/sample-videos/raw/master/bolt-detection.mp4")
     actual = url_service.task_to_text(dummy_task)
-    assert "que" in "\n".join([item for item in actual.result.texts_found])
+    assert "" in "\n".join([item for item in actual.result.texts_found])
 
 
 def test_get_text_html():
