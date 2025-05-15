@@ -18,8 +18,8 @@ class OCRMIService(BaseService):
     def task_to_text(self, task: TaskModel, **kwargs) -> TaskModel:
         if task.extras is None:
             task.extras = {}
-        if task.result is None:
-            task.result = ResultModel(
+        if task.output is None:
+            task.output = ResultModel(
                 type="ocr",
                 created_at=int(time.time()),
                 model_name=self.ocr_mi_client.get_health().get("name"),
@@ -29,12 +29,12 @@ class OCRMIService(BaseService):
                 extras={},
             )
         logger.info(f"{task.id} send to ocr")
-        task_ocr = self.ocr_mi_client.send(user_id=task.user_id, file_path=task.content.file_path)
+        task_ocr = self.ocr_mi_client.send(user_id=task.user_id, file_path=task.input.file_path)
         task_ocr_id = task_ocr["id"]
         logger.info(f"{task.id} send to ocr OK")
 
-        task.result.extras["task_ocr_id"] = task_ocr_id
-        task = self.update_task(task=task, status=TaskStatus.IN_PROGRESS.value, result=task.result)
+        task.output.extras["task_ocr_id"] = task_ocr_id
+        task = self.update_task(task=task, status=TaskStatus.IN_PROGRESS.value, result=task.output)
 
         task_status_finish = [
             TaskStatus.COMPLETED.value,
@@ -57,18 +57,18 @@ class OCRMIService(BaseService):
             task_ocr = self.ocr_mi_client.get_tasks(task_id=task_ocr["id"])
             status = task_ocr.get("status")
             percentage = task_ocr.get("percentage", 0)
-            task.result.percentage = percentage
+            task.output.percentage = percentage
             text_found = []
             if task_ocr.get("output") is not None:
                 result = OCRResult(**task_ocr.get("output"))
                 for page in result.pages:
                     text_found.append(sort_reader(page=page))
-            task.result.texts_found = text_found
-            task = self.update_task(task=task, status=TaskStatus.IN_PROGRESS.value, result=task.result)
+            task.output.texts_found = text_found
+            task = self.update_task(task=task, status=TaskStatus.IN_PROGRESS.value, result=task.output)
             logger.debug(f"{task.id} current status for ocr {status} - percentage {100* percentage}%")
             time.sleep(5)
 
         if status in task_finish_on_error:
-            task = self.update_task(task=task, status=status, result=task.result)
+            task = self.update_task(task=task, status=status, result=task.output)
 
         return task

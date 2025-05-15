@@ -21,7 +21,7 @@ def dummy_task() -> TaskModel:
             type="summary",
             status=TaskStatus.CREATED.value,
             updated_at=0,
-            content=DocumentModel(
+            input=DocumentModel(
                 created_at=0,
                 file_path="tests/test_data/elysee-module-24161-fr.pdf",
                 raw_filename="elysee-module-24161-fr.pdf",
@@ -39,5 +39,5 @@ def dummy_task() -> TaskModel:
 def test_integration_ocr_api(dummy_task: TaskModel):
     task = obj_module_ocr.task_to_text(task=dummy_task)
     assert task.status in TaskStatus.IN_PROGRESS.value
-    assert task.result is not None
-    assert task.result.percentage == 1
+    assert task.output is not None
+    assert task.output.percentage == 1

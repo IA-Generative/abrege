@@ -67,7 +67,7 @@ def dummy_task() -> TaskModel:
             type="summary",
             status=TaskStatus.CREATED.value,
             updated_at=0,
-            result=ResultModel(
+            output=ResultModel(
                 type="ocr",
                 created_at=0,
                 model_name="mock",
@@ -96,11 +96,11 @@ def test_merge_summary_small_text(dummy_task: TaskModel):
     model_name = [model.id for model in client.models.list()][0]
     summary_service = NaiveSummaryService(model_name=model_name, client=client, size=500, language="francais")
     task = summary_service.process_task(task=dummy_task)
-    assert isinstance(task.result, SummaryModel)
+    assert isinstance(task.output, SummaryModel)
     assert task.status == TaskStatus.COMPLETED.value
-    assert task.result.nb_llm_calls == 1
-    assert task.result.percentage == 1
-    assert "Nathan" in task.result.summary
+    assert task.output.nb_llm_calls == 1
+    assert task.output.percentage == 1
+    assert "Nathan" in task.output.summary
 
 
 @pytest.fixture(scope="module")
@@ -124,7 +124,7 @@ def dummy_task_large() -> TaskModel:
             type="summary",
             status=TaskStatus.CREATED.value,
             updated_at=0,
-            result=ResultModel(
+            output=ResultModel(
                 type="ocr",
                 created_at=0,
                 model_name="mock",
@@ -153,10 +153,10 @@ def test_merge_summary_large_text(dummy_task_large: TaskModel):
     model_name = [model.id for model in client.models.list()][0]
     summary_service = NaiveSummaryService(model_name=model_name, client=client, size=500, language="francais")
     task = summary_service.process_task(task=dummy_task_large)
-    assert isinstance(task.result, SummaryModel)
+    assert isinstance(task.output, SummaryModel)
     assert task.status == TaskStatus.COMPLETED.value
     with open("tests/data/test_merge_summary_large_text.json", "w") as f:
-        json.dump(task.result.model_dump(), f, indent=2)
+        json.dump(task.output.model_dump(), f, indent=2)
 
-    assert task.result.nb_llm_calls == int(math.log(len(dummy_task_large.result.texts_found), 2) + 1)
-    assert task.result.percentage == 1
+    assert task.output.nb_llm_calls == int(math.log(len(dummy_task_large.output.texts_found), 2) + 1)
+    assert task.output.percentage == 1

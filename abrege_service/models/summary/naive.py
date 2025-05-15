@@ -58,24 +58,24 @@ class NaiveSummaryService(BaseSummaryService):
         # Theoretically, the number of calls to the LLM is log2(n) + 1 if not odds
         task_id = task.id
         nb_call = 0
-        logger_app.info(f"Start task {task_id} - nb texts {len(task.result.texts_found)}")
+        logger_app.info(f"Start task {task_id} - nb texts {len(task.output.texts_found)}")
         logger_app.info(
             f"task {task_id} - MAX_CONTEXT_SIZE {openai_settings.MAX_CONTEXT_SIZE * 0.75} - MODEL {openai_settings.TOKENIZER_MODEL_NAME} "
         )
 
         splitted_text = split_texts_by_token_limit(
-            task.result.texts_found,
+            task.output.texts_found,
             max_tokens=int(openai_settings.MAX_CONTEXT_SIZE * 0.75),  # Secure number of token
             model=openai_settings.TOKENIZER_MODEL_NAME,
             cache_dir=os.environ.get("CACHE_FOLDER"),
         )
-        task.result.texts_found = splitted_text
+        task.output.texts_found = splitted_text
         logger_app.info(f"Start task {task_id} - nb texts {len(splitted_text)} -- ")
-        total_call = int(math.log(len(task.result.texts_found), 2)) + 1
-        logger_app.info(f"Start task {task_id} - theory nb calls {total_call} - nb texts {len(task.result.texts_found)}")
+        total_call = int(math.log(len(task.output.texts_found), 2)) + 1
+        logger_app.info(f"Start task {task_id} - theory nb calls {total_call} - nb texts {len(task.output.texts_found)}")
         t_start = time.time()
-        task.result = SummaryModel(
-            created_at=task.result.created_at,
+        task.output = SummaryModel(
+            created_at=task.output.created_at,
             updated_at=int(time.time()),
             summary="",
             word_count=0,
@@ -83,7 +83,7 @@ class NaiveSummaryService(BaseSummaryService):
             model_name=self.model_name,
             model_version=self.model_name,
             status=TaskStatus.IN_PROGRESS.value,
-            texts_found=task.result.texts_found,
+            texts_found=task.output.texts_found,
             extras={},
         )
         params = task.parameters
@@ -96,9 +96,9 @@ class NaiveSummaryService(BaseSummaryService):
                 text=item,
                 word_count=len(item.split()),
             )
-            for item in task.result.texts_found
+            for item in task.output.texts_found
         ]
-        task.result.partial_summaries = texts
+        task.output.partial_summaries = texts
         if len(texts) == 1:
             logger_app.info(f"task {task_id} - only one text detected")
             prompt = generate_prompt(
@@ -110,15 +110,15 @@ class NaiveSummaryService(BaseSummaryService):
                 },
             )
             summary = summarize_text(self.model_name, self.client, prompt=prompt)
-            task.result.summary = summary
-            task.result.word_count = len(summary.split())
-            task.result.percentage = 1
-            task.result.nb_llm_calls = 1
-            task = self.update_result_task(task=task, result=task.result, status=TaskStatus.COMPLETED.value)
+            task.output.summary = summary
+            task.output.word_count = len(summary.split())
+            task.output.percentage = 1
+            task.output.nb_llm_calls = 1
+            task = self.update_result_task(task=task, result=task.output, status=TaskStatus.COMPLETED.value)
             logger_app.info(f"task {task_id} - Done {time.time() - t_start}")
             return task
 
-        task = self.update_result_task(task=task, result=task.result, status=TaskStatus.IN_PROGRESS.value)
+        task = self.update_result_task(task=task, result=task.output, status=TaskStatus.IN_PROGRESS.value)
         start_size = len(texts)
         while len(texts) > 1:
             logger_app.info(f"task {task_id} - {len(texts)}/{start_size} process")
@@ -153,22 +153,22 @@ class NaiveSummaryService(BaseSummaryService):
                         text1=texts[i],
                         text2=texts[i + 1],
                     )
-                    task.result.partial_summaries.append(partial_sum)
+                    task.output.partial_summaries.append(partial_sum)
                     time_merge = time.time() - t
 
                     new_summaries.append(partial_sum)
                     nb_call += 1
 
-                    task.result.updated_at = int(time.time())
-                    task.result.nb_llm_calls = nb_call
-                    task.result.percentage = nb_call / total_call
-                    task.result.word_count = word_count
-                    task.result.summary = new_summary
+                    task.output.updated_at = int(time.time())
+                    task.output.nb_llm_calls = nb_call
+                    task.output.percentage = nb_call / total_call
+                    task.output.word_count = word_count
+                    task.output.summary = new_summary
 
                     logger_app.debug(f"task {task_id} [{i}:{i+1}]({len(texts)}), Time: {time_merge} - Call: {nb_call}/ {total_call}")
                     task = self.update_result_task(
                         task=task,
-                        result=task.result,
+                        result=task.output,
                         status=TaskStatus.IN_PROGRESS.value,
                     )
                     logger_app.debug(f"task {task_id} - partial saved")
@@ -182,9 +182,9 @@ class NaiveSummaryService(BaseSummaryService):
 
         assert len(texts) == 1, f"Final text should be only one item with the summary - nb texts {len(texts)} we get "
         final_summary = texts[0]
-        task.result.updated_at = int(time.time())
-        task.result.percentage = 1
-        task.result.word_count = len(final_summary.text.split())
-        task.result.summary = final_summary.text
-        task = self.update_result_task(task=task, result=task.result, status=TaskStatus.COMPLETED.value)
+        task.output.updated_at = int(time.time())
+        task.output.percentage = 1
+        task.output.word_count = len(final_summary.text.split())
+        task.output.summary = final_summary.text
+        task = self.update_result_task(task=task, result=task.output, status=TaskStatus.COMPLETED.value)
         return task

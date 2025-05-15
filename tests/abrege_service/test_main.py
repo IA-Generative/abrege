@@ -12,7 +12,7 @@ def test_task_process_text():
         user_id=user_id,
         form_data=TaskForm(
             type="summary",
-            content=TextModel(text="test", created_at=0),
+            input=TextModel(text="test", created_at=0),
             status=TaskStatus.CREATED.value,
             extras={},
         ),
@@ -34,7 +34,7 @@ def test_task_process_url():
         user_id=user_id,
         form_data=TaskForm(
             type="summary",
-            content=URLModel(url=url_html, created_at=0),
+            input=URLModel(url=url_html, created_at=0),
             status=TaskStatus.CREATED.value,
             extras={},
         ),
@@ -59,7 +59,7 @@ def test_task_process_url_pdf():
         user_id=user_id,
         form_data=TaskForm(
             type="summary",
-            content=URLModel(url=url_pdf, created_at=0),
+            input=URLModel(url=url_pdf, created_at=0),
             status=TaskStatus.CREATED.value,
             extras={},
         ),
@@ -70,8 +70,8 @@ def test_task_process_url_pdf():
     actual = TaskModel.model_validate(result)
     assert actual.id == task.id
     assert actual.status == TaskStatus.COMPLETED.value
-    assert actual.result.percentage == 1
-    assert len(actual.result.summary.split()) > 0
+    assert actual.output.percentage == 1
+    assert len(actual.output.summary.split()) > 0
     task_table.delete_task_by_id(task.id)
 
     #############################################################
@@ -87,7 +87,7 @@ def test_task_process_url_png():
         user_id=user_id,
         form_data=TaskForm(
             type="summary",
-            content=URLModel(url=url_png, created_at=0),
+            input=URLModel(url=url_png, created_at=0),
             status=TaskStatus.CREATED.value,
             extras={},
         ),
@@ -111,7 +111,7 @@ def test_task_process_url_mp4():
         user_id=user_id,
         form_data=TaskForm(
             type="summary",
-            content=URLModel(url=url_mp4, created_at=0),
+            input=URLModel(url=url_mp4, created_at=0),
             status=TaskStatus.CREATED.value,
             extras={},
         ),
@@ -137,7 +137,7 @@ def test_task_process_url_ppt():
         user_id=user_id,
         form_data=TaskForm(
             type="summary",
-            content=URLModel(url=url_ppt, created_at=0),
+            input=URLModel(url=url_ppt, created_at=0),
             status=TaskStatus.CREATED.value,
             extras={},
         ),
@@ -148,9 +148,9 @@ def test_task_process_url_ppt():
     actual = TaskModel.model_validate(result)
     assert actual.id == task.id
     assert actual.status == TaskStatus.COMPLETED.value
-    assert actual.result.percentage == 1
+    assert actual.output.percentage == 1
 
-    assert len(actual.result.summary.split()) > 0
+    assert len(actual.output.summary.split()) > 0
     task_table.delete_task_by_id(task.id)
 
     #############################################################
@@ -166,7 +166,7 @@ def test_task_process_url_audio():
         user_id=user_id,
         form_data=TaskForm(
             type="summary",
-            content=URLModel(url=url_audio, created_at=0),
+            input=URLModel(url=url_audio, created_at=0),
             status=TaskStatus.CREATED.value,
             extras={},
         ),
@@ -177,7 +177,7 @@ def test_task_process_url_audio():
     actual = TaskModel.model_validate(result)
     assert actual.id == task.id
     assert actual.status == TaskStatus.COMPLETED.value
-    assert actual.result.percentage == 1
+    assert actual.output.percentage == 1
     task_table.delete_task_by_id(task.id)
 
     #############################################################
@@ -208,7 +208,7 @@ def test_audio_document():
         task_id=task.id,
         form_data=TaskForm(
             type="summary",
-            content=document,
+            input=document,
             status=TaskStatus.CREATED.value,
             updated_at=1,
             extras={},
@@ -220,9 +220,9 @@ def test_audio_document():
     actual = TaskModel.model_validate(result)
     assert actual.id == task.id
     assert actual.status == TaskStatus.COMPLETED.value
-    assert "que" in actual.result.summary
+    assert "que" in actual.output.summary
 
-    assert actual.result.percentage == 1
+    assert actual.output.percentage == 1
     task_table.delete_task_by_id(task.id)
 
 
@@ -251,7 +251,7 @@ def test_video_document():
         task_id=task.id,
         form_data=TaskForm(
             type="summary",
-            content=document,
+            input=document,
             status=TaskStatus.CREATED.value,
             updated_at=1,
             extras={},
@@ -263,7 +263,7 @@ def test_video_document():
     actual = TaskModel.model_validate(result)
     assert actual.id == task.id
     assert actual.status == TaskStatus.COMPLETED.value
-    assert actual.result.percentage == 1
+    assert actual.output.percentage == 1
 
     task_table.delete_task_by_id(task.id)
 
@@ -293,7 +293,7 @@ def test_pdf_document():
         task_id=task.id,
         form_data=TaskForm(
             type="summary",
-            content=document,
+            input=document,
             status=TaskStatus.CREATED.value,
             updated_at=1,
             extras={},
@@ -305,7 +305,7 @@ def test_pdf_document():
     actual = TaskModel.model_validate(result)
     assert actual.id == task.id
     assert actual.status == TaskStatus.COMPLETED.value
-    assert actual.result.percentage == 1
+    assert actual.output.percentage == 1
 
     task_table.delete_task_by_id(task.id)
 
@@ -335,7 +335,7 @@ def test_docx_document():
         task_id=task.id,
         form_data=TaskForm(
             type="summary",
-            content=document,
+            input=document,
             status=TaskStatus.CREATED.value,
             updated_at=1,
             extras={},
@@ -347,6 +347,6 @@ def test_docx_document():
     actual = TaskModel.model_validate(result)
     assert actual.id == task.id
     assert actual.status == TaskStatus.COMPLETED.value
-    assert actual.result.percentage == 1
+    assert actual.output.percentage == 1
 
     task_table.delete_task_by_id(task.id)

@@ -12,7 +12,7 @@ def dummy_task() -> TaskModel:
             type="summary",
             status=TaskStatus.CREATED.value,
             updated_at=0,
-            content=DocumentModel(
+            input=DocumentModel(
                 created_at=0,
                 file_path="tests/test_data/elysee-module-24161-fr.pdf",
                 raw_filename="elysee-module-24161-fr.pdf",
@@ -34,7 +34,7 @@ def dummy_task_microsoft() -> TaskModel:
             type="summary",
             status=TaskStatus.CREATED.value,
             updated_at=0,
-            content=DocumentModel(
+            input=DocumentModel(
                 created_at=0,
                 file_path="tests/test_data/Cadrage.docx",
                 raw_filename="Cadrage.docx",
@@ -51,12 +51,12 @@ def dummy_task_microsoft() -> TaskModel:
 def test_doc_service_pdf(dummy_task: TaskModel):
     doc_service = PDFTOMD4LLMService()
     task = doc_service.task_to_text(task=dummy_task)
-    assert task.result.percentage == 1
-    assert len(task.result.texts_found) == 3
+    assert task.output.percentage == 1
+    assert len(task.output.texts_found) == 3
 
 
 def test_doc_service_microft(dummy_task_microsoft: TaskModel):
     doc_service = MicrosoftDocumnentToMdService()
     task = doc_service.task_to_text(task=dummy_task_microsoft)
-    assert task.result.percentage == 1
-    assert len(task.result.texts_found) == 1
+    assert task.output.percentage == 1
+    assert len(task.output.texts_found) == 1

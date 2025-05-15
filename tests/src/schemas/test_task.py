@@ -14,8 +14,8 @@ def test_insert_new_task():
     form_data = TaskForm(
         type="classification",
         status=TaskStatus.QUEUED.value,
-        content=None,
-        result=None,
+        input=None,
+        output=None,
         extras={"source": "test"},
     )
 
@@ -60,8 +60,8 @@ def test_insert_new_task_content():
             form_data = TaskForm(
                 type="classification",
                 status=TaskStatus.QUEUED.value,
-                content=content_model,
-                result=result_tmp,
+                input=content_model,
+                output=result_tmp,
                 extras={"source": "test"},
             )
 
@@ -74,8 +74,8 @@ def test_insert_new_task_content():
             assert result.extras["source"] == "test"
             assert isinstance(result.created_at, int)
             assert isinstance(result.updated_at, int)
-            assert result.content == content_model
-            assert result.result == result_tmp
+            assert result.input == content_model
+            assert result.output == result_tmp
 
 
 def test_update_task():

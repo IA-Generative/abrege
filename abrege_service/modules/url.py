@@ -35,18 +35,18 @@ class URLService(URLBaseService):
         self.services = services
 
     def task_to_text(self, task: TaskModel, **kwargs) -> TaskModel:
-        assert isinstance(task.content, URLModel)
-        url = task.content.url
+        assert isinstance(task.input, URLModel)
+        url = task.input.url
         assert check_url(url), f"{url} is not a valid URL"
         filename = download_file(url=url, folder_dest=os.environ.get("CACHE_FOLDER"))
         content_type_calculated = get_content_type_from_file(filename)
         _, ext = os.path.split(filename)
 
-        task.content = DocumentModel(
-            created_at=task.content.created_at,
-            extras=task.content.extras,
+        task.input = DocumentModel(
+            created_at=task.input.created_at,
+            extras=task.input.extras,
             file_path=filename,
-            raw_filename=task.content.url,
+            raw_filename=task.input.url,
             content_type=content_type_calculated,
             size=-1,
             ext=ext,

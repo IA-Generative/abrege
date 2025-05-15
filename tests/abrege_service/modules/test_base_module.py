@@ -12,8 +12,8 @@ def mock_base_service() -> BaseService:
             super().__init__(content_type_allowed)
 
         def task_to_text(self, task: TaskModel, **kwargs):
-            if task.result is None:
-                task.result = ResultModel(
+            if task.output is None:
+                task.output = ResultModel(
                     type="process",
                     created_at=0,
                     model_name="mock",
@@ -21,8 +21,8 @@ def mock_base_service() -> BaseService:
                     updated_at=0,
                     percentage=0,
                 )
-            task.result.percentage = 0.5
-            task = self.update_task(task=task, result=task.result, status=TaskStatus.IN_PROGRESS.value)
+            task.output.percentage = 0.5
+            task = self.update_task(task=task, result=task.output, status=TaskStatus.IN_PROGRESS.value)
             return task
 
     return MockeBase(content_type_allowed=["application/pdf"])
@@ -36,7 +36,7 @@ def dummy_task() -> TaskModel:
             type="summary",
             status=TaskStatus.CREATED.value,
             updated_at=0,
-            content=DocumentModel(
+            input=DocumentModel(
                 created_at=0,
                 file_path="ft://mock.txt",
                 raw_filename="mock.txt",
@@ -66,19 +66,19 @@ def test_base_srevice_update_task(mock_base_service: BaseService, dummy_task: Ta
     )
     actual_task = mock_base_service.update_task(task=dummy_task, result=expected_result, status=TaskStatus.STARTED.value)
 
-    assert actual_task.result == expected_result
+    assert actual_task.output == expected_result
     assert actual_task.status == TaskStatus.STARTED.value
 
 
 def test_base_service_process_task(mock_base_service: BaseService, dummy_task: TaskModel):
     actual_task = mock_base_service.process_task(dummy_task)
-    assert actual_task.result.percentage == 0.5
+    assert actual_task.output.percentage == 0.5
     assert actual_task.status == TaskStatus.IN_PROGRESS.value
 
     with pytest.raises(NotImplementedError):
-        dummy_task.content.content_type = "image/jpeg"
+        dummy_task.input.content_type = "image/jpeg"
         mock_base_service.process_task(dummy_task)
 
     with pytest.raises(NoGivenInput):
-        dummy_task.content = None
+        dummy_task.input = None
         mock_base_service.process_task(dummy_task)

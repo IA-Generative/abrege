@@ -90,7 +90,7 @@ async def summarize_doc(
             task_id=task_data.id,
             form_data=TaskUpdateForm(
                 status=TaskStatus.QUEUED.value,
-                content=document_content,
+                input=document_content,
                 extras=extras,
             ),
         )

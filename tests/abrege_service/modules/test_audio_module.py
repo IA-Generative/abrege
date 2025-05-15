@@ -13,7 +13,7 @@ def dummy_task() -> TaskModel:
             type="summary",
             status=TaskStatus.CREATED.value,
             updated_at=0,
-            content=DocumentModel(
+            input=DocumentModel(
                 created_at=0,
                 file_path="tests/data/audio/1.wav",
                 raw_filename="1.wav",
@@ -36,4 +36,4 @@ def test_audio_service(dummy_task: TaskModel):
     # unzip vosk-model-small-fr-0.22.zip -d abrege_service/data/models
     audio_service = AudioVoskTranscriptionService()
     task = audio_service.process_task(task=dummy_task)
-    assert task.result.percentage == 1
+    assert task.output.percentage == 1

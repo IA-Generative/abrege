@@ -54,8 +54,8 @@ class AudioVoskTranscriptionService(AudioBaseService):
         logger_abrege.debug(f"Start transciption for {task.id}")
         if task.extras is None:
             task.extras = {}
-        if task.result is None:
-            task.result = ResultModel(
+        if task.output is None:
+            task.output = ResultModel(
                 type="audio",
                 created_at=int(time.time()),
                 model_name="vosk",
@@ -64,7 +64,7 @@ class AudioVoskTranscriptionService(AudioBaseService):
                 percentage=0,
             )
         file_path = os.path.join(folder_dest, "temp.wav") if folder_dest else "temp.wav"
-        convertir_audio(task.content.file_path, file_path)
+        convertir_audio(task.input.file_path, file_path)
         wf = wave.open(file_path, "rb")
         frames = wf.getnframes()
         framerate = wf.getframerate()
@@ -85,22 +85,22 @@ class AudioVoskTranscriptionService(AudioBaseService):
             red_frames += read_frames
             if red_frames > frames:
                 red_frames = frames
-            task.result.percentage = self.service_ratio_representaion * (red_frames / frames)
+            task.output.percentage = self.service_ratio_representaion * (red_frames / frames)
             task.extras["audio"] = {"result": results}
-            logger_abrege.debug(f"{task.id}: percentage : {task.result.percentage} - {red_frames}/{frames}")
-            task.result.texts_found = [item.get("text") for item in results]
-            task = self.update_task(task=task, status=TaskStatus.IN_PROGRESS.value, result=task.result)
+            logger_abrege.debug(f"{task.id}: percentage : {task.output.percentage} - {red_frames}/{frames}")
+            task.output.texts_found = [item.get("text") for item in results]
+            task = self.update_task(task=task, status=TaskStatus.IN_PROGRESS.value, result=task.output)
 
         final_res = json.loads(rec.FinalResult())
         if "result" not in final_res:
             final_res["result"] = []
         results.append(final_res)
         wf.close()
-        logger_abrege.debug(f"{task.id}: percentage : {task.result.percentage} - {red_frames}/{frames}")
+        logger_abrege.debug(f"{task.id}: percentage : {task.output.percentage} - {red_frames}/{frames}")
         task.extras["audio"] = {"result": results}
-        task.result.texts_found = [item.get("text") for item in results]
+        task.output.texts_found = [item.get("text") for item in results]
 
-        task = self.update_task(task=task, status=TaskStatus.IN_PROGRESS.value, result=task.result)
+        task = self.update_task(task=task, status=TaskStatus.IN_PROGRESS.value, result=task.output)
         if os.path.exists(file_path):
             os.remove(file_path)
 

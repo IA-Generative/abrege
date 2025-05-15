@@ -19,7 +19,7 @@ class BaseSummaryService(ABC):
             task_id=task.id,
             form_data=TaskUpdateForm(
                 status=status,
-                result=result,
+                output=result,
                 updated_at=int(time.time()),
                 extras=task.extras,
             ),
@@ -29,7 +29,7 @@ class BaseSummaryService(ABC):
     def summarize(self, task: TaskModel, *args, **kwargs) -> TaskModel: ...
 
     def process_task(self, task: TaskModel, *args, **kwargs) -> TaskModel:
-        if task.result is None or not task.result.texts_found:
+        if task.output is None or not task.output.texts_found:
             raise TextResultNotGiven("No text is given")
 
         return self.summarize(task=task)

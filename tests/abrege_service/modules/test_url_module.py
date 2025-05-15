@@ -12,7 +12,7 @@ def mock_task(url) -> TaskModel:
             type="summary",
             status=TaskStatus.CREATED.value,
             updated_at=0,
-            content=URLModel(created_at=0, url=url),
+            input=URLModel(created_at=0, url=url),
         ),
     )
 
@@ -39,7 +39,7 @@ def test_get_text_from_pdf():
     # Test download pdf
     dummy_task = mock_task("https://www-fourier.ujf-grenoble.fr/~demailly/L3_topologie_B/topologie_nier_iftimie.pdf")
     actual = url_service.task_to_text(dummy_task)
-    assert "topologie" in "\n".join([item for item in actual.result.texts_found])
+    assert "topologie" in "\n".join([item for item in actual.output.texts_found])
 
 
 def test_get_text_from_microsoft():
@@ -50,7 +50,7 @@ def test_get_text_from_microsoft():
     dummy_task = mock_task("https://pedagogie.ac-toulouse.fr/philosophie/sites/default/files/fichiers/ppt_philosophie_et_ecologie.pptx")
     actual = url_service.task_to_text(dummy_task)
 
-    assert "biologiste" in "\n".join([item for item in actual.result.texts_found])
+    assert "biologiste" in "\n".join([item for item in actual.output.texts_found])
 
 
 def test_get_text_from_audio():
@@ -60,7 +60,7 @@ def test_get_text_from_audio():
     # test audio
     dummy_task = mock_task("https://github.com/UniData-pro/french-speech-recognition-dataset/raw/refs/heads/main/audio/1.wav")
     actual = url_service.task_to_text(dummy_task)
-    assert "que" in "\n".join([item for item in actual.result.texts_found])
+    assert "que" in "\n".join([item for item in actual.output.texts_found])
 
 
 def test_get_text_from_audio_video():
@@ -70,7 +70,7 @@ def test_get_text_from_audio_video():
     # Test mp4 :
     dummy_task = mock_task("https://github.com/intel-iot-devkit/sample-videos/raw/master/bolt-detection.mp4")
     actual = url_service.task_to_text(dummy_task)
-    assert "" in "\n".join([item for item in actual.result.texts_found])
+    assert "" in "\n".join([item for item in actual.output.texts_found])
 
 
 def test_get_text_html():
@@ -82,4 +82,4 @@ def test_get_text_html():
     dummy_task = mock_task("https://this-is-tobi.com/")
 
     actual = url_service.task_to_text(dummy_task)
-    assert "Tobi's projects" in "\n".join([item for item in actual.result.texts_found])
+    assert "Tobi's projects" in "\n".join([item for item in actual.output.texts_found])

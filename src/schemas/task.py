@@ -4,7 +4,7 @@ import time
 from typing import Dict, List, Optional, Any, Union
 from enum import Enum
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import Column, String, JSON, BigInteger, select
+from sqlalchemy import Column, String, JSON, BigInteger, select, Float
 from sqlalchemy.exc import SQLAlchemyError
 
 from src.internal.db import get_db, Base
@@ -21,6 +21,7 @@ class Task(Base):
     type = Column(String, nullable=False)
     status = Column(String, default="queued")
     user_id = Column(String, nullable=False)
+    percentage = Column(Float, nullable=False, default=0)
 
     created_at = Column(BigInteger, default=lambda: int(datetime.now().timestamp()))
     updated_at = Column(
@@ -28,8 +29,8 @@ class Task(Base):
         default=lambda: int(datetime.now().timestamp()),
         onupdate=lambda: int(datetime.now().timestamp()),
     )
-    content = Column(JSON, nullable=True)
-    result = Column(JSON, nullable=True)
+    input = Column(JSON, nullable=True)
+    output = Column(JSON, nullable=True)
     parameters = Column(JSON, nullable=True)
     extras = Column(JSON, nullable=True)
 
@@ -40,8 +41,9 @@ class TaskModel(BaseModel):
     user_id: str
     type: str
     status: str = "queued"
-    content: Optional[Union[URLModel, DocumentModel, TextModel]] = None
-    result: Optional[Union[ResultModel, SummaryModel]] = None
+    percentage: Optional[float] = None
+    input: Optional[Union[URLModel, DocumentModel, TextModel]] = None
+    output: Optional[Union[ResultModel, SummaryModel]] = None
     parameters: Optional[SummaryParameters] = SummaryParameters()
 
     created_at: int
@@ -53,9 +55,9 @@ class TaskForm(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     type: str
     status: Optional[str] = None
-
-    content: Optional[Union[URLModel, DocumentModel, TextModel]] = None
-    result: Optional[Union[ResultModel, SummaryModel]] = None
+    percentage: Optional[float] = None
+    input: Optional[Union[URLModel, DocumentModel, TextModel]] = None
+    output: Optional[Union[ResultModel, SummaryModel]] = None
     parameters: Optional[SummaryParameters] = None
     updated_at: Optional[int] = None
     extras: Optional[Dict[str, Any]] = None
@@ -64,9 +66,9 @@ class TaskForm(BaseModel):
 class TaskUpdateForm(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     status: Optional[str] = None
-
-    content: Optional[Union[URLModel, DocumentModel, TextModel]] = None
-    result: Optional[Union[ResultModel, SummaryModel]] = None
+    percentage: Optional[float] = None
+    input: Optional[Union[URLModel, DocumentModel, TextModel]] = None
+    output: Optional[Union[ResultModel, SummaryModel]] = None
     parameters: Optional[SummaryParameters] = None
     updated_at: Optional[int] = None
     extras: Optional[Dict[str, Any]] = None
@@ -131,12 +133,12 @@ class TaskTable:
                 if hasattr(task, key):
                     setattr(task, key, value)
 
-            if form_data.result:
-                task.result = form_data.result.model_dump()
-            if form_data.content:
-                task.content = form_data.content.model_dump()
+            if form_data.output:
+                task.result = form_data.output.model_dump()
+            if form_data.input:
+                task.content = form_data.input.model_dump()
             if form_data.parameters:
-                task.parameters = form_data.content.model_dump()
+                task.parameters = form_data.input.model_dump()
 
             task.updated_at = int(time.time())
             db.commit()

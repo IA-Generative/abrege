@@ -47,7 +47,7 @@ def dummy_task_large() -> TaskModel:
             status=TaskStatus.CREATED.value,
             updated_at=0,
             parameters=SummaryParameters(),
-            result=ResultModel(
+            output=ResultModel(
                 type="ocr",
                 created_at=0,
                 model_name="mock",

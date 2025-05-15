@@ -28,8 +28,8 @@ class PDFTOMD4LLMService(PDFService):
     def task_to_text(self, task: TaskModel, **kwargs):
         if task.extras is None:
             task.extras = {}
-        if task.result is None:
-            task.result = ResultModel(
+        if task.output is None:
+            task.output = ResultModel(
                 type="pdf",
                 created_at=int(time.time()),
                 model_name=pymupdf4llm.__name__,
@@ -40,18 +40,18 @@ class PDFTOMD4LLMService(PDFService):
             )
 
         partial_result = pymupdf4llm.to_markdown(
-            task.content.file_path,
+            task.input.file_path,
             page_chunks=kwargs.get("page_chunks", True),
             embed_images=kwargs.get("embed_images", True),
         )
-        task.result.texts_found = [item.get("text") for item in partial_result]
+        task.output.texts_found = [item.get("text") for item in partial_result]
 
         # task.result.extras["pdftomd"] = partial_result
-        task.result.percentage = 1
+        task.output.percentage = 1
         task = self.update_task(
             task=task,
             status=TaskStatus.IN_PROGRESS.value,
-            result=task.result,
+            result=task.output,
         )
         return task
 
@@ -74,8 +74,8 @@ class MicrosoftDocumnentToMdService(MicrosoftDocumentService):
     def task_to_text(self, task: TaskModel, **kwargs):
         if task.extras is None:
             task.extras = {}
-        if task.result is None:
-            task.result = ResultModel(
+        if task.output is None:
+            task.output = ResultModel(
                 type="microsoft",
                 created_at=int(time.time()),
                 model_name=markitdown.__name__,
@@ -85,13 +85,13 @@ class MicrosoftDocumnentToMdService(MicrosoftDocumentService):
                 extras={},
             )
 
-        task.result.texts_found = [md.convert(source=task.content.file_path).text_content]
+        task.output.texts_found = [md.convert(source=task.input.file_path).text_content]
 
-        task.result.percentage = 1
+        task.output.percentage = 1
         task = self.update_task(
             task=task,
             status=TaskStatus.IN_PROGRESS.value,
-            result=task.result,
+            result=task.output,
         )
 
         return task
@@ -104,8 +104,8 @@ class FlatTextService(BaseService):
     def task_to_text(self, task: TaskModel, **kwargs) -> TaskModel:
         if task.extras is None:
             task.extras = {}
-        if task.result is None:
-            task.result = ResultModel(
+        if task.output is None:
+            task.output = ResultModel(
                 type="plain-text",
                 created_at=int(time.time()),
                 model_name=markitdown.__name__,
@@ -115,14 +115,14 @@ class FlatTextService(BaseService):
                 extras={},
             )
 
-        with open(task.content.file_path, encoding="utf8", errors="ignore") as f:
-            task.result.texts_found = [f.read()]
+        with open(task.input.file_path, encoding="utf8", errors="ignore") as f:
+            task.output.texts_found = [f.read()]
 
-        task.result.percentage = 1
+        task.output.percentage = 1
         task = self.update_task(
             task=task,
             status=TaskStatus.IN_PROGRESS.value,
-            result=task.result,
+            result=task.output,
         )
 
         return task

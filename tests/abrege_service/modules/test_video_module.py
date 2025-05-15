@@ -13,7 +13,7 @@ def dummy_task() -> TaskModel:
             type="summary",
             status=TaskStatus.CREATED.value,
             updated_at=0,
-            content=DocumentModel(
+            input=DocumentModel(
                 created_at=0,
                 file_path="tests/data/video/bonjour.mp4",
                 raw_filename="bonjour.mp4",
@@ -33,8 +33,8 @@ def dummy_task() -> TaskModel:
 )
 def test_video_service(dummy_task: TaskModel):
     video_service = VideoTranscriptionService()
-    content = dummy_task.content
+    content = dummy_task.input
     task = video_service.process_task(task=dummy_task)
-    assert task.result.percentage == 1
+    assert task.output.percentage == 1
     # Check no change into content
-    assert task.content == content
+    assert task.input == content

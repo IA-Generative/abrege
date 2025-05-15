@@ -67,27 +67,27 @@ def launch(self, task: str):
             ),
         )
 
-        if isinstance(task.content, URLModel):
+        if isinstance(task.input, URLModel):
             task = url_service.process_task(task=task)
 
-        elif isinstance(task.content, DocumentModel):
+        elif isinstance(task.input, DocumentModel):
             file_path = file_connector.get_by_task_id(user_id=task.user_id, task_id=task.id)
-            task.content.file_path = file_path
+            task.input.file_path = file_path
             for service in services:
-                if service.is_availble(task.content.content_type):
+                if service.is_availble(task.input.content_type):
                     task = service.process_task(task=task)
 
             if os.path.exists(file_path):
                 os.remove(file_path)
 
-        elif isinstance(task.content, TextModel):
-            task.result = ResultModel(
+        elif isinstance(task.input, TextModel):
+            task.output = ResultModel(
                 type="flat",
-                created_at=task.content.created_at,
+                created_at=task.input.created_at,
                 model_name="flat",
                 model_version=__version__,
                 percentage=1,
-                texts_found=[task.content.text],
+                texts_found=[task.input.text],
             )
 
         else:

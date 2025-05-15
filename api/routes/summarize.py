@@ -50,7 +50,7 @@ async def summarize_content(user_id: str, summarize_content: SummarizeModel):
 
     task = task_table.insert_new_task(
         user_id=user_id,
-        form_data=TaskForm(type="summary", status=TaskStatus.CREATED.value, content=model_to_send, parameters=parameters),
+        form_data=TaskForm(type="summary", status=TaskStatus.CREATED.value, input=model_to_send, parameters=parameters),
     )
     logger.debug({"task_id": task.id, "time": task.created_at})
     celery_app.send_task(

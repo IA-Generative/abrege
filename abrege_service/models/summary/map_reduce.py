@@ -53,8 +53,8 @@ class LangChainMapReduceService(BaseSummaryService):
         self.recursion_limit = recursion_limit
 
     def summarize(self, task: TaskModel, *args, **kwargs) -> TaskModel:
-        task.result = SummaryModel(
-            created_at=task.result.created_at,
+        task.output = SummaryModel(
+            created_at=task.output.created_at,
             updated_at=int(time.time()),
             summary="",
             word_count=0,
@@ -62,7 +62,7 @@ class LangChainMapReduceService(BaseSummaryService):
             model_name=self.llm.model_name,
             model_version=self.llm.model_name,
             status=TaskStatus.IN_PROGRESS.value,
-            texts_found=task.result.texts_found,
+            texts_found=task.output.texts_found,
             extras={},
         )
 
@@ -70,22 +70,22 @@ class LangChainMapReduceService(BaseSummaryService):
 
         deb = perf_counter()
 
-        logger_abrege.info(f"Début du processus de map-reduce avec {len(task.result.texts_found)} documents")
+        logger_abrege.info(f"Début du processus de map-reduce avec {len(task.output.texts_found)} documents")
 
-        for i, text in enumerate(task.result.texts_found):
+        for i, text in enumerate(task.output.texts_found):
             num_tokens = self.llm.get_num_tokens(text)
             logger_abrege.info(f"Before optim : Danse la page {i + 1} Nombre de tokens: {num_tokens}")
 
         list_str = split_texts_by_word_limit(
-            texts=task.result.texts_found,
+            texts=task.output.texts_found,
             max_words=int(self.num_tokens_limit * self.ratio_word_token),
         )
         for i, text in enumerate(list_str):
             num_tokens = self.llm.get_num_tokens(text)
             logger_abrege.info(f"After optim : Danse la page {i + 1} Nombre de tokens: {num_tokens}")
 
-        task.result.texts_found = list_str
-        task = self.update_result_task(task=task, result=task.result, status=TaskStatus.IN_PROGRESS.value)
+        task.output.texts_found = list_str
+        task = self.update_result_task(task=task, result=task.output, status=TaskStatus.IN_PROGRESS.value)
 
         logger_abrege.info(f"Taille maximale de contexte: {self.num_tokens_limit} tokens")
 
@@ -207,8 +207,8 @@ class LangChainMapReduceService(BaseSummaryService):
             )
             for step in result:
                 nb_call += 1
-                task.result.nb_llm_calls = nb_call
-                task.result.percentage = 0.7  # How to calculate correctly ?
+                task.output.nb_llm_calls = nb_call
+                task.output.percentage = 0.7  # How to calculate correctly ?
                 for item in result[step]:
                     if isinstance(item, str):
                         text = Text(
@@ -216,7 +216,7 @@ class LangChainMapReduceService(BaseSummaryService):
                             text=item,
                             word_count=len(item.split()),
                         )
-                        task.result.partial_summaries.append(text)
+                        task.output.partial_summaries.append(text)
                     if isinstance(item, list):
                         for unit_item in item:
                             if isinstance(unit_item, str):
@@ -225,7 +225,7 @@ class LangChainMapReduceService(BaseSummaryService):
                                     text=unit_item,
                                     word_count=len(unit_item.split()),
                                 )
-                                task.result.partial_summaries.append(text)
+                                task.output.partial_summaries.append(text)
                             if isinstance(unit_item, Document):
                                 tmp_text = unit_item.page_content
                                 text = Text(
@@ -233,20 +233,20 @@ class LangChainMapReduceService(BaseSummaryService):
                                     text=tmp_text,
                                     word_count=len(tmp_text.split()),
                                 )
-                                task.result.partial_summaries.append(text)
+                                task.output.partial_summaries.append(text)
 
-                task = self.update_result_task(task=task, result=task.result, status=TaskStatus.IN_PROGRESS.value)
+                task = self.update_result_task(task=task, result=task.output, status=TaskStatus.IN_PROGRESS.value)
 
                 logger_abrege.debug(f"Étape {nb_call} du graphe exécutée")
                 elapsed = perf_counter() - deb
                 logger_abrege.info(f"Processus de map-reduce terminé en {elapsed:.2f} secondes avec {nb_call} appels")
 
-                task.result.summary = result["final_summary"]
-                task.result.word_count = len(result["final_summary"].split())
-                task.result.percentage = 1
+                task.output.summary = result["final_summary"]
+                task.output.word_count = len(result["final_summary"].split())
+                task.output.percentage = 1
 
-                logger_abrege.info(f"Résumé final généré avec {len(task.result.summary)} caractères - nb words {task.result.word_count}")
-                self.update_result_task(task=task, result=task.result, status=TaskStatus.COMPLETED.value)
+                logger_abrege.info(f"Résumé final généré avec {len(task.output.summary)} caractères - nb words {task.output.word_count}")
+                self.update_result_task(task=task, result=task.output, status=TaskStatus.COMPLETED.value)
                 return task
 
         except openai.InternalServerError as e:

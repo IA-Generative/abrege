@@ -27,7 +27,7 @@ class BaseService(ABC):
             task_id=task.id,
             form_data=TaskUpdateForm(
                 status=status,
-                result=result,
+                output=result,
                 updated_at=int(time.time()),
                 extras=task.extras,
             ),
@@ -37,11 +37,11 @@ class BaseService(ABC):
     def task_to_text(self, task: TaskModel, **kwargs) -> TaskModel: ...
 
     def process_task(self, task: TaskModel, **kwargs):
-        if task.content is None:
+        if task.input is None:
             raise NoGivenInput("No input is given")
 
-        if isinstance(task.content, DocumentModel):
-            content_type: str = task.content.content_type
+        if isinstance(task.input, DocumentModel):
+            content_type: str = task.input.content_type
             if not self.is_availble(content_type):
                 raise NotImplementedError(f"Content type {content_type} is not available for processing.")
         return self.task_to_text(task, **kwargs)
