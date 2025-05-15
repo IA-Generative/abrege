@@ -46,7 +46,7 @@ class PDFTOMD4LLMService(PDFService):
         )
         task.result.texts_found = [item.get("text") for item in partial_result]
 
-        task.result.extras["pdftomd"] = partial_result
+        # task.result.extras["pdftomd"] = partial_result
         task.result.percentage = 1
         task = self.update_task(
             task=task,
