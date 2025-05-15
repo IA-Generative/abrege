@@ -1,4 +1,3 @@
-import os
 import json
 
 from src.clients import file_connector
@@ -47,7 +46,7 @@ def test_task_process_url():
     assert actual.id == task.id
     assert actual.status == TaskStatus.COMPLETED.value
     task_table.delete_task_by_id(task.id)
-    os.remove("google.com")
+
     #############################################################
 
 
@@ -74,7 +73,7 @@ def test_task_process_url_pdf():
     assert actual.result.percentage == 1
     assert len(actual.result.summary.split()) > 0
     task_table.delete_task_by_id(task.id)
-    os.remove("chap1.pdf")
+
     #############################################################
 
 
@@ -124,7 +123,7 @@ def test_task_process_url_mp4():
     assert actual.id == task.id
     assert actual.status == TaskStatus.COMPLETED.value
     task_table.delete_task_by_id(task.id)
-    os.remove("bolt-detection.mp4")
+
     #############################################################
 
 
@@ -153,7 +152,7 @@ def test_task_process_url_ppt():
 
     assert len(actual.result.summary.split()) > 0
     task_table.delete_task_by_id(task.id)
-    os.remove("ppt_philosophie_et_ecologie.pptx")
+
     #############################################################
 
 
@@ -180,7 +179,7 @@ def test_task_process_url_audio():
     assert actual.status == TaskStatus.COMPLETED.value
     assert actual.result.percentage == 1
     task_table.delete_task_by_id(task.id)
-    os.remove("1.wav")
+
     #############################################################
 
 

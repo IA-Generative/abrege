@@ -54,6 +54,9 @@ class URLService(URLBaseService):
         logger_abrege.info(f"{task.id} - content_type {content_type_calculated}")
         for service in self.services:
             if service.is_availble(content_type=content_type_calculated):
-                return service.task_to_text(task=task)
+                task = service.task_to_text(task=task)
+                if os.path.exists(filename):
+                    os.remove(filename)
+                return task
 
         raise NotImplementedError(f"{url} can not be abrege - {content_type_calculated}")

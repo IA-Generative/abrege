@@ -40,7 +40,6 @@ def test_get_text_from_pdf():
     dummy_task = mock_task("https://www-fourier.ujf-grenoble.fr/~demailly/L3_topologie_B/topologie_nier_iftimie.pdf")
     actual = url_service.task_to_text(dummy_task)
     assert "topologie" in "\n".join([item for item in actual.result.texts_found])
-    os.remove("topologie_nier_iftimie.pdf")
 
 
 def test_get_text_from_microsoft():
@@ -52,7 +51,6 @@ def test_get_text_from_microsoft():
     actual = url_service.task_to_text(dummy_task)
 
     assert "biologiste" in "\n".join([item for item in actual.result.texts_found])
-    os.remove("ppt_philosophie_et_ecologie.pptx")
 
 
 def test_get_text_from_audio():
@@ -62,10 +60,7 @@ def test_get_text_from_audio():
     # test audio
     dummy_task = mock_task("https://github.com/UniData-pro/french-speech-recognition-dataset/raw/refs/heads/main/audio/1.wav")
     actual = url_service.task_to_text(dummy_task)
-    print(actual.result)
-    print(79 * "*")
     assert "que" in "\n".join([item for item in actual.result.texts_found])
-    os.remove("1.wav")
 
 
 def test_get_text_from_audio_video():
@@ -76,17 +71,15 @@ def test_get_text_from_audio_video():
     dummy_task = mock_task("https://github.com/intel-iot-devkit/sample-videos/raw/master/bolt-detection.mp4")
     actual = url_service.task_to_text(dummy_task)
     assert "que" in "\n".join([item for item in actual.result.texts_found])
-    os.remove("bolt-detection.mp4")
 
 
 def test_get_text_html():
-    from abrege_service.modules.doc import FlatTextService
+    from abrege_service.modules.doc import MicrosoftDocumnentToMdService
 
-    url_service = URLService(services=[FlatTextService()])
+    url_service = URLService(services=[MicrosoftDocumnentToMdService()])
 
     # Test donwload html
     dummy_task = mock_task("https://this-is-tobi.com/")
 
     actual = url_service.task_to_text(dummy_task)
     assert "Tobi's projects" in "\n".join([item for item in actual.result.texts_found])
-    os.remove("downloaded_file")
