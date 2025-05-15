@@ -4,7 +4,7 @@ from abrege_service.modules.ocr import OCRMIService
 from src.schemas.task import TaskModel, TaskStatus, task_table, TaskForm
 from src.schemas.content import DocumentModel
 
-url = os.getenv("OCR_BACKEND_URL", "https://mirai-ocr-staging.sdid-app.cpin.numerique-interieur.com/")
+url = os.getenv("OCR_BACKEND_URL", "https://localhost:80/1")
 is_ocr_client_available = True
 try:
     obj_module_ocr = OCRMIService(url_ocr=url)

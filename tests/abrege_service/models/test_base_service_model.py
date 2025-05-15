@@ -13,6 +13,7 @@ def dummy_task() -> TaskModel:
             type="summary",
             status=TaskStatus.CREATED.value,
             updated_at=0,
+            percentage=0.0,
             input=DocumentModel(
                 created_at=0,
                 file_path="tests/data/audio/1.wav",
@@ -50,7 +51,7 @@ def mock_model_service() -> BaseSummaryService:
                 summary="Done",
                 word_count=1,
             )
-            task = self.update_result_task(task=task, result=result, status=TaskStatus.COMPLETED.value)
+            task = self.update_result_task(task=task, result=result, status=TaskStatus.COMPLETED.value, percentage=0.5)
 
             return task
 

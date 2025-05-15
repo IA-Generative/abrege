@@ -7,7 +7,7 @@ from src.schemas.task import TaskModel, TaskStatus
 from src.schemas.result import ResultModel
 from src.logger.logger import logger
 
-url = os.getenv("OCR_BACKEND_URL", "https://mirai-ocr-staging.sdid-app.cpin.numerique-interieur.com/")
+url = os.getenv("OCR_BACKEND_URL", "https://mirai-ocr-staging.sdid-app.cpin.numerique-interieur.com/1")
 
 
 class OCRMIService(BaseService):

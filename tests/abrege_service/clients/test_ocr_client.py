@@ -4,7 +4,7 @@ from abrege_service.clients.ocr_client import OCRClient
 from src.schemas.task import TaskStatus
 
 
-url = os.getenv("OCR_BACKEND_URL", "https://mirai-ocr-staging.sdid-app.cpin.numerique-interieur.com/")
+url = os.getenv("OCR_BACKEND_URL", "https://localhost:80/")
 client = OCRClient(url=url)
 
 is_ocr_available = True
@@ -15,7 +15,7 @@ except Exception:
 
 
 @pytest.mark.skipif(not is_ocr_available, reason=f"{url} is not avalaible")
-def test_data():
+def test_client_ocr():
     task = client.send("user_id", "tests/test_data/elysee-module-24161-fr.pdf")
     task_id = task["id"]
     status = task.get("status")

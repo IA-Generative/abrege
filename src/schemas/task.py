@@ -134,9 +134,9 @@ class TaskTable:
                     setattr(task, key, value)
 
             if form_data.output:
-                task.result = form_data.output.model_dump()
+                task.output = form_data.output.model_dump()
             if form_data.input:
-                task.content = form_data.input.model_dump()
+                task.input = form_data.input.model_dump()
             if form_data.parameters:
                 task.parameters = form_data.input.model_dump()
 

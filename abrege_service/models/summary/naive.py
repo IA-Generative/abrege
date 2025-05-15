@@ -114,12 +114,15 @@ class NaiveSummaryService(BaseSummaryService):
             task.output.word_count = len(summary.split())
             task.output.percentage = 1
             task.output.nb_llm_calls = 1
-            task = self.update_result_task(task=task, result=task.output, status=TaskStatus.COMPLETED.value)
+            task = self.update_result_task(task=task, result=task.output, status=TaskStatus.COMPLETED.value, percentage=1)
             logger_app.info(f"task {task_id} - Done {time.time() - t_start}")
             return task
 
         task = self.update_result_task(task=task, result=task.output, status=TaskStatus.IN_PROGRESS.value)
         start_size = len(texts)
+        previous_percentage = task.percentage
+        left_percentage = 1 - previous_percentage
+
         while len(texts) > 1:
             logger_app.info(f"task {task_id} - {len(texts)}/{start_size} process")
             new_summaries: List[Text] = []
@@ -170,6 +173,7 @@ class NaiveSummaryService(BaseSummaryService):
                         task=task,
                         result=task.output,
                         status=TaskStatus.IN_PROGRESS.value,
+                        percentage=previous_percentage + left_percentage * task.output.percentage,
                     )
                     logger_app.debug(f"task {task_id} - partial saved")
                 else:
@@ -186,5 +190,5 @@ class NaiveSummaryService(BaseSummaryService):
         task.output.percentage = 1
         task.output.word_count = len(final_summary.text.split())
         task.output.summary = final_summary.text
-        task = self.update_result_task(task=task, result=task.output, status=TaskStatus.COMPLETED.value)
+        task = self.update_result_task(task=task, result=task.output, status=TaskStatus.COMPLETED.value, percentage=1)
         return task

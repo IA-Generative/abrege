@@ -10,9 +10,10 @@ class NoGivenInput(Exception): ...
 
 
 class BaseService(ABC):
-    def __init__(self, content_type_allowed: List[str] = []):
+    def __init__(self, content_type_allowed: List[str] = [], service_weight: float = 0.5):
         self.task_table = task_table
         self.content_type_allowed = content_type_allowed
+        self.service_weight = service_weight
 
     def is_availble(self, content_type: str) -> bool:
         return content_type in self.content_type_allowed
@@ -23,14 +24,13 @@ class BaseService(ABC):
         result: Optional[ResultModel] = None,
         status: Optional[TaskStatus] = None,
     ) -> TaskModel:
+        percentage = None
+        if result is not None:
+            percentage = result.percentage * self.service_weight
+
         return self.task_table.update_task(
             task_id=task.id,
-            form_data=TaskUpdateForm(
-                status=status,
-                output=result,
-                updated_at=int(time.time()),
-                extras=task.extras,
-            ),
+            form_data=TaskUpdateForm(status=status, output=result, updated_at=int(time.time()), extras=task.extras, percentage=percentage),
         )
 
     @abstractmethod
