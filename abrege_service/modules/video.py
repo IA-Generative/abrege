@@ -54,8 +54,6 @@ class VideoTranscriptionService(VideoBaseService):
         task.result = task_audio.result
         task.status = task_audio.status
 
-        if os.path.exists(task.content.file_path):
-            os.remove(task.content.file_path)
         if os.path.exists(tmp_file):
             os.remove(tmp_file)
 
