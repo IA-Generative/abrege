@@ -1,9 +1,9 @@
-name: Release Management
+name: Release Alpha
 
 on:
   push:
     branches:
-      - main
+      - dev
 
 permissions:
   contents: write
@@ -16,13 +16,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-            fetch-depth: 0
-            fetch-tags: true
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Run Release Please
         uses: googleapis/release-please-action@v4
         with:
           release-type: python
-          token: ${{ secrets.MY_GITHUB_TOKEN }}
-          target-branch: main
-          prerelease: ${{ github.ref_name != 'main' }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          target-branch: dev
+          prerelease: true
