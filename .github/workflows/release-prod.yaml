@@ -32,5 +32,6 @@ jobs:
         with:
           release-type: python
           token: ${{ secrets.MY_GITHUB_TOKEN }}
-          target-branch: ${{ steps.vars.outputs.target_branch }}
+          target-branch: main
+          config-file: release-please-config.json
           prerelease: ${{ steps.vars.outputs.prerelease }}
