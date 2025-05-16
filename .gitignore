@@ -14,3 +14,4 @@ abrege_service/data/models/vosk-model-small-fr-0.22
 tests/data/*.md
 tests/data/nltk
 tests/data/text
+.env.prod
