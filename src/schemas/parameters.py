@@ -1,11 +1,11 @@
-from typing import Literal
+from typing import Literal, Optional
 from pydantic import BaseModel, Field
 
 MethodType = Literal["map_reduce", "refine", "text_rank", "k-means", "stuff"]  # "text_rank2", "k-means2"
 
 
 class BaseParameters(BaseModel):
-    temperature: float = Field(0.0, ge=0.0, le=1.0, description="Temperature of the model")
+    temperature: Optional[float] = Field(0.0, ge=0.0, le=1.0, description="Temperature of the model")
     language: str | None = Field("French", description="Language you want the summary")
     size: int | None = Field(
         4_000,

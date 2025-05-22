@@ -11,13 +11,14 @@ def test_summarize_content_url():
 
     client = TestClient(app)
     response = client.post(
-        "/content/test_user",
+        "/task/text-url",
         json={
+            "user_id": "test",
             "content": {
                 "url": "https://google.com",
                 "extras": {"key": "value"},
                 "prompt": "Summarize this page",
-            }
+            },
         },
     )
 
@@ -34,13 +35,14 @@ def test_summarize_content_text():
 
     client = TestClient(app)
     response = client.post(
-        "/content/test_user",
+        "/task/text-url",
         json={
+            "user_id": "test",
             "content": {
                 "text": "https://example.com",
                 "extras": {"key": "value"},
                 "prompt": "Summarize this page",
-            }
+            },
         },
     )
 
@@ -57,7 +59,7 @@ def test_summarize_content_body_error():
 
     client = TestClient(app)
     response = client.post(
-        "/content/test_user",
+        "/task/text-url",
         json={
             "content": {
                 "stext": "https://example.com",
@@ -73,17 +75,16 @@ def test_summarize_content_body_error():
 def test_summarize_content_url_error():
     app = FastAPI()
     app.include_router(router)
+    input_data = {
+        "user_id": "test_user",
+        "content": {
+            "url": "https://22222.24",  # URL invalide
+            "prompt": "Summarize this page",
+            "extras": {"key": "value"},
+        },
+    }
 
     client = TestClient(app)
-    response = client.post(
-        "/content/test_user",
-        json={
-            "content": {
-                "url": "https://22222.24",
-                "extras": {"key": "value"},
-                "prompt": "Summarize this page",
-            }
-        },
-    )
+    response = client.post("/task/text-url", json=input_data)
 
     assert response.status_code == 500

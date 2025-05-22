@@ -3,54 +3,52 @@ import tempfile
 import shutil
 import os
 import traceback
-from datetime import datetime
 from typing import Optional
-from fastapi import APIRouter, File, UploadFile, HTTPException, status, Form
-from pydantic import ValidationError, BaseModel
-
-from api.schemas.content import Content
-
+from datetime import datetime
+from fastapi import File, UploadFile, HTTPException, status, Form, APIRouter
 from src.clients import file_connector, celery_app
 from src.logger.logger import logger
-from src.schemas.task import (
-    task_table,
-    TaskForm,
-    TaskModel,
-    TaskUpdateForm,
-    TaskStatus,
-)
+from src.schemas.task import task_table, TaskForm, TaskUpdateForm, TaskStatus, TaskModel
 from src.schemas.content import DocumentModel
+from api.schemas.content import Content
 from src.schemas.parameters import SummaryParameters
 
-router = APIRouter(tags=["Document"])
+
+doc_router = APIRouter(tags=["Document"])
 
 
-class SummarizeDocModel(BaseModel):
-    content: Optional[Content] = None
-    parameters: Optional[SummaryParameters] = None
-
-
-@router.post("/doc/summarize-validator", response_model=SummarizeDocModel)
-async def validate_content(summarize_content: SummarizeDocModel):
-    return summarize_content
-
-
-@router.post("/doc/{user_id}", status_code=status.HTTP_201_CREATED, response_model=TaskModel)
+@doc_router.post("/task/document", status_code=status.HTTP_201_CREATED, response_model=TaskModel)
 async def summarize_doc(
-    user_id: str,
-    summarize_content: Optional[str] = Form(None, description=f"Should be in {SummarizeDocModel.__name__} format"),
     file: UploadFile = File(...),
+    user_id: str = Form(..., description="User id"),
+    prompt: Optional[str] = Form(None, description="Custom prompt for after summary"),
+    parameters: Optional[str] = Form(
+        default="",
+        description="Parameters",
+        examples=SummaryParameters().model_dump(),
+    ),
+    extras: Optional[str] = Form(default="", description="Extras json payload", examples={}),
 ):
-    if summarize_content is not None and summarize_content.strip() != "":
+    print(type(extras), type(parameters))
+    print(79 * "*")
+    if extras is not None and extras:
         try:
-            summarize_content: SummarizeDocModel = SummarizeDocModel.model_validate_json(summarize_content)
-        except ValidationError as e:
-            raise HTTPException(status_code=422, detail=e.errors())
+            extras = json.loads(extras)
+        except Exception as e:
+            raise HTTPException(status_code=422, detail=f"{e}")
     else:
-        summarize_content = SummarizeDocModel()
-    parameters = summarize_content.parameters
-    content = summarize_content.content
-    extras = {}
+        extras = {}
+
+    if parameters is not None and parameters:
+        try:
+            parameters = SummaryParameters.model_validate_json(parameters)
+        except Exception as e:
+            raise HTTPException(status_code=422, detail=f"{e}")
+    else:
+        parameters = SummaryParameters()
+
+    content = Content(prompt=prompt, extras=extras)
+
     task_data = task_table.insert_new_task(
         user_id=user_id,
         form_data=TaskForm(
