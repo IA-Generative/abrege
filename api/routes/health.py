@@ -34,4 +34,5 @@ async def healthcheck():
         status=status,
         dependencies=dependencies,
     )
+    logger_abrege.debug(global_health.model_dump())
     return JSONResponse(content=global_health.model_dump(), status_code=status_code)
