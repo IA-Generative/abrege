@@ -81,17 +81,25 @@ build: build-abrege-api build-abrege-service ## Lance la construction de toutes 
 
 ####################################################################
 
+down-services:
+	docker compose down || true
+
 init-db:
-	docker compose up -d redis db minio abrege_api abrege_service migration
+	docker compose up -d redis db minio migration
 	sleep 2
 	docker compose run migration uv run alembic upgrade head
 	sleep 2
 
 test-src: init-db
+	docker compose up -d abrege_api
 	docker compose exec abrege_api uv run pytest --cov=./src --cov-report=term-missing tests/src/ -ra -v --maxfail=0
+	make down-services
 
 test-abrege-api: init-db
+	docker compose up -d abrege_api
 	docker compose exec abrege_api uv run pytest --cov=./api --cov-report=term-missing tests/api/ -ra -v --maxfail=0
+	make down-services
 
 test-abrege-service: init-db
-	docker compose exec abrege_service uv run pytest --cov=./abrege_service --cov-report=term-missing tests/abrege_service/ -ra -v --maxfail=0
+	docker compose run --rm test_runner
+	make down-services

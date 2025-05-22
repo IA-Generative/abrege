@@ -1,5 +1,3 @@
-from typing import Union, Optional
-from pydantic import BaseModel
 import json
 from datetime import datetime
 
@@ -13,20 +11,19 @@ from src.clients import celery_app
 from src.schemas.content import URLModel, TextModel
 from src.schemas.task import task_table, TaskModel, TaskForm, TaskStatus
 from src.logger.logger import logger
-from src.schemas.parameters import SummaryParameters
+from api.schemas.content import InputModel
 
-router = APIRouter(tags=["Text"])
-
-
-class SummarizeModel(BaseModel):
-    content: Union[UrlContent, TextContent]
-    parameters: Optional[SummaryParameters] = None
+router = APIRouter(tags=["Text & Url"])
 
 
-@router.post("/content/{user_id}", status_code=status.HTTP_201_CREATED, response_model=TaskModel)
-async def summarize_content(user_id: str, summarize_content: SummarizeModel):
-    content = summarize_content.content
-    parameters = summarize_content.parameters
+@router.post(
+    "/task/text-url",
+    status_code=status.HTTP_201_CREATED,
+    response_model=TaskModel,
+)
+async def summarize_content(input: InputModel):
+    content = input.content
+    parameters = input.parameters
     if isinstance(content, UrlContent):
         model_to_send = URLModel(
             created_at=int(datetime.now().timestamp()),
@@ -49,8 +46,13 @@ async def summarize_content(user_id: str, summarize_content: SummarizeModel):
     model_to_send.extras["prompt"] = content.prompt
 
     task = task_table.insert_new_task(
-        user_id=user_id,
-        form_data=TaskForm(type="summary", status=TaskStatus.CREATED.value, input=model_to_send, parameters=parameters),
+        user_id=input.user_id,
+        form_data=TaskForm(
+            type="summary",
+            status=TaskStatus.CREATED.value,
+            input=model_to_send,
+            parameters=parameters,
+        ),
     )
     logger.debug({"task_id": task.id, "time": task.created_at})
     celery_app.send_task(

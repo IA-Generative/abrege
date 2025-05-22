@@ -1,9 +1,18 @@
 import json
+import pytest
 
 from src.clients import file_connector
 from src.schemas.task import task_table, TaskForm, TaskModel, TaskStatus
 from src.schemas.content import TextModel, URLModel, DocumentModel
-from abrege_service.main import launch
+from abrege_service.main import launch, ocr_service
+
+is_ocr_available = False
+
+try:
+    ocr_service.ocr_mi_client.get_health()
+    is_ocr_available = True
+except Exception as e:
+    print(e)
 
 
 def test_task_process_text():
@@ -50,6 +59,7 @@ def test_task_process_url():
     #############################################################
 
 
+@pytest.mark.skipif(condition=not is_ocr_available, reason="Ocr not available")
 def test_task_process_url_pdf():
     user_id = "test"
     #############################################################
@@ -268,6 +278,7 @@ def test_video_document():
     task_table.delete_task_by_id(task.id)
 
 
+@pytest.mark.skipif(condition=not is_ocr_available, reason="Ocr not available")
 def test_pdf_document():
     video_path = "tests/test_data/elysee-module-24161-fr.pdf"
     user_id = "test"

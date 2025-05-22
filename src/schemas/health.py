@@ -1,6 +1,6 @@
 from __future__ import annotations
-from typing import List, Dict, Any, Optional, Union
-from pydantic import BaseModel
+from typing import List, Dict, Any, Optional
+from pydantic import BaseModel, Field
 
 from enum import Enum
 
@@ -10,16 +10,10 @@ class HealtStatus(str, Enum):
     UNHEALTHY = "unhealthy"
 
 
-class HealthError(BaseModel):
-    name: str
-    error: str
-    code_status: int
-
-
 class Health(BaseModel):
-    name: str
-    version: str
-    up_time: str
-    extras: Optional[Dict[str, Any]] = None
-    status: HealtStatus = HealtStatus.HEALTHY.value
-    dependencies: Optional[List[Union[Health, HealthError]]] = None
+    name: str = Field(..., description="Api name")
+    version: str = Field(..., description="version name")
+    up_time: str = Field(..., description="Since up time name")
+    extras: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Any extras informations")
+    status: HealtStatus = Field(HealtStatus.HEALTHY.value, description="Status of the api")
+    dependencies: Optional[List[Health]] = Field(default_factory=list, description="List of dependencies of the api")

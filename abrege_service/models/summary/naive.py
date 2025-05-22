@@ -55,6 +55,10 @@ class NaiveSummaryService(BaseSummaryService):
         self.temperature = temperature
 
     def summarize(self, task: TaskModel, *args, **kwargs) -> TaskModel:
+        params = task.parameters
+        if task.parameters is None:
+            params = SummaryParameters(size=self.size, language=self.language, temperature=self.temperature)
+
         # Theoretically, the number of calls to the LLM is log2(n) + 1 if not odds
         task_id = task.id
         nb_call = 0
@@ -71,7 +75,7 @@ class NaiveSummaryService(BaseSummaryService):
         )
         task.output.texts_found = splitted_text
         logger_app.info(f"Start task {task_id} - nb texts {len(splitted_text)} -- ")
-        total_call = int(math.log(len(task.output.texts_found), 2)) + 1
+        total_call = int(math.log(len(task.output.texts_found), 2)) + 1 + 1 if params.custom_prompt else 0
         logger_app.info(f"Start task {task_id} - theory nb calls {total_call} - nb texts {len(task.output.texts_found)}")
         t_start = time.time()
         task.output = SummaryModel(
@@ -86,9 +90,6 @@ class NaiveSummaryService(BaseSummaryService):
             texts_found=task.output.texts_found,
             extras={},
         )
-        params = task.parameters
-        if task.parameters is None:
-            params = SummaryParameters(size=self.size, language=self.language, temperature=self.temperature)
 
         texts = [
             Text(
@@ -114,7 +115,12 @@ class NaiveSummaryService(BaseSummaryService):
             task.output.word_count = len(summary.split())
             task.output.percentage = 1
             task.output.nb_llm_calls = 1
-            task = self.update_result_task(task=task, result=task.output, status=TaskStatus.COMPLETED.value, percentage=1)
+            task = self.update_result_task(
+                task=task,
+                result=task.output,
+                status=TaskStatus.COMPLETED.value,
+                percentage=1,
+            )
             logger_app.info(f"task {task_id} - Done {time.time() - t_start}")
             return task
 
@@ -190,5 +196,10 @@ class NaiveSummaryService(BaseSummaryService):
         task.output.percentage = 1
         task.output.word_count = len(final_summary.text.split())
         task.output.summary = final_summary.text
-        task = self.update_result_task(task=task, result=task.output, status=TaskStatus.COMPLETED.value, percentage=1)
+        task = self.update_result_task(
+            task=task,
+            result=task.output,
+            status=TaskStatus.COMPLETED.value,
+            percentage=1,
+        )
         return task

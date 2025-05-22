@@ -23,8 +23,9 @@ services:
   abrege_service:
     deploy:
       replicas: 1
-    command: ["celery", "-A", "abrege_service.main", "worker","--loglevel=info", "--pool=prefork","--concurrency=4", "-E"]
+    command: ["celery", "-A", "abrege_service.main", "worker","--loglevel=info", "--pool=prefork","--concurrency=1", "-E"]
     image: abrege-service
+    mem_limit: 1g
     volumes:
     - ./abrege_service/:/app/abrege_service/
     - ./src/:/app/src/
@@ -95,6 +96,26 @@ services:
       - .env
     depends_on:
       - db
+
+  test_runner:
+    image: abrege-service
+    build:
+      target: test
+      context: .
+      dockerfile: Dockerfiles/abrege_service/Dockerfile
+    command: ["uv", "run", "pytest", "--cov=./abrege_service", "--cov-report=term-missing", "tests/abrege_service/", "-ra", "-v", "--maxfail=0"]
+    volumes:
+      - ./abrege_service/:/app/abrege_service/
+      - ./src/:/app/src/
+      - ./tests/:/app/tests/
+    depends_on:
+      - db
+      - redis
+      - minio
+    env_file:
+      - .env
+    mem_limit: 1g
+
 
 volumes:
   minio_data:
