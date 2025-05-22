@@ -20,9 +20,4 @@ class BaseParameters(BaseModel):
 
 class SummaryParameters(BaseParameters):
     method: MethodType | None = "map_reduce"
-    model: str = "qwen2.5"
-    context_size: int | None = 10_000
-    map_prompt: str | None = MAP_PROMPT
-    reduce_prompt: str | None = REDUCE_PROMPT
-    extras: dict | None = {}
     custom_prompt: str | None = None
