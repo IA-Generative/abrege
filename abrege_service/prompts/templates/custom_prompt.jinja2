@@ -1,0 +1,18 @@
+Vous êtes un expert en résumé et en amélioration de texte.
+
+Un résumé a déjà été généré automatiquement. Veuillez relire ce résumé et le corriger ou l’améliorer si nécessaire, tout en conservant le sens principal.
+
+Résumé actuel :
+{{ summary }}
+
+{% if custom_prompt %}
+Veuillez également prendre en compte la demande suivante de l’utilisateur : "{{ custom_prompt }}"
+{% endif %}
+
+{% if size %}
+Le résumé final doit contenir moins de {{ size }} mots.
+{% endif %}
+
+{% if language %}
+Le résumé doit être en {{ language }}.
+{% endif %}
