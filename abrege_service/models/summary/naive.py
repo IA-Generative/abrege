@@ -192,6 +192,17 @@ class NaiveSummaryService(BaseSummaryService):
 
         assert len(texts) == 1, f"Final text should be only one item with the summary - nb texts {len(texts)} we get "
         final_summary = texts[0]
+        if params.custom_prompt:
+            prompt = generate_prompt(
+                template_name="custom_prompt.jinja2",
+                context={
+                    "size": params.size,
+                    "language": params.language,
+                    "summary": final_summary,
+                    "custom_prompt": params.custom_prompt,
+                },
+            )
+            final_summary = summarize_text(self.model_name, self.client, prompt=prompt)
         task.output.updated_at = int(time.time())
         task.output.percentage = 1
         task.output.word_count = len(final_summary.text.split())
