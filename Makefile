@@ -1,12 +1,8 @@
 PYTHONPATH=$(PWD)
-BACKEND_CONTAINER=talktomi-backend
-TRANSCRIPTION_SERVICE_CONTAINER=talktomi-transcription-service
-DIARIZATION_SERVICE_CONTAINER=talktomi-diarization-service
-
 
 .PHONY: install-uv install-local linter test-bakend \
-        up down tests build-talktomi-backend build-talktomi-transcription-service build-talktomi-diarization-service build \
-        upgrade-db upgrade-revision cluster help test-service-transcription
+        up down build \
+        upgrade-db upgrade-revision help
 
 .DEFAULT_GOAL := help
 

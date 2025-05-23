@@ -4,7 +4,7 @@ import time
 from typing import Dict, List, Optional, Any, Union
 from enum import Enum
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import Column, String, JSON, BigInteger, select, Float
+from sqlalchemy import Column, String, JSON, BigInteger, select, Float, Integer, func
 from sqlalchemy.exc import SQLAlchemyError
 
 from src.internal.db import get_db, Base
@@ -22,6 +22,7 @@ class Task(Base):
     status = Column(String, default="queued")
     user_id = Column(String, nullable=False)
     percentage = Column(Float, nullable=False, default=0)
+    position = Column(Integer, nullable=True)
 
     created_at = Column(BigInteger, default=lambda: int(datetime.now().timestamp()))
     updated_at = Column(
@@ -45,6 +46,7 @@ class TaskModel(BaseModel):
     input: Optional[Union[URLModel, DocumentModel, TextModel]] = None
     output: Optional[Union[ResultModel, SummaryModel]] = None
     parameters: Optional[SummaryParameters] = SummaryParameters()
+    position: Optional[int] = None
 
     created_at: int
     updated_at: int
@@ -56,6 +58,7 @@ class TaskForm(BaseModel):
     type: str
     status: Optional[str] = None
     percentage: Optional[float] = None
+    position: Optional[int] = None
     input: Optional[Union[URLModel, DocumentModel, TextModel]] = None
     output: Optional[Union[ResultModel, SummaryModel]] = None
     parameters: Optional[SummaryParameters] = None
@@ -67,6 +70,7 @@ class TaskUpdateForm(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     status: Optional[str] = None
     percentage: Optional[float] = None
+    position: Optional[int] = None
     input: Optional[Union[URLModel, DocumentModel, TextModel]] = None
     output: Optional[Union[ResultModel, SummaryModel]] = None
     parameters: Optional[SummaryParameters] = None
@@ -179,6 +183,27 @@ class TaskTable:
             db.commit()
 
             return [TaskModel.model_validate(task) for task in tasks_to_delete]
+
+    def get_position_in_queue(self, task_id: str) -> int | None:
+        if task_id:
+            with get_db() as db:
+                task = db.query(Task).filter(Task.id == task_id).first()
+                if not task:
+                    return None
+
+                if task.status != TaskStatus.QUEUED:
+                    return None
+
+                position = (
+                    db.query(func.count(Task.id))  # noqa
+                    .filter(
+                        Task.status == TaskStatus.QUEUED,
+                        Task.created_at < task.created_at,
+                    )
+                    .scalar()
+                )
+
+                return position
 
 
 task_table = TaskTable()
