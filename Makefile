@@ -82,7 +82,7 @@ build: build-abrege-api build-abrege-service ## Lance la construction de toutes 
 ####################################################################
 
 down-services:
-	docker compose down || true
+	docker compose down --remove-orphans || true
 
 init-db:
 	docker compose up -d redis db minio migration
@@ -96,7 +96,8 @@ test-src: init-db
 	make down-services
 
 test-abrege-api: init-db
-	docker compose up -d abrege_api
+	docker compose up -d abrege_api llm_guard_api
+	./scripts/wait-for-llm-guard.sh
 	docker compose exec abrege_api uv run pytest --cov=./api --cov-report=term-missing tests/api/ -ra -v --maxfail=0
 	make down-services
 

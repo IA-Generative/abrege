@@ -12,6 +12,11 @@ from src.schemas.task import task_table, TaskForm, TaskUpdateForm, TaskStatus, T
 from src.schemas.content import DocumentModel
 from api.schemas.content import Content
 from src.schemas.parameters import SummaryParameters
+from api.clients.llm_guard import (
+    llm_guard,
+    LLMGuardMaliciousPromptException,
+    LLMGuardRequestException,
+)
 
 
 doc_router = APIRouter(tags=["Document"])
@@ -29,8 +34,6 @@ async def summarize_doc(
     ),
     extras: Optional[str] = Form(default="", description="Extras json payload", examples={}),
 ):
-    print(type(extras), type(parameters))
-    print(79 * "*")
     if extras is not None and extras:
         try:
             extras = json.loads(extras)
@@ -41,11 +44,19 @@ async def summarize_doc(
 
     if parameters is not None and parameters:
         try:
-            parameters = SummaryParameters.model_validate_json(parameters)
+            parameters: SummaryParameters = SummaryParameters.model_validate_json(parameters)
         except Exception as e:
             raise HTTPException(status_code=422, detail=f"{e}")
     else:
-        parameters = SummaryParameters()
+        parameters: SummaryParameters = SummaryParameters()
+
+    if llm_guard is not None and parameters.custom_prompt is not None:
+        try:
+            parameters.custom_prompt = llm_guard.request_llm_guard_prompt(prompt=parameters.custom_prompt)
+        except LLMGuardRequestException:
+            raise HTTPException(status_code=400, detail=" Bad request for the guard")
+        except LLMGuardMaliciousPromptException:
+            raise HTTPException(status_code=422, detail="Unprocessable Entity (Suspicious)")
 
     content = Content(prompt=prompt, extras=extras)
 

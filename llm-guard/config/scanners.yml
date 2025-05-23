@@ -1,0 +1,9 @@
+input_scanners:
+  - type: PromptInjection
+    params:
+      threshold: 0.92
+      match_type: truncate_head_tail
+      model_max_length: 256
+
+
+output_scanners: []
