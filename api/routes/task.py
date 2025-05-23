@@ -12,6 +12,8 @@ async def read(id: str) -> TaskModel:
     task = task_table.get_task_by_id(task_id=id)
     if task is None:
         raise HTTPException(404, detail=f"{id} not found")
+
+    task.position = task_table.get_position_in_queue(task_id=id)
     return task
 
 
