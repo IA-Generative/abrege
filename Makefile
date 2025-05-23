@@ -82,7 +82,7 @@ build: build-abrege-api build-abrege-service ## Lance la construction de toutes 
 ####################################################################
 
 down-services:
-	docker compose down || true
+	docker compose down --remove-orphans || true
 
 init-db:
 	docker compose up -d redis db minio migration
