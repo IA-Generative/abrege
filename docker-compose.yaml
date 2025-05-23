@@ -115,6 +115,15 @@ services:
     env_file:
       - .env
     mem_limit: 1g
+  llm_guard_api:
+    image: laiyer/llm-guard-api:latest
+    ports:
+      - "8000:8000"
+    environment:
+      - AUTH_TOKEN=llm_guard
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - ./llm-guard/config/scanners.yml:/home/user/app/config/scanners.yml
 
 
 volumes:

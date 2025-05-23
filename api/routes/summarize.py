@@ -12,6 +12,11 @@ from src.schemas.content import URLModel, TextModel
 from src.schemas.task import task_table, TaskModel, TaskForm, TaskStatus
 from src.logger.logger import logger
 from api.schemas.content import InputModel
+from api.clients.llm_guard import (
+    llm_guard,
+    LLMGuardMaliciousPromptException,
+    LLMGuardRequestException,
+)
 
 router = APIRouter(tags=["Text & Url"])
 
@@ -24,6 +29,14 @@ router = APIRouter(tags=["Text & Url"])
 async def summarize_content(input: InputModel):
     content = input.content
     parameters = input.parameters
+    if llm_guard is not None and parameters and parameters.custom_prompt is not None:
+        try:
+            parameters.custom_prompt = llm_guard.request_llm_guard_prompt(prompt=parameters.custom_prompt)
+        except LLMGuardRequestException:
+            raise HTTPException(status_code=400, detail=" Bad request for the guard")
+        except LLMGuardMaliciousPromptException:
+            raise HTTPException(status_code=422, detail="Unprocessable Entity (Suspicious)")
+
     if isinstance(content, UrlContent):
         model_to_send = URLModel(
             created_at=int(datetime.now().timestamp()),
