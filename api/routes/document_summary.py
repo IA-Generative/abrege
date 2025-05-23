@@ -29,10 +29,9 @@ async def summarize_doc(
     prompt: Optional[str] = Form(None, description="Custom prompt for after summary"),
     parameters: Optional[str] = Form(
         default="",
-        description="Parameters",
-        examples=SummaryParameters().model_dump(),
+        description=f"Parameters {SummaryParameters().model_dump()}",
     ),
-    extras: Optional[str] = Form(default="", description="Extras json payload", examples={}),
+    extras: Optional[str] = Form(default="", description="Extras json payload"),
 ):
     if extras is not None and extras:
         try:
