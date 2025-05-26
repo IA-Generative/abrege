@@ -50,6 +50,15 @@ def set_cors(app: FastAPI, origins=["*"]):
                 allow_methods=["*"],
                 allow_headers=["*"],
             )
+    else:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=origins,
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+        logger_abrege.warning("CORS_REGEXP not set, using default CORS settings")
     # app.add_middleware(CatchExceptionsMiddleware)
     # CatchExceptionsMiddleware doit être ajouté APRES CORSMiddlewar
     return app
