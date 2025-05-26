@@ -26,7 +26,7 @@ class CatchExceptionsMiddleware(BaseHTTPMiddleware):
             )  # Il ne faut pas utiliser de HTTPException ici
 
 
-def set_cors(app: FastAPI, origins=("http://localhost", "http://localhost:5000")):
+def set_cors(app: FastAPI, origins=["*"]):
     if "CORS_REGEXP" in os.environ:
         origin_regex = os.environ["CORS_REGEXP"]
 
