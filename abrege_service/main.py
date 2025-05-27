@@ -4,6 +4,7 @@ import time
 import json
 
 import openai
+from langchain_openai import ChatOpenAI
 
 from abrege_service.modules.base import BaseService
 from abrege_service.modules.url import URLService
@@ -16,7 +17,7 @@ from abrege_service.modules.doc import (
     # PDFTOMD4LLMService,
 )
 
-from abrege_service.models.summary.naive import NaiveSummaryService
+from abrege_service.models.summary.summary_chain import LangChainMapReduceService
 from abrege_service.config.openai import OpenAISettings
 
 from src.schemas.task import TaskModel, task_table, TaskStatus, TaskUpdateForm
@@ -49,7 +50,13 @@ client = openai.OpenAI(
 )
 
 
-summary_service = NaiveSummaryService(client=client, model_name=openai_settings.OPENAI_API_MODEL)
+llm = ChatOpenAI(
+    model=openai_settings.OPENAI_API_MODEL,
+    temperature=0.0,
+    api_key=openai_settings.OPENAI_API_KEY,
+    base_url=openai_settings.OPENAI_API_BASE,
+)
+summary_service = LangChainMapReduceService(llm=llm)
 tmp_folder = os.environ.get("CACHE_FOLDER")
 os.makedirs(tmp_folder, exist_ok=True)
 
