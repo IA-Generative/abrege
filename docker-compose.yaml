@@ -103,7 +103,7 @@ services:
       target: test
       context: .
       dockerfile: Dockerfiles/abrege_service/Dockerfile
-    command: ["uv", "run", "pytest", "--cov=./abrege_service", "--cov-report=term-missing", "tests/abrege_service/", "-ra", "-v", "--maxfail=0"]
+    command: ["uv", "run", "pytest",-s,  "--cov=./abrege_service", "--cov-report=term-missing", "tests/abrege_service/", "-ra", "-v", "--maxfail=0"]
     volumes:
       # - ./abrege_service/:/app/abrege_service/
       - ./src/:/app/src/

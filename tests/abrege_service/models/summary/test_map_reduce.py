@@ -1,13 +1,12 @@
 import pytest
 import openai
 import os
-from abrege_service.models.summary.map_reduce import (
-    ChatOpenAI,
-)
+from langchain_openai import ChatOpenAI
 from src.schemas.task import TaskModel, TaskForm, task_table, TaskStatus
 from src.schemas.result import ResultModel
 from src.schemas.parameters import SummaryParameters
 from datasets import load_dataset
+from abrege_service.models.summary.summary_chain import LangChainMapReduceService
 
 
 @pytest.fixture(scope="module")
@@ -46,7 +45,7 @@ def dummy_task_large() -> TaskModel:
             type="summary",
             status=TaskStatus.CREATED.value,
             updated_at=0,
-            parameters=SummaryParameters(),
+            parameters=SummaryParameters(size=4000, custom_prompt="Ecris le au style de Victor Hugo"),
             output=ResultModel(
                 type="ocr",
                 created_at=0,
@@ -63,6 +62,9 @@ def dummy_task_large() -> TaskModel:
 
 
 def test_summary(mock_llm: ChatOpenAI, dummy_task_large: TaskModel):
-    # service = LangChainMapReduceService(llm=mock_llm)
-    # service.process_task(dummy_task_large)
-    ...
+    service = LangChainMapReduceService(llm=mock_llm)
+    task = service.process_task(dummy_task_large)
+    assert task.status == TaskStatus.COMPLETED.value
+    assert task.output.summary
+    assert task.output.word_count > 0 and task.output.word_count < 4000
+    assert task.percentage == 1
