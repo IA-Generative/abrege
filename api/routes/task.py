@@ -1,8 +1,11 @@
 from typing import List
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import JSONResponse
 
 from src.schemas.task import task_table, TaskModel
+from src.schemas.code_error import TASK_STATUS_TO_HTTP
 from src.utils.logger import logger_abrege
+
 
 router = APIRouter(tags=["Tasks"])
 
@@ -14,7 +17,7 @@ async def read(id: str) -> TaskModel:
         raise HTTPException(404, detail=f"{id} not found")
 
     task.position = task_table.get_position_in_queue(task_id=id)
-    return task
+    return JSONResponse(task.model_dump(), status_code=TASK_STATUS_TO_HTTP.get(task.status, 200))
 
 
 @router.get("/task/user/{user_id}", response_model=List[TaskModel])
