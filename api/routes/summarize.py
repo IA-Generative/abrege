@@ -22,7 +22,7 @@ router = APIRouter(tags=["Text & Url"])
 
 
 @router.post(
-    "/task/text-url",
+    "/task/text-url/",
     status_code=status.HTTP_201_CREATED,
     response_model=TaskModel,
 )
