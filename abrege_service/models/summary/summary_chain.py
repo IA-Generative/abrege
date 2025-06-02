@@ -5,7 +5,6 @@ import traceback
 from langchain.chains.summarize import load_summarize_chain
 from langchain_core.documents import Document
 from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
 
 from src.schemas.result import SummaryModel
 from src.schemas.task import TaskModel, TaskStatus
@@ -59,17 +58,18 @@ class LangChainMapReduceService(BaseSummaryService):
             if params.custom_prompt:
                 logger_abrege.info("Applying custom prompt to the summary")
                 logger_abrege.debug(f"Custom prompt: {params.custom_prompt}")
-                prompt = ChatPromptTemplate.from_messages(
-                    [
-                        ("system", params.custom_prompt),
-                        ("human", "{text}"),
-                    ]
-                )
-                formatted_prompt = prompt.format_prompt(text=summary)
-                messages = formatted_prompt.to_messages()
-                response = self.llm.invoke(messages)
+                response = self.llm.invoke(f"Apply this insctruction '{params.custom_prompt}' to {summary} and give me only the result")
                 summary = response.content
                 logger_abrege.info(f"Time final summary time: {perf_counter() - init_summary_perf:.2f} seconds")
+            ############################################
+            language = params.language if params.language is not None else "French"
+            try:
+                # TODO: use load_summarize_chain to use refine_prompt, for using custom_prompt and language
+                response = self.llm.invoke(f"Translate this summary to {language} and give me only the result : {summary}")
+                summary = response.content
+            except Exception as e:
+                logger_abrege.error(f"{e}")
+            ############################################
 
             task.output.percentage = 1
             task.status = TaskStatus.COMPLETED.value
