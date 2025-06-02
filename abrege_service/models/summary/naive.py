@@ -193,6 +193,7 @@ class NaiveSummaryService(BaseSummaryService):
         assert len(texts) == 1, f"Final text should be only one item with the summary - nb texts {len(texts)} we get "
         final_summary = texts[0]
         if params.custom_prompt:
+            logger_app.debug(f"{task_id} - use custom prompt")
             prompt = generate_prompt(
                 template_name="custom_prompt.jinja2",
                 context={
