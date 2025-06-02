@@ -1,11 +1,11 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from api.routes.health import router as health_router
 from api.routes.summarize import router as summarize_router
 from api.routes.document_summary import doc_router
 from api.routes.task import router as task_router
 from src import __version__, __name__ as name
-from api.utils.cors import set_cors
 
 
 app = FastAPI(
@@ -15,8 +15,13 @@ app = FastAPI(
 )
 
 
-app = set_cors(app)
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(health_router)
 app.include_router(summarize_router, prefix="/api")
