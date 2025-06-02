@@ -11,7 +11,7 @@ def test_summarize_content_url():
 
     client = TestClient(app)
     response = client.post(
-        "/task/text-url/",
+        "/task/text-url",
         json={
             "user_id": "test",
             "content": {
@@ -35,7 +35,7 @@ def test_summarize_content_text():
 
     client = TestClient(app)
     response = client.post(
-        "/task/text-url/",
+        "/task/text-url",
         json={
             "user_id": "test",
             "content": {
@@ -59,7 +59,7 @@ def test_summarize_content_body_error():
 
     client = TestClient(app)
     response = client.post(
-        "/task/text-url/",
+        "/task/text-url",
         json={
             "content": {
                 "stext": "https://example.com",
@@ -85,6 +85,6 @@ def test_summarize_content_url_error():
     }
 
     client = TestClient(app)
-    response = client.post("/task/text-url/", json=input_data)
+    response = client.post("/task/text-url", json=input_data)
 
     assert response.status_code == 500

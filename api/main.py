@@ -18,7 +18,7 @@ app = FastAPI(
 app = set_cors(app)
 
 
-app.include_router(health_router, prefix="/health")
+app.include_router(health_router)
 app.include_router(summarize_router, prefix="/api")
 app.include_router(task_router, prefix="/api")
 app.include_router(doc_router, prefix="/api")

@@ -11,7 +11,7 @@ router = APIRouter(tags=["Health"])
 up_time = datetime.datetime.now().isoformat()
 
 
-@router.get("/", response_model=Health)
+@router.get("/health", response_model=Health)
 async def healthcheck():
     dependencies = []
     status = HealtStatus.HEALTHY.value
