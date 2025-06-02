@@ -70,6 +70,15 @@ class LangChainMapReduceService(BaseSummaryService):
                 response = self.llm.invoke(messages)
                 summary = response.content
                 logger_abrege.info(f"Time final summary time: {perf_counter() - init_summary_perf:.2f} seconds")
+            ############################################
+            language = params.language if params.language is not None else "French"
+            try:
+                # TODO: use load_summarize_chain to use refine_prompt, for using custom_prompt and language
+                response = self.llm.invoke(f"Translate to {language}: {summary}")
+                summary = response.content
+            except Exception as e:
+                logger_abrege.error(f"{e}")
+            ############################################
 
             task.output.percentage = 1
             task.status = TaskStatus.COMPLETED.value
