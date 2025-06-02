@@ -74,7 +74,7 @@ class LangChainMapReduceService(BaseSummaryService):
             language = params.language if params.language is not None else "French"
             try:
                 # TODO: use load_summarize_chain to use refine_prompt, for using custom_prompt and language
-                response = self.llm.invoke(f"Translate to {language}: {summary}")
+                response = self.llm.invoke(f"Translate this summary to {language} and give me only the result : {summary}")
                 summary = response.content
             except Exception as e:
                 logger_abrege.error(f"{e}")
