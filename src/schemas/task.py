@@ -11,7 +11,7 @@ from src.internal.db import get_db, Base
 from src.schemas.content import URLModel, DocumentModel, TextModel
 from src.schemas.result import ResultModel, SummaryModel
 from src.schemas.parameters import SummaryParameters
-from src.logger.logger import logger
+from src.utils.logger import logger_abrege as logger
 
 
 class Task(Base):

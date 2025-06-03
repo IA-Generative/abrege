@@ -7,7 +7,7 @@ from typing import Optional
 from datetime import datetime
 from fastapi import File, UploadFile, HTTPException, status, Form, APIRouter
 from src.clients import file_connector, celery_app
-from src.logger.logger import logger
+from src.utils.logger import logger_abrege as logger
 from src.schemas.task import task_table, TaskForm, TaskUpdateForm, TaskStatus, TaskModel
 from src.schemas.content import DocumentModel
 from api.schemas.content import Content
