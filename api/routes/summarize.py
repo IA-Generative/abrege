@@ -10,7 +10,7 @@ from api.utils.url import check_url
 from src.clients import celery_app
 from src.schemas.content import URLModel, TextModel
 from src.schemas.task import task_table, TaskModel, TaskForm, TaskStatus
-from src.logger.logger import logger
+from src.utils.logger import logger_abrege as logger
 from api.schemas.content import InputModel
 from api.clients.llm_guard import (
     llm_guard,
