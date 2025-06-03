@@ -5,7 +5,7 @@ from abrege_service.schemas import IMAGE_CONTENT_TYPES, PDF_CONTENT_TYPES
 from abrege_service.modules.base import BaseService
 from src.schemas.task import TaskModel, TaskStatus
 from src.schemas.result import ResultModel
-from src.logger.logger import logger
+from src.utils.logger import logger_abrege as logger
 
 url = os.getenv("OCR_BACKEND_URL", "https://mirai-ocr-staging.sdid-app.cpin.numerique-interieur.com/1")
 

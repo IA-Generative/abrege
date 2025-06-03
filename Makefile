@@ -88,13 +88,13 @@ init-db:
 
 test-src: init-db
 	docker compose up -d abrege_api
-	docker compose exec abrege_api uv run pytest --cov=./src --cov-report=term-missing tests/src/ -ra -v --maxfail=0
+	docker compose exec abrege_api uv run pytest -s --cov=./src --cov-report=term-missing tests/src/ -ra -v --maxfail=0
 	make down-services
 
 test-abrege-api: init-db
 	docker compose up -d abrege_api llm_guard_api
 	./scripts/wait-for-llm-guard.sh
-	docker compose exec abrege_api uv run pytest --cov=./api --cov-report=term-missing tests/api/ -ra -v --maxfail=0
+	docker compose exec abrege_api uv run pytest -s --cov=./api --cov-report=term-missing tests/api/ -ra -v --maxfail=0
 	make down-services
 
 test-abrege-service: init-db
