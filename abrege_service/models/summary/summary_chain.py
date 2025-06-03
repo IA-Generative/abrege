@@ -93,7 +93,7 @@ class LangChainMapReduceService(BaseSummaryService):
             task.output.percentage = 1
             task.status = TaskStatus.COMPLETED.value
             task.output.summary = summary["output_text"]
-            task.output.word_count = len(summary.split())
+            task.output.word_count = len(task.output.summary.split())
             logger_abrege.info(
                 f"{task.output.word_count} words",
                 extra={"task.id": task.id},
