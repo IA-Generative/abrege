@@ -42,7 +42,7 @@ class LangChainMapReduceService(BaseSummaryService):
         chain_perf_instantiate = perf_counter()
         chain = load_summarize_chain(
             self.llm,
-            chain_type=params.method or "map_reduce",
+            chain_type="map_reduce",
             verbose=True,
             token_max=int(
                 size_final_summary_word * 1.25
