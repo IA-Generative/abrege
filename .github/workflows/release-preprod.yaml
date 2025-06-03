@@ -21,12 +21,6 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Set rc prerelease info
-        id: vars
-        run: |
-          echo "prerelease=true" >> $GITHUB_OUTPUT
-          echo "target_branch=preprod" >> $GITHUB_OUTPUT
-
       - name: Run Release Please for RC
         uses: googleapis/release-please-action@v4
         with:
@@ -34,4 +28,5 @@ jobs:
           token: ${{ secrets.MY_GITHUB_TOKEN }}
           target-branch: preprod
           config-file: release-please-config.json
-          prerelease: ${{ steps.vars.outputs.prerelease }}
+          # optional. customize path to .release-please-manifest.json
+          manifest-file: .release-please-manifest.json
