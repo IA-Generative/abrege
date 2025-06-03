@@ -11,6 +11,27 @@ from src.schemas.task import TaskModel, TaskStatus
 from src.utils.logger import logger_abrege
 
 from abrege_service.models.base import BaseSummaryService
+from langchain_core.prompts import PromptTemplate
+
+# Prompt pour l'étape de "map"
+map_template = """The following is a set of documents:
+{text}
+Based on this list of docs, summarize concisely.
+Helpful Answer in {language}:"""
+
+# Prompt pour l'étape de "reduce"
+combine_template = """The following is a set of summaries:
+{text}
+Take these and distill it into a final, consolidated summary written of the main themes {size}.{custom_prompt}
+Helpful Answer in {language}:"""
+
+# Définition des PromptTemplates avec les variables d'entrée appropriées
+MAP_PROMPT = PromptTemplate(template=map_template, input_variables=["text", "language"])
+
+COMBINE_PROMPT = PromptTemplate(
+    template=combine_template,
+    input_variables=["text", "language", "size", "custom_prompt"],
+)
 
 
 class LangChainMapReduceService(BaseSummaryService):
@@ -34,48 +55,49 @@ class LangChainMapReduceService(BaseSummaryService):
         )
 
         params = task.parameters
-        size_final_summary_word = params.size or 4000  # Default to 4000 words if not specified
 
-        logger_abrege.info(f"Début du processus de map-reduce avec {len(task.output.texts_found)} documents")
+        logger_abrege.info(
+            f"Début du processus de map-reduce avec {len(task.output.texts_found)} documents",
+            extra={"task.id": task.id},
+        )
 
         documents = [Document(page_content=text) for text in task.output.texts_found]
         chain_perf_instantiate = perf_counter()
         chain = load_summarize_chain(
             self.llm,
-            chain_type=params.method or "map_reduce",
+            chain_type="map_reduce",
             verbose=True,
-            token_max=int(
-                size_final_summary_word * 1.25
-            ),  # 1.25 * nb_words give final summary size in tokens (approx. 1.25 tokens per word on average)
+            map_prompt=MAP_PROMPT,
+            combine_prompt=COMBINE_PROMPT,
         )
-        logger_abrege.info(f"Chain instantiated in {perf_counter() - chain_perf_instantiate:.2f} seconds")
+        logger_abrege.info(
+            f"Chain instantiated in {perf_counter() - chain_perf_instantiate:.2f} seconds",
+            extra={"task.id": task.id},
+        )
 
         try:
             init_summary_perf = perf_counter()
-            summary = chain.run(documents)
-            logger_abrege.info(f"Summary generated in {perf_counter() - init_summary_perf:.2f} seconds")
-
-            if params.custom_prompt:
-                logger_abrege.info("Applying custom prompt to the summary")
-                logger_abrege.debug(f"Custom prompt: {params.custom_prompt}")
-                response = self.llm.invoke(f"Apply this insctruction '{params.custom_prompt}' to {summary} and give me only the result")
-                summary = response.content
-                logger_abrege.info(f"Time final summary time: {perf_counter() - init_summary_perf:.2f} seconds")
-            ############################################
-            language = params.language if params.language is not None else "French"
-            try:
-                # TODO: use load_summarize_chain to use refine_prompt, for using custom_prompt and language
-                response = self.llm.invoke(f"Translate this summary to {language} and give me only the result : {summary}")
-                summary = response.content
-            except Exception as e:
-                logger_abrege.error(f"{e}")
-            ############################################
+            summary = chain.invoke(
+                {
+                    "input_documents": documents,
+                    "language": params.language if params.language else "French",
+                    "size": f"in at most {params.size} words" if params.size else "",
+                    "custom_prompt": (params.custom_prompt if params.custom_prompt else ""),
+                }
+            )
+            logger_abrege.info(
+                f"Summary generated in {perf_counter() - init_summary_perf:.2f} seconds",
+                extra={"task.id": task.id},
+            )
 
             task.output.percentage = 1
             task.status = TaskStatus.COMPLETED.value
-            task.output.summary = summary
+            task.output.summary = summary["output_text"]
             task.output.word_count = len(summary.split())
-            logger_abrege.info(f"{task.id} : {task.output.word_count} words")
+            logger_abrege.info(
+                f"{task.output.word_count} words",
+                extra={"task.id": task.id},
+            )
 
             task = self.update_result_task(
                 task,
@@ -85,8 +107,14 @@ class LangChainMapReduceService(BaseSummaryService):
             )
             return task
         except Exception as e:
-            logger_abrege.error(f"Erreur lors du résumé : {e}")
-            logger_abrege.error(traceback.format_exc())
+            logger_abrege.error(
+                f"Erreur lors du résumé : {e}",
+                extra={"task.id": task.id},
+            )
+            logger_abrege.error(
+                traceback.format_exc(),
+                extra={"task.id": task.id},
+            )
             task.status = TaskStatus.FAILED.value
             task.extras["error"] = str(e)
             task = self.update_result_task(
