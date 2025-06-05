@@ -9,7 +9,7 @@ from langchain_core.documents import Document
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import PromptTemplate
 
-from src.schemas.result import SummaryModel, PartialSummary
+from src.schemas.result import SummaryModel, Text
 from src.schemas.task import TaskModel, TaskStatus
 from src.utils.logger import logger_abrege
 
@@ -91,22 +91,18 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
                         logger_abrege.debug(f"left percentage {percentage_left} current_ma_percentage {percentage_map}", extra=extra_log)
                         task.percentage = percentage_left + percentage_map
                         new_summary: str = summary["output_text"]
-                        partial_sum = PartialSummary(
+                        partial_sum = Text(
                             id=hashlib.md5(new_summary.encode()).hexdigest(),
                             text=new_summary,
                             word_count=len(new_summary.split()),
-                            text1=doc.page_content,
-                            text2="",
                         )
                         task.output.partial_summaries.append(partial_sum)
                         task = self.update_result_task(task=task, result=task.output, percentage=task.percentage, status=TaskStatus.IN_PROGRESS)
 
                     return Document(page_content=summary["output_text"], metadata=doc.metadata)
                 except Exception as e:
-                    return Document(
-                        page_content=f"[Erreur de résumé: {str(e)}]",
-                        metadata=doc.metadata,
-                    )
+                    logger_abrege.error(f"{e} - {traceback.format_exc()}", extra=extra_log)
+                    raise e
 
         docs = [Document(page_content=text) for text in transform_texts]
         return await asyncio.gather(*[map_one_document(doc) for doc in docs])
@@ -156,21 +152,18 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
                             logger_abrege.debug(f"left percentage {percentage_left} current_ma_percentage {percentage_map}", extra=extra_log)
                             task.percentage = percentage_left + percentage_map
                             new_summary: str = summary["output_text"]
-                            partial_sum = PartialSummary(
+                            partial_sum = Text(
                                 id=hashlib.md5(new_summary.encode()).hexdigest(),
                                 text=new_summary,
                                 word_count=len(new_summary.split()),
-                                text1=doc.page_content,
-                                text2="",
                             )
                             task.output.partial_summaries.append(partial_sum)
                             task = self.update_result_task(task=task, result=task.output, percentage=task.percentage, status=TaskStatus.IN_PROGRESS)
 
                         return Document(page_content=summary["output_text"])
                     except Exception as e:
-                        return Document(
-                            page_content=f"[Erreur de résumé: {str(e)}]",
-                        )
+                        logger_abrege.error(f"{e} - {traceback.format_exc()}", extra=extra_log)
+                        raise e
 
             return await asyncio.gather(*[collapse_summary_document(doc) for doc in partition_documents])
         else:
