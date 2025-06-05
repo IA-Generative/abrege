@@ -1,3 +1,4 @@
+import os
 import time
 import pymupdf4llm
 from abrege_service.modules.base import BaseService
@@ -9,9 +10,11 @@ from abrege_service.schemas import (
     MICROSOFT_PRESENTATION_CONTENT_TYPES,
     TEXT_CONTENT_TYPES,
     HTML_CONTENT_TYPE,
+    LIBRE_OFFICE_CONTENT_TYPES,
 )
 from src.schemas.task import TaskModel, TaskStatus
 from src.schemas.result import ResultModel
+
 
 md = markitdown.MarkItDown(enable_plugins=False)
 
@@ -86,6 +89,45 @@ class MicrosoftDocumnentToMdService(MicrosoftDocumentService):
             )
 
         task.output.texts_found = [md.convert(source=task.input.file_path).text_content]
+
+        task.output.percentage = 1
+        task = self.update_task(
+            task=task,
+            status=TaskStatus.IN_PROGRESS.value,
+            result=task.output,
+        )
+
+        return task
+
+
+class LibreOfficeDocumentService(BaseService):
+    def __init__(self, content_type_allowed=LIBRE_OFFICE_CONTENT_TYPES):
+        super().__init__(content_type_allowed)
+
+
+class LibreOfficeDocumentToMdService(LibreOfficeDocumentService):
+    def __init__(self):
+        super().__init__()
+        import pypandoc
+
+        self.__pypandoc_module = pypandoc
+
+    def task_to_text(self, task: TaskModel, **kwargs):
+        if task.extras is None:
+            task.extras = {}
+        if task.output is None:
+            task.output = ResultModel(
+                type="libreoffice",
+                created_at=int(time.time()),
+                model_name=self.__pypandoc_module.__name__,
+                model_version=self.__pypandoc_module.__version__,
+                updated_at=int(time.time()),
+                percentage=0,
+                extras={},
+            )
+        ext = os.path.splitext(task.input.raw_filename)[1].strip(".")
+        text = self.__pypandoc_module.convert_file(task.input.file_path, "markdown", format=ext)
+        task.output.texts_found = [text]
 
         task.output.percentage = 1
         task = self.update_task(

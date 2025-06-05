@@ -1,4 +1,4 @@
-from abrege_service.modules.doc import PDFTOMD4LLMService, MicrosoftDocumnentToMdService
+from abrege_service.modules.doc import PDFTOMD4LLMService, MicrosoftDocumnentToMdService, LibreOfficeDocumentToMdService
 from src.schemas.task import TaskModel, TaskForm, task_table, TaskStatus
 from src.schemas.content import DocumentModel
 import pytest
@@ -48,6 +48,28 @@ def dummy_task_microsoft() -> TaskModel:
     return task
 
 
+@pytest.fixture(scope="module")
+def dummy_task_libreoffice_odt() -> TaskModel:
+    task = task_table.insert_new_task(
+        user_id="1",
+        form_data=TaskForm(
+            type="summary",
+            status=TaskStatus.CREATED.value,
+            updated_at=0,
+            input=DocumentModel(
+                created_at=0,
+                file_path="tests/test_data/Lettre_de_Camus.odt",
+                raw_filename="Lettre_de_Camus.odt",
+                content_type="application/vnd.oasis.opendocument.text",
+                ext="odt",
+                size=2,
+            ),
+        ),
+    )
+
+    return task
+
+
 def test_doc_service_pdf(dummy_task: TaskModel):
     doc_service = PDFTOMD4LLMService()
     task = doc_service.task_to_text(task=dummy_task)
@@ -58,5 +80,12 @@ def test_doc_service_pdf(dummy_task: TaskModel):
 def test_doc_service_microft(dummy_task_microsoft: TaskModel):
     doc_service = MicrosoftDocumnentToMdService()
     task = doc_service.task_to_text(task=dummy_task_microsoft)
+    assert task.output.percentage == 1
+    assert len(task.output.texts_found) == 1
+
+
+def test_doc_service_libreoffice(dummy_task_libreoffice_odt: TaskModel):
+    doc_service = LibreOfficeDocumentToMdService()
+    task = doc_service.task_to_text(task=dummy_task_libreoffice_odt)
     assert task.output.percentage == 1
     assert len(task.output.texts_found) == 1

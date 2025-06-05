@@ -2,6 +2,7 @@ FROM python:3.11-slim AS builder
 
 # Copier les binaires uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+COPY --from=pandoc/minimal:2.19.2 /pandoc /usr/bin/pandoc
 
 # Réduction des interactions lors de l'installation
 ENV DEBIAN_FRONTEND=noninteractive
