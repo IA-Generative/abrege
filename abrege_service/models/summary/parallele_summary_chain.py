@@ -54,8 +54,8 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
         semaphore = asyncio.Semaphore(self.max_concurrency)
         lock = asyncio.Lock()
         counter = 0
-        task = self.update_result_task(task=task, percentage=task.output.percentage, status=TaskStatus.IN_PROGRESS.value, result=task.output)
-        current_percentage = task.output.percentage
+        task = self.update_result_task(task=task, percentage=task.percentage, status=TaskStatus.IN_PROGRESS.value, result=task.output)
+        current_percentage = task.percentage
         logger_abrege.debug(f"current percentage {current_percentage * 100:.2f}%", extra=extra_log)
 
         current_text = task.output.texts_found
@@ -123,7 +123,7 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
             semaphore = asyncio.Semaphore(self.max_concurrency)
             lock = asyncio.Lock()
             counter = 0
-            current_percentage = task.output.percentage
+            current_percentage = task.percentage
             logger_abrege.debug(f"current percentage {current_percentage * 100:.2f}%", extra=extra_log)
             nb_total_documents = len(docs)
             partition_texts = group_by_max_word_sum(texts=texts, threshold=max_word)
@@ -209,7 +209,7 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
             updated_at=int(time.time()),
             summary="",
             word_count=0,
-            percentage=0,
+            percentage=task.percentage,
             model_name=self.llm.model_name,
             model_version=self.llm.model_name,
             status=TaskStatus.IN_PROGRESS.value,
