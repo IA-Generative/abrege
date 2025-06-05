@@ -65,7 +65,7 @@ class OCRMIService(BaseService):
                     text_found.append(sort_reader(page=page))
             task.output.texts_found = text_found
             task = self.update_task(task=task, status=TaskStatus.IN_PROGRESS.value, result=task.output)
-            logger.debug(f"{task.id} current status for ocr {status} - percentage {100* percentage}%")
+            logger.debug(f"{task.id} current status for ocr {status} - percentage {100 * percentage}%")
             time.sleep(5)
 
         if status in task_finish_on_error:
