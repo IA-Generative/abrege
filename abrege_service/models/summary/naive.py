@@ -134,7 +134,7 @@ class NaiveSummaryService(BaseSummaryService):
             new_summaries: List[Text] = []
             logger_app.info(79 * "*")
             for i in range(0, len(texts), 2):
-                logger_app.info(f"task {task_id} [{i}:{i+1}]({len(texts)}) start")
+                logger_app.info(f"task {task_id} [{i}:{i + 1}]({len(texts)}) start")
                 if i + 1 < len(texts):
                     summary1 = texts[i].text
                     summary2 = texts[i + 1].text
@@ -174,7 +174,7 @@ class NaiveSummaryService(BaseSummaryService):
                     task.output.word_count = word_count
                     task.output.summary = new_summary
 
-                    logger_app.debug(f"task {task_id} [{i}:{i+1}]({len(texts)}), Time: {time_merge} - Call: {nb_call}/ {total_call}")
+                    logger_app.debug(f"task {task_id} [{i}:{i + 1}]({len(texts)}), Time: {time_merge} - Call: {nb_call}/ {total_call}")
                     task = self.update_result_task(
                         task=task,
                         result=task.output,
