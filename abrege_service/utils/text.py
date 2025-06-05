@@ -50,3 +50,29 @@ def split_texts_by_token_limit(texts: List[str], max_tokens: int, model: str = "
         logger_abrege.info(f"output {len(chunk_token_id)} ")
 
     return all_chunks
+
+
+def sum_words(texts: List[str]) -> int:
+    return sum(len(text.split()) for text in texts)
+
+
+def group_by_max_word_sum(texts: List[str], threshold: int) -> List[List[str]]:
+    groups: List[List[str]] = []
+    current_group: List[str] = []
+    current_sum = 0
+
+    for text in texts:
+        word_count = len(text.split())
+        if current_sum + word_count <= threshold:
+            current_group.append(text)
+            current_sum += word_count
+        else:
+            if current_group:
+                groups.append(current_group)
+            current_group = [text]
+            current_sum = word_count
+
+    if current_group:
+        groups.append(current_group)
+
+    return groups

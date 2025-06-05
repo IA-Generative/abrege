@@ -17,7 +17,7 @@ from abrege_service.modules.doc import (
     # PDFTOMD4LLMService,
 )
 
-from abrege_service.models.summary.summary_chain import LangChainMapReduceService
+from abrege_service.models.summary.parallele_summary_chain import LangChainAsyncMapReduceService
 from abrege_service.config.openai import OpenAISettings
 
 from src.schemas.task import TaskModel, task_table, TaskStatus, TaskUpdateForm
@@ -56,7 +56,9 @@ llm = ChatOpenAI(
     api_key=openai_settings.OPENAI_API_KEY,
     base_url=openai_settings.OPENAI_API_BASE,
 )
-summary_service = LangChainMapReduceService(llm=llm)
+summary_service = LangChainAsyncMapReduceService(
+    llm=llm, max_token=os.getenv("MAX_MODEL_TOKEN", 128_000), max_concurrency=int(os.getenv("MAX_CONCURRENCY_LLM_CALL", 5))
+)
 tmp_folder = os.environ.get("CACHE_FOLDER")
 os.makedirs(tmp_folder, exist_ok=True)
 
