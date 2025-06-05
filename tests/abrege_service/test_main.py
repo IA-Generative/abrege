@@ -361,3 +361,45 @@ def test_docx_document():
     assert actual.output.percentage == 1
 
     task_table.delete_task_by_id(task.id)
+
+
+def test_odt_document():
+    video_path = "tests/test_data/Lettre_de_Camus.odt"
+    user_id = "test"
+    task = task_table.insert_new_task(
+        user_id=user_id,
+        form_data=TaskForm(
+            type="summary",
+            status=TaskStatus.CREATED.value,
+            extras={},
+        ),
+    )
+
+    save_path = file_connector.save(user_id=task.user_id, task_id=task.id, file_path=video_path)
+    document = DocumentModel(
+        created_at=0,
+        file_path=save_path,
+        raw_filename="Lettre_de_Camus.odt",
+        content_type="application/vnd.oasis.opendocument.text",
+        ext=".odt",
+        size=0,
+    )
+    task = task_table.update_task(
+        task_id=task.id,
+        form_data=TaskForm(
+            type="summary",
+            input=document,
+            status=TaskStatus.CREATED.value,
+            updated_at=1,
+            extras={},
+        ),
+    )
+
+    result = launch.apply(args=[json.dumps(task.model_dump())])
+    result = result.get()
+    actual = TaskModel.model_validate(result)
+    assert actual.id == task.id
+    assert actual.status == TaskStatus.COMPLETED.value
+    assert actual.output.percentage == 1
+
+    task_table.delete_task_by_id(task.id)

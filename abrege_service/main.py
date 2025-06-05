@@ -15,6 +15,7 @@ from abrege_service.modules.doc import (
     MicrosoftDocumnentToMdService,
     FlatTextService,
     # PDFTOMD4LLMService,
+    LibreOfficeDocumentToMdService,
 )
 
 from abrege_service.models.summary.parallele_summary_chain import LangChainAsyncMapReduceService
@@ -30,16 +31,11 @@ from src import __version__
 audio_service = AudioVoskTranscriptionService()
 video_service = VideoTranscriptionService()
 microsof_service = MicrosoftDocumnentToMdService()
+libre_office_service = LibreOfficeDocumentToMdService()
 flat_text_service = FlatTextService()
 # pdf_service = PDFTOMD4LLMService()
 ocr_service = OCRMIService()
-services: List[BaseService] = [
-    audio_service,
-    video_service,
-    microsof_service,
-    flat_text_service,
-    ocr_service,
-]
+services: List[BaseService] = [audio_service, video_service, microsof_service, flat_text_service, ocr_service, libre_office_service]
 url_service = URLService(services=services)
 
 
