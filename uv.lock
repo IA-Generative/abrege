@@ -10,7 +10,7 @@ resolution-markers = [
 
 [[package]]
 name = "abrege"
-version = "2.0.1"
+version = "0.0.3"
 source = { virtual = "." }
 dependencies = [
     { name = "boto3" },
@@ -45,6 +45,7 @@ abrege-service = [
     { name = "openai" },
     { name = "pydub" },
     { name = "pymupdf4llm" },
+    { name = "pypandoc" },
     { name = "tiktoken" },
     { name = "transformers" },
     { name = "unstructured" },
@@ -120,6 +121,7 @@ abrege-service = [
     { name = "openai", specifier = "==1.76.0" },
     { name = "pydub", specifier = "==0.25.1" },
     { name = "pymupdf4llm", specifier = "==0.0.21" },
+    { name = "pypandoc", specifier = ">=1.15" },
     { name = "tiktoken", specifier = ">=0.9.0" },
     { name = "transformers", specifier = ">=4.51.3" },
     { name = "unstructured", specifier = "==0.17.2" },
@@ -2912,6 +2914,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/58/ed/a939586b562bd1300fd9586ae5e8875a53ad70e6032d94a003642b78015e/pymupdf4llm-0.0.21.tar.gz", hash = "sha256:77b49d5f8efd48ca3b7322f620afa4bcbb2a01d17079baeeb7ad04add434ce0b", size = 27507, upload-time = "2025-04-08T20:36:47.426Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f9/51/85dce1267a4569db08aff94b72153297f13880ddfb77f9d3fef67ac86ba7/pymupdf4llm-0.0.21-py3-none-any.whl", hash = "sha256:cf78fc0957ed13f56cb531b3bc0546cb5ae543541e54ce7ec4194165549cfe2e", size = 28130, upload-time = "2025-04-08T20:36:49.764Z" },
+]
+
+[[package]]
+name = "pypandoc"
+version = "1.15"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e1/88/26e650d053df5f3874aa3c05901a14166ce3271f58bfe114fd776987efbd/pypandoc-1.15.tar.gz", hash = "sha256:ea25beebe712ae41d63f7410c08741a3cab0e420f6703f95bc9b3a749192ce13", size = 32940, upload-time = "2025-01-08T17:39:58.705Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/61/06/0763e0ccc81754d3eadb21b2cb86cf21bdedc9b52698c2ad6785db7f0a4e/pypandoc-1.15-py3-none-any.whl", hash = "sha256:4ededcc76c8770f27aaca6dff47724578428eca84212a31479403a9731fc2b16", size = 21321, upload-time = "2025-01-08T17:39:09.928Z" },
 ]
 
 [[package]]

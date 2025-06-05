@@ -11,6 +11,9 @@ MICROSOFT_WORD_CONTENT_TYPES = [
     "application/msword",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ]
+
+LIBRE_OFFICE_CONTENT_TYPES = ["application/vnd.oasis.opendocument.text"]
+
 MICROSOFT_SPREADSHEET_CONTENT_TYPES = [
     "application/vnd.ms-excel",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
