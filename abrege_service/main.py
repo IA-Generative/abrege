@@ -11,11 +11,11 @@ from abrege_service.modules.url import URLService
 from abrege_service.modules.audio import AudioVoskTranscriptionService
 from abrege_service.modules.ocr import OCRMIService
 from abrege_service.modules.video import VideoTranscriptionService
+from abrege_service.modules.documents.openoffice import LibreOfficeDocumentToMdService
 from abrege_service.modules.doc import (
     MicrosoftDocumnentToMdService,
     FlatTextService,
     # PDFTOMD4LLMService,
-    LibreOfficeDocumentToMdService,
 )
 
 from abrege_service.models.summary.parallele_summary_chain import LangChainAsyncMapReduceService
