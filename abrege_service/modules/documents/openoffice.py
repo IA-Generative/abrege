@@ -11,6 +11,7 @@ from abrege_service.modules.base import BaseService
 from abrege_service.schemas import LIBRE_OFFICE_CONTENT_TYPES, LIBRE_OFFICE_PRESENTATION_TYPES
 from src.schemas.task import TaskModel, TaskStatus
 from src.schemas.result import ResultModel
+from src.utils.logger import logger_abrege
 
 
 def extract_pages_from_odt(path: Path) -> list[str]:
@@ -76,13 +77,14 @@ class LibreOfficeDocumentToMdService(LibreOfficeDocumentService):
                 percentage=0,
                 extras={},
             )
+        logger_abrege.debug(f"{task.input.content_type}", extra={"task.id": task.id})
         if task.input.content_type in LIBRE_OFFICE_CONTENT_TYPES:
             task.output.texts_found = extract_pages_from_odt(task.input.file_path)
         elif task.input.content_type in LIBRE_OFFICE_CONTENT_TYPES:
             task.output.texts_found = extract_slides_from_odp(task.input.file_path)
 
         else:
-            raise
+            raise NotImplementedError(f"{task.input.content_type} is not supported")
 
         task.output.percentage = 1
         task = self.update_task(
