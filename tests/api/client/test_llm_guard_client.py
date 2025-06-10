@@ -11,8 +11,15 @@ LLM_GUARD_API_KEY = os.environ.get("LLM_GUARD_API_KEY", "llm_guard")
 LLM_GUARD_BASE_URL = os.environ.get("LLM_GUARD_URL", "http://localhost:8000")
 
 llm_guard = LLMGuard(llm_guard_base_url=LLM_GUARD_BASE_URL, llm_guard_api_key=LLM_GUARD_API_KEY)
+is_up = True
+try:
+    llm_guard.get_health()
+except Exception as e:
+    is_up = False
+    print(e)
 
 
+@pytest.mark.skipif(condition=not is_up, reason="LLM Guard is not available")
 def test_llm_guard_prompt_valid():
     """
     Teste un prompt valide pour s'assurer qu'il est accepté par l'API.
@@ -28,6 +35,7 @@ def test_llm_guard_prompt_valid():
         pytest.fail(f"Erreur de requête lors de l'appel à l'API: {e}")
 
 
+@pytest.mark.skipif(condition=not is_up, reason="LLM Guard is not available")
 def test_llm_guard_prompt_malicious():
     """
     Teste un prompt malveillant pour s'assurer qu'il est correctement détecté.
@@ -38,6 +46,7 @@ def test_llm_guard_prompt_malicious():
     assert "LLM Guard detected a malicious promp" in str(exc_info.value)
 
 
+@pytest.mark.skipif(condition=not is_up, reason="LLM Guard is not available")
 def test_llm_guard_health_check():
     """
     Vérifie que l'API LLM Guard est en bonne santé.
