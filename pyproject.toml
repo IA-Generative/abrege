@@ -47,6 +47,7 @@ abrege-service = [
     "langgraph==0.3.34",
     "markitdown[docx,pdf,pptx,xlsx]==0.1.1",
     "moviepy==2.1.2",
+    "odfpy>=1.4.1",
     "openai==1.76.0",
     "pydub==0.25.1",
     "pymupdf4llm==0.0.21",
