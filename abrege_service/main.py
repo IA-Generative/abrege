@@ -16,6 +16,7 @@ from abrege_service.modules.doc import (
     MicrosoftDocumnentToMdService,
     FlatTextService,
     # PDFTOMD4LLMService,
+    LibreOfficeDocumentToMdService,
 )
 
 from abrege_service.models.summary.parallele_summary_chain import LangChainAsyncMapReduceService
