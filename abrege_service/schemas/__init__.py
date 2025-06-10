@@ -13,6 +13,7 @@ MICROSOFT_WORD_CONTENT_TYPES = [
 ]
 
 LIBRE_OFFICE_CONTENT_TYPES = ["application/vnd.oasis.opendocument.text"]
+LIBRE_OFFICE_PRESENTATION_TYPES = ["application/vnd.oasis.opendocument.presentation"]
 
 MICROSOFT_SPREADSHEET_CONTENT_TYPES = [
     "application/vnd.ms-excel",

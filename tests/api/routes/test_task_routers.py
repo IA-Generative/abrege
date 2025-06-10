@@ -31,7 +31,7 @@ def test_read_task(client, mock_task):
     task_table.get_task_by_id = MagicMock(return_value=mock_task)
 
     response = client.get("/task/123")
-    assert response.status_code == 200
+    assert response.status_code == 201
     assert response.json() == mock_task.dict()
 
 
