@@ -80,7 +80,7 @@ class LibreOfficeDocumentToMdService(LibreOfficeDocumentService):
         logger_abrege.debug(f"{task.input.content_type}", extra={"task.id": task.id})
         if task.input.content_type in LIBRE_OFFICE_CONTENT_TYPES:
             task.output.texts_found = extract_pages_from_odt(task.input.file_path)
-        elif task.input.content_type in LIBRE_OFFICE_CONTENT_TYPES:
+        elif task.input.content_type in LIBRE_OFFICE_PRESENTATION_TYPES:
             task.output.texts_found = extract_slides_from_odp(task.input.file_path)
 
         else:
