@@ -71,7 +71,7 @@ class LibreOfficeDocumentToMdService(LibreOfficeDocumentService):
                 type="libreoffice",
                 created_at=int(time.time()),
                 model_name=odf.__name__,
-                model_version=odf.__version__,
+                model_version=">=1.4.1",
                 updated_at=int(time.time()),
                 percentage=0,
                 extras={},
