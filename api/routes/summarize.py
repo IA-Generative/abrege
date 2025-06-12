@@ -46,7 +46,7 @@ async def summarize_content(input: InputModel):
         )
         if not check_url(url=model_to_send.url):
             status_code, error_content = get_status_code_and_code(url=model_to_send.url)
-            raise JSONResponse(
+            return JSONResponse(
                 status_code=status_code, content={"msg": f"L'url {model_to_send.url} n'est pas accessible par le systeme detail : {error_content}"}
             )
 
