@@ -2,10 +2,11 @@ import json
 from datetime import datetime
 
 from fastapi import APIRouter, status, HTTPException
+from fastapi.responses import JSONResponse
 
 from api.schemas.content import UrlContent, TextContent
 
-from api.utils.url import check_url
+from api.utils.url import check_url, get_status_code_and_code
 
 from src.clients import celery_app
 from src.schemas.content import URLModel, TextModel
@@ -44,7 +45,10 @@ async def summarize_content(input: InputModel):
             url=content.url,
         )
         if not check_url(url=model_to_send.url):
-            raise HTTPException(status_code=500, detail=f"url {model_to_send.url} is not valid")
+            status_code, error_content = get_status_code_and_code(url=model_to_send.url)
+            raise JSONResponse(
+                status_code=status_code, content={"msg": f"L'url {model_to_send.url} n'est pas accessible par le systeme detail : {error_content}"}
+            )
 
     elif isinstance(content, TextContent):
         model_to_send = TextModel(
