@@ -6,6 +6,7 @@ from typing import Annotated, List, Literal, TypedDict
 import asyncio
 from config.openai import OpenAISettings
 from fastapi import HTTPException
+import os
 
 from openai import OpenAI
 import openai
@@ -27,18 +28,27 @@ from langchain_core.prompts import ChatPromptTemplate
 from schemas.params import ParamsSummarize
 from schemas.response import SummaryResponse
 
-client = OpenAI(api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE)
+client = OpenAI(api_key=os.environ["OPENAI_API_KEY"], base_url=os.environ["OPENAI_API_BASE"])
 
 
 async def do_map_reduce(
-    list_str: list[str], params: ParamsSummarize, recursion_limit: int = 20, num_tokens_limit: int = 1226 * 300
+    list_str: list[str], params: ParamsSummarize, recursion_limit: int = 20, num_tokens_limit: int = 1226 * 300, max_concurrency: int = 15
 ) -> SummaryResponse:
     """Peut faire un GraphRecursionError si recursion_limit est trop faible"""
 
     deb = perf_counter()
     llm = ChatOpenAI(
-        model=params.model, temperature=params.temperature, api_key=OpenAISettings().OPENAI_API_KEY, base_url=OpenAISettings().OPENAI_API_BASE
+        model=params.model, temperature=params.temperature, api_key=os.environ["OPENAI_API_KEY"], base_url=os.environ["OPENAI_API_BASE"]
     )
+
+    concat_str = [list_str[0]]
+    for index, str_ in enumerate(list_str[1:]):
+        candidat = concat_str[-1] + "\n---\n" + str_
+        if llm.get_num_tokens(candidat) > params.context_size:
+            concat_str.append(str_)
+        else:
+            concat_str[-1] = candidat
+
 
     num_tokens = llm.get_num_tokens(" ".join(list_str))
 
@@ -161,8 +171,8 @@ async def do_map_reduce(
         nb_call = 0
         async for step in app.astream(
             # {"contents": [doc.page_content for doc in split_docs]},
-            {"contents": list_str},
-            {"recursion_limit": recursion_limit},
+            {"contents": list_str if 0 else concat_str},
+            {"recursion_limit": recursion_limit, "max_concurrency": max_concurrency}
         ):
             # print(list(step.keys()))
             list(step.keys())
