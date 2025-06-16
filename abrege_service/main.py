@@ -27,8 +27,8 @@ from src.clients import celery_app, file_connector
 from src import __version__
 
 
-audio_service = AudioVoskTranscriptionService()
-video_service = VideoTranscriptionService()
+audio_service = AudioVoskTranscriptionService(service_ratio_representaion=0.5)
+video_service = VideoTranscriptionService(service_ratio_representaion=0.5)
 microsof_service = MicrosoftDocumnentToMdService()
 libre_office_service = LibreOfficeDocumentToMdService()
 flat_text_service = FlatTextService()

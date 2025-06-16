@@ -18,5 +18,13 @@ def is_accessible_url(url: str, timeout: int = 5) -> bool:
         return False
 
 
+def get_status_code_and_code(url: str, timeout: int = 5) -> tuple[int, str]:
+    try:
+        response = requests.head(url, timeout=timeout, allow_redirects=True)
+        return response.status_code, response.content
+    except requests.RequestException:
+        return 500, ""
+
+
 def check_url(url: str) -> bool:
     return is_valid_url(url) and is_accessible_url(url)
