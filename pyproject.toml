@@ -1,6 +1,6 @@
 [project]
 name = "abrege"
-version = "0.0.3"
+version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -85,4 +85,12 @@ line-length = 150
 [tool.uv]
 dev-dependencies = [
     "ruff>=0.8.3",
+]
+
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.1.0"
+version_files = [
+  "pyproject.toml",
 ]
