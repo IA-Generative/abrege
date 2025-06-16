@@ -15,9 +15,12 @@ from abrege_service.modules.documents.openoffice import LibreOfficeDocumentToMdS
 from abrege_service.modules.doc import (
     MicrosoftDocumnentToMdService,
     FlatTextService,
+    PDFTOMD4LLMService,
 )
 
-from abrege_service.models.summary.parallele_summary_chain import LangChainAsyncMapReduceService
+from abrege_service.models.summary.parallele_summary_chain import (
+    LangChainAsyncMapReduceService,
+)
 from abrege_service.config.openai import OpenAISettings
 
 from src.schemas.task import TaskModel, task_table, TaskStatus, TaskUpdateForm
@@ -32,9 +35,17 @@ video_service = VideoTranscriptionService(service_ratio_representaion=0.5)
 microsof_service = MicrosoftDocumnentToMdService()
 libre_office_service = LibreOfficeDocumentToMdService()
 flat_text_service = FlatTextService()
-# pdf_service = PDFTOMD4LLMService()
+pdf_service = PDFTOMD4LLMService()
 ocr_service = OCRMIService()
-services: List[BaseService] = [audio_service, video_service, microsof_service, flat_text_service, ocr_service, libre_office_service]
+services: List[BaseService] = [
+    audio_service,
+    video_service,
+    microsof_service,
+    flat_text_service,
+    pdf_service,
+    ocr_service,
+    libre_office_service,
+]
 url_service = URLService(services=services)
 
 
@@ -52,7 +63,9 @@ llm = ChatOpenAI(
     base_url=openai_settings.OPENAI_API_BASE,
 )
 summary_service = LangChainAsyncMapReduceService(
-    llm=llm, max_token=os.getenv("MAX_MODEL_TOKEN", 128_000), max_concurrency=int(os.getenv("MAX_CONCURRENCY_LLM_CALL", 5))
+    llm=llm,
+    max_token=os.getenv("MAX_MODEL_TOKEN", 128_000),
+    max_concurrency=int(os.getenv("MAX_CONCURRENCY_LLM_CALL", 5)),
 )
 tmp_folder = os.environ.get("CACHE_FOLDER")
 os.makedirs(tmp_folder, exist_ok=True)

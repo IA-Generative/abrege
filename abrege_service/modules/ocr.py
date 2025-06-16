@@ -1,17 +1,20 @@
 import os
 import time
 from abrege_service.clients.ocr_client import OCRClient, sort_reader, OCRResult
-from abrege_service.schemas import IMAGE_CONTENT_TYPES, PDF_CONTENT_TYPES
+from abrege_service.schemas import IMAGE_CONTENT_TYPES
 from abrege_service.modules.base import BaseService
 from src.schemas.task import TaskModel, TaskStatus
 from src.schemas.result import ResultModel
 from src.utils.logger import logger_abrege as logger
 
-url = os.getenv("OCR_BACKEND_URL", "https://mirai-ocr-staging.sdid-app.cpin.numerique-interieur.com/1")
+url = os.getenv(
+    "OCR_BACKEND_URL",
+    "https://mirai-ocr-staging.sdid-app.cpin.numerique-interieur.com/1",
+)
 
 
 class OCRMIService(BaseService):
-    def __init__(self, url_ocr: str = url, content_type_allowed=IMAGE_CONTENT_TYPES + PDF_CONTENT_TYPES):
+    def __init__(self, url_ocr: str = url, content_type_allowed=IMAGE_CONTENT_TYPES):
         super().__init__(content_type_allowed)
         self.ocr_mi_client = OCRClient(url=url_ocr)
 
