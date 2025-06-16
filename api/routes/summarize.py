@@ -32,15 +32,11 @@ async def summarize_content(input: InputModel):
     parameters = input.parameters
     if llm_guard is not None and parameters and parameters.custom_prompt is not None:
         try:
-            parameters.custom_prompt = llm_guard.request_llm_guard_prompt(
-                prompt=parameters.custom_prompt
-            )
+            parameters.custom_prompt = llm_guard.request_llm_guard_prompt(prompt=parameters.custom_prompt)
         except LLMGuardRequestException:
             raise HTTPException(status_code=400, detail=" Bad request for the guard")
         except LLMGuardMaliciousPromptException:
-            raise HTTPException(
-                status_code=422, detail="Unprocessable Entity (Suspicious)"
-            )
+            raise HTTPException(status_code=422, detail="Unprocessable Entity (Suspicious)")
 
     if isinstance(content, UrlContent):
         model_to_send = URLModel(
@@ -52,9 +48,7 @@ async def summarize_content(input: InputModel):
             status_code, error_content = get_status_code_and_code(url=model_to_send.url)
             return JSONResponse(
                 status_code=status_code,
-                content={
-                    "msg": f"L'url {model_to_send.url} n'est pas accessible par le systeme detail : {error_content}"
-                },
+                content={"msg": f"L'url {model_to_send.url} n'est pas accessible par le systeme detail : {error_content}"},
             )
 
     elif isinstance(content, TextContent):
@@ -66,9 +60,7 @@ async def summarize_content(input: InputModel):
     else:
         raise HTTPException(status_code=500, detail=f" {content} is not available")
 
-    model_to_send.extras = (
-        model_to_send.extras if model_to_send.extras is not None else {}
-    )
+    model_to_send.extras = model_to_send.extras if model_to_send.extras is not None else {}
     model_to_send.extras["prompt"] = content.prompt
 
     task = task_table.insert_new_task(

@@ -3,8 +3,6 @@ from time import perf_counter
 import logging
 import traceback
 from typing import Annotated, List, Literal, TypedDict
-import asyncio
-from config.openai import OpenAISettings
 from fastapi import HTTPException
 import os
 
@@ -21,7 +19,6 @@ from langgraph.graph import END, START, StateGraph
 
 from langchain_openai import ChatOpenAI
 
-from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
@@ -37,9 +34,7 @@ async def do_map_reduce(
     """Peut faire un GraphRecursionError si recursion_limit est trop faible"""
 
     deb = perf_counter()
-    llm = ChatOpenAI(
-        model=params.model, temperature=params.temperature, api_key=os.environ["OPENAI_API_KEY"], base_url=os.environ["OPENAI_API_BASE"]
-    )
+    llm = ChatOpenAI(model=params.model, temperature=params.temperature, api_key=os.environ["OPENAI_API_KEY"], base_url=os.environ["OPENAI_API_BASE"])
 
     concat_str = [list_str[0]]
     for index, str_ in enumerate(list_str[1:]):
@@ -48,7 +43,6 @@ async def do_map_reduce(
             concat_str.append(str_)
         else:
             concat_str[-1] = candidat
-
 
     num_tokens = llm.get_num_tokens(" ".join(list_str))
 
@@ -63,7 +57,7 @@ async def do_map_reduce(
     try:
         # On vérifie qu'il y a bien une balise {context} dans params.map_prompt et pas d'autres balises
         params.map_prompt.format(context="placeholder")
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=500,
             detail='Erreur lors de l\'utilisation du prompt "map_prompt". map_prompt ne peut pas contenir une balise autre que {context}',
@@ -75,7 +69,7 @@ async def do_map_reduce(
 
     try:
         reduce_template = params.reduce_prompt.format(language=params.language, size=str(params.size), docs="{docs}")
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=500,
             detail='Erreur lors de l\'utilisation du prompt "reduce_prompt". reduce_prompt ne peut pas contenir une balise autre que {language}, {size} ou {docs}',
@@ -172,7 +166,7 @@ async def do_map_reduce(
         async for step in app.astream(
             # {"contents": [doc.page_content for doc in split_docs]},
             {"contents": list_str if 0 else concat_str},
-            {"recursion_limit": recursion_limit, "max_concurrency": max_concurrency}
+            {"recursion_limit": recursion_limit, "max_concurrency": max_concurrency},
         ):
             # print(list(step.keys()))
             list(step.keys())
@@ -189,7 +183,6 @@ async def do_map_reduce(
             status_code=429,
             detail="Surcharge du LLM",
         )
-
 
     elapsed = perf_counter() - deb
 
