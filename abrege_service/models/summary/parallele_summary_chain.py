@@ -15,19 +15,24 @@ from src.utils.logger import logger_abrege
 
 
 from abrege_service.models.base import BaseSummaryService
-from abrege_service.utils.text import split_texts_by_token_limit, split_texts_by_word_limit, sum_words, group_by_max_word_sum
+from abrege_service.utils.text import (
+    split_texts_by_token_limit,
+    split_texts_by_word_limit,
+    sum_words,
+    group_by_max_word_sum,
+)
 
 
 # Prompt pour l'étape de "map"
 map_template = """The following is a set of documents:
 {text}
-Based on this list of docs, summarize concisely.
+Based on this list of docs, summarize concisely and clearly in paragraph form. Highlight the main ideas and recurring themes.
 Helpful Answer in {language}:"""
 
 # Prompt pour l'étape de "reduce"
 combine_template = """The following is a set of summaries:
 {text}
-Take these and distill it into a final, consolidated summary written of the main themes {prompt_size}.{custom_prompt}
+Take these and consolidate them into a clear and well-organized final summary. Highlight recurring ideas, themes, and insights. {prompt_size}.{custom_prompt}
 Helpful Answer in {language}:"""
 
 # Définition des PromptTemplates avec les variables d'entrée appropriées
@@ -49,12 +54,23 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
         self.collapse_document_chain = load_summarize_chain(llm, chain_type="stuff", prompt=COMBINE_PROMPT)
         self.max_token = max_token
 
-    async def map_documents(self, task: TaskModel, language: str, prompt_size: str = "", custom_prompt: str = "") -> list[Document]:
+    async def map_documents(
+        self,
+        task: TaskModel,
+        language: str,
+        prompt_size: str = "",
+        custom_prompt: str = "",
+    ) -> list[Document]:
         extra_log = {"task.id": task.id}
         semaphore = asyncio.Semaphore(self.max_concurrency)
         lock = asyncio.Lock()
         counter = 0
-        task = self.update_result_task(task=task, percentage=task.percentage, status=TaskStatus.IN_PROGRESS.value, result=task.output)
+        task = self.update_result_task(
+            task=task,
+            percentage=task.percentage,
+            status=TaskStatus.IN_PROGRESS.value,
+            result=task.output,
+        )
         current_percentage = task.percentage
         logger_abrege.debug(f"current percentage {current_percentage * 100:.2f}%", extra=extra_log)
 
@@ -69,7 +85,10 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
             logger_abrege.warning(f"{self.llm.model_name} - {e}")
             transform_texts: list[str] = split_texts_by_word_limit(current_text, max_words=int(max_token * 0.75))
         nb_total_documents = len(transform_texts)
-        logger_abrege.debug(f"After transformation, number of documents {nb_total_documents}%", extra=extra_log)
+        logger_abrege.debug(
+            f"After transformation, number of documents {nb_total_documents}%",
+            extra=extra_log,
+        )
         percentage_left = 1 - current_percentage
 
         async def map_one_document(doc: Document) -> Document:
@@ -77,7 +96,12 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
             nonlocal task
             async with semaphore:
                 try:
-                    inputs = {"input_documents": [doc], "language": language, "prompt_size": prompt_size, "custom_prompt": custom_prompt}
+                    inputs = {
+                        "input_documents": [doc],
+                        "language": language,
+                        "prompt_size": prompt_size,
+                        "custom_prompt": custom_prompt,
+                    }
                     t_doc_summary = perf_counter()
                     summary = await self.llm_chain_map.ainvoke(inputs)
                     copy_log = extra_log.copy()
@@ -88,7 +112,10 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
                         counter += 1
                         percentage_map = counter / (nb_total_documents + 1)
                         percentage_map = percentage_left * percentage_map
-                        logger_abrege.debug(f"left percentage {percentage_left} current_ma_percentage {percentage_map}", extra=extra_log)
+                        logger_abrege.debug(
+                            f"left percentage {percentage_left} current_ma_percentage {percentage_map}",
+                            extra=extra_log,
+                        )
                         task.percentage = percentage_left + percentage_map
                         new_summary: str = summary["output_text"]
                         partial_sum = Text(
@@ -97,7 +124,12 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
                             word_count=len(new_summary.split()),
                         )
                         task.output.partial_summaries.append(partial_sum)
-                        task = self.update_result_task(task=task, result=task.output, percentage=task.percentage, status=TaskStatus.IN_PROGRESS)
+                        task = self.update_result_task(
+                            task=task,
+                            result=task.output,
+                            percentage=task.percentage,
+                            status=TaskStatus.IN_PROGRESS,
+                        )
 
                     return Document(page_content=summary["output_text"], metadata=doc.metadata)
                 except Exception as e:
@@ -108,13 +140,21 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
         return await asyncio.gather(*[map_one_document(doc) for doc in docs])
 
     async def collapse_summary_chain(
-        self, task: TaskModel, docs: list[Document], language: str, prompt_size: str = "", custom_prompt: str = ""
+        self,
+        task: TaskModel,
+        docs: list[Document],
+        language: str,
+        prompt_size: str = "",
+        custom_prompt: str = "",
     ) -> list[Document]:
         extra_log = {"task.id": task.id}
         texts = [doc.page_content for doc in docs]
         total_words = sum_words(texts=texts)
         max_word = int(self.max_token * 0.75)
-        logger_abrege.info(f"Collapse document because current total words {total_words} > {self.max_token}", extra=extra_log)
+        logger_abrege.info(
+            f"Collapse document because current total words {total_words} > {self.max_token}",
+            extra=extra_log,
+        )
         if total_words > max_word:
             semaphore = asyncio.Semaphore(self.max_concurrency)
             lock = asyncio.Lock()
@@ -138,18 +178,29 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
                 nonlocal task
                 async with semaphore:
                     try:
-                        inputs = {"input_documents": [doc], "language": language, "prompt_size": prompt_size, "custom_prompt": custom_prompt}
+                        inputs = {
+                            "input_documents": [doc],
+                            "language": language,
+                            "prompt_size": prompt_size,
+                            "custom_prompt": custom_prompt,
+                        }
                         t_doc_summary = perf_counter()
                         summary = await self.collapse_document_chain.ainvoke(inputs)
                         copy_log = extra_log.copy()
                         copy_log["process_name"] = "collapse_summary_chain.ainvoke"
                         copy_log["process_time"] = perf_counter() - t_doc_summary
-                        logger_abrege.info(f"{counter} / {nb_total_documents} processed", extra=copy_log)
+                        logger_abrege.info(
+                            f"{counter} / {nb_total_documents} processed",
+                            extra=copy_log,
+                        )
                         async with lock:
                             counter += 1
                             percentage_map = counter / (nb_total_documents + 1)
                             percentage_map = percentage_left * percentage_map
-                            logger_abrege.debug(f"left percentage {percentage_left} current_ma_percentage {percentage_map}", extra=extra_log)
+                            logger_abrege.debug(
+                                f"left percentage {percentage_left} current_ma_percentage {percentage_map}",
+                                extra=extra_log,
+                            )
                             task.percentage = percentage_left + percentage_map
                             new_summary: str = summary["output_text"]
                             partial_sum = Text(
@@ -158,7 +209,12 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
                                 word_count=len(new_summary.split()),
                             )
                             task.output.partial_summaries.append(partial_sum)
-                            task = self.update_result_task(task=task, result=task.output, percentage=task.percentage, status=TaskStatus.IN_PROGRESS)
+                            task = self.update_result_task(
+                                task=task,
+                                result=task.output,
+                                percentage=task.percentage,
+                                status=TaskStatus.IN_PROGRESS,
+                            )
 
                         return Document(page_content=summary["output_text"])
                     except Exception as e:
@@ -176,7 +232,12 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
         prompt_size = (f"in at most {params.size} words" if params.size else "",)
         custom_prompt = params.custom_prompt if params.custom_prompt else ""
 
-        mapped_docs: list[Document] = await self.map_documents(task=task, language=language, prompt_size=prompt_size, custom_prompt=custom_prompt)
+        mapped_docs: list[Document] = await self.map_documents(
+            task=task,
+            language=language,
+            prompt_size=prompt_size,
+            custom_prompt=custom_prompt,
+        )
         texts = [doc.page_content for doc in mapped_docs]
         total_words = sum_words(texts=texts)
         max_word = int(self.max_token * 0.75)
@@ -188,10 +249,19 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
 
         if total_words > max_word:
             mapped_docs = await self.collapse_summary_chain(
-                task=task, docs=mapped_docs, language=language, prompt_size=prompt_size, custom_prompt=custom_prompt
+                task=task,
+                docs=mapped_docs,
+                language=language,
+                prompt_size=prompt_size,
+                custom_prompt=custom_prompt,
             )
 
-        combine_input = {"input_documents": mapped_docs, "language": language, "prompt_size": prompt_size, "custom_prompt": custom_prompt}
+        combine_input = {
+            "input_documents": mapped_docs,
+            "language": language,
+            "prompt_size": prompt_size,
+            "custom_prompt": custom_prompt,
+        }
         final_output = await self.combine_document_chain.ainvoke(input=combine_input)
         return final_output
 
