@@ -52,6 +52,8 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
         self.llm_chain_map = load_summarize_chain(llm, chain_type="stuff", prompt=MAP_PROMPT)
         self.combine_document_chain = load_summarize_chain(llm, chain_type="stuff", prompt=COMBINE_PROMPT)
         self.collapse_document_chain = load_summarize_chain(llm, chain_type="stuff", prompt=COMBINE_PROMPT)
+        if isinstance(max_token, str):
+            max_token = int(max_token)
         self.max_token = max_token
 
     async def map_documents(
@@ -77,7 +79,11 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
         current_text = task.output.texts_found
         nb_total_documents = len(current_text)
         max_token = self.llm.max_tokens if self.llm.max_tokens else self.max_token
-        logger_abrege.debug(f"Current number of documents {nb_total_documents}%", extra=extra_log)
+        logger_abrege.debug(f"max_token {max_token} - {type(max_token)}")
+        logger_abrege.debug(
+            f"Current number of documents {nb_total_documents}%",
+            extra=extra_log,
+        )
         try:
             transform_texts: list[str] = split_texts_by_token_limit(texts=current_text, max_tokens=max_token, model=self.llm.model_name)
 

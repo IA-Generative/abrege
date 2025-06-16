@@ -63,7 +63,7 @@ llm = ChatOpenAI(
 )
 summary_service = LangChainAsyncMapReduceService(
     llm=llm,
-    max_token=os.getenv("MAX_MODEL_TOKEN", 128_000),
+    max_token=int(os.getenv("MAX_MODEL_TOKEN", 128_000)),
     max_concurrency=int(os.getenv("MAX_CONCURRENCY_LLM_CALL", 5)),
 )
 tmp_folder = os.environ.get("CACHE_FOLDER")
