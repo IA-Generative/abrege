@@ -15,7 +15,7 @@ from abrege_service.modules.documents.openoffice import LibreOfficeDocumentToMdS
 from abrege_service.modules.doc import (
     MicrosoftDocumnentToMdService,
     FlatTextService,
-    PDFTOMD4LLMService,
+    # PDFTOMD4LLMService,
 )
 
 from abrege_service.models.summary.parallele_summary_chain import (
@@ -35,14 +35,13 @@ video_service = VideoTranscriptionService(service_ratio_representaion=0.5)
 microsof_service = MicrosoftDocumnentToMdService()
 libre_office_service = LibreOfficeDocumentToMdService()
 flat_text_service = FlatTextService()
-pdf_service = PDFTOMD4LLMService()
+# pdf_service = PDFTOMD4LLMService()
 ocr_service = OCRMIService()
 services: List[BaseService] = [
     audio_service,
     video_service,
     microsof_service,
     flat_text_service,
-    pdf_service,
     ocr_service,
     libre_office_service,
 ]

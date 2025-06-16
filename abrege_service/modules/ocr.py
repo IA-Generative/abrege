@@ -1,7 +1,7 @@
 import os
 import time
 from abrege_service.clients.ocr_client import OCRClient, sort_reader, OCRResult
-from abrege_service.schemas import IMAGE_CONTENT_TYPES
+from abrege_service.schemas import IMAGE_CONTENT_TYPES, PDF_CONTENT_TYPES
 from abrege_service.modules.base import BaseService
 from src.schemas.task import TaskModel, TaskStatus
 from src.schemas.result import ResultModel
@@ -14,7 +14,11 @@ url = os.getenv(
 
 
 class OCRMIService(BaseService):
-    def __init__(self, url_ocr: str = url, content_type_allowed=IMAGE_CONTENT_TYPES):
+    def __init__(
+        self,
+        url_ocr: str = url,
+        content_type_allowed=IMAGE_CONTENT_TYPES + PDF_CONTENT_TYPES,
+    ):
         super().__init__(content_type_allowed)
         self.ocr_mi_client = OCRClient(url=url_ocr)
 
