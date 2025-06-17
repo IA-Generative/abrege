@@ -19,7 +19,9 @@ ENV PYTHONUNBUFFERED=1
 RUN uv sync --no-cache --group abrege-api
 
 COPY api /app/api
+COPY src/ /app/src
 ENV PYTHONPATH=PYTHONPATH:/app
+
 CMD [ "uv", "run", "--no-cache", "python", "/app/api/main.py" ]
 ################################
 # Step 2: "development" target #
