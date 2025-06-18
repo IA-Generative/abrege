@@ -49,7 +49,6 @@ services:
   abrege_api:
     image: abrege-api
     build:
-      target: test
       context: .
       dockerfile: Dockerfiles/api/Dockerfile
     ports:
