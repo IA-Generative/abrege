@@ -1,8 +1,7 @@
 {
     "packages": {
       ".": {
-        "release-type": "python",
-        "package-name": "abrege",
+        "package-name": "src",
         "include-component-in-tag": false
       }
     }
