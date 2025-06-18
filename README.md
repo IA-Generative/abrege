@@ -1,75 +1,123 @@
 # Abrege
 
-## Overview
+## Introduction
 
-This repository contains the necessary files to build and run the `abrege` service using Docker Compose. The service is configured to build its Docker image from a Dockerfile and supports various environment configurations through an `.env` file.
+**Abrege** is a powerful summarization tool designed to generate concise summaries from large documents—without strict page limits. While technically scalable, it has been tested with documents up to **500 pages**.
 
-## Prerequisites
+Supported input formats:
 
-Before running the application, ensure that you have the following software installed on your system:
-- Docker
-- Docker Compose
-- Makefile
+* `.pdf`
+* `.docx`
+* `.odt`
+* `.odp`
+* `.png`
+* URLs
+* Raw text
 
-## Setup
+## How It Works
 
-1. **Clone the Repository:**
-   ```bash
-   git clone <repository-url>
-   cd <repository-directory>
-   ```
+Abrege uses an **asynchronous Map-Reduce architecture** to summarize large documents efficiently:
 
-2. **Environment Configuration:**
-   Create an `.env` file in the root directory of your project if it doesn't already exist. Populate it with the necessary environment variables. An example `.env` file might look like this:
-   ```env
-   BACKEND_PORT=5000
-   TAG=latest
-   ```
+1. **Text Extraction**: the system retrieves the full text using either:
 
-## Building and Running the Service
+   * **Simple extraction** (e.g., PDF parsing)
+   * **OCR** (for scanned documents or images)
+2. **Chunking**: the extracted text is divided into sections that fit within the LLM's context window.
+3. **Map Phase**: each chunk is summarized in parallel using asynchronous workers.
+4. **Reduce Phase**: the intermediate summaries are aggregated into a final global summary.
 
-To build and run the `abrege` service, follow these steps:
+The number of LLM calls is approximately:
 
-1. **Build the Docker Image:**
-   ```bash
-   make build
-   ```
+```
+total_calls ≈ total_tokens // llm_max_context + 1
+```
 
-2. **Run the Service:**
-   ```bash
-   make dev
-   ```
+The `+1` accounts for the final reduction step.
 
-3. **Stopping the Service:**
-   To stop the service, run:
-   ```bash
-   make down
-   ```
+## Architecture Overview
 
-## Notes
+```mermaid
+flowchart TD
+    A[User Request] --> B[REST API]
+    B --> C[Task Broker Redis/RabbitMQ]
+    C --> D[Worker: Text Extraction - OCR or classic]
+    D --> E[Worker: Chunk + Summarize - Map Phase]
+    E --> F[Worker: Summary Reducer - Reduce Phase]
+    F --> G[Final Summary Response]
 
-- Ensure that the necessary environment variables are correctly set in the `.env` file to avoid build and runtime issues.
-- Uncomment and configure the `deploy` section in the `docker-compose.yaml` file if resource constraints and GPU capabilities are needed.
+    subgraph KEDA Autoscaling
+        E
+    end
+```
 
-## Troubleshooting
+### Key Components
 
-If you encounter any issues, check the following:
-- Verify that Docker and Docker Compose are correctly installed and running.
-- Ensure all environment variables in the `.env` file are set correctly.
-- Check the Docker and Docker Compose documentation for more detailed troubleshooting steps.
+* **API**: Accepts input documents and triggers the pipeline.
+* **Broker**: Manages the asynchronous task queue.
+* **Workers**:
 
-## Contributing
+  * Extract text (OCR or standard)
+  * Chunk and summarize (Map phase)
+  * Combine results (Reduce phase)
+* **KEDA**: Scales summarization workers based on the queue size for parallelism.
 
-If you wish to contribute to the project, please follow the standard procedures for forking the repository, making changes, and submitting a pull request.
+## Run Locally with Docker Compose
 
-## License
+To start the service locally:
 
-This project is licensed under the MIT License. See the LICENSE file for details.
+```bash
+docker compose up
+```
 
-## Contact
+This launches:
 
-For any inquiries or issues, please contact [your-email@example.com].
+* The REST API
+* Backend workers
+* Required infrastructure (e.g., broker, database)
 
----
+Ensure Docker and Docker Compose are installed and running on your machine.
 
-This README provides the necessary steps and configurations to get the `abrege` service up and running using Docker Compose. For any additional information or advanced configurations, refer to the Docker and Docker Compose documentation.
+## Run Unit Tests
+
+Unit tests are defined in the `Makefile`. Available targets:
+
+### Test the Core Service (`src`)
+
+```bash
+make test-src
+```
+
+This runs:
+
+```makefile
+docker compose up -d abrege_api
+docker compose exec abrege_api uv run pytest -s --cov=./src --cov-report=term-missing tests/src/ -ra -v --maxfail=0
+make down-services
+```
+
+### Test the API Layer
+
+```bash
+make test-abrege-api
+```
+
+This runs:
+
+```makefile
+docker compose up -d abrege_api
+docker compose exec abrege_api uv run pytest -s --cov=./api --cov-report=term-missing tests/api/ -ra -v --maxfail=0
+make down-services
+```
+
+### Test the Full Service via Runner
+
+```bash
+make test-abrege-service
+```
+
+This runs:
+
+```makefile
+docker compose run --rm test_runner
+make down-services
+```
