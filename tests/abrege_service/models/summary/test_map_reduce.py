@@ -8,6 +8,10 @@ from src.schemas.parameters import SummaryParameters
 from datasets import load_dataset
 from abrege_service.models.summary.summary_chain import LangChainMapReduceService
 
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+OPENAI_API_BASE = os.environ.get("OPENAI_API_BASE")
+is_openai_is_set = all([OPENAI_API_BASE, OPENAI_API_KEY])
+
 
 @pytest.fixture(scope="module")
 def mock_llm() -> ChatOpenAI:
@@ -61,6 +65,7 @@ def dummy_task_large() -> TaskModel:
     return task
 
 
+@pytest.mark.skipif(condition=not is_openai_is_set, reason="Openai not set")
 def test_summary(mock_llm: ChatOpenAI, dummy_task_large: TaskModel):
     service = LangChainMapReduceService(llm=mock_llm)
     task = service.process_task(dummy_task_large)
