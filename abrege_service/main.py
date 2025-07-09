@@ -9,7 +9,6 @@ from langchain_openai import ChatOpenAI
 from abrege_service.modules.base import BaseService
 from abrege_service.modules.url import URLService
 from abrege_service.modules.audio import AudioVoskTranscriptionService
-from abrege_service.modules.ocr import OCRMIService
 from abrege_service.modules.video import VideoTranscriptionService
 from abrege_service.modules.documents.openoffice import LibreOfficeDocumentToMdService
 from abrege_service.modules.doc import (
@@ -17,6 +16,7 @@ from abrege_service.modules.doc import (
     FlatTextService,
     # PDFTOMD4LLMService,
 )
+from abrege_service.modules.image import ImageFromVLM
 
 from abrege_service.models.summary.parallele_summary_chain import (
     LangChainAsyncMapReduceService,
@@ -29,14 +29,18 @@ from src.schemas.result import ResultModel
 from src.clients import celery_app, file_connector
 from src import __version__
 
-
+openai_settings = OpenAISettings()
 audio_service = AudioVoskTranscriptionService(service_ratio_representaion=0.5)
 video_service = VideoTranscriptionService(service_ratio_representaion=0.5)
 microsof_service = MicrosoftDocumnentToMdService()
 libre_office_service = LibreOfficeDocumentToMdService()
 flat_text_service = FlatTextService()
-# pdf_service = PDFTOMD4LLMService()
-ocr_service = OCRMIService()
+
+async_client = openai.AsyncOpenAI(
+    api_key=openai_settings.OPENAI_API_KEY,
+    base_url=openai_settings.OPENAI_API_BASE,
+)
+ocr_service = ImageFromVLM(client=async_client, model_name=openai_settings.OPENAI_VLM_MODEL_NAME)
 services: List[BaseService] = [
     audio_service,
     video_service,
@@ -48,7 +52,6 @@ services: List[BaseService] = [
 url_service = URLService(services=services)
 
 
-openai_settings = OpenAISettings()
 client = openai.OpenAI(
     api_key=openai_settings.OPENAI_API_KEY,
     base_url=openai_settings.OPENAI_API_BASE,

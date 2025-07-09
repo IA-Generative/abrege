@@ -38,7 +38,7 @@ class AudioBaseService(BaseService):
 class AudioVoskTranscriptionService(AudioBaseService):
     def __init__(
         self,
-        path_model: str = "abrege_service/data/models/vosk-model-small-fr-0.22",
+        path_model: str = "data/models/vosk-model-small-fr-0.22",
         second_per_process: float = 4000 / 16000.0,
         service_ratio_representaion: float = 1.0,
     ):

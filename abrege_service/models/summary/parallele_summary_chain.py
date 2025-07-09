@@ -10,6 +10,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import PromptTemplate
 
 from src.schemas.result import SummaryModel, Text
+from src.schemas.parameters import SummaryParameters
 from src.schemas.task import TaskModel, TaskStatus
 from src.utils.logger import logger_abrege
 
@@ -233,6 +234,8 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
 
     async def acall(self, task: TaskModel) -> dict:
         params = task.parameters
+        if not params:
+            params = SummaryParameters()
 
         language = params.language if params.language else "French"
         prompt_size = (f"in at most {params.size} words" if params.size else "",)
