@@ -64,7 +64,7 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
         prompt_size: str = "",
         custom_prompt: str = "",
     ) -> list[Document]:
-        extra_log = {"task.id": task.id}
+        extra_log = {"task.id": task.id, "user_id": task.user_id}
         semaphore = asyncio.Semaphore(self.max_concurrency)
         lock = asyncio.Lock()
         counter = 0
@@ -308,7 +308,7 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
             task.output.word_count = len(task.output.summary.split())
             logger_abrege.info(
                 f"{task.output.word_count} words",
-                extra={"task.id": task.id},
+                extra={"task.id": task.id, "user_id": task.user_id},
             )
 
             task = self.update_result_task(
@@ -321,11 +321,11 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
         except Exception as e:
             logger_abrege.error(
                 f"Erreur lors du résumé : {e}",
-                extra={"task.id": task.id},
+                extra={"task.id": task.id, "user_id": task.user_id},
             )
             logger_abrege.error(
                 traceback.format_exc(),
-                extra={"task.id": task.id},
+                extra={"task.id": task.id, "user_id": task.user_id},
             )
             task.status = TaskStatus.FAILED.value
             task.extras["error"] = str(e)

@@ -78,7 +78,7 @@ async def summarize_doc(
         logger.debug(task_data.model_dump())
 
         saved_path = file_connector.save(user_id, task_data.id, temp_file_path)
-        logger.debug(f"Save into S3 - {saved_path}")
+        logger.debug(f"Save into S3 - {saved_path}", extra={"task_id": task_data.id, "user_id": task_data.user_id})
 
         _, extension = os.path.splitext(file.filename)
 
