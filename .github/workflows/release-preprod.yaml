@@ -1,5 +1,4 @@
-# .github/workflows/release-rc.yml
-name: Release RC
+name: Release
 
 on:
   push:
@@ -13,17 +12,16 @@ permissions:
 jobs:
   release:
     runs-on: actions-runner-controller
-
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Run Release Please for RC
+      - name: Run Release Please
         uses: googleapis/release-please-action@v4
         with:
           release-type: python
-          token: ${{ secrets.MY_GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           target-branch: preprod
