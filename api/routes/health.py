@@ -17,9 +17,7 @@ async def healthcheck():
     status = HealtStatus.HEALTHY.value
     status_code = 200
     # status_task_table, error = task_table.health_check()
-    dependencies.append(
-        Health(name="task-table", version=__version__, up_time=up_time, status=status)
-    )
+    dependencies.append(Health(name="task-table", version=__version__, up_time=up_time, status=status))
     logger_abrege.debug("Health avalaible")
     global_health = Health(
         name=__name__,
