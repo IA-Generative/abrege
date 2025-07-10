@@ -27,13 +27,17 @@ services:
     image: abrege-service
     mem_limit: 1g
     volumes:
-    # - ./abrege_service/:/app/abrege_service/
+    - ./abrege_service/:/app/abrege_service/
     - ./src/:/app/src/
     - ./tests/:/app/tests/
     build:
       target: test
       context: .
       dockerfile: Dockerfiles/abrege_service/Dockerfile
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_API_BASE=${OPENAI_API_BASE}
+      - OPENAI_API_MODEL=${OPENAI_API_MODEL}
     env_file:
       - .env
 
@@ -103,9 +107,19 @@ services:
       target: test
       context: .
       dockerfile: Dockerfiles/abrege_service/Dockerfile
-    command: ["uv", "run", "pytest",-s,  "--cov=./abrege_service", "--cov-report=term-missing", "tests/abrege_service/modules/test_doc_module.py", "-ra", "-v", "--maxfail=0"]
+    command:
+     - uv
+     - run
+     - pytest
+     - -s
+     - --cov=./abrege_service/
+     - --cov-report=term-missing
+     - tests/abrege_service/
+     - -ra
+     - -v
+     - --maxfail=0
     volumes:
-      - ./abrege_service/modules/doc.py:/app/abrege_service/modules/doc.py
+      - ./abrege_service/:/app/abrege_service/
       - ./src/:/app/src/
       - ./tests/:/app/tests/
     depends_on:

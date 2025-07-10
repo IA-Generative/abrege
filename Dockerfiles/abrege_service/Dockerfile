@@ -30,9 +30,9 @@ COPY pyproject.toml uv.lock ./
 
 RUN uv sync --no-cache --group abrege-service
 
-RUN mkdir -p /app/abrege_service/data/models && \
+RUN mkdir -p /app/data/models && \
     curl -L -o vosk-model-small-fr-0.22.zip https://alphacephei.com/vosk/models/vosk-model-small-fr-0.22.zip && \
-    unzip vosk-model-small-fr-0.22.zip -d /app/abrege_service/data/models && \
+    unzip vosk-model-small-fr-0.22.zip -d /app/data/models && \
     rm vosk-model-small-fr-0.22.zip
 
 COPY abrege_service /app/abrege_service

@@ -12,7 +12,13 @@ from abrege_service.utils.text import (
     split_texts_by_word_limit,
 )
 from src.utils.logger import logger_abrege
-from abrege_service.models.summary.parallele_summary_chain import LangChainAsyncMapReduceService
+from abrege_service.models.summary.parallele_summary_chain import (
+    LangChainAsyncMapReduceService,
+)
+
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+OPENAI_API_BASE = os.environ.get("OPENAI_API_BASE")
+is_openai_is_set = all([OPENAI_API_BASE, OPENAI_API_KEY])
 
 
 @pytest.fixture(scope="module")
@@ -88,13 +94,18 @@ def dummy_task_large4() -> TaskModel:
     return dummy_task_large()
 
 
+@pytest.mark.skipif(condition=not is_openai_is_set, reason="Openai not set")
 @pytest.mark.asyncio
 async def test_map_documents(mock_llm: ChatOpenAI, dummy_task_large1: TaskModel):
     service = LangChainAsyncMapReduceService(llm=mock_llm, max_token=10_000)
     result = await service.map_documents(task=dummy_task_large1, language="french")
     max_token = mock_llm.max_tokens if mock_llm.max_tokens else 10_000
     try:
-        expected_text = split_texts_by_token_limit(texts=dummy_task_large1.output.texts_found, max_tokens=max_token, model=mock_llm.model_name)
+        expected_text = split_texts_by_token_limit(
+            texts=dummy_task_large1.output.texts_found,
+            max_tokens=max_token,
+            model=mock_llm.model_name,
+        )
     except Exception as e:
         logger_abrege.warning(str(e))
         expected_text = split_texts_by_word_limit(texts=dummy_task_large1.output.texts_found, max_words=int(max_token * 0.75))
@@ -104,11 +115,16 @@ async def test_map_documents(mock_llm: ChatOpenAI, dummy_task_large1: TaskModel)
 
 
 # TODO: need to refactor here the name of function
+@pytest.mark.skipif(condition=not is_openai_is_set, reason="Openai not set")
 @pytest.mark.asyncio
 async def test_collapse_summary_chain(mock_llm: ChatOpenAI, dummy_task_large2: TaskModel):
     max_token = 50
     try:
-        expected_text = split_texts_by_token_limit(texts=dummy_task_large2.output.texts_found, max_tokens=max_token, model=mock_llm.model_name)
+        expected_text = split_texts_by_token_limit(
+            texts=dummy_task_large2.output.texts_found,
+            max_tokens=max_token,
+            model=mock_llm.model_name,
+        )
     except Exception as e:
         logger_abrege.warning(str(e))
         expected_text = split_texts_by_word_limit(texts=dummy_task_large2.output.texts_found, max_words=int(max_token * 0.75))
@@ -122,20 +138,26 @@ async def test_collapse_summary_chain(mock_llm: ChatOpenAI, dummy_task_large2: T
     assert updated_task.percentage < 1
 
 
-@pytest.mark.skipif(not os.environ.get("TOKENIZER_MODEL_NAME"), reason="No TOKENIZER_MODEL_NAME are defined")
+@pytest.mark.skipif(
+    not os.environ.get("TOKENIZER_MODEL_NAME") or not is_openai_is_set,
+    reason="No TOKENIZER_MODEL_NAME are defined",
+)
 @pytest.mark.asyncio
 async def test_async_existing_token_summary(mock_llm: ChatOpenAI, dummy_task_large3: TaskModel):
     service = LangChainAsyncMapReduceService(llm=mock_llm, max_token=10_000)
     result = await service.map_documents(task=dummy_task_large3, language="french")
     max_token = mock_llm.max_tokens if mock_llm.max_tokens else 10_000
     expected_text = split_texts_by_token_limit(
-        texts=dummy_task_large3.output.texts_found, max_tokens=max_token, model=os.environ.get("TOKENIZER_MODEL_NAME")
+        texts=dummy_task_large3.output.texts_found,
+        max_tokens=max_token,
+        model=os.environ.get("TOKENIZER_MODEL_NAME"),
     )
     assert len(result) == len(expected_text)
     updated_task = task_table.get_task_by_id(task_id=dummy_task_large3.id)
     assert updated_task.percentage < 1
 
 
+@pytest.mark.skipif(condition=not is_openai_is_set, reason="Openai not set")
 def test_summary(mock_llm: ChatOpenAI, dummy_task_large4: TaskModel):
     service = LangChainAsyncMapReduceService(llm=mock_llm)
     logger_abrege.debug(f"Model name {mock_llm.model_name}")
