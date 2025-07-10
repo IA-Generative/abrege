@@ -34,6 +34,10 @@ services:
       target: test
       context: .
       dockerfile: Dockerfiles/abrege_service/Dockerfile
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_API_BASE=${OPENAI_API_BASE}
+      - OPENAI_API_MODEL=${OPENAI_API_MODEL}
     env_file:
       - .env
 
