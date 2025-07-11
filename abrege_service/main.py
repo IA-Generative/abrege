@@ -41,7 +41,7 @@ async_client = openai.AsyncOpenAI(
     api_key=openai_settings.OPENAI_API_KEY,
     base_url=openai_settings.OPENAI_API_BASE,
 )
-if os.environ.get("OCR_SERVICE_LLM", "LLM"):
+if os.environ.get("OCR_SERVICE_LLM") == "LLM":
     ocr_service = ImageFromVLM(client=async_client, model_name=openai_settings.OPENAI_VLM_MODEL_NAME)
 else:
     ocr_service = OCRMIService(url_ocr=os.environ.get("OCR_BACKEND_URL"))
