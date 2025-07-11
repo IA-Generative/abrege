@@ -137,7 +137,7 @@ class ImageFromVLM(BaseService):
             task.output.texts_found.extend(results)
             task = self.update_task(task=task, status=TaskStatus.IN_PROGRESS.value, result=task.output)
             logger_abrege.debug(
-                f"Status {len(process_pages)} / {len(images)} - time process batch (nb items: {len(batch)}): {time.time() - t:.2f}s",
+                f"Status {process_pages} / {len(images)} - time process batch (nb items: {len(batch)}): {time.time() - t:.2f}s",
                 extra=extra_log,
             )
 
