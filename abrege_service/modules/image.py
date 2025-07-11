@@ -112,7 +112,7 @@ class ImageFromVLM(BaseService):
         extra_log = {
             "task_id": task.id,
             "user_id": task.user_id,
-            "filename": task.input.file_path,
+            "file_path-process": task.input.file_path,
             "process_name": self.__class__.__name__,
         }
         logger_abrege.info("start to extract content", extra=extra_log)
