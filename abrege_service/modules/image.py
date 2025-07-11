@@ -3,6 +3,7 @@ import openai
 from PIL import Image
 import traceback
 import asyncio
+from uuid import uuid4
 from abrege_service.schemas import IMAGE_CONTENT_TYPES, PDF_CONTENT_TYPES
 from abrege_service.modules.base import BaseService
 from abrege_service.utils.images import pil_image_to_base64
@@ -47,11 +48,18 @@ class ImageFromVLM(BaseService):
         self.sleep = sleep
 
     async def process_image(self, image: Image.Image) -> str:
+        t = time.time()
+        extra_log = {"process_id": uuid4().hex}
         base64_image = pil_image_to_base64(image)
+        logger_abrege.debug(
+            f"time to transform into base64 :{time.time()-t:.2f}",
+            extra=extra_log,
+        )
         attempt = 0
         for i in range(self.retry):
             attempt = i + 1
             try:
+                t = time.time()
                 response = await self.client.chat.completions.create(
                     model=self.model_name,
                     messages=[
@@ -68,18 +76,22 @@ class ImageFromVLM(BaseService):
                     ],
                     # max_tokens=8192,
                 )
+                logger_abrege.debug(f"{time.time()-t:.2f}s to get result from llm", extra=extra_log)
                 return response.choices[0].message.content
             except openai.APIConnectionError as e:
-                logger_abrege.error(f"openai.APIConnectionError {str(e)} - {traceback.format_exc()}")
+                logger_abrege.error(
+                    f"openai.APIConnectionError {str(e)} - {traceback.format_exc()}",
+                    extra=extra_log,
+                )
 
             except Exception as e:
-                logger_abrege.error(f"Exception : {str(e)} - {traceback.format_exc()}")
+                logger_abrege.error(f"Exception : {str(e)} - {traceback.format_exc()}", extra=extra_log)
 
             if attempt < self.retry:
                 wait_time = self.sleep * (2 ** (attempt - 1))  # backoff exponentiel
-                logger_abrege.debug(f"Error Waiting {wait_time}s before retrying...")
+                logger_abrege.debug(f"Error Waiting {wait_time}s before retrying...", extra=extra_log)
                 await asyncio.sleep(wait_time)
-        logger_abrege.warning(f"Max retry was exceed {self.retry}")
+        logger_abrege.warning(f"Max retry was exceed {self.retry}", extra=extra_log)
         return "No Content will be found due too llm call error"
 
     async def process_batch_async(self, batch: list[Image.Image]):
@@ -125,7 +137,7 @@ class ImageFromVLM(BaseService):
             task.output.texts_found.extend(results)
             task = self.update_task(task=task, status=TaskStatus.IN_PROGRESS.value, result=task.output)
             logger_abrege.debug(
-                f"Status {len(results)} / {len(images)} - time process batch (nb items: {len(batch)}): {time.time() - t:.2f}s",
+                f"Status {process_pages} / {len(images)} - time process batch (nb items: {len(batch)}): {time.time() - t:.2f}s",
                 extra=extra_log,
             )
 
