@@ -109,12 +109,25 @@ class ImageFromVLM(BaseService):
             images = LazyPdfImageList(task.input.file_path)
         else:
             raise NotImplementedError("")
-
+        extra_log = {
+            "task_id": task.id,
+            "user_id": task.user_id,
+            "filename": task.input.file_path,
+            "process_name": self.__class__.__name__,
+        }
+        logger_abrege.info("start to extract content", extra=extra_log)
+        process_pages = 0
         for batch in chunks(images, self.batch_size):
+            t = time.time()
             results = asyncio.run(self.process_batch_async(batch))
             task.output.percentage += len(results) / len(images)
+            process_pages += len(results)
             task.output.texts_found.extend(results)
             task = self.update_task(task=task, status=TaskStatus.IN_PROGRESS.value, result=task.output)
+            logger_abrege.debug(
+                f"Status {len(results)} / {len(images)} - time process batch (nb items: {len(batch)}): {time.time() - t:.2f}s",
+                extra=extra_log,
+            )
 
         task = self.update_task(
             task=task,
