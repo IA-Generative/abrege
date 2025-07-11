@@ -1,6 +1,7 @@
 import time
 import openai
 from PIL import Image
+import traceback
 import asyncio
 from abrege_service.schemas import IMAGE_CONTENT_TYPES, PDF_CONTENT_TYPES
 from abrege_service.modules.base import BaseService
@@ -8,6 +9,7 @@ from abrege_service.utils.images import pil_image_to_base64
 from abrege_service.utils.lazy_pdf import LazyPdfImageList
 from src.schemas.task import TaskModel, TaskStatus
 from src.schemas.result import ResultModel
+from src.utils.logger import logger_abrege
 
 
 def chunks(lst: list, batch_size: int):
@@ -28,6 +30,8 @@ class ImageFromVLM(BaseService):
         content_type_allowed=IMAGE_CONTENT_TYPES + PDF_CONTENT_TYPES,
         service_weight=0.5,
         batch_size: int = 4,
+        retry: int = 2,
+        sleep: int = 3,
     ):
         super().__init__(content_type_allowed, service_weight)
         self.model_name = model_name
@@ -39,26 +43,44 @@ class ImageFromVLM(BaseService):
             Conserve la ponctuation, les tableaux, les sauts de ligne et la mise en page d’origine.
             Sous format markddown
             """
+        self.retry = retry
+        self.sleep = sleep
 
     async def process_image(self, image: Image.Image) -> str:
         base64_image = pil_image_to_base64(image)
-        response = await self.client.chat.completions.create(
-            model=self.model_name,
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": self.prompt},
+        attempt = 0
+        for i in range(self.retry):
+            attempt = i + 1
+            try:
+                response = await self.client.chat.completions.create(
+                    model=self.model_name,
+                    messages=[
                         {
-                            "type": "image_url",
-                            "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
-                        },
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": self.prompt},
+                                {
+                                    "type": "image_url",
+                                    "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
+                                },
+                            ],
+                        }
                     ],
-                }
-            ],
-            # max_tokens=8192,
-        )
-        return response.choices[0].message.content
+                    # max_tokens=8192,
+                )
+                return response.choices[0].message.content
+            except openai.APIConnectionError as e:
+                logger_abrege.error(f"openai.APIConnectionError {str(e)} - {traceback.format_exc()}")
+
+            except Exception as e:
+                logger_abrege.error(f"Exception : {str(e)} - {traceback.format_exc()}")
+
+            if attempt < self.retry:
+                wait_time = self.sleep * (2 ** (attempt - 1))  # backoff exponentiel
+                logger_abrege.debug(f"Error Waiting {wait_time}s before retrying...")
+                await asyncio.sleep(wait_time)
+        logger_abrege.warning(f"Max retry was exceed {self.retry}")
+        return "No Content will be found due too llm call error"
 
     async def process_batch_async(self, batch: list[Image.Image]):
         tasks = [self.process_image(image) for image in batch]
