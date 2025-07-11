@@ -17,6 +17,7 @@ from abrege_service.modules.doc import (
     # PDFTOMD4LLMService,
 )
 from abrege_service.modules.image import ImageFromVLM
+from abrege_service.modules.ocr import OCRMIService
 
 from abrege_service.models.summary.parallele_summary_chain import (
     LangChainAsyncMapReduceService,
@@ -40,7 +41,10 @@ async_client = openai.AsyncOpenAI(
     api_key=openai_settings.OPENAI_API_KEY,
     base_url=openai_settings.OPENAI_API_BASE,
 )
-ocr_service = ImageFromVLM(client=async_client, model_name=openai_settings.OPENAI_VLM_MODEL_NAME)
+if os.environ.get("OCR_SERVICE_LLM", "LLM"):
+    ocr_service = ImageFromVLM(client=async_client, model_name=openai_settings.OPENAI_VLM_MODEL_NAME)
+else:
+    ocr_service = OCRMIService(url_ocr=os.environ.get("OCR_BACKEND_URL"))
 services: List[BaseService] = [
     audio_service,
     video_service,
