@@ -19,7 +19,8 @@ RUN apt-get update -y && \
         libxext6 \
         curl \
         unzip \
-        poppler-utils && \
+        poppler-utils \
+        libatomic1 && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
