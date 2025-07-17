@@ -5,7 +5,7 @@ import os
 import traceback
 from typing import Optional
 from datetime import datetime
-from fastapi import File, UploadFile, HTTPException, status, Form, APIRouter
+from fastapi import File, UploadFile, HTTPException, status, Form, APIRouter, Depends
 from src.clients import file_connector, celery_app
 from src.utils.logger import logger_abrege as logger
 from src.schemas.task import task_table, TaskForm, TaskUpdateForm, TaskStatus, TaskModel
@@ -17,7 +17,8 @@ from api.clients.llm_guard import (
     LLMGuardMaliciousPromptException,
     LLMGuardRequestException,
 )
-
+from api.core.security.token import RequestContext
+from api.core.security.factory import TokenVerifier
 
 doc_router = APIRouter(tags=["Document"])
 
@@ -78,7 +79,10 @@ async def summarize_doc(
         logger.debug(task_data.model_dump())
 
         saved_path = file_connector.save(user_id, task_data.id, temp_file_path)
-        logger.debug(f"Save into S3 - {saved_path}", extra={"task_id": task_data.id, "user_id": task_data.user_id})
+        logger.debug(
+            f"Save into S3 - {saved_path}",
+            extra={"task_id": task_data.id, "user_id": task_data.user_id},
+        )
 
         _, extension = os.path.splitext(file.filename)
 
@@ -127,3 +131,23 @@ async def summarize_doc(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="File upload failed",
         )
+
+
+@doc_router.post("/v1/task/document", status_code=status.HTTP_201_CREATED, response_model=TaskModel)
+async def new_summarize_doc(
+    file: UploadFile = File(...),
+    prompt: Optional[str] = Form(None, description="Custom prompt for after summary"),
+    parameters: Optional[str] = Form(
+        default="",
+        description=f"Parameters {SummaryParameters().model_dump()}",
+    ),
+    extras: Optional[str] = Form(default="", description="Extras json payload"),
+    ctx: RequestContext = Depends(TokenVerifier),
+):
+    return await summarize_doc(
+        file=file,
+        user_id=ctx.user_id,
+        prompt=prompt,
+        parameters=parameters,
+        extras=extras,
+    )

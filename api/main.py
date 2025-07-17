@@ -5,6 +5,7 @@ from api.routes.summarize import router as summarize_router
 from api.routes.document_summary import doc_router
 from api.routes.task import router as task_router
 from src import __version__, __name__ as name
+from prometheus_fastapi_instrumentator import Instrumentator
 
 
 app = FastAPI(
@@ -12,6 +13,7 @@ app = FastAPI(
     description="",
     version=__version__,
 )
+Instrumentator().instrument(app).expose(app)
 
 
 app.add_middleware(
