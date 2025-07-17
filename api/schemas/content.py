@@ -21,3 +21,8 @@ class InputModel(BaseModel):
     user_id: str
     content: Optional[Union[UrlContent, TextContent, Content]] = Content()
     parameters: Optional[SummaryParameters] = None
+
+
+class Input(BaseModel):
+    content: Optional[Union[UrlContent, TextContent, Content]] = Content()
+    parameters: Optional[SummaryParameters] = None
