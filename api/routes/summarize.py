@@ -1,7 +1,7 @@
 import json
 from datetime import datetime
 
-from fastapi import APIRouter, status, HTTPException
+from fastapi import APIRouter, status, HTTPException, Depends
 from fastapi.responses import JSONResponse
 
 from api.schemas.content import UrlContent, TextContent
@@ -12,12 +12,14 @@ from src.clients import celery_app
 from src.schemas.content import URLModel, TextModel
 from src.schemas.task import task_table, TaskModel, TaskForm, TaskStatus
 from src.utils.logger import logger_abrege as logger
-from api.schemas.content import InputModel
+from api.schemas.content import InputModel, Input
 from api.clients.llm_guard import (
     llm_guard,
     LLMGuardMaliciousPromptException,
     LLMGuardRequestException,
 )
+from api.core.security.token import RequestContext
+from api.core.security.factory import TokenVerifier
 
 router = APIRouter(tags=["Text & Url"])
 
@@ -81,3 +83,16 @@ async def summarize_content(input: InputModel):
     )
 
     return task
+
+
+@router.post(
+    "/v1/task/text-url",
+    status_code=status.HTTP_201_CREATED,
+    response_model=TaskModel,
+)
+async def new_summarize_content(
+    input: Input,
+    ctx: RequestContext = Depends(TokenVerifier),
+):
+    input_model = InputModel(user_id=ctx.user_id, **input.model_dump())
+    return await summarize_content(input=input_model)
