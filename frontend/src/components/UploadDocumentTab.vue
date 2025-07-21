@@ -1,0 +1,130 @@
+<script lang="ts" setup>
+import type { IResumeTask } from '@/interfaces/IResume.ts'
+import { storeToRefs } from 'pinia'
+
+import useToaster from '@/composables/use-toaster.ts'
+import { useAbregeStore } from '@/stores/abrege'
+import { generateRandomUUID } from '@/utils/uniqueId.ts'
+import ParamsResume from './ParamsResume.vue'
+import ResumeResult from './ResumeResult.vue'
+
+const uploadLabel = 'Ajouter un fichier'
+const uploadHint = 'Taille maximale : 200MB par fichier. Formats supportés (texte, présentation, audio et vidéo) : PDF, DOCX, PPTX, ODT, ODP, TXT. Les images scannées ne fonctionnent pas.'
+const uploadAccept = ['.pdf', '.docx', '.pptx', '.txt', '.odt', '.odp']
+const generateButtonLabel = 'Générer'
+const isLoading = ref(false)
+
+// TODO: add checkCGU after 17/04
+// const checkCGU = ref(false)
+
+const abregeStore = useAbregeStore()
+const { addErrorMessage } = useToaster()
+
+const {
+  taskData,
+  isPolling,
+  formattedPercentage,
+  status,
+  error: storeError,
+} = storeToRefs(abregeStore)
+
+const userId = ref<string>(generateRandomUUID())
+const resumeResult = ref<IResumeTask>()
+const percentage = computed(() => formattedPercentage.value)
+
+function handleFileChange (files: FileList | File[]) {
+  const file = Array.isArray(files) ? files[0] : files[0] || null
+  if (file) {
+    abregeStore.fileUpload = file
+  }
+}
+async function onSubmit () {
+  try {
+    isLoading.value = true
+    await abregeStore.sendDocumentAndPoll(userId.value)
+
+    if (taskData.value && taskData.value.id) {
+      resumeResult.value = await abregeStore.downloadContentSummary(taskData.value.id)
+    }
+    else if (storeError.value) {
+      throw new Error(storeError.value)
+    }
+    else if (!taskData.value?.id) {
+      throw new Error('Aucune tâche valide trouvée pour le résumé.')
+    }
+
+    await (new Promise(resolve => setTimeout(resolve, 1000)))
+
+    if (status.value === 'completed') {
+      abregeStore.reset()
+    }
+  }
+  catch (error) {
+    addErrorMessage({
+      title: 'Erreur lors de la génération de résumé :',
+      description: `${error}`,
+    })
+  }
+  finally {
+    isLoading.value = false
+  }
+}
+
+function newSearch () {
+  resumeResult.value = undefined
+  abregeStore.reset()
+}
+
+if (storeError.value) {
+  addErrorMessage({
+    title: 'Erreur : ',
+    description: storeError.value,
+  })
+}
+</script>
+
+<template>
+  <form
+    class="tab-container"
+    @submit.prevent
+  >
+    <ResumeResult
+      v-if="resumeResult"
+      :resume-result="resumeResult"
+      @re-generate="newSearch"
+    />
+    <DsfrFileUpload
+      :label="uploadLabel"
+      :hint="uploadHint"
+      :accept="uploadAccept"
+      @change="handleFileChange"
+    />
+    <ParamsResume />
+    <!-- <DsfrCheckbox
+      v-model="checkCGU"
+      value="checkCG-3"
+      name="checkCGU-upload-document"
+      label="Avez-vous pris connaissance des conditions d'utilisation de MIrAI ?"
+      @click="checkCGU === true"
+    /> -->
+    <div
+      v-if="isPolling"
+      class="is-generating-container"
+    >
+      <ProgressBar
+        :visible="isPolling"
+        :progress="percentage"
+      />
+      <DsfrAlert
+        type="info"
+        description="Le temps de traitement varie en fonction de la taille de la source, dans certains cas cela peut prendre quelques minutes."
+      />
+    </div>
+    <DsfrButton
+      size="lg"
+      :label="generateButtonLabel"
+      :disabled="isPolling || !abregeStore.fileUpload || isLoading"
+      @click="onSubmit"
+    />
+  </form>
+</template>
