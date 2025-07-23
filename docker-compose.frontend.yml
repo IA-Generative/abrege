@@ -1,5 +1,5 @@
 services:
-  mirai_frontend:
+  abrege_frontend:
     container_name: abrege_frontend
     restart: always
     working_dir: /app
