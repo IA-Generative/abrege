@@ -3,7 +3,7 @@ FROM docker.io/node:22.15.0-slim AS dev
 
 WORKDIR /app
 RUN npm install --ignore-scripts --location=global pnpm@10.11.0
-COPY ./frontend/package.json ./
+COPY ./package.json ./
 RUN pnpm install --ignore-scripts
 COPY . .
 CMD ["pnpm", "run", "dev"]
