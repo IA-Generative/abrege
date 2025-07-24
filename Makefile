@@ -50,6 +50,14 @@ lint: install ## Lint le code du dépôt
 up: ## Lance l'environnement de développement en conteneurs
 	docker compose up -d
 
+setup-frontend: clean-front ## Prépare le frontend pour le développement
+	cd frontend && \
+		pnpm install && \
+		pnpm update
+
+up-frontend: setup-frontend ## Lance l'environnement de développement en conteneurs pour le frontend
+	docker compose -f docker-compose.frontend.yml up -d
+
 down: ## Eteint l'environnement de développement en conteneurs
 	docker compose down || true
 
@@ -62,6 +70,9 @@ clean: ## Nettoyage du dépôt
 	find . -type d -name ".mypy_cache" -exec rm -r {} +
 	rm *.db
 
+clean-front: ## Nettoyage du frontend
+	cd frontend && \
+		rm -rf node_modules
 
 ########################### DOCKER BUILD ###########################
 
