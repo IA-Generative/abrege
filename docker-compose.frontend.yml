@@ -1,18 +1,14 @@
 services:
-  mirai_frontend:
+  abrege_frontend:
     container_name: abrege_frontend
     restart: always
     working_dir: /app
     build:
-      context: .
-      dockerfile: Dockerfiles/frontend/Dockerfile
+      context: ./frontend
+      dockerfile: Dockerfile
       target: dev
-    image: abrege/front:dev
     env_file:
       - .env
-    # environment:
-    #   - NODE_ENV=development
-    #   - FRONT_PORT=3000
     ports:
     - 8081:3000
     volumes:
