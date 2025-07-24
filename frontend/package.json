@@ -17,7 +17,8 @@
     "test:unit": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "type-check": "vue-tsc --build --force || exit 0"
+    "type-check": "vue-tsc --build --force || exit 0",
+    "generate-openapi": "pnpx openapi-typescript ${VITE_ABREGE_API_URL}/openapi.json -o ./src/api/types/api.schema.d.ts"
   },
   "dependencies": {
     "@gouvfr/dsfr": "~1.12.1",
@@ -53,6 +54,7 @@
     "eslint-plugin-playwright": "^1.8.3",
     "jsdom": "^25.0.1",
     "npm-run-all2": "^6.2.6",
+    "openapi-typescript": "^7.8.0",
     "rimraf": "^5.0.10",
     "typescript": "~5.4.5",
     "unplugin-auto-import": "^0.18.6",

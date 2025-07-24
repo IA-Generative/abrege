@@ -1,15 +1,17 @@
 <script lang="ts" setup>
-import type { IResumeTask } from '@/interfaces/IResume'
+import type { components } from '@/api/types/api.schema'
 import DOMPurify from 'dompurify'
 import { marked } from 'marked'
 import { onMounted, ref } from 'vue'
 import useToaster from '@/composables/use-toaster'
 import { useAbregeStore } from '@/stores/abrege'
 
+type TaskModel = components['schemas']['TaskModel']
+
 const props = defineProps({
   resumeResult: {
     name: 'resumeResult',
-    type: Object as () => IResumeTask,
+    type: Object as () => TaskModel,
     required: true,
   },
 })
