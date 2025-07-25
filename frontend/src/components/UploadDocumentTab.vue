@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { IResumeTask } from '@/interfaces/IResume.ts'
+import type { components } from '@/api/types/api.schema'
 import { storeToRefs } from 'pinia'
 
 import useToaster from '@/composables/use-toaster.ts'
@@ -7,6 +7,8 @@ import { useAbregeStore } from '@/stores/abrege'
 import { generateRandomUUID } from '@/utils/uniqueId.ts'
 import ParamsResume from './ParamsResume.vue'
 import ResumeResult from './ResumeResult.vue'
+
+type TaskModel = components['schemas']['TaskModel']
 
 const uploadLabel = 'Ajouter un fichier'
 const uploadHint = 'Taille maximale : 200MB par fichier. Formats supportés (texte, présentation, audio et vidéo) : PDF, DOCX, PPTX, ODT, ODP, TXT. Les images scannées ne fonctionnent pas.'
@@ -29,7 +31,7 @@ const {
 } = storeToRefs(abregeStore)
 
 const userId = ref<string>(generateRandomUUID())
-const resumeResult = ref<IResumeTask>()
+const resumeResult = ref<TaskModel>()
 const percentage = computed(() => formattedPercentage.value)
 
 function handleFileChange (files: FileList | File[]) {

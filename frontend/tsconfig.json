@@ -1,4 +1,9 @@
 {
+  "compilerOptions": {
+    "module": "ESNext", // or "NodeNext"
+    "moduleResolution": "Bundler", // or "NodeNext"
+    "noUncheckedIndexedAccess": true
+  },
   "references": [
     {
       "path": "./tsconfig.node.json"

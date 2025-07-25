@@ -1,4 +1,3 @@
-import type { IResumeTask } from '@/interfaces/IResume'
 /**
  *
  * @Status - Errors :
@@ -21,12 +20,15 @@ import type { IResumeTask } from '@/interfaces/IResume'
  *    - INTERNAL_SERVER_ERROR,  # 500 - Traitement annulé
  *    - GATEWAY_TIMEOUT,  # 504 - Temps d’attente dépassé
  */
+import type { components } from '@/api/types/api.schema'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 import createHttpClient from '@/api/http-client'
 import useToaster from '@/composables/use-toaster'
 import { ABREGE_API_URL } from '@/utils/constants'
+
+type TaskModel = components['schemas']['TaskModel']
 
 const http = createHttpClient(ABREGE_API_URL)
 
@@ -53,7 +55,7 @@ export const useAbregeStore = defineStore('abrege', () => {
 
   const status = ref<string | null>(null)
   const percentage = ref<number>(0)
-  const taskData = ref<IResumeTask | null>(null)
+  const taskData = ref<TaskModel | null>(null)
   const isPolling = ref(false)
   const error = ref<string | undefined>(undefined)
   const position = ref<number | null>(null)
@@ -81,9 +83,9 @@ export const useAbregeStore = defineStore('abrege', () => {
     }
   }
 
-  async function getTask (taskId: string): Promise<IResumeTask> {
+  async function getTask (taskId: string): Promise<TaskModel> {
     try {
-      const { data } = await http.get<IResumeTask>(`/api/task/${taskId}`)
+      const { data } = await http.get<TaskModel>(`/api/task/${taskId}`)
       return data
     }
     catch (err: any) {
@@ -220,7 +222,7 @@ export const useAbregeStore = defineStore('abrege', () => {
     }
 
     try {
-      const { data: task } = await http.post<IResumeTask>(
+      const { data: task } = await http.post<TaskModel>(
         `/api/task/text-url`,
         body,
       )
@@ -265,7 +267,7 @@ export const useAbregeStore = defineStore('abrege', () => {
         custom_prompt: paramsValue.value.customPrompt,
       }))
 
-      const { data: task } = await http.post<IResumeTask>(
+      const { data: task } = await http.post<TaskModel>(
         `/api/task/document`,
         formData,
         {
@@ -308,9 +310,9 @@ export const useAbregeStore = defineStore('abrege', () => {
   /**
    * Récupère le résumé d'un texte ou d'un lien ou d'un fichier.
    */
-  async function downloadContentSummary (taskId: string): Promise<IResumeTask> {
+  async function downloadContentSummary (taskId: string): Promise<TaskModel> {
     try {
-      const response = await http.get<IResumeTask>(
+      const response = await http.get<TaskModel>(
         `/api/task/${taskId}`,
       )
       const data = response.data
