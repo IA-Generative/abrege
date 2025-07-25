@@ -1,13 +1,15 @@
-import type { IResumeResult } from '@/interfaces/IResume'
+import type { components } from '@/api/types/api.schema'
 import { ref, toRefs } from 'vue'
 
 import { useAbregeStore } from '@/stores/abrege'
 import useToaster from './use-toaster'
 
-export function useResumeGenerator (asyncFunction: (...args: any[]) => Promise<IResumeResult>) {
+type TaskModel = components['schemas']['TaskModel']
+
+export function useResumeGenerator (asyncFunction: (...args: any[]) => Promise<TaskModel>) {
   const isGenerating = ref(false)
   const progress = ref(0)
-  const result = ref<IResumeResult | null | undefined>(null)
+  const result = ref<TaskModel | null | undefined>(null)
   const { addMessage } = useToaster()
 
   const abregeStore = useAbregeStore()

@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { IResumeTask } from '@/interfaces/IResume.ts'
+import type { components } from '@/api/types/api.schema'
 import { useForm } from 'vee-validate'
 import { watch } from 'vue'
 import * as yup from 'yup'
@@ -8,6 +8,8 @@ import { useAbregeStore } from '@/stores/abrege'
 import { generateRandomUUID } from '@/utils/uniqueId.ts'
 import ParamsResume from './ParamsResume.vue'
 import ResumeResult from './ResumeResult.vue'
+
+type TaskModel = components['schemas']['TaskModel']
 
 // Champs du formulaire
 const inputLabel = 'Copier/coller un texte'
@@ -20,7 +22,7 @@ const abregeStore = useAbregeStore()
 const { addErrorMessage } = useToaster()
 
 const userId = ref<string>(generateRandomUUID())
-const resumeResult = ref<IResumeTask>()
+const resumeResult = ref<TaskModel>()
 const isGenerating = ref(false)
 const percentage = computed<number>(() =>
   abregeStore.taskData && abregeStore.taskData.percentage != null
