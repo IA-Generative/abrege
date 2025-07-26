@@ -27,9 +27,9 @@ services:
     image: abrege-service
     mem_limit: 1g
     volumes:
-    - ./abrege_service/:/app/abrege_service/
-    - ./src/:/app/src/
-    - ./tests/:/app/tests/
+    - ./apps/abrege_service/:/app/abrege_service/
+    - ./apps/src/:/app/src/
+    - ./apps/tests/:/app/tests/
     build:
       target: test
       context: .
@@ -54,7 +54,7 @@ services:
     image: abrege-api
     build:
       context: .
-      dockerfile: Dockerfiles/api/Dockerfile
+      dockerfile: apps/api/Dockerfile
     ports:
     - 5000:5000
     volumes:
@@ -119,13 +119,17 @@ services:
      - -v
      - --maxfail=0
     volumes:
-      - ./abrege_service/:/app/abrege_service/
-      - ./src/:/app/src/
-      - ./tests/:/app/tests/
+      - ./apps/abrege_service/:/app/abrege_service/
+      - ./apps/src/:/app/src/
+      - ./apps/tests/:/app/tests/
     depends_on:
       - db
       - redis
       - minio
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_API_BASE: ${OPENAI_API_BASE}
+      OPENAI_API_MODEL: ${OPENAI_API_MODEL}
     env_file:
       - .env
     mem_limit: 1g
