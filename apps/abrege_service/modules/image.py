@@ -52,7 +52,7 @@ class ImageFromVLM(BaseService):
         extra_log = {"process_id": uuid4().hex}
         base64_image = pil_image_to_base64(image)
         logger_abrege.debug(
-            f"time to transform into base64 :{time.time()-t:.2f}",
+            f"time to transform into base64 :{time.time() - t:.2f}",
             extra=extra_log,
         )
         attempt = 0
@@ -76,7 +76,7 @@ class ImageFromVLM(BaseService):
                     ],
                     # max_tokens=8192,
                 )
-                logger_abrege.debug(f"{time.time()-t:.2f}s to get result from llm", extra=extra_log)
+                logger_abrege.debug(f"{time.time() - t:.2f}s to get result from llm", extra=extra_log)
                 return response.choices[0].message.content
             except openai.APIConnectionError as e:
                 logger_abrege.error(

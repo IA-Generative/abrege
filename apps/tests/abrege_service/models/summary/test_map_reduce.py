@@ -1,5 +1,4 @@
 import pytest
-import openai
 import os
 from langchain_openai import ChatOpenAI
 from src.schemas.task import TaskModel, TaskForm, task_table, TaskStatus
@@ -15,11 +14,7 @@ is_openai_is_set = all([OPENAI_API_BASE, OPENAI_API_KEY])
 
 @pytest.fixture(scope="module")
 def mock_llm() -> ChatOpenAI:
-    client = openai.OpenAI(
-        api_key=os.environ.get("OPENAI_API_KEY"),
-        base_url=os.environ.get("OPENAI_API_BASE"),
-    )
-    model_name = [model.id for model in client.models.list()][0]
+    model_name = os.environ.get("OPENAI_API_MODEL")
     return ChatOpenAI(
         model=model_name,
         temperature=0.0,
