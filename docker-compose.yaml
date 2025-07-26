@@ -117,7 +117,7 @@ services:
      - tests/abrege_service/
      - -ra
      - -v
-     - --maxfail=0
+     - --maxfail=1
     volumes:
       - ./apps/abrege_service/:/app/abrege_service/
       - ./apps/src/:/app/src/
