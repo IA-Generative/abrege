@@ -37,6 +37,6 @@ def test_get_content_type():
     for file_path in expected_file_mime_mapping:
         mock_file = MockUploadFile(file_path=file_path)
         content_type = get_content_type(mock_file)
-        assert content_type == expected_file_mime_mapping[file_path], (
-            f"Content type mismatch for {file_path}: expected {expected_file_mime_mapping[file_path]}, got {content_type}"
-        )
+        assert (
+            content_type == expected_file_mime_mapping[file_path]
+        ), f"Content type mismatch for {file_path}: expected {expected_file_mime_mapping[file_path]}, got {content_type}"

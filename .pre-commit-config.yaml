@@ -18,7 +18,10 @@ repos:
       - id: check-added-large-files
       - id: check-merge-conflict
       - id: end-of-file-fixer
+        exclude: \.lock$
+
       - id: trailing-whitespace
+
 
   - repo: https://github.com/zricethezav/gitleaks
     rev: v8.18.1

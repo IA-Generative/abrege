@@ -58,9 +58,9 @@ services:
     ports:
     - 5000:5000
     volumes:
-    - ./api/:/app/api/
-    - ./src/:/app/src/
-    - ./tests/:/app/tests/
+    - ./apps/api/:/app/api/
+    - ./apps/src/:/app/src/
+    - ./apps/tests/:/app/tests/
     container_name: abrege-api
     environment:
       DEV_MODE: "true"
@@ -94,7 +94,7 @@ services:
     - head
     container_name: abrege-migration
     volumes:
-    - ./src/:/app/src/
+    - ./apps/src/:/app/src/
     - ./migration/:/app/migration
     env_file:
       - .env
