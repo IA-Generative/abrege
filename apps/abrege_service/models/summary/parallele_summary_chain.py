@@ -120,10 +120,10 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
                         percentage_map = counter / (nb_total_documents + 1)
                         percentage_map = percentage_left * percentage_map
                         logger_abrege.debug(
-                            f"left percentage {percentage_left} current_ma_percentage {percentage_map}",
+                            f"left percentage {100 * percentage_left:.2f}% {100 * current_percentage:.2f}% current_ma_percentage {100 * percentage_map:.2f}",
                             extra=extra_log,
                         )
-                        task.percentage = percentage_left + percentage_map
+                        task.percentage = current_percentage + percentage_map
                         new_summary: str = summary["output_text"]
                         partial_sum = Text(
                             id=hashlib.md5(new_summary.encode()).hexdigest(),
@@ -192,26 +192,24 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
                             "custom_prompt": custom_prompt,
                         }
                         t_doc_summary = perf_counter()
-                        logger_abrege.debug(79 * "*")
-                        logger_abrege.debug(doc)
-                        logger_abrege.debug(79 * "*")
                         summary = await self.collapse_document_chain.ainvoke(inputs)
                         copy_log = extra_log.copy()
                         copy_log["process_name"] = "collapse_summary_chain.ainvoke"
                         copy_log["process_time"] = perf_counter() - t_doc_summary
                         logger_abrege.info(
-                            f"{counter} / {nb_total_documents} processed",
+                            f"{counter + 1} / {nb_total_documents} processed",
                             extra=copy_log,
                         )
                         async with lock:
                             counter += 1
                             percentage_map = counter / (nb_total_documents + 1)
-                            percentage_map = percentage_left * percentage_map
+                            percentage_map = current_percentage + percentage_left * percentage_map
                             logger_abrege.debug(
-                                f"left percentage {percentage_left} current_ma_percentage {percentage_map}",
+                                f"left percentage {100 * percentage_left:.2f}%| old percentage {100 * current_percentage:.2f}%"
+                                f"current_ma_percentage {100 * percentage_map:.2f}",
                                 extra=extra_log,
                             )
-                            task.percentage = percentage_left + percentage_map
+                            task.percentage = current_percentage + percentage_map
                             new_summary: str = summary["output_text"]
                             partial_sum = Text(
                                 id=hashlib.md5(new_summary.encode()).hexdigest(),

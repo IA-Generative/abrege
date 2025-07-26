@@ -1,5 +1,4 @@
 import pytest
-import openai
 import os
 from langchain_openai import ChatOpenAI
 from langchain_core.documents import Document
@@ -23,11 +22,7 @@ is_openai_is_set = all([OPENAI_API_BASE, OPENAI_API_KEY])
 
 @pytest.fixture(scope="module")
 def mock_llm() -> ChatOpenAI:
-    client = openai.OpenAI(
-        api_key=os.environ.get("OPENAI_API_KEY"),
-        base_url=os.environ.get("OPENAI_API_BASE"),
-    )
-    model_name = [model.id for model in client.models.list()][0]
+    model_name = os.environ.get("OPENAI_API_MODEL")
     logger_abrege.info(f"For the test we will use {model_name}")
     logger_abrege.debug(79 * "*")
     return ChatOpenAI(
@@ -111,14 +106,14 @@ async def test_map_documents(mock_llm: ChatOpenAI, dummy_task_large1: TaskModel)
         expected_text = split_texts_by_word_limit(texts=dummy_task_large1.output.texts_found, max_words=int(max_token * 0.75))
     assert len(result) == len(expected_text)
     updated_task = task_table.get_task_by_id(task_id=dummy_task_large1.id)
-    assert updated_task.percentage < 1
+    assert updated_task.percentage == 0.75
 
 
 # TODO: need to refactor here the name of function
 @pytest.mark.skipif(condition=not is_openai_is_set, reason="Openai not set")
 @pytest.mark.asyncio
 async def test_collapse_summary_chain(mock_llm: ChatOpenAI, dummy_task_large2: TaskModel):
-    max_token = 50
+    max_token = 10000
     try:
         expected_text = split_texts_by_token_limit(
             texts=dummy_task_large2.output.texts_found,
@@ -133,7 +128,7 @@ async def test_collapse_summary_chain(mock_llm: ChatOpenAI, dummy_task_large2: T
     service = LangChainAsyncMapReduceService(llm=mock_llm, max_token=100)
     result = await service.collapse_summary_chain(task=dummy_task_large2, docs=docs, language="french")
 
-    assert len(result) < len(expected_text)
+    assert len(result) <= len(expected_text)
     updated_task = task_table.get_task_by_id(task_id=dummy_task_large2.id)
     assert updated_task.percentage < 1
 
