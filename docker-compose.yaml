@@ -33,7 +33,7 @@ services:
     build:
       target: test
       context: .
-      dockerfile: Dockerfiles/abrege_service/Dockerfile
+      dockerfile: apps/abrege_service/Dockerfile
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_API_BASE=${OPENAI_API_BASE}
@@ -106,7 +106,7 @@ services:
     build:
       target: test
       context: .
-      dockerfile: Dockerfiles/abrege_service/Dockerfile
+      dockerfile: apps/abrege_service/Dockerfile
     command:
      - uv
      - run
