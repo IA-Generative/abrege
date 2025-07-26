@@ -3,9 +3,10 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 ENV UV_CACHE_DIR=/app/.cache
 WORKDIR /app
 COPY alembic.ini /app/
-COPY migration /app/migration
-COPY src/ /app/src/
+COPY apps/migration /app/migration
+COPY apps/src/ /app/src/
 COPY pyproject.toml uv.lock ./
+COPY alembic.ini /app/
 
 RUN uv sync --no-cache --group migration
 

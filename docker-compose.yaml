@@ -87,7 +87,7 @@ services:
     image: abrege-migration
     build:
       context: .
-      dockerfile: Dockerfiles/migration/Dockerfile
+      dockerfile: apps/migration/Dockerfile
     command:
     - alembic
     - upgrade
@@ -95,7 +95,7 @@ services:
     container_name: abrege-migration
     volumes:
     - ./apps/src/:/app/src/
-    - ./migration/:/app/migration
+    - ./apps/migration/:/app/migration
     env_file:
       - .env
     depends_on:
@@ -141,7 +141,7 @@ services:
       - AUTH_TOKEN=llm_guard
       - LOG_LEVEL=DEBUG
     volumes:
-      - ./llm-guard/config/scanners.yml:/home/user/app/config/scanners.yml
+      - ./apps/llm-guard/config/scanners.yml:/home/user/app/config/scanners.yml
 
 
 volumes:
