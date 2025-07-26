@@ -186,12 +186,15 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
                 async with semaphore:
                     try:
                         inputs = {
-                            "input_documents": [doc],
+                            "input_documents": doc,
                             "language": language,
                             "prompt_size": prompt_size,
                             "custom_prompt": custom_prompt,
                         }
                         t_doc_summary = perf_counter()
+                        logger_abrege.debug(79 * "*")
+                        logger_abrege.debug(doc)
+                        logger_abrege.debug(79 * "*")
                         summary = await self.collapse_document_chain.ainvoke(inputs)
                         copy_log = extra_log.copy()
                         copy_log["process_name"] = "collapse_summary_chain.ainvoke"
@@ -286,6 +289,7 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
             model_version=self.llm.model_name,
             status=TaskStatus.IN_PROGRESS.value,
             texts_found=task.output.texts_found,
+            partial_summaries=[],
             extras={},
         )
 
