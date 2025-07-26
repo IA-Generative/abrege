@@ -1,9 +1,9 @@
-name: Release
+name: Release Alpha
 
 on:
   push:
     branches:
-      - preprod
+      - dev
 
 permissions:
   contents: write
@@ -19,15 +19,9 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Export selected envs to .env
-        run: |
-          env >> .env
-
       - name: Run Release Please
         uses: googleapis/release-please-action@v4
         with:
           release-type: python
           token: ${{ secrets.GITHUB_TOKEN }}
-          target-branch: preprod
-      - name: Cleanup
-        run: rm -f .env
+          target-branch: dev
