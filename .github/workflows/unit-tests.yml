@@ -71,7 +71,7 @@ jobs:
           LLM_GUARD_API_KEY=${{ secrets.LLM_GUARD_API_KEY }}
           LLM_GUARD_URL=http://llm_guard_api:8000
           MAX_CONCURRENCY_LLM_CALL=5
-          MAX_MODEL_TOKEN=128000
+          MAX_MODEL_TOKEN=16384
           PYPANDOC_PANDOC_FOLDER=/app/pandoc
           EOF
 
