@@ -36,8 +36,8 @@ RUN mkdir -p /app/data/models && \
     unzip vosk-model-small-fr-0.22.zip -d /app/data/models && \
     rm vosk-model-small-fr-0.22.zip
 
-COPY apps/abrege_service /app/abrege_service
-COPY apps/src /app/src
+COPY apps/server/abrege_service /app/abrege_service
+COPY apps/server/src /app/src
 
 ENV PYTHONPATH=/app
 ENV PATH="/app/.venv/bin:$PATH"
@@ -48,5 +48,5 @@ CMD ["uv", "run", "abrege_service/main.py"]
 FROM builder AS test
 WORKDIR /app
 RUN uv sync --no-cache --group test --group abrege-service
-COPY apps/tests tests
+COPY apps/server/tests tests
 CMD ["uv", "run", "abrege_service/main.py"]

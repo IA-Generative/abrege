@@ -18,8 +18,8 @@ ENV PYTHONUNBUFFERED=1
 
 RUN uv sync --no-cache --group abrege-api
 
-COPY apps/api /app/api
-COPY apps/src/ /app/src
+COPY apps/server/api /app/api
+COPY apps/server/src/ /app/src
 ENV PYTHONPATH=PYTHONPATH:/app
 
 CMD [ "uv", "run", "--no-cache", "python", "/app/api/main.py" ]
@@ -29,5 +29,5 @@ CMD [ "uv", "run", "--no-cache", "python", "/app/api/main.py" ]
 FROM base AS dev
 WORKDIR /app
 RUN uv sync --no-cache --group test --group abrege-api
-COPY apps/tests tests
+COPY apps/server/tests tests
 CMD [ "uv", "run", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "5000", "--reload"]
