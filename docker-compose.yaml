@@ -27,13 +27,13 @@ services:
     image: abrege-service
     mem_limit: 1g
     volumes:
-    - ./apps/abrege_service/:/app/abrege_service/
-    - ./apps/src/:/app/src/
-    - ./apps/tests/:/app/tests/
+    - ./apps/server/abrege_service/:/app/abrege_service/
+    - ./apps/server/src/:/app/src/
+    - ./apps/server/tests/:/app/tests/
     build:
       target: test
       context: .
-      dockerfile: apps/abrege_service/Dockerfile
+      dockerfile: apps/server/abrege_service/Dockerfile
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_API_BASE=${OPENAI_API_BASE}
@@ -54,13 +54,13 @@ services:
     image: abrege-api
     build:
       context: .
-      dockerfile: apps/api/Dockerfile
+      dockerfile: apps/server/api/Dockerfile
     ports:
     - 5000:5000
     volumes:
-    - ./apps/api/:/app/api/
-    - ./apps/src/:/app/src/
-    - ./apps/tests/:/app/tests/
+    - ./apps/server/api/:/app/api/
+    - ./apps/server/src/:/app/src/
+    - ./apps/server/tests/:/app/tests/
     container_name: abrege-api
     environment:
       DEV_MODE: "true"
@@ -87,15 +87,15 @@ services:
     image: abrege-migration
     build:
       context: .
-      dockerfile: apps/migration/Dockerfile
+      dockerfile: apps/server/migration/Dockerfile
     command:
     - alembic
     - upgrade
     - head
     container_name: abrege-migration
     volumes:
-    - ./apps/src/:/app/src/
-    - ./apps/migration/:/app/migration
+    - ./apps/server/src/:/app/src/
+    - ./apps/server/migration/:/app/migration
     env_file:
       - .env
     depends_on:
@@ -106,7 +106,7 @@ services:
     build:
       target: test
       context: .
-      dockerfile: apps/abrege_service/Dockerfile
+      dockerfile: apps/server/abrege_service/Dockerfile
     command:
      - uv
      - run
@@ -119,9 +119,9 @@ services:
      - -v
      - --maxfail=1
     volumes:
-      - ./apps/abrege_service/:/app/abrege_service/
-      - ./apps/src/:/app/src/
-      - ./apps/tests/:/app/tests/
+      - ./apps/server/abrege_service/:/app/abrege_service/
+      - ./apps/server/src/:/app/src/
+      - ./apps/server/tests/:/app/tests/
     depends_on:
       - db
       - redis
@@ -142,7 +142,7 @@ services:
       - AUTH_TOKEN=llm_guard
       - LOG_LEVEL=DEBUG
     volumes:
-      - ./apps/llm-guard/config/scanners.yml:/home/user/app/config/scanners.yml
+      - ./apps/server/llm-guard/config/scanners.yml:/home/user/app/config/scanners.yml
 
 
 volumes:
