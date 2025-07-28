@@ -27,7 +27,7 @@ RUN apt-get update -y && \
 ENV UV_CACHE_DIR=/app/.cache
 ENV CACHE_FOLDER=/app/.cache
 
-COPY pyproject.toml uv.lock ./
+COPY apps/server/pyproject.toml apps/server/uv.lock ./
 
 RUN uv sync --no-cache --group abrege-service
 

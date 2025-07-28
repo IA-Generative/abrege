@@ -10,8 +10,8 @@ RUN apt-get update -y && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY pyproject.toml /app/pyproject.toml
-COPY uv.lock /app/uv.lock
+COPY apps/server/pyproject.toml /app/pyproject.toml
+COPY apps/server/uv.lock /app/uv.lock
 ENV UV_CACHE_DIR=/app/.cache
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
