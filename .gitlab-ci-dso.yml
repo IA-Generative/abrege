@@ -55,8 +55,8 @@ docker-build-migration:
 docker-build-abrege-frontend:
   variables:
     IMAGE_NAMES: abrege-frontend:${CI_COMMIT_REF_SLUG} abrege-frontend:${CI_COMMIT_SHORT_SHA} abrege-frontend:${CI_COMMIT_TAG}
-    DOCKERFILE: "./frontend/Dockerfile"
-    WORKING_DIR: "./frontend"
+    DOCKERFILE: "./apps/client/Dockerfile"
+    WORKING_DIR: "./apps/client"
   stage: docker-build
   extends:
     - .kaniko:build-push
