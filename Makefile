@@ -51,7 +51,7 @@ up: ## Lance l'environnement de développement en conteneurs
 	docker compose up -d
 
 setup-frontend: clean-front ## Prépare le frontend pour le développement
-	cd frontend && \
+	cd apps/client && \
 		pnpm install && \
 		pnpm update
 
@@ -71,8 +71,11 @@ clean: ## Nettoyage du dépôt
 	rm *.db
 
 clean-front: ## Nettoyage du frontend
-	cd frontend && \
-		rm -rf node_modules
+	docker compose -f docker-compose.frontend.yml down || true
+	cd apps/client && \
+ 		rm -rf node_modules && \
+		rm -rf dist
+
 
 ########################### DOCKER BUILD ###########################
 

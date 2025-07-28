@@ -34,7 +34,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'safari-pinned-tab.svg'],
       workbox: {
-        maximumFileSizeToCacheInBytes: 3000000 // Pour le CSS du DSFR :-/
+        maximumFileSizeToCacheInBytes: 3000000
       },
       manifest: {
         name: 'Dummy app',
