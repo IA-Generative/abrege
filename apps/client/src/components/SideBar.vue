@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router'
 import ComminitySVG from '@/assets/pictograms/community.svg'
 import PenSVG from '@/assets/pictograms/pen.svg'
 import { USER_REVIEW_URL } from '@/utils/constants'
+import { PORTAIL_URL, TCHAP_CANAL_URL } from '@/utils/constants'
 import { openLink } from '@/utils/methods'
 
 defineProps({
@@ -49,26 +50,28 @@ const donneMonAvisButton = {
           À savoir sur MIrAI
         </h3>
         <p class="side-bar__cgu__text">
-          Veuillez impérativement consulter les <RouterLink
+          Veuillez impérativement consulter les <a
             class="side-bar__about__text"
-            to="/cgu"
+            :href="`${PORTAIL_URL}/cgu`"
+            target="_blank"
           >
             conditions d'utilisation
-          </RouterLink> de MIrAI.
+          </a> de MIrAI.
         </p>
         <p>
-          Pour vous former et utiliser au mieux les fonctionnalités des outils de MIrAI, rendez-vous sur <RouterLink
+          Pour vous former et utiliser au mieux les fonctionnalités des outils de MIrAI, rendez-vous sur <a
             class="side-bar__about__text"
-            to="/faq/introduction"
+            :href="`${PORTAIL_URL}/faq/introduction`"
+            target="_blank"
           >
-            Introduction et acculturation à l'IA .
-          </RouterLink>
+            Introduction et acculturation à l'IA
+          </a>.
         </p>
         <p>
           Une question ? RDV sur notre <a
-            href="https://tchap.gouv.fr/#/room/%21uTmmquZyqzVNkBGvdb:agent.interieur.tchap.gouv.fr?via=agent.interieur.tchap.gouv.fr"
+            :href="TCHAP_CANAL_URL"
             target="_blank"
-          >canal Tchap</a>. pour échanger avec la communauté MIrAI.
+          >canal Tchap</a> pour échanger avec la communauté MIrAI.
         </p>
       </div>
       <DsfrCallout
@@ -87,7 +90,7 @@ const donneMonAvisButton = {
         <DsfrTile
           :key="index"
           :title="tool.title"
-          :to="tool.to"
+          :to="PORTAIL_URL + tool.to"
           :icon="false"
           horizontal
           :img-src="tool.imgSrc"
