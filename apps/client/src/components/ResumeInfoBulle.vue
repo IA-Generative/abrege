@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { TCHAP_CANAL_URL } from '@/utils/constants'
 </script>
 
 <template>
@@ -10,7 +11,7 @@
       <br>
       Nous travaillons pour améliorer la performance et le type de documents acceptes, veuillez nous notifier
       via le <a
-        href="https://tchap.gouv.fr/#/room/%21uTmmquZyqzVNkBGvdb:agent.interieur.tchap.gouv.fr?via=agent.interieur.tchap.gouv.fr"
+        :href="TCHAP_CANAL_URL"
         target="_blank"
       >canal Tchap</a> de tout dysfonctionnement.
     </p>
