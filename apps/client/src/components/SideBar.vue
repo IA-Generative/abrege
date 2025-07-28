@@ -4,7 +4,7 @@ import { RouterLink } from 'vue-router'
 import ComminitySVG from '@/assets/pictograms/community.svg'
 import PenSVG from '@/assets/pictograms/pen.svg'
 import { USER_REVIEW_URL } from '@/utils/constants'
-import { PORTAIL_URL, CHAP_CANAL_URL } from '@/utils/constants'
+import { PORTAIL_URL, TCHAP_CANAL_URL } from '@/utils/constants'
 import { openLink } from '@/utils/methods'
 
 defineProps({
@@ -69,7 +69,7 @@ const donneMonAvisButton = {
         </p>
         <p>
           Une question ? RDV sur notre <a
-            :href="CHAP_CANAL_URL"
+            :href="TCHAP_CANAL_URL"
             target="_blank"
           >canal Tchap</a> pour échanger avec la communauté MIrAI.
         </p>
