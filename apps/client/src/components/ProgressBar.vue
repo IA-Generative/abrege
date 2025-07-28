@@ -34,7 +34,7 @@ const progressColor = computed(() => {
       <div
         class="progress-bar"
         :style="{ width: `${progress}%`, backgroundColor: progressColor }"
-      />
+      ></div>
     </div>
   </div>
 </template>
