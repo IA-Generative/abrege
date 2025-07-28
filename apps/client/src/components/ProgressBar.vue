@@ -4,10 +4,22 @@ import { computed } from 'vue'
 const props = defineProps<{ visible: boolean, progress: number }>()
 
 const progressColor = computed(() => {
-  if (props.progress < 25) { return '#e8edff' }
-  if (props.progress < 50) { return '#dde5ff' }
-  if (props.progress < 75) { return '#bccdff' }
-  if (props.progress < 100) { return 'var(--background-flat-info)' }
+  if (props.progress < 25) {
+    return '#e8edff'
+  }
+
+  if (props.progress < 50) {
+    return '#dde5ff'
+  }
+
+  if (props.progress < 75) {
+    return '#bccdff'
+  }
+
+  if (props.progress < 100) {
+    return 'var(--background-flat-info)'
+  }
+
   return 'var(--artwork-major-blue-france)'
 })
 </script>
