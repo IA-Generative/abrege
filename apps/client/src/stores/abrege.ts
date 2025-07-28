@@ -85,7 +85,7 @@ export const useAbregeStore = defineStore('abrege', () => {
 
   async function getTask (taskId: string): Promise<TaskModel> {
     try {
-      const { data } = await http.get<TaskModel>(`/api/task/${taskId}`)
+      const { data } = await http.get<TaskModel>(`/task/${taskId}`)
       return data
     }
     catch (err: any) {
@@ -223,7 +223,7 @@ export const useAbregeStore = defineStore('abrege', () => {
 
     try {
       const { data: task } = await http.post<TaskModel>(
-        `/api/task/text-url`,
+        `/task/text-url`,
         body,
       )
 
@@ -268,7 +268,7 @@ export const useAbregeStore = defineStore('abrege', () => {
       }))
 
       const { data: task } = await http.post<TaskModel>(
-        `/api/task/document`,
+        `/task/document`,
         formData,
         {
           headers: {
@@ -313,7 +313,7 @@ export const useAbregeStore = defineStore('abrege', () => {
   async function downloadContentSummary (taskId: string): Promise<TaskModel> {
     try {
       const response = await http.get<TaskModel>(
-        `/api/task/${taskId}`,
+        `/task/${taskId}`,
       )
       const data = response.data
       return data

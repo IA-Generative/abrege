@@ -4,7 +4,7 @@ services:
     restart: always
     working_dir: /app
     build:
-      context: ./frontend
+      context: ./apps/client
       dockerfile: Dockerfile
       target: dev
     env_file:
@@ -12,5 +12,5 @@ services:
     ports:
     - 8081:3000
     volumes:
-    - ./frontend:/app
+    - ./apps/client:/app
     - /app/node_modules
