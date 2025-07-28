@@ -1,0 +1,81 @@
+name: CI/CD Workflow
+
+on:
+  push:
+    branches:
+      - '**'
+
+jobs:
+  run-test-src:
+    runs-on: actions-runner-controller
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.x
+
+      - name: Install dependencies and run tests
+        run: |
+          make test-src
+
+  run-test-abrege-api:
+    runs-on: actions-runner-controller
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.x
+
+      - name: Install dependencies and run abrege api tests
+        run: |
+          make test-abrege-api
+
+  run-test-abrege-service:
+    runs-on: actions-runner-controller
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.x
+
+      - name: Générer le .env
+        run: |
+          cat <<EOF > .env
+          REDIS_HOST=redis
+          REDIS_PORT=6379
+          REDIS_QUEUE_NAME=redis-queue
+          AWS_ACCESS_KEY_ID=minioadmin
+          AWS_SECRET_ACCESS_KEY=minioadmin
+          AWS_ENDPOINT_URL=http://minio:9000
+          AWS_DEFAULT_REGION=us-east-1
+          DATABASE_URL=postgresql://postgres:secret@postgres:5432/example_db
+          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          OPENAI_API_BASE=${{ secrets.OPENAI_API_BASE }}
+          OPENAI_API_MODEL=${{ vars.OPENAI_API_MODEL }}
+          TOKENIZER_MODEL_NAME=gpt-4
+          LLM_GUARD_API_KEY=${{ secrets.LLM_GUARD_API_KEY }}
+          LLM_GUARD_URL=http://llm_guard_api:8000
+          MAX_CONCURRENCY_LLM_CALL=5
+          MAX_MODEL_TOKEN=16384
+          PYPANDOC_PANDOC_FOLDER=/app/pandoc
+          EOF
+
+
+      - name: Install dependencies and run abrege service tests
+        run: |
+          make test-abrege-service
