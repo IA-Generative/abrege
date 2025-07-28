@@ -74,7 +74,7 @@ clean-front: ## Nettoyage du frontend
 	docker compose -f docker-compose.frontend.yml down || true
 	cd apps/client && \
  		rm -rf node_modules && \
-		rm -rf apps/client/dist
+		rm -rf dist
 
 
 ########################### DOCKER BUILD ###########################
