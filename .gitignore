@@ -16,3 +16,4 @@ tests/data/nltk
 tests/data/text
 .env.prod
 .DS_Store
+.env
