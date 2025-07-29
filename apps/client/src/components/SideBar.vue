@@ -1,10 +1,8 @@
 <script lang="ts" setup>
 import type { DsfrTileProps } from '@gouvminint/vue-dsfr'
-import { RouterLink } from 'vue-router'
 import ComminitySVG from '@/assets/pictograms/community.svg'
 import PenSVG from '@/assets/pictograms/pen.svg'
-import { USER_REVIEW_URL } from '@/utils/constants'
-import { PORTAIL_URL, TCHAP_CANAL_URL } from '@/utils/constants'
+import { PORTAIL_URL, TCHAP_CANAL_URL, USER_REVIEW_URL } from '@/utils/constants'
 import { openLink } from '@/utils/methods'
 
 defineProps({
