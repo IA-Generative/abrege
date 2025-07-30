@@ -5,8 +5,8 @@ import useToaster from './composables/use-toaster'
 
 const toaster = useToaster()
 
-const serviceTitle = 'ABRÈGE'
-const serviceDescription = 'Résumer un texte'
+const serviceTitle = 'Résumer un texte'
+const serviceDescription = 'Produire une synthèse de documents volumineux'
 const logoText = ['Ministère', 'de l’intérieur']
 
 const {
