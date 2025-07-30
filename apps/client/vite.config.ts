@@ -40,7 +40,7 @@ export default defineConfig({
       },
       manifest: {
         name: 'Abrege',
-        short_name: 'abrege',
+        short_name: 'Abrege',
         theme_color: '#ffffff',
         background_color: '#ffffff',
         icons: [
