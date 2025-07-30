@@ -32,13 +32,15 @@ export default defineConfig({
     VueDevTools(),
     VitePWA({
       registerType: 'autoUpdate',
+      selfDestroying: true,
       includeAssets: ['favicon.svg', 'safari-pinned-tab.svg'],
       workbox: {
-        maximumFileSizeToCacheInBytes: 3000000
+        maximumFileSizeToCacheInBytes: 3000000,
+        cleanupOutdatedCaches: true,
       },
       manifest: {
-        name: 'Dummy app',
-        short_name: 'Dummy',
+        name: 'Abrege',
+        short_name: 'abrege',
         theme_color: '#ffffff',
         background_color: '#ffffff',
         icons: [
