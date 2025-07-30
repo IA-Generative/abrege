@@ -142,18 +142,6 @@ h4{
   margin-bottom: 0;
 }
 
-@media (min-width: 576px) {
-
-}
-
-@media (min-width: 768px) {
-
-}
-
-@media (min-width: 992px) {
-
-}
-
 @media (min-width: 1248px) {
   .side-bar__container{
     display: flex;
