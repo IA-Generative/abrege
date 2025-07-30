@@ -2,9 +2,9 @@
 import type { components } from '@/api/types/api.schema'
 import { storeToRefs } from 'pinia'
 
-import useToaster from '@/composables/use-toaster.ts'
+import useToaster from '@/composables/use-toaster'
 import { useAbregeStore } from '@/stores/abrege'
-import { generateRandomUUID } from '@/utils/uniqueId.ts'
+import { generateRandomUUID } from '@/utils/uniqueId'
 import ParamsResume from './ParamsResume.vue'
 import ResumeResult from './ResumeResult.vue'
 
@@ -15,9 +15,6 @@ const uploadHint = 'Taille maximale : 200MB par fichier. Formats supportés (tex
 const uploadAccept = ['.pdf', '.docx', '.pptx', '.txt', '.odt', '.odp']
 const generateButtonLabel = 'Générer'
 const isLoading = ref(false)
-
-// TODO: add checkCGU after 17/04
-// const checkCGU = ref(false)
 
 const abregeStore = useAbregeStore()
 const { addErrorMessage } = useToaster()
@@ -102,13 +99,6 @@ if (storeError.value) {
       @change="handleFileChange"
     />
     <ParamsResume />
-    <!-- <DsfrCheckbox
-      v-model="checkCGU"
-      value="checkCG-3"
-      name="checkCGU-upload-document"
-      label="Avez-vous pris connaissance des conditions d'utilisation de MIrAI ?"
-      @click="checkCGU === true"
-    /> -->
     <div
       v-if="isPolling"
       class="is-generating-container"
