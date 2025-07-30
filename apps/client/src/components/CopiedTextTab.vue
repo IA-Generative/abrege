@@ -3,9 +3,9 @@ import type { components } from '@/api/types/api.schema'
 import { useForm } from 'vee-validate'
 import { watch } from 'vue'
 import * as yup from 'yup'
-import useToaster from '@/composables/use-toaster.ts'
+import useToaster from '@/composables/use-toaster'
 import { useAbregeStore } from '@/stores/abrege'
-import { generateRandomUUID } from '@/utils/uniqueId.ts'
+import { generateRandomUUID } from '@/utils/uniqueId'
 import ParamsResume from './ParamsResume.vue'
 import ResumeResult from './ResumeResult.vue'
 
@@ -14,9 +14,6 @@ type TaskModel = components['schemas']['TaskModel']
 // Champs du formulaire
 const inputLabel = 'Copier/coller un texte'
 const generateButtonLabel = 'Générer'
-
-// TODO: add checkCGU after 17/04
-// const checkCGU = ref(false)
 
 const abregeStore = useAbregeStore()
 const { addErrorMessage } = useToaster()
@@ -95,13 +92,6 @@ function newSearch () {
       />
     </div>
     <ParamsResume />
-    <!-- <DsfrCheckbox
-      v-model="checkCGU"
-      value="checkCG-1"
-      name="checkCGU-copied-text"
-      label="Avez-vous pris connaissance des conditions d'utilisation de MIrAI ?"
-      @click="checkCGU === true"
-    /> -->
     <div
       v-if="isGenerating"
       class="is-generating-container"
