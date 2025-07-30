@@ -22,11 +22,11 @@ const { addErrorMessage } = useToaster()
 
 const tags = ref<string[]>([
   'Synthèse',
-  props.resumeResult.parameters.language === 'French'
+  props.resumeResult.parameters?.language === 'French'
     ? 'Français'
-    : props.resumeResult.parameters.language === 'English'
+    : props.resumeResult.parameters?.language === 'English'
       ? 'Anglais'
-      : props.resumeResult.parameters.language,
+      : props.resumeResult.parameters?.language || '',
   // `${props.resumeResult.output.word_count} mots`,
 ]) // Tags du résumé
 
@@ -34,6 +34,11 @@ const speech = ref<SpeechSynthesisUtterance | null>(null) // Stocke l'instance d
 const isSpeaking = ref<boolean>(false)
 const textQueue = ref<string[]>([]) // File d’attente des textes à lire
 const currentIndex = ref<number>(0) // Index du texte en cours de lecture
+
+// Vérifie si l'output contient un résumé
+function hasSummary (output: TaskModel['output']): output is components['schemas']['SummaryModel'] {
+  return !!(output as components['schemas']['SummaryModel'])?.summary?.length
+}
 
 function speakMultipleTexts (texts: string[]) {
   if (!texts.length) {
@@ -67,7 +72,7 @@ function reGenerate () {
 }
 function copyOnClipboard () {
   stopSpeech()
-  if (props.resumeResult.output.summary) {
+  if (hasSummary(props.resumeResult.output)) {
     navigator.clipboard.writeText(props.resumeResult.output.summary)
   }
   else {
@@ -118,10 +123,18 @@ onMounted (() => {
             {{ tag }}
           </div>
         </div>
-        <span class="resume-content-words">{{ $props.resumeResult.output.word_count }} mots générés</span>
+        <span class="resume-content-words">
+          {{ ($props.resumeResult.output as components['schemas']['SummaryModel'])?.word_count || 0 }} mots générés
+        </span>
       </div>
       <div class="resume-content-result">
-        <div v-html="renderMarkdown($props.resumeResult.output.summary || '')" />
+        <div
+          v-html="renderMarkdown(
+            hasSummary($props.resumeResult.output)
+              ? $props.resumeResult.output.summary
+              : '',
+          )"
+        />
       </div>
     </div>
     <div class="resume-container-buttons">
@@ -130,7 +143,11 @@ onMounted (() => {
         icon-only
         tertiary
         no-outline
-        @click="speakMultipleTexts([$props.resumeResult.output.summary || ''])"
+        @click="speakMultipleTexts([
+          hasSummary($props.resumeResult.output)
+            ? $props.resumeResult.output.summary
+            : '',
+        ])"
       />
       <DsfrButton
         :icon="{ name: 'ri-refresh-line', fill: 'var(--border-plain-blue-france))' }"

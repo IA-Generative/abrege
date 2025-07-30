@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 
-// Déclarer les props
-const props = defineProps({
-  tabsData: {
-    type: Array,
-    required: true, // tabsData doit être passé au composant
-    default: () => [], // Fournit une valeur par défaut vide pour éviter des erreurs
-  },
-})
+interface TabData {
+  label: string
+  slot?: string
+}
+
+const props = defineProps<{
+  tabsData: TabData[]
+}>()
 
 const tabListId = 'dynamic-tabs'
 const activeTab = ref(0)
@@ -23,7 +23,7 @@ const tabs = computed(() =>
   })),
 )
 
-function activateTab (index) {
+function activateTab (index: number) {
   activeTab.value = index
 }
 </script>

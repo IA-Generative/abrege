@@ -20,10 +20,8 @@ declare module 'vue' {
     DsfrHeader: typeof import('@gouvminint/vue-dsfr')['DsfrHeader']
     DsfrInput: typeof import('@gouvminint/vue-dsfr')['DsfrInput']
     DsfrInputGroup: typeof import('@gouvminint/vue-dsfr')['DsfrInputGroup']
-    DsfrPagination: typeof import('@gouvminint/vue-dsfr')['DsfrPagination']
     DsfrSelect: typeof import('@gouvminint/vue-dsfr')['DsfrSelect']
     DsfrTile: typeof import('@gouvminint/vue-dsfr')['DsfrTile']
-    OcrViewer: typeof import('./components/OcrViewer.vue')['default']
     ParamsResume: typeof import('./components/ParamsResume.vue')['default']
     ProgressBar: typeof import('./components/ProgressBar.vue')['default']
     ReloadPrompt: typeof import('./components/ReloadPrompt.vue')['default']
@@ -34,6 +32,5 @@ declare module 'vue' {
     SideBar: typeof import('./components/SideBar.vue')['default']
     UploadDocumentTab: typeof import('./components/UploadDocumentTab.vue')['default']
     UrlTab: typeof import('./components/UrlTab.vue')['default']
-    VIcon: typeof import('@gouvminint/vue-dsfr')['VIcon']
   }
 }

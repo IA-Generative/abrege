@@ -1,3 +1,4 @@
+import type { AxiosError } from 'axios'
 import type { components } from '@/api/types/api.schema'
 import { ref, toRefs } from 'vue'
 
@@ -5,6 +6,24 @@ import { useAbregeStore } from '@/stores/abrege'
 import useToaster from './use-toaster'
 
 type TaskModel = components['schemas']['TaskModel']
+
+interface ErrorWithDetail {
+  response: {
+    data: {
+      detail: string
+    }
+  }
+}
+
+// Vérifie si l'erreur a une propriété detail
+function isErrorWithDetail (error: unknown): error is ErrorWithDetail {
+  return (
+    typeof error === 'object'
+    && error !== null
+    && 'response' in error
+    && typeof (error as ErrorWithDetail).response?.data?.detail === 'string'
+  )
+}
 
 export function useResumeGenerator (asyncFunction: (...args: any[]) => Promise<TaskModel>) {
   const isGenerating = ref(false)
@@ -30,8 +49,8 @@ export function useResumeGenerator (asyncFunction: (...args: any[]) => Promise<T
       const response = await asyncFunction(...args)
       result.value = response
     }
-    catch (error) {
-      if (!error.response) {
+    catch (error: unknown) {
+      if (!(error as AxiosError)?.response) {
         addMessage({
           type: 'error',
           title: 'Erreur de connexion',
@@ -40,10 +59,14 @@ export function useResumeGenerator (asyncFunction: (...args: any[]) => Promise<T
         })
       }
       else {
+        const errorMessage = isErrorWithDetail(error)
+          ? error.response.data.detail
+          : 'Problème serveur'
+
         addMessage({
           type: 'error',
           title: 'Erreur',
-          description: error.response.data?.detail ?? 'Problème serveur',
+          description: errorMessage,
           timeout: 3000,
         })
       }
