@@ -6,6 +6,7 @@ import VueMatomo from 'vue-matomo'
 import App from './App.vue'
 import router from './router/index'
 import { MATOMO_SITE_ID, MATOMO_SITE_URL } from './utils/constants'
+import { keycloakInit } from './utils/keycloak'
 
 import '@gouvfr/dsfr/dist/core/core.main.min.css'
 import '@gouvfr/dsfr/dist/component/component.main.min.css'
@@ -23,6 +24,8 @@ declare global {
 }
 
 async function initializeApp () {
+  await keycloakInit()
+
   createApp(App)
     .use(createPinia())
     .use(router)
