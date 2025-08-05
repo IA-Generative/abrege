@@ -1,123 +1,166 @@
+
 # Abrege
 
-## Introduction
+## 🔍 Overview
 
-**Abrege** is a powerful summarization tool designed to generate concise summaries from large documents—without strict page limits. While technically scalable, it has been tested with documents up to **500 pages**.
+**Abrege** is a scalable document summarization tool built to handle **documents of any length**, i1. **Text Extraction**
+   Retrieves the document's content using:
+
+   * **Standard parsing** (e.g., for PDFs, Word files)
+   * **OCR** (for scanned images or PDFs)ing those over **500 pages**. It supports various file formats and uses an intelligent **asynchronous Map-Reduce architecture** to deliver concise, high-quality summaries—no matter the input size.
 
 Supported input formats:
 
-* `.pdf`
-* `.docx`
-* `.odt`
-* `.odp`
-* `.png`
+* `.pdf`, `.docx`, `.odt`, `.odp`
+* `.png` (via OCR)
 * URLs
 * Raw text
 
-## How It Works
+---
 
-Abrege uses an **asynchronous Map-Reduce architecture** to summarize large documents efficiently:
+## Demo
 
-1. **Text Extraction**: the system retrieves the full text using either:
+| Document Summarization | Text Summarization | URL Summarization |
+|:----------------------:|:-------------------:|:-----------------:|
+| ![Document Summarization](docs/images/document-abrege-ezgif.com-optimize.gif) | ![Text Summarization](docs/images/texte-abrege-ezgif.com-optimize.gif) | ![URL Summarization](docs/images/abrege-url-ezgif.com-optimize.gif) |
 
-   * **Simple extraction** (e.g., PDF parsing)
-   * **OCR** (for scanned documents or images)
-2. **Chunking**: the extracted text is divided into sections that fit within the LLM's context window.
-3. **Map Phase**: each chunk is summarized in parallel using asynchronous workers.
-4. **Reduce Phase**: the intermediate summaries are aggregated into a final global summary.
+---
+## ⚙️ How It Works
 
-The number of LLM calls is approximately:
+Abrege breaks down the summarization process into three key phases:
 
-```
-total_calls ≈ total_tokens // llm_max_context + 1
-```
+1. **Text Extraction**
+   Retrieves the document’s content using:
 
-The `+1` accounts for the final reduction step.
+   * **Standard parsing** (e.g., for PDFs, Word files)
+   * **OCR** (for scanned images or PDFs)
 
-## Architecture Overview
+2. **Chunking**
+   The text is split into manageable sections that fit within the LLM's context window.
 
-```mermaid
-flowchart TD
-    A[User Request] --> B[REST API]
-    B --> C[Task Broker Redis/RabbitMQ]
-    C --> D[Worker: Text Extraction - OCR or classic]
-    D --> E[Worker: Chunk + Summarize - Map Phase]
-    E --> F[Worker: Summary Reducer - Reduce Phase]
-    F --> G[Final Summary Response]
+3. **Summarization (Map-Reduce)**
 
-    subgraph KEDA Autoscaling
-        E
-    end
-```
+   * **Map Phase**: Each chunk is summarized **in parallel** using async workers.
+   * **Reduce Phase**: The partial summaries are merged into a final global summary.
 
-### Key Components
+> 📊 Total LLM calls ≈ `total_tokens // llm_max_context + 1`
+> The `+1` is for the final reduction step.
 
-* **API**: Accepts input documents and triggers the pipeline.
-* **Broker**: Manages the asynchronous task queue.
-* **Workers**:
+---
 
-  * Extract text (OCR or standard)
-  * Chunk and summarize (Map phase)
-  * Combine results (Reduce phase)
-* **KEDA**: Scales summarization workers based on the queue size for parallelism.
 
-## Run Locally with Docker Compose
+##  Getting Started
 
-To start the service locally:
+### Prerequisites
+
+Install system dependencies:
 
 ```bash
+# For development environment
+make install
+
+# For system dependencies (Linux/macOS)
+make install-local
+```
+
+### 🐳 Run Locally (Docker Compose)
+
+Start the full stack:
+
+```bash
+# Launch development environment
+make up
+
+# Or use Docker Compose directly
 docker compose up
 ```
 
-This launches:
+For frontend development:
 
-* The REST API
-* Backend workers
-* Required infrastructure (e.g., broker, database)
+```bash
+# Setup and launch frontend
+make up-frontend
+```
 
-Ensure Docker and Docker Compose are installed and running on your machine.
+To stop services:
 
-## Run Unit Tests
+```bash
+make down
+```
 
-Unit tests are defined in the `Makefile`. Available targets:
+### 🧱 Build Docker Images
 
-### Test the Core Service (`src`)
+```bash
+# Build all images
+make build
+
+# Or build specific services
+make build-abrege-api
+make build-abrege-service
+```
+
+---
+
+## 🧪 Testing
+
+All tests are managed via the `Makefile`. Available test commands:
+
+### Core Service Tests
 
 ```bash
 make test-src
 ```
 
-This runs:
+Tests the core `src` module with coverage reporting.
 
-```makefile
-docker compose up -d abrege_api
-docker compose exec abrege_api uv run pytest -s --cov=./src --cov-report=term-missing tests/src/ -ra -v --maxfail=0
-make down-services
-```
-
-### Test the API Layer
+### API Tests
 
 ```bash
 make test-abrege-api
 ```
 
-This runs:
+Tests the API layer with coverage reporting.
 
-```makefile
-docker compose up -d abrege_api
-docker compose exec abrege_api uv run pytest -s --cov=./api --cov-report=term-missing tests/api/ -ra -v --maxfail=0
-make down-services
-```
-
-### Test the Full Service via Runner
+### End-to-End Tests
 
 ```bash
 make test-abrege-service
 ```
 
-This runs:
+Runs comprehensive end-to-end tests via the test runner.
 
-```makefile
-docker compose run --rm test_runner
-make down-services
+### 🧹 Development Tools
+
+```bash
+# Code linting
+make lint
+
+# Clean up cache and temporary files
+make clean
+
+# Clean frontend dependencies
+make clean-front
+
+# View all available commands
+make help
 ```
+
+---
+
+
+## 🧱 Architecture
+
+For a detailed sequence diagram of the document processing flow, see [docs/diagram.md](docs/diagram.md).
+
+### Components
+
+* **API**: Accepts inputs and initiates the processing pipeline.
+* **Task Broker**: Handles message queueing (e.g., Redis, RabbitMQ).
+* **Workers**:
+
+  * Extract text from documents or images
+  * Summarize chunks in parallel
+  * Merge partial summaries
+* **KEDA**: Automatically scales workers based on queue load.
+
+---
