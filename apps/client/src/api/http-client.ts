@@ -46,7 +46,8 @@ function createHttpClient (baseURL: string): AxiosInstance {
             }
             return httpClient(originalRequest)
           }
-        } catch (refreshError) {
+        }
+        catch (refreshError) {
           console.error('Echec du rafraîchissement du token :', refreshError)
           await keycloak.login()
         }
