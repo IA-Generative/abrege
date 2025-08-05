@@ -23,18 +23,32 @@ export const keycloakConfig: KeycloakConfig = {
 
 let keycloak: Keycloak
 
+function isRefreshTokenValid (keycloak: Keycloak): boolean {
+  const refreshExp = keycloak.refreshTokenParsed?.exp
+  const tokenExp = keycloak.tokenParsed?.exp
+  return typeof refreshExp === 'number' && typeof tokenExp === 'number' && refreshExp > tokenExp
+}
+
+function getTokenExpiration (keycloak: Keycloak): number | null {
+  const tokenExp = keycloak.tokenParsed?.exp
+  return typeof tokenExp === 'number' ? tokenExp : null
+}
+
 export function getKeycloak () {
   if (!keycloak) {
     keycloak = new Keycloak(keycloakConfig)
     keycloak.onAuthSuccess = () => {
-      if (!(keycloak.refreshTokenParsed?.exp && keycloak.tokenParsed?.exp && keycloak.refreshTokenParsed.exp > keycloak.tokenParsed.exp)) {
+      if (!isRefreshTokenValid(keycloak)) {
         return
       }
-      console.warn('KeyclKeycloak misconfiguration : refreshToken should not expire before token.akl')
-      const refreshTokenDelay = (keycloak.tokenParsed.exp * 100 - Date.now()) / 2
-      setTimeout(() => {
-        keycloak.updateToken()
-      }, refreshTokenDelay)
+      console.warn('Keycloak misconfiguration : refreshToken should not expire before token.akl')
+      const tokenExp = getTokenExpiration(keycloak)
+      if (tokenExp) {
+        const refreshTokenDelay = (tokenExp * 1000 - Date.now()) / 2
+        setTimeout(() => {
+          keycloak.updateToken()
+        }, refreshTokenDelay)
+      }
     }
     keycloak.onTokenExpired = () => {
       keycloak.updateToken(30)
