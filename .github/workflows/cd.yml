@@ -15,7 +15,7 @@ jobs:
       run: echo "Exposing env vars"
 
   release:
-    uses: ./.github/workflows/release.yaml
+    uses: ./.github/workflows/release.yml
     permissions:
       contents: write
       pull-requests: write
