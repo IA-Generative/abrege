@@ -32,6 +32,9 @@ importers:
       husky:
         specifier: ^9.1.7
         version: 9.1.7
+      keycloak-js:
+        specifier: ^26.2.0
+        version: 26.2.0
       marked:
         specifier: ^15.0.12
         version: 15.0.12
@@ -3017,6 +3020,9 @@ packages:
   jsonpointer@5.0.1:
     resolution: {integrity: sha512-p/nXbhSEcu3pZRdkW1OfJhpsVtW1gd4Wa1fnQc9YLiTfAjn0312eMKimbdIQzuZl9aa9xUGaRlP9T/CJE/ditQ==}
     engines: {node: '>=0.10.0'}
+
+  keycloak-js@26.2.0:
+    resolution: {integrity: sha512-CrFcXTN+d6J0V/1v3Zpioys6qHNWE6yUzVVIsCUAmFn9H14GZ0vuYod+lt+SSpMgWGPuneDZBSGBAeLBFuqjsw==}
 
   keyv@4.5.4:
     resolution: {integrity: sha512-oxVHkHR/EJf2CNXnWxRLW6mg7JyCCUcG0DtEGmL2ctUo1PNTin1PUil+r/+4r5MpVgC/fn1kjsx7mjSujKqIpw==}
@@ -7764,6 +7770,8 @@ snapshots:
       graceful-fs: 4.2.11
 
   jsonpointer@5.0.1: {}
+
+  keycloak-js@26.2.0: {}
 
   keyv@4.5.4:
     dependencies:
