@@ -49,6 +49,7 @@ abrege-service = [
     { name = "pydub" },
     { name = "pymupdf4llm" },
     { name = "pypandoc" },
+    { name = "spire-doc" },
     { name = "tiktoken" },
     { name = "transformers" },
     { name = "unstructured" },
@@ -128,6 +129,7 @@ abrege-service = [
     { name = "pydub", specifier = "==0.25.1" },
     { name = "pymupdf4llm", specifier = "==0.0.21" },
     { name = "pypandoc", specifier = ">=1.15" },
+    { name = "spire-doc", specifier = ">=13.6.4" },
     { name = "tiktoken", specifier = ">=0.9.0" },
     { name = "transformers", specifier = ">=4.51.3" },
     { name = "unstructured", specifier = "==0.17.2" },
@@ -2574,6 +2576,15 @@ wheels = [
 ]
 
 [[package]]
+name = "plum-dispatch"
+version = "1.7.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/39/4e/f4d6b2bd80a9880989d37773f0f2e3a91a2d5352732e4ebb68b5606bca83/plum-dispatch-1.7.4.tar.gz", hash = "sha256:1c1d15b2842b5fa98405fd3dff6fad4887bdc77b60bd200e209d76ebfe9990fe", size = 56429, upload-time = "2022-10-21T06:29:20.747Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e6/b6/3aaa985591c63da64c7bd8c5f470442a4c00b37ad3ed057f21de14174f83/plum_dispatch-1.7.4-py3-none-any.whl", hash = "sha256:c40dbeab269bbbf972ce0dbc078380da19ebaee1a370a2c564e1814a11bde216", size = 24238, upload-time = "2022-10-21T06:29:19.054Z" },
+]
+
+[[package]]
 name = "proglog"
 version = "0.1.11"
 source = { registry = "https://pypi.org/simple" }
@@ -3452,6 +3463,20 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/3f/f4/4a80cd6ef364b2e8b65b15816a843c0980f7a5a2b4dc701fc574952aa19f/soupsieve-2.7.tar.gz", hash = "sha256:ad282f9b6926286d2ead4750552c8a6142bc4c783fd66b0293547c8fe6ae126a", size = 103418, upload-time = "2025-04-20T18:50:08.518Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e7/9c/0e6afc12c269578be5c0c1c9f4b49a8d32770a080260c333ac04cc1c832d/soupsieve-2.7-py3-none-any.whl", hash = "sha256:6e60cc5c1ffaf1cebcc12e8188320b72071e922c2e897f737cadce79ad5d30c4", size = 36677, upload-time = "2025-04-20T18:50:07.196Z" },
+]
+
+[[package]]
+name = "spire-doc"
+version = "13.6.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "plum-dispatch" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/39/54/73344c808f582e439066c00d8cde3bb2fbd5cb307a8fdf61abca26fb4d0b/spire_doc-13.6.4-py3-none-macosx_10_7_universal.whl", hash = "sha256:aa16fe86cda9a4942754d4988e9e17ebbfeae25234add01f6551d52915885528", size = 53088663, upload-time = "2025-06-25T08:17:05.269Z" },
+    { url = "https://files.pythonhosted.org/packages/89/81/73fdb5f58e080e598b81c1d4590970034af423a24c213bbcc7dead08ecbb/spire_doc-13.6.4-py3-none-manylinux2014_aarch64.whl", hash = "sha256:97cd1291b140df767975d62a42e30f81348f7a845ade954909c88304d2bd6609", size = 25271879, upload-time = "2025-06-25T08:17:12.613Z" },
+    { url = "https://files.pythonhosted.org/packages/72/c6/23f37e107fb79b4c7935ca9ff77254dac947f315a5a292d121cfc5538761/spire_doc-13.6.4-py3-none-manylinux_2_31_x86_64.whl", hash = "sha256:9bf02180493e30ece5bfcb0f399dee06fb9829a61bfb319e485089f3c00b1ed2", size = 45030297, upload-time = "2025-06-25T08:17:22.233Z" },
+    { url = "https://files.pythonhosted.org/packages/68/b2/31f6e422e6db3a070f9461ba1ee484fa94739d2b14e0a2d4199a53a0022b/spire_doc-13.6.4-py3-none-win_amd64.whl", hash = "sha256:19245c51c4034308c4bf53ec8781ac0a883115676fbb48b29db6192b24904296", size = 28880645, upload-time = "2025-06-25T08:17:29.713Z" },
 ]
 
 [[package]]
