@@ -7,9 +7,12 @@ IMAGE_CONTENT_TYPES = [
     "image/svg+xml",
     "image/tiff",
 ]
-MICROSOFT_WORD_CONTENT_TYPES = [
-    "application/msword",
+MICROSOFT_WORD_CONTENT_TYPES_DOCX = [
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+]
+MICROSOFT_WORD_CONTENT_TYPES_DOC = [
+    "application/msword",
+    "application/vnd.ms-word",
 ]
 
 LIBRE_OFFICE_CONTENT_TYPES = ["application/vnd.oasis.opendocument.text"]
@@ -70,7 +73,10 @@ VIDEO_CONTENT_TYPES = [
 ALL_CONTENT_TYPES = (
     IMAGE_CONTENT_TYPES
     + PDF_CONTENT_TYPES
-    + MICROSOFT_WORD_CONTENT_TYPES
+    + MICROSOFT_WORD_CONTENT_TYPES_DOCX
+    + MICROSOFT_WORD_CONTENT_TYPES_DOC
+    + LIBRE_OFFICE_CONTENT_TYPES
+    + LIBRE_OFFICE_PRESENTATION_TYPES
     + MICROSOFT_SPREADSHEET_CONTENT_TYPES
     + MICROSOFT_PRESENTATION_CONTENT_TYPES
     + AUDIO_CONTENT_TYPES
