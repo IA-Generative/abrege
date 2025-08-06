@@ -12,7 +12,7 @@ type TaskModel = components['schemas']['TaskModel']
 
 const uploadLabel = 'Ajouter un fichier'
 const uploadHint = 'Taille maximale : 200MB par fichier. Formats supportés (texte, présentation, audio et vidéo) : PDF, DOCX, PPTX, ODT, ODP, TXT. Les images scannées ne fonctionnent pas.'
-const uploadAccept = ['.pdf', '.docx', '.pptx', '.txt', '.odt', '.odp']
+const uploadAccept = ['.pdf', '.docx', '.pptx', '.txt', '.odt', '.odp', '.doc']
 const generateButtonLabel = 'Générer'
 const isLoading = ref(false)
 
