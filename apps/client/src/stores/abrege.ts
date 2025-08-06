@@ -42,6 +42,9 @@ const VALID_MIME_TYPES = [
   'application/vnd.oasis.opendocument.presentation',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  // Ajout pour .doc et .txt :
+  'application/msword',
+  'text/plain',
   // Other formats :
   // 'audio/mpeg',
   // 'video/mp4',
