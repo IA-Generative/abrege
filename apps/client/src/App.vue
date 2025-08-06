@@ -18,7 +18,6 @@ const quickLinks = computed(() => {
   if (!isLoggedIn.value) {
     items.push(
       { label: 'Se connecter', to: '/login', class: 'fr-icon-user-fill' },
-      { label: 'S\'enregistrer', to: '/register', class: 'fr-icon-user-add-fill' }
     )
   }
   else {

@@ -13,3 +13,6 @@ export const KEYCLOAK_URL = (window as any).VITE_KEYCLOAK_URL ?? import.meta.env
 export const KEYCLOAK_CLIENT_ID = (window as any).VITE_KEYCLOAK_CLIENT_ID ?? import.meta.env.VITE_KEYCLOAK_CLIENT_ID
 export const KEYCLOAK_REALM = (window as any).VITE_KEYCLOAK_REALM ?? import.meta.env.VITE_KEYCLOAK_REALM
 export const KEYCLOAK_REDIRECT_URI = (window as any).VITE_REDIRECT_URI ?? import.meta.env.VITE_REDIRECT_URI
+
+// AUTH
+export const OAUTH2_PROXY_URL = (window as any).OAUTH2_PROXY_URL ?? import.meta.env.OAUTH2_PROXY_URL
