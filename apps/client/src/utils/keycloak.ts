@@ -25,8 +25,8 @@ let keycloak: Keycloak
 
 function isRefreshTokenValid (keycloak: Keycloak): boolean {
   const refreshExp = keycloak.refreshTokenParsed?.exp
-  const tokenExp = keycloak.tokenParsed?.exp
-  return typeof refreshExp === 'number' && typeof tokenExp === 'number' && refreshExp > tokenExp
+  const now = Date.now() / 1000
+  return typeof refreshExp === 'number' && refreshExp > now
 }
 
 function getTokenExpiration (keycloak: Keycloak): number | null {
@@ -38,10 +38,10 @@ export function getKeycloak () {
   if (!keycloak) {
     keycloak = new Keycloak(keycloakConfig)
     keycloak.onAuthSuccess = () => {
-      if (!isRefreshTokenValid(keycloak)) {
+      if (isRefreshTokenValid(keycloak)) {
         return
       }
-      console.warn('Keycloak misconfiguration : refreshToken should not expire before token.akl')
+      console.warn('Keycloak misconfiguration: refreshToken should not expire before token')
       const tokenExp = getTokenExpiration(keycloak)
       if (tokenExp) {
         const refreshTokenDelay = (tokenExp * 1000 - Date.now()) / 2
@@ -60,7 +60,7 @@ export function getKeycloak () {
 export function getUserProfile (): IUser {
   try {
     const keycloak = getKeycloak()
-    const { email, sub: id, given_name: firstName, family_name: lastName, groups } = keycloak.idTokenParsed as { email: string, sub: string, given_name: string, firstName: string, family_name: string, lastName: string, groups: string[] }
+    const { email, sub: id, given_name: firstName, family_name: lastName, groups } = keycloak.idTokenParsed as { email: string, sub: string, given_name: string, family_name: string, groups: string[] }
     return {
       email,
       id,
