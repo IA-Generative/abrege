@@ -3,7 +3,7 @@ import zipfile
 from abrege_service.schemas import (
     IMAGE_CONTENT_TYPES,
     PDF_CONTENT_TYPES,
-    MICROSOFT_WORD_CONTENT_TYPES,
+    MICROSOFT_WORD_CONTENT_TYPES_DOCX,
     MICROSOFT_SPREADSHEET_CONTENT_TYPES,
     MICROSOFT_PRESENTATION_CONTENT_TYPES,
     AUDIO_CONTENT_TYPES,
@@ -30,7 +30,7 @@ def is_content_type_available_for_process(content_type: str) -> bool:
 def get_content_category(content_type: str) -> str:
     if content_type in PDF_CONTENT_TYPES:
         return ContentTypeCategories.PDF.value
-    if content_type in MICROSOFT_WORD_CONTENT_TYPES + MICROSOFT_PRESENTATION_CONTENT_TYPES + MICROSOFT_SPREADSHEET_CONTENT_TYPES:
+    if content_type in MICROSOFT_WORD_CONTENT_TYPES_DOCX + MICROSOFT_PRESENTATION_CONTENT_TYPES + MICROSOFT_SPREADSHEET_CONTENT_TYPES:
         return ContentTypeCategories.WORD_DOCUMENT.value
 
     if content_type in IMAGE_CONTENT_TYPES:
