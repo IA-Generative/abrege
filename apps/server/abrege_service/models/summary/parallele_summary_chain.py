@@ -52,6 +52,7 @@ COMBINE_PROMPT = PromptTemplate(
 Langfuse(
     public_key=os.environ.get("LANGFUSE_PUBLIC_KEY", "your-public-key"),
     secret_key=os.environ.get("LANGFUSE_SECRET_KEY", "your-secret-key"),
+    environment=os.environ.get("LANGFUSE_ENVIRONMENT", "local"),  # Optional: defaults to production
     host=os.environ.get("LANGFUSE_HOST", "https://cloud.langfuse.com"),  # Optional: defaults to https://cloud.langfuse.com
 )
 
@@ -59,9 +60,12 @@ Langfuse(
 langfuse = get_client()
 config = {}
 
-if langfuse.auth_check():
-    langfuse_handler = CallbackHandler()
-    config["callbacks"] = [langfuse_handler]
+try:
+    if langfuse.auth_check():
+        langfuse_handler = CallbackHandler()
+        config["callbacks"] = [langfuse_handler]
+except Exception as e:
+    logger_abrege.error(f"Langfuse initialization error: {e}")
 
 
 class LangChainAsyncMapReduceService(BaseSummaryService):
