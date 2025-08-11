@@ -138,7 +138,10 @@ if __name__ == "__main__":
     import sys
 
     # Get the URL from environment variables
-    url = os.getenv("OCR_BACKEND_URL", "https://mirai-ocr-staging.sdid-app.cpin.numerique-interieur.com/")
+    url = os.getenv(
+        "OCR_BACKEND_URL",
+        "https://mirai-ocr-staging.sdid-app.cpin.numerique-interieur.com/",
+    )
     if not url:
         print("Please set the OCR_BACKEND_URL environment variable.")
         sys.exit(1)
