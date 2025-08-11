@@ -135,8 +135,15 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
                     #     "langfuse_session_id": "sessionABC",
                     #     "langfuse_tags": ["test", "urgent"]
                     # }
+                    tmp_copy_config = config.copy()
+                    if tmp_copy_config:
+                        tmp_copy_config["metadata"] = {
+                            "langfuse_user_id": task.user_id,
+                            "langfuse_session_id": task.id,
+                            "langfuse_tags": ["map_one_document"],
+                        }
 
-                    summary = await self.llm_chain_map.ainvoke(inputs, config=config)
+                    summary = await self.llm_chain_map.ainvoke(inputs, config=tmp_copy_config)
                     copy_log = extra_log.copy()
                     copy_log["process_name"] = "llm_chain_map.ainvoke"
                     copy_log["process_time"] = perf_counter() - t_doc_summary
@@ -218,7 +225,14 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
                             "custom_prompt": custom_prompt,
                         }
                         t_doc_summary = perf_counter()
-                        summary = await self.collapse_document_chain.ainvoke(inputs, config=config)
+                        tmp_copy_config = config.copy()
+                        if tmp_copy_config:
+                            tmp_copy_config["metadata"] = {
+                                "langfuse_user_id": task.user_id,
+                                "langfuse_session_id": task.id,
+                                "langfuse_tags": ["collapse_summary_document"],
+                            }
+                        summary = await self.collapse_document_chain.ainvoke(inputs, config=tmp_copy_config)
                         copy_log = extra_log.copy()
                         copy_log["process_name"] = "collapse_summary_chain.ainvoke"
                         copy_log["process_time"] = perf_counter() - t_doc_summary
