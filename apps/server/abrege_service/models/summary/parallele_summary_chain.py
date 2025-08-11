@@ -1,3 +1,4 @@
+import os
 import time
 from time import perf_counter
 import traceback
@@ -8,6 +9,9 @@ from langchain.chains.summarize import load_summarize_chain
 from langchain_core.documents import Document
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import PromptTemplate
+from langfuse import Langfuse, get_client
+from langfuse.langchain import CallbackHandler
+
 
 from src.schemas.result import SummaryModel, Text
 from src.schemas.parameters import SummaryParameters
@@ -43,6 +47,21 @@ COMBINE_PROMPT = PromptTemplate(
     template=combine_template,
     input_variables=["text", "language", "prompt_size", "custom_prompt"],
 )
+
+
+Langfuse(
+    public_key=os.environ.get("LANGFUSE_PUBLIC_KEY", "your-public-key"),
+    secret_key=os.environ.get("LANGFUSE_SECRET_KEY", "your-secret-key"),
+    host=os.environ.get("LANGFUSE_HOST", "https://cloud.langfuse.com"),  # Optional: defaults to https://cloud.langfuse.com
+)
+
+# Get the configured client instance
+langfuse = get_client()
+config = {}
+
+if langfuse.auth_check():
+    langfuse_handler = CallbackHandler()
+    config["callbacks"] = [langfuse_handler]
 
 
 class LangChainAsyncMapReduceService(BaseSummaryService):
@@ -110,7 +129,14 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
                         "custom_prompt": custom_prompt,
                     }
                     t_doc_summary = perf_counter()
-                    summary = await self.llm_chain_map.ainvoke(inputs)
+                    # TODO: add metadata to config to make sure to have more context
+                    # config["metadata"] = {
+                    #     "langfuse_user_id": "user123",
+                    #     "langfuse_session_id": "sessionABC",
+                    #     "langfuse_tags": ["test", "urgent"]
+                    # }
+
+                    summary = await self.llm_chain_map.ainvoke(inputs, config=config)
                     copy_log = extra_log.copy()
                     copy_log["process_name"] = "llm_chain_map.ainvoke"
                     copy_log["process_time"] = perf_counter() - t_doc_summary
@@ -192,7 +218,7 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
                             "custom_prompt": custom_prompt,
                         }
                         t_doc_summary = perf_counter()
-                        summary = await self.collapse_document_chain.ainvoke(inputs)
+                        summary = await self.collapse_document_chain.ainvoke(inputs, config=config)
                         copy_log = extra_log.copy()
                         copy_log["process_name"] = "collapse_summary_chain.ainvoke"
                         copy_log["process_time"] = perf_counter() - t_doc_summary
