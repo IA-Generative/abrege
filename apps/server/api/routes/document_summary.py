@@ -1,6 +1,5 @@
+import aiofiles
 import json
-import tempfile
-import shutil
 import os
 import traceback
 from typing import Optional
@@ -23,7 +22,6 @@ from api.core.security.factory import TokenVerifier
 doc_router = APIRouter(tags=["Document"])
 
 
-@doc_router.post("/task/document", status_code=status.HTTP_201_CREATED, response_model=TaskModel)
 async def summarize_doc(
     file: UploadFile = File(...),
     user_id: str = Form(..., description="User id"),
@@ -71,10 +69,11 @@ async def summarize_doc(
         ),
     )
     try:
-        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-            temp_file_path = temp_file.name  # Le chemin du fichier temporaire
-            with open(temp_file_path, "wb") as buffer:
-                shutil.copyfileobj(file.file, buffer)
+        async with aiofiles.tempfile.NamedTemporaryFile(delete=False) as temp_file:
+            temp_file_path = temp_file.name
+            chunk_size = 8192  # 8KB chunks
+            while chunk := await file.read(chunk_size):
+                await temp_file.write(chunk)
 
         logger.debug(task_data.model_dump())
 
@@ -133,7 +132,7 @@ async def summarize_doc(
         )
 
 
-@doc_router.post("/v1/task/document", status_code=status.HTTP_201_CREATED, response_model=TaskModel)
+@doc_router.post("/task/document", status_code=status.HTTP_201_CREATED, response_model=TaskModel)
 async def new_summarize_doc(
     file: UploadFile = File(...),
     prompt: Optional[str] = Form(None, description="Custom prompt for after summary"),

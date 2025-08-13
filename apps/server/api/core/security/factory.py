@@ -1,6 +1,8 @@
+import logging
 import os
 import warnings
 from api.core.security.token import BaseVerifyToken, RequestContext
+from keycloak import KeycloakOpenID
 
 
 class AllowAllAccess(BaseVerifyToken):
@@ -9,6 +11,7 @@ class AllowAllAccess(BaseVerifyToken):
         warnings.warn(message="YOU USE DEV MODE PLEASE DON'T USE THAT IN PRODUCTION")
 
     def verify(self, ctx: RequestContext) -> bool:
+        ctx.user_id = "dev"
         return True
 
 
@@ -29,9 +32,50 @@ class DevToken(BaseVerifyToken):
         return False
 
 
+class KeycloakToken(BaseVerifyToken):
+    def __init__(self):
+        super().__init__(verify_token=True, is_fastapi=True)
+
+        # Configuration Keycloak depuis les variables d'environnement
+        self.keycloak_url = os.environ.get("KEYCLOAK_URL", "http://localhost:8080")
+        self.realm_name = os.environ.get("KEYCLOAK_REALM", "master")
+        self.client_id = os.environ.get("KEYCLOAK_CLIENT_ID", "your-client-id")
+        self.keycloak_openid = KeycloakOpenID(
+            server_url=self.keycloak_url,
+            client_id=self.client_id,
+            realm_name=self.realm_name,
+            client_secret_key=os.environ.get("KEYCLOAK_CLIENT_SECRET", "secret"),
+        )
+
+    def verify(self, ctx: RequestContext) -> bool:
+        """Vérifie le token JWT avec Keycloak et remplit ctx avec les infos utilisateur"""
+        try:
+            # Récupérer les informations utilisateur via Keycloak
+            user_info = self.keycloak_openid.userinfo(ctx.token)
+
+            # Remplir le contexte avec les informations récupérées
+            ctx.user_id = user_info.get("sub", "")  # Subject = user ID
+            ctx.email = user_info.get("email", "")
+
+            # Récupérer les rôles (peut varier selon la config Keycloak)
+            ctx.roles = user_info.get("roles", [])
+            # Ou si les rôles sont dans realm_access :
+            # ctx.roles = user_info.get("realm_access", {}).get("roles", [])
+
+            # Déterminer si l'utilisateur est admin
+            ctx.is_admin = "admin" in ctx.roles or "realm-admin" in ctx.roles
+
+            return True
+
+        except Exception as e:
+            logging.error(f"Erreur lors de la vérification du token: {e}")
+            return False
+
+
 SECURITY_FACTORY: dict[str, BaseVerifyToken] = {
     "full-access": AllowAllAccess(),
     "dev": DevToken(),
+    "keycloak": KeycloakToken(),
 }
 
-TokenVerifier: BaseVerifyToken = SECURITY_FACTORY[os.environ.get("VERIFY_TOEKN_MODEL", "full-access")]
+TokenVerifier: BaseVerifyToken = SECURITY_FACTORY[os.environ.get("VERIFY_TOKEN_MODEL", "full-access")]
