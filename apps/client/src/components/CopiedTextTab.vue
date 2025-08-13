@@ -5,7 +5,6 @@ import { watch } from 'vue'
 import * as yup from 'yup'
 import useToaster from '@/composables/use-toaster'
 import { useAbregeStore } from '@/stores/abrege'
-import { generateRandomUUID } from '@/utils/uniqueId'
 import ParamsResume from './ParamsResume.vue'
 import ResumeResult from './ResumeResult.vue'
 
@@ -18,7 +17,6 @@ const generateButtonLabel = 'Générer'
 const abregeStore = useAbregeStore()
 const { addErrorMessage } = useToaster()
 
-const userId = ref<string>(generateRandomUUID())
 const resumeResult = ref<TaskModel>()
 const isGenerating = ref(false)
 const percentage = computed<number>(() =>
@@ -44,7 +42,7 @@ watch(textToResume, (newValue) => {
 const onSubmit = handleSubmit(async () => {
   try {
     isGenerating.value = true
-    await abregeStore.sendContentAndPoll(userId.value, 'text')
+    await abregeStore.sendContentAndPoll('text')
     if (abregeStore.taskData && abregeStore.taskData.id) {
       resumeResult.value = await abregeStore.downloadContentSummary(abregeStore.taskData.id)
     }
