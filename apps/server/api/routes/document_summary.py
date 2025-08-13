@@ -156,7 +156,10 @@ async def new_summarize_doc(
     ctx: RequestContext = Depends(TokenVerifier),
 ):
     # Récupérer les headers et les convertir en dictionnaire
-    headers = dict(request.headers)
+    # Récupérer seulement le header authorization
+    headers = {}
+    if "authorization" in request.headers:
+        headers["authorization"] = request.headers["authorization"]
 
     return await summarize_doc(
         file=file,
