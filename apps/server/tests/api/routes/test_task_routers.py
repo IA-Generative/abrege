@@ -17,7 +17,7 @@ def client():
 def mock_task():
     return TaskModel(
         id="123",
-        user_id="test_user",
+        user_id="dev",
         status=TaskStatus.CREATED.value,
         parameters=None,
         extras={},
@@ -46,7 +46,7 @@ def test_read_task_not_found(client):
 def test_read_user_tasks(client, mock_task):
     task_table.get_tasks_by_user_id = MagicMock(return_value=[mock_task])
 
-    response = client.get("/task/user/test_user")
+    response = client.get("/task/user/")
     assert response.status_code == 200
     assert len(response.json()) == 1
     assert response.json()[0] == mock_task.dict()
@@ -55,6 +55,6 @@ def test_read_user_tasks(client, mock_task):
 def test_read_user_tasks_empty(client):
     task_table.get_tasks_by_user_id = MagicMock(return_value=[])
 
-    response = client.get("/task/user/test_user")
+    response = client.get("/task/user/")
     assert response.status_code == 200
     assert response.json() == []

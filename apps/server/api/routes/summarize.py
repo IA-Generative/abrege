@@ -24,12 +24,7 @@ from api.core.security.factory import TokenVerifier
 router = APIRouter(tags=["Text & Url"])
 
 
-@router.post(
-    "/task/text-url",
-    status_code=status.HTTP_201_CREATED,
-    response_model=TaskModel,
-)
-async def summarize_content(input: InputModel):
+def summarize_content(input: InputModel):
     content = input.content
     parameters = input.parameters
     if llm_guard is not None and parameters and parameters.custom_prompt is not None:
@@ -60,7 +55,7 @@ async def summarize_content(input: InputModel):
             text=content.text,
         )
     else:
-        raise HTTPException(status_code=500, detail=f" {content} is not available")
+        raise HTTPException(status_code=422, detail=f" {content} is not available")
 
     model_to_send.extras = model_to_send.extras if model_to_send.extras is not None else {}
     model_to_send.extras["prompt"] = content.prompt
@@ -86,7 +81,7 @@ async def summarize_content(input: InputModel):
 
 
 @router.post(
-    "/v1/task/text-url",
+    "/task/text-url",
     status_code=status.HTTP_201_CREATED,
     response_model=TaskModel,
 )
@@ -95,4 +90,4 @@ async def new_summarize_content(
     ctx: RequestContext = Depends(TokenVerifier),
 ):
     input_model = InputModel(user_id=ctx.user_id, **input.model_dump())
-    return await summarize_content(input=input_model)
+    return summarize_content(input=input_model)

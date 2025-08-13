@@ -28,6 +28,8 @@ abrege-api = [
     "python-magic==0.4.27",
     "uvicorn>=0.34.2",
     "prometheus-fastapi-instrumentator>=7.1.0",
+    "python-keycloak>=5.7.0",
+    "aiofiles>=24.1.0",
 ]
 version = [
     "commitizen>=4.4.1",
