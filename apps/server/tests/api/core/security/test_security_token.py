@@ -38,6 +38,7 @@ def test_parse_header():
         email="john@example.com",
         roles=["admin", "editor"],
         token="mytoken123",
+        is_admin=True,
     )
     assert actual == expected
 
