@@ -25,7 +25,7 @@ read_secret:
 docker-build-api:
   variables:
     WORKING_DIR: .
-    IMAGE_NAMES:  abrege-api:${CI_COMMIT_REF_SLUG} abrege-api:${CI_COMMIT_SHORT_SHA} abrege-api:${CI_COMMIT_TAG}
+    IMAGE_NAMES:  abrege-api:${CI_COMMIT_REF_SLUG} abrege-api:${CI_COMMIT_SHORT_SHA} # abrege-api:${CI_COMMIT_TAG}
     DOCKERFILE: "apps/server/api/Dockerfile"
     EXTRA_BUILD_ARGS: ""
   stage: docker-build
@@ -35,7 +35,7 @@ docker-build-api:
 docker-build-service:
   variables:
     WORKING_DIR: .
-    IMAGE_NAMES:  abrege-service:${CI_COMMIT_REF_SLUG} abrege-service:${CI_COMMIT_SHORT_SHA} abrege-service:${CI_COMMIT_TAG}
+    IMAGE_NAMES:  abrege-service:${CI_COMMIT_REF_SLUG} abrege-service:${CI_COMMIT_SHORT_SHA} # abrege-service:${CI_COMMIT_TAG}
     DOCKERFILE: "apps/server/abrege_service/Dockerfile"
     EXTRA_BUILD_ARGS: ""
   stage: docker-build
@@ -45,7 +45,7 @@ docker-build-service:
 docker-build-migration:
   variables:
     WORKING_DIR: .
-    IMAGE_NAMES:  abrege-migration:${CI_COMMIT_REF_SLUG} abrege-migration:${CI_COMMIT_SHORT_SHA} abrege-migration:${CI_COMMIT_TAG}
+    IMAGE_NAMES:  abrege-migration:${CI_COMMIT_REF_SLUG} abrege-migration:${CI_COMMIT_SHORT_SHA} # abrege-migration:${CI_COMMIT_TAG}
     DOCKERFILE: "apps/server/migration/Dockerfile"
     EXTRA_BUILD_ARGS: ""
   stage: docker-build
@@ -54,7 +54,7 @@ docker-build-migration:
 
 docker-build-abrege-frontend:
   variables:
-    IMAGE_NAMES: abrege-frontend:${CI_COMMIT_REF_SLUG} abrege-frontend:${CI_COMMIT_SHORT_SHA} abrege-frontend:${CI_COMMIT_TAG}
+    IMAGE_NAMES: abrege-frontend:${CI_COMMIT_REF_SLUG} abrege-frontend:${CI_COMMIT_SHORT_SHA} # abrege-frontend:${CI_COMMIT_TAG}
     DOCKERFILE: "./apps/client/Dockerfile"
     WORKING_DIR: "./apps/client"
   stage: docker-build
