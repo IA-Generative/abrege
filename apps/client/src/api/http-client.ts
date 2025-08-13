@@ -1,7 +1,7 @@
 import type { AxiosError, AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import axios from 'axios'
 
-import { getKeycloak } from '@/utils/keycloak'
+import { getKeycloak, getUserProfile } from '@/utils/keycloak'
 
 interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean
@@ -16,13 +16,23 @@ function createHttpClient (baseURL: string): AxiosInstance {
     },
   })
 
-  // Intercepteur pour ajouter le token à chaque requête
+  // Intercepteur pour ajouter le token et les headers utilisateur à chaque requête
   httpClient.interceptors.request.use(
     (config: CustomAxiosRequestConfig): CustomAxiosRequestConfig => {
       const keycloak = getKeycloak()
       if (keycloak.authenticated && keycloak.token) {
         if (config.headers && typeof config.headers.set === 'function') {
           config.headers.set('Authorization', `Bearer ${keycloak.token}`)
+
+          // Ajouter les headers X-User-Id et X-Roles
+          try {
+            const userProfile = getUserProfile()
+            config.headers.set('X-User-Id', userProfile.id)
+            config.headers.set('X-Roles', userProfile.groups?.join(',') || '')
+          }
+          catch (error) {
+            console.warn('Impossible de récupérer le profil utilisateur pour les headers:', error)
+          }
         }
       }
       return config
@@ -43,6 +53,16 @@ function createHttpClient (baseURL: string): AxiosInstance {
           if (refreshed) {
             if (originalRequest.headers && typeof originalRequest.headers.set === 'function') {
               originalRequest.headers.set('Authorization', `Bearer ${keycloak.token}`)
+
+              // Remettre les headers utilisateur lors du retry
+              try {
+                const userProfile = getUserProfile()
+                originalRequest.headers.set('X-User-Id', userProfile.id)
+                originalRequest.headers.set('X-Roles', userProfile.groups?.join(',') || '')
+              }
+              catch (profileError) {
+                console.warn('Impossible de récupérer le profil utilisateur lors du retry:', profileError)
+              }
             }
             return httpClient(originalRequest)
           }

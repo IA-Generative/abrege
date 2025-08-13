@@ -219,4 +219,8 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
+# Playwright report
+playwright-report/*
+test-results/*
+
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,macos,node,windows
