@@ -91,6 +91,9 @@ async def new_summarize_content(
     ctx: RequestContext = Depends(TokenVerifier),
 ):
     input_model = InputModel(user_id=ctx.user_id, **input.model_dump())
-    headers = dict(request.headers)
+    # Récupérer seulement le header authorization
+    headers = {}
+    if "authorization" in request.headers:
+        headers["authorization"] = request.headers["authorization"]
     input_model.parameters.headers = headers
     return summarize_content(input=input_model)
