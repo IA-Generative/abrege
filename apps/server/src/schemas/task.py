@@ -101,9 +101,15 @@ class TaskTable:
 
     def insert_new_task(self, user_id: str, form_data: TaskForm) -> Optional[TaskModel]:
         with get_db() as db:
+            # Nettoyer les parameters pour enlever le token
+            cleaned_form_data = form_data.model_copy()
+            if cleaned_form_data.parameters and cleaned_form_data.parameters.headers:
+                cleaned_headers = {k: v for k, v in cleaned_form_data.parameters.headers.items() if k.lower() != "authorization"}
+                cleaned_form_data.parameters.headers = cleaned_headers
+
             knowledge = TaskModel(
                 **{
-                    **form_data.model_dump(),
+                    **cleaned_form_data.model_dump(),
                     "id": str(uuid.uuid4()),
                     "user_id": user_id,
                     "created_at": int(time.time()),
@@ -132,17 +138,23 @@ class TaskTable:
                 logger.warning(f"Task with id {task_id} not found.")
                 return None
 
-            updates = form_data.model_dump(exclude_unset=True)
+            # Nettoyer les parameters pour enlever le token
+            cleaned_form_data = form_data.model_copy()
+            if cleaned_form_data.parameters and cleaned_form_data.parameters.headers:
+                cleaned_headers = {k: v for k, v in cleaned_form_data.parameters.headers.items() if k.lower() != "authorization"}
+                cleaned_form_data.parameters.headers = cleaned_headers
+
+            updates = cleaned_form_data.model_dump(exclude_unset=True)
             for key, value in updates.items():
                 if hasattr(task, key):
                     setattr(task, key, value)
 
-            if form_data.output:
-                task.output = form_data.output.model_dump()
-            if form_data.input:
-                task.input = form_data.input.model_dump()
-            if form_data.parameters:
-                task.parameters = form_data.input.model_dump()
+            if cleaned_form_data.output:
+                task.output = cleaned_form_data.output.model_dump()
+            if cleaned_form_data.input:
+                task.input = cleaned_form_data.input.model_dump()
+            if cleaned_form_data.parameters:
+                task.parameters = cleaned_form_data.parameters.model_dump()  # Correction: était form_data.input
 
             task.updated_at = int(time.time())
             db.commit()
