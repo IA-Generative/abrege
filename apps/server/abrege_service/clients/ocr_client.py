@@ -68,7 +68,7 @@ class OCRClient(BaseBackend):
 
     def send(self, user_id: str, file_path: str, headers: dict = {}) -> dict:
         response = requests.post(
-            f"{self.url}/jobs/{user_id}",
+            f"{self.url}/jobs/",
             files={
                 "file": (
                     file_path,
@@ -135,20 +135,26 @@ def sort_reader(page: Page, seuil_ligne: float = 0.01):
 
 
 if __name__ == "__main__":
-    import os
     import sys
 
+    headers = {
+        "authorization": "Bearer your_token_here",
+    }
+
     # Get the URL from environment variables
-    url = os.getenv(
-        "OCR_BACKEND_URL",
-        "https://mirai-ocr-staging.sdid-app.cpin.numerique-interieur.com/",
-    )
+    url = "https://mirai-ocr-dev.mirai-hp.cpin.numerique-interieur.com/api"
+
     if not url:
         print("Please set the OCR_BACKEND_URL environment variable.")
         sys.exit(1)
 
     client = OCRClient(url)
-    task = client.send("user_id", "tests/test_data/elysee-module-24161-fr.pdf")
+    print(client.get_health())
+    task = client.send(
+        "user_id",
+        "/home/michou/Documents/dtnum/abrege/apps/server/tests/test_data/elysee-module-24161-fr.pdf",
+        headers=headers,
+    )
     task_id = task["id"]
     status = task.get("status")
     error_status = [
