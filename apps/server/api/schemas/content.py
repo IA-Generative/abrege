@@ -20,9 +20,9 @@ class TextContent(Content):
 class InputModel(BaseModel):
     user_id: str
     content: Optional[Union[UrlContent, TextContent, Content]] = Content()
-    parameters: Optional[SummaryParameters] = None
+    parameters: Optional[SummaryParameters] = SummaryParameters()
 
 
 class Input(BaseModel):
     content: Optional[Union[UrlContent, TextContent, Content]] = Content()
-    parameters: Optional[SummaryParameters] = None
+    parameters: Optional[SummaryParameters] = SummaryParameters()
