@@ -69,7 +69,7 @@ def test_summarize_content_body_error():
         },
     )
 
-    assert response.status_code == 422
+    assert response.status_code == 422, response.json()
 
 
 def test_summarize_content_url_error():
