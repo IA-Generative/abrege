@@ -11,7 +11,7 @@ test.describe('Summary text with Text or URL', () => {
     await page.getByLabel('Copier/coller un texte').fill(textToSummarize)
 
     await page.getByRole('button', { name: 'Générer' }).click()
-    await page.waitForTimeout(15000)
+    await page.waitForSelector('p:has-text("Retailleau")')
     await expect(page.locator('p', { hasText: 'Retailleau' })).toBeVisible()
     await expect(page.locator('p', { hasText: '21 septembre 2024' })).toBeVisible()
   })
@@ -22,7 +22,7 @@ test.describe('Summary text with Text or URL', () => {
     await page.getByRole('tab', { name: 'd\'une URL' }).click()
     await page.getByLabel('Entrer une url').fill('https://fr.wikipedia.org/wiki/Minist%C3%A8re_de_l%27Int%C3%A9rieur_(France)')
     await page.getByRole('button', { name: 'Générer' }).click()
-    await page.waitForTimeout(15000)
+    await page.waitForSelector('p:has-text("Direction générale de la Police nationale")')
     await expect(page.getByText('Direction générale de la Police nationale')).toBeVisible()
     await expect(page.getByText('Hôtel de Beauvau')).toBeVisible()
   })
