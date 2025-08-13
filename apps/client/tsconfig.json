@@ -3,6 +3,7 @@
     "target": "ES2015",
     "module": "ESNext", // or "NodeNext"
     "moduleResolution": "Bundler", // or "NodeNext"
+    "types": ["node", "vite/client"],
     "noUncheckedIndexedAccess": true,
     "skipLibCheck": true
   },
