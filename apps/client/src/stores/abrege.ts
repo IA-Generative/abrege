@@ -208,7 +208,7 @@ export const useAbregeStore = defineStore('abrege', () => {
     error.value = undefined
   }
 
-  async function sendContentAndPoll (userId: string, type: 'text' | 'url') {
+  async function sendContentAndPoll (type: 'text' | 'url') {
     const ok = await healthCheck()
     if (!ok) {
       return
@@ -216,7 +216,6 @@ export const useAbregeStore = defineStore('abrege', () => {
 
     const body = {
       content: { [type]: type === 'url' ? urlToResume.value : textToResume.value },
-      user_id: userId,
       parameters: {
         language: paramsValue.value.selectOptionSelected,
         size: Number(paramsValue.value.inputValue),
@@ -243,7 +242,7 @@ export const useAbregeStore = defineStore('abrege', () => {
     }
   }
 
-  async function sendDocumentAndPoll (userId: string) {
+  async function sendDocumentAndPoll () {
     if (!fileUpload.value) {
       error.value = 'Aucun fichier sélectionné'
       return Promise.reject(error.value)
@@ -262,7 +261,6 @@ export const useAbregeStore = defineStore('abrege', () => {
 
     try {
       const formData = new FormData()
-      formData.append('user_id', userId)
       formData.append('file', fileUpload.value)
       formData.append('parameters', JSON.stringify({
         language: paramsValue.value.selectOptionSelected,

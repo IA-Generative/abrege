@@ -4,7 +4,6 @@ import { storeToRefs } from 'pinia'
 
 import useToaster from '@/composables/use-toaster'
 import { useAbregeStore } from '@/stores/abrege'
-import { generateRandomUUID } from '@/utils/uniqueId'
 import ParamsResume from './ParamsResume.vue'
 import ResumeResult from './ResumeResult.vue'
 
@@ -27,7 +26,6 @@ const {
   error: storeError,
 } = storeToRefs(abregeStore)
 
-const userId = ref<string>(generateRandomUUID())
 const resumeResult = ref<TaskModel>()
 const percentage = computed(() => formattedPercentage.value)
 
@@ -40,7 +38,7 @@ function handleFileChange (files: FileList | File[]) {
 async function onSubmit () {
   try {
     isLoading.value = true
-    await abregeStore.sendDocumentAndPoll(userId.value)
+    await abregeStore.sendDocumentAndPoll()
 
     if (taskData.value && taskData.value.id) {
       resumeResult.value = await abregeStore.downloadContentSummary(taskData.value.id)
