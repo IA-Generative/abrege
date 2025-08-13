@@ -1,8 +1,9 @@
+import process from 'node:process'
 import { defineConfig, devices } from '@playwright/test'
 
-import { loadEnv } from 'vite'
+import dotenv from 'dotenv'
 
-const env = loadEnv('', '../../', '')
+dotenv.config({ path: '../../.env' })
 
 /**
  * Read environment variables from file.
@@ -100,6 +101,6 @@ export default defineConfig({
      * Playwright will re-use the local server if there is already a dev-server running.
      */
     command: 'pnpm run dev',
-    port: Number(env.FRONT_PORT),
+    port: Number(process.env.FRONT_PORT),
   }
 })
