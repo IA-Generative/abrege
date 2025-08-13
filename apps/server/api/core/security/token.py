@@ -9,6 +9,7 @@ class RequestContext(BaseModel):
     email: Optional[str] = None
     roles: Optional[list[str]] = None
     token: Optional[str] = None
+    is_admin: Optional[bool] = False
 
 
 def parse_header_context(request: Request, is_fastapi: bool = False) -> RequestContext:
@@ -32,7 +33,13 @@ def parse_header_context(request: Request, is_fastapi: bool = False) -> RequestC
     if auth_header and auth_header.startswith("Bearer "):
         token = auth_header[len("Bearer ") :]
 
-    return RequestContext(user_id=user_id, email=email, roles=roles_list, token=token)
+    return RequestContext(
+        user_id=user_id,
+        email=email,
+        roles=roles_list,
+        token=token,
+        is_admin="admin" in roles_list,
+    )
 
 
 class BaseVerifyToken:
