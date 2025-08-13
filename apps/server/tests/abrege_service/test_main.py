@@ -31,7 +31,7 @@ def test_task_process_text():
     result = result.get()
     actual = TaskModel.model_validate(result)
     assert actual.id == task.id
-    assert actual.status == TaskStatus.COMPLETED.value
+    assert actual.status == TaskStatus.COMPLETED.value, actual.extras
 
 
 def test_task_process_url():

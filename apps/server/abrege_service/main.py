@@ -2,6 +2,7 @@ import os
 from typing import List
 import time
 import json
+import traceback
 
 import openai
 from langchain_openai import ChatOpenAI
@@ -128,7 +129,7 @@ def launch(self, task: str):
             form_data=TaskUpdateForm(
                 status=TaskStatus.FAILED.value,
                 updated_at=int(time.time()),
-                extras={"error": f"{e}"},
+                extras={"error": f"{e} - {traceback.format_exc()}"},
             ),
         )
         raise e
