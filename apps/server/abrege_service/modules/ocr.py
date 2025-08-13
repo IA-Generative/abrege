@@ -51,7 +51,14 @@ class OCRMIService(BaseService):
         super().__init__(content_type_allowed)
         self.ocr_mi_client = OCRClient(url=url_ocr)
 
-    def send_by_batch(self, user_id: str, file_path: str, task_id: str, batch: list[Image.Image]) -> list[str]:
+    def send_by_batch(
+        self,
+        user_id: str,
+        file_path: str,
+        task_id: str,
+        batch: list[Image.Image],
+        headers: dict = None,
+    ) -> list[str]:
         extra_log = {
             "user_id": user_id,
             "file_path": file_path,
@@ -61,7 +68,7 @@ class OCRMIService(BaseService):
         task_ids = []
         for image in batch:
             with temp_image_file(image) as tmp_path:
-                task_ocr = self.ocr_mi_client.send(user_id=user_id, file_path=tmp_path)
+                task_ocr = self.ocr_mi_client.send(user_id=user_id, file_path=tmp_path, headers=headers)
                 task_ocr_id = task_ocr["id"]
                 task_ids.append(task_ocr_id)
                 logger.debug(
@@ -125,6 +132,7 @@ class OCRMIService(BaseService):
                 task_id=task.id,
                 file_path=task.input.file_path,
                 batch=batch,
+                headers=task.parameters.headers if task.parameters else {},
             )
             task.output.extras["task_ocr_id"] = list(set(task_ids) & set(task.output.extras["task_ocr_id"]))
             logger.debug(f"batch size {len(batch)} get {task_ids} as ocr id", extra=extra_log)

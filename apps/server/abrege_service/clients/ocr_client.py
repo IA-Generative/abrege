@@ -66,7 +66,7 @@ class OCRClient(BaseBackend):
     def __init__(self, url: str):
         self.url = url
 
-    def send(self, user_id: str, file_path: str) -> dict:
+    def send(self, user_id: str, file_path: str, headers: dict = {}) -> dict:
         response = requests.post(
             f"{self.url}/jobs/{user_id}",
             files={
@@ -76,6 +76,7 @@ class OCRClient(BaseBackend):
                     magic.from_file(file_path, mime=True),
                 )
             },
+            headers=headers,
         )
         if response.status_code != 201:
             raise Exception(f"Error: {response.status_code} - {response.text}")
