@@ -12,6 +12,7 @@ class BaseParameters(BaseModel):
         description="Number of words you, WARNING: the model will try to get less than the size",
     )
     extras: dict | None = Field(default_factory=dict, description="Extras informations")
+    headers: dict | None = Field(default_factory=dict, description="Headers to include in the request")
 
 
 class SummaryParameters(BaseParameters):
