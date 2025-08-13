@@ -1,4 +1,3 @@
-import aiofiles
 import json
 import os
 import traceback
@@ -27,6 +26,8 @@ from api.clients.llm_guard import (
 )
 from api.core.security.token import RequestContext
 from api.core.security.factory import TokenVerifier
+import tempfile
+import shutil
 
 doc_router = APIRouter(tags=["Document"])
 
@@ -80,11 +81,13 @@ async def summarize_doc(
         ),
     )
     try:
-        async with aiofiles.tempfile.NamedTemporaryFile(delete=False) as temp_file:
+        # Créer un fichier temporaire
+        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
             temp_file_path = temp_file.name
-            chunk_size = 8192  # 8KB chunks
-            while chunk := await file.read(chunk_size):
-                await temp_file.write(chunk)
+
+            # Copier directement le contenu du fichier uploadé
+            file.file.seek(0)  # S'assurer qu'on est au début du fichier
+            shutil.copyfileobj(file.file, temp_file)
 
         logger.debug(task_data.model_dump())
 
