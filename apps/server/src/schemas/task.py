@@ -21,6 +21,7 @@ class Task(Base):
     type = Column(String, nullable=False)
     status = Column(String, default="queued")
     user_id = Column(String, nullable=False)
+    group_id = Column(String, nullable=True)
     percentage = Column(Float, nullable=False, default=0)
     position = Column(Integer, nullable=True)
 
@@ -34,6 +35,7 @@ class Task(Base):
     output = Column(JSON, nullable=True)
     parameters = Column(JSON, nullable=True)
     extras = Column(JSON, nullable=True)
+    content_hash = Column(String, nullable=True, index=True, unique=False)
 
 
 class TaskModel(BaseModel):
