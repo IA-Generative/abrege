@@ -100,6 +100,10 @@ init-db:
 	docker compose run migration uv run alembic upgrade head
 	sleep 2
 
+upgrade-revision: ## Crée une nouvelle révision de base de données
+	@read -p "Message de révision : " msg; \
+	docker compose run --rm migration uv run alembic revision --autogenerate -m "$$msg"
+
 test-src: init-db
 	docker compose up -d abrege_api
 	docker compose exec abrege_api uv run pytest -s --cov=./src --cov-report=term-missing tests/src/ -ra -v --maxfail=0
