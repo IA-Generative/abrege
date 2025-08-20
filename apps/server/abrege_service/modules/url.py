@@ -2,6 +2,8 @@ import os
 from typing import List
 
 from abrege_service.modules.base import BaseService
+from abrege_service.utils.file import hash_file
+
 from abrege_service.utils.content_type import (
     get_content_type_from_file,
 )
@@ -17,7 +19,7 @@ class URLBaseService(BaseService):
     def __init__(self, content_type_allowed=[]):
         super().__init__(content_type_allowed)
 
-    def is_availble(self, content_type: str) -> bool:
+    def is_available(self, task: TaskModel) -> bool:
         """
         Check if the content type is available for processing.
 
@@ -42,6 +44,7 @@ class URLService(URLBaseService):
         content_type_calculated = get_content_type_from_file(filename)
         _, ext = os.path.split(filename)
 
+        task.content_hash = hash_file(filename)
         task.input = DocumentModel(
             created_at=task.input.created_at,
             extras=task.input.extras,
@@ -53,7 +56,7 @@ class URLService(URLBaseService):
         )
         logger_abrege.info(f"{task.id} - content_type {content_type_calculated}")
         for service in self.services:
-            if service.is_availble(content_type=content_type_calculated):
+            if service.is_available(task=task):
                 task = service.task_to_text(task=task)
                 if os.path.exists(filename):
                     os.remove(filename)

@@ -15,8 +15,8 @@ class BaseService(ABC):
         self.content_type_allowed = content_type_allowed
         self.service_weight = service_weight
 
-    def is_availble(self, content_type: str) -> bool:
-        return content_type in self.content_type_allowed
+    def is_available(self, task: TaskModel) -> bool:
+        return task.input.content_type in self.content_type_allowed
 
     def update_task(
         self,
@@ -30,7 +30,14 @@ class BaseService(ABC):
 
         return self.task_table.update_task(
             task_id=task.id,
-            form_data=TaskUpdateForm(status=status, output=result, updated_at=int(time.time()), extras=task.extras, percentage=percentage),
+            form_data=TaskUpdateForm(
+                status=status,
+                output=result,
+                updated_at=int(time.time()),
+                extras=task.extras,
+                percentage=percentage,
+                content_hash=task.content_hash,
+            ),
         )
 
     @abstractmethod
@@ -42,6 +49,6 @@ class BaseService(ABC):
 
         if isinstance(task.input, DocumentModel):
             content_type: str = task.input.content_type
-            if not self.is_availble(content_type):
+            if not self.is_available(task=task):
                 raise NotImplementedError(f"Content type {content_type} is not available for processing.")
         return self.task_to_text(task, **kwargs)

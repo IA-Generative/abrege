@@ -102,7 +102,10 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
 
         current_text = task.output.texts_found
         nb_total_documents = len(current_text)
-        max_token = self.llm.max_tokens if self.llm.max_tokens else self.max_token
+        max_token = self.max_token
+        if self.llm.max_tokens:
+            max_token = min(self.max_token, self.llm.max_tokens)
+
         logger_abrege.debug(f"max_token {max_token} - {type(max_token)}")
         logger_abrege.debug(
             f"Current number of documents {nb_total_documents}%",
@@ -116,7 +119,7 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
             transform_texts: list[str] = split_texts_by_word_limit(current_text, max_words=int(max_token * 0.75))
         nb_total_documents = len(transform_texts)
         logger_abrege.debug(
-            f"After transformation, number of documents {nb_total_documents}%",
+            f"After transformation, number of documents {nb_total_documents} - max_words {int(max_token * 0.75)} - {[len(text.split()) for text in transform_texts]}",  # noqa
             extra=extra_log,
         )
         percentage_left = 1 - current_percentage
