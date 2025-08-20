@@ -6,7 +6,7 @@ import traceback
 
 import openai
 from langchain_openai import ChatOpenAI
-
+from abrege_service.utils.file import hash_file, hash_string
 from abrege_service.modules.base import BaseService
 from abrege_service.modules.url import URLService
 from abrege_service.modules.audio import AudioVoskTranscriptionService
@@ -20,6 +20,7 @@ from abrege_service.modules.doc import (
 )
 from abrege_service.modules.image import ImageFromVLM
 from abrege_service.modules.ocr import OCRMIService
+from abrege_service.modules.cache import CacheService
 
 from abrege_service.models.summary.parallele_summary_chain import (
     LangChainAsyncMapReduceService,
@@ -33,6 +34,7 @@ from src.clients import celery_app, file_connector
 from src import __version__
 
 openai_settings = OpenAISettings()
+cache_service = CacheService()
 audio_service = AudioVoskTranscriptionService(service_ratio_representaion=0.5)
 video_service = VideoTranscriptionService(service_ratio_representaion=0.5)
 microsof_service = MicrosoftDocumnentToMdService()
@@ -49,6 +51,7 @@ if os.environ.get("OCR_SERVICE_LLM") == "LLM":
 else:
     ocr_service = OCRMIService(url_ocr=os.environ.get("OCR_BACKEND_URL"))
 services: List[BaseService] = [
+    cache_service,
     audio_service,
     video_service,
     microsoft_service_older,
@@ -100,14 +103,17 @@ def launch(self, task: str):
         elif isinstance(task.input, DocumentModel):
             file_path = file_connector.get_by_task_id(user_id=task.user_id, task_id=task.id)
             task.input.file_path = file_path
+            task.content_hash = hash_file(file_path)
             for service in services:
-                if service.is_availble(task.input.content_type):
+                if service.is_available(task):
                     task = service.process_task(task=task)
+                    break
 
             if os.path.exists(file_path):
                 os.remove(file_path)
 
         elif isinstance(task.input, TextModel):
+            task.content_hash = hash_string(task.input.text)
             task.output = ResultModel(
                 type="flat",
                 created_at=task.input.created_at,
