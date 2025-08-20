@@ -44,6 +44,7 @@ class TaskModel(BaseModel):
     user_id: str
     type: str
     status: str = "queued"
+    group_id: Optional[str] = None
     percentage: Optional[float] = None
     input: Optional[Union[URLModel, DocumentModel, TextModel]] = None
     output: Optional[Union[ResultModel, SummaryModel]] = None
@@ -53,6 +54,7 @@ class TaskModel(BaseModel):
     created_at: int
     updated_at: int
     extras: Optional[Dict[str, Any]] = None
+    content_hash: Optional[str] = None
 
 
 class TaskForm(BaseModel):
@@ -66,6 +68,7 @@ class TaskForm(BaseModel):
     parameters: Optional[SummaryParameters] = None
     updated_at: Optional[int] = None
     extras: Optional[Dict[str, Any]] = None
+    content_hash: Optional[str] = None
 
 
 class TaskUpdateForm(BaseModel):
@@ -78,6 +81,7 @@ class TaskUpdateForm(BaseModel):
     parameters: Optional[SummaryParameters] = None
     updated_at: Optional[int] = None
     extras: Optional[Dict[str, Any]] = None
+    content_hash: Optional[str] = None
 
 
 class TaskStatus(str, Enum):
@@ -218,6 +222,15 @@ class TaskTable:
                 )
 
                 return position
+
+    def search_task_by_fields(self, **filters) -> Optional[TaskModel]:
+        with get_db() as db:
+            query = db.query(Task)
+            for field, value in filters.items():
+                if hasattr(Task, field):
+                    query = query.filter(getattr(Task, field) == value)
+            task = query.first()
+            return TaskModel.model_validate(task) if task else None
 
 
 task_table = TaskTable()

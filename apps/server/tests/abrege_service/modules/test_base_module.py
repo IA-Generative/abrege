@@ -28,7 +28,7 @@ def mock_base_service() -> BaseService:
     return MockeBase(content_type_allowed=["application/pdf"])
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def dummy_task() -> TaskModel:
     task = task_table.insert_new_task(
         user_id="1",
@@ -50,9 +50,10 @@ def dummy_task() -> TaskModel:
     return task
 
 
-def test_base_service_is_available(mock_base_service: BaseService):
-    assert mock_base_service.is_availble(content_type="application/pdf")
-    assert not mock_base_service.is_availble(content_type="image/jpeg")
+def test_base_service_is_available(dummy_task: TaskModel, mock_base_service: BaseService):
+    assert mock_base_service.is_available(task=dummy_task)
+    dummy_task.input.content_type = "image/jpeg"
+    assert not mock_base_service.is_available(task=dummy_task)
 
 
 def test_base_srevice_update_task(mock_base_service: BaseService, dummy_task: TaskModel):

@@ -77,6 +77,7 @@ class OCRClient(BaseBackend):
                 )
             },
             headers=headers,
+            data={"task_operation": "default", "group_id": "abrege"},
         )
         if response.status_code != 201:
             raise Exception(f"Error: {response.status_code} - {response.text}")
