@@ -50,15 +50,18 @@ class KeycloakToken(BaseVerifyToken):
     def verify(self, ctx: RequestContext) -> bool:
         """Vérifie le token JWT avec Keycloak et remplit ctx avec les infos utilisateur"""
         try:
-            # Récupérer les informations utilisateur via Keycloak
-            user_info = self.keycloak_openid.userinfo(ctx.token)
+            user_info = self.keycloak_openid.introspect(ctx.token)
+            logging.debug(f"Token info: {user_info.keys()}")
+            if user_info.get("active") is False:
+                return False
 
             # Remplir le contexte avec les informations récupérées
             ctx.user_id = user_info.get("sub", "")  # Subject = user ID
             ctx.email = user_info.get("email", "")
+            ctx.groups = user_info.get("groups", [])
 
             # Récupérer les rôles (peut varier selon la config Keycloak)
-            ctx.roles = user_info.get("roles", [])
+            ctx.roles = user_info.get("realm_access", {}).get("roles", [])
             # Ou si les rôles sont dans realm_access :
             # ctx.roles = user_info.get("realm_access", {}).get("roles", [])
 
@@ -73,9 +76,9 @@ class KeycloakToken(BaseVerifyToken):
 
 
 SECURITY_FACTORY: dict[str, BaseVerifyToken] = {
-    "full-access": AllowAllAccess(),
-    "dev": DevToken(),
-    "keycloak": KeycloakToken(),
+    "full-access": AllowAllAccess,
+    "dev": DevToken,
+    "keycloak": KeycloakToken,
 }
 
-TokenVerifier: BaseVerifyToken = SECURITY_FACTORY[os.environ.get("VERIFY_TOKEN_MODEL", "full-access")]
+TokenVerifier: BaseVerifyToken = SECURITY_FACTORY[os.environ.get("VERIFY_TOKEN_MODEL", "keycloak")]()
