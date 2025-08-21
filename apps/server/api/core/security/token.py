@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from fastapi import Request, HTTPException, status
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class RequestContext(BaseModel):
@@ -10,6 +10,7 @@ class RequestContext(BaseModel):
     roles: Optional[list[str]] = None
     token: Optional[str] = None
     is_admin: Optional[bool] = False
+    groups: Optional[list[str]] = Field(default_factory=list)
 
 
 def parse_header_context(request: Request, is_fastapi: bool = False) -> RequestContext:
