@@ -1,10 +1,46 @@
+import time
 import requests
 from abc import ABC, abstractmethod
 import magic
 from enum import Enum
+import os
 
 from typing import List, Optional
 from pydantic import BaseModel, ConfigDict
+from keycloak import KeycloakOpenID
+
+
+class BaseTokenManager(ABC):
+    @abstractmethod
+    def get_token(self):
+        pass
+
+
+class DummyTokenManager(BaseTokenManager):
+    def get_token(self) -> str:
+        return "dummy_token"
+
+
+class TokenManager(BaseTokenManager):
+    def __init__(
+        self,
+    ):
+        self.keycloak_openid = KeycloakOpenID(
+            server_url=os.getenv("KEYCLOAK_URL"),
+            client_id=os.getenv("KEYCLOAK_CLIENT_ID"),
+            realm_name=os.getenv("KEYCLOAK_REALM"),
+            client_secret_key=os.getenv("KEYCLOAK_CLIENT_SECRET"),
+        )
+        self.token = None
+        self.expiry = 0
+
+    def get_token(self) -> str:
+        if not self.token or time.time() > self.expiry:
+            token = self.keycloak_openid.token(grant_type="client_credentials")
+            self.token = token["access_token"]
+            self.expiry = time.time() + token["expires_in"] - 60
+        return self.token
+
 
 # TODO: use official client
 
@@ -52,7 +88,7 @@ class TaskStatus(str, Enum):
 
 class BaseBackend(ABC):
     @abstractmethod
-    def send(self, user_id: str, *args, **kwargs): ...
+    def send(self, *args, **kwargs): ...
 
     @abstractmethod
     def get_tasks(self, task_id: str): ...
@@ -61,12 +97,25 @@ class BaseBackend(ABC):
     def get_health(self): ...
 
 
+TOKEN_MANAGER_FACTORY = {
+    TokenManager.__name__: TokenManager,
+    DummyTokenManager.__name__: DummyTokenManager,
+}
+
+
 # sudo apt-get install libmagic1
 class OCRClient(BaseBackend):
-    def __init__(self, url: str):
+    def __init__(
+        self,
+        url: str,
+        token_manager: BaseTokenManager = TOKEN_MANAGER_FACTORY[TokenManager.__name__](),
+    ):
         self.url = url
+        self.token_manager = token_manager
 
-    def send(self, user_id: str, file_path: str, headers: dict = {}) -> dict:
+    def send(self, file_path: str, group_id: str = "abrege") -> dict:
+        headers = {}
+        headers["Authorization"] = f"Bearer {self.token_manager.get_token()}"
         response = requests.post(
             f"{self.url}/jobs/",
             files={
@@ -77,7 +126,7 @@ class OCRClient(BaseBackend):
                 )
             },
             headers=headers,
-            data={"task_operation": "default", "group_id": "abrege"},
+            data={"task_operation": "default", "group_id": group_id},
         )
         if response.status_code != 201:
             raise Exception(f"Error: {response.status_code} - {response.text}")
@@ -85,7 +134,9 @@ class OCRClient(BaseBackend):
         return data
 
     def get_tasks(self, task_id: str):
-        response = requests.get(f"{self.url}/tasks/{task_id}")
+        headers = {}
+        headers["Authorization"] = f"Bearer {self.token_manager.get_token()}"
+        response = requests.get(f"{self.url}/tasks/{task_id}", headers=headers)
         if response.status_code != 200:
             raise Exception(f"Error: {response.status_code} - {response.text}")
         data = response.json()
@@ -136,25 +187,14 @@ def sort_reader(page: Page, seuil_ligne: float = 0.01):
 
 
 if __name__ == "__main__":
-    import sys
+    manager = TokenManager()
 
-    headers = {
-        "authorization": "Bearer your_token_here",
-    }
-
-    # Get the URL from environment variables
     url = "https://mirai-ocr-dev.mirai-hp.cpin.numerique-interieur.com/api"
 
-    if not url:
-        print("Please set the OCR_BACKEND_URL environment variable.")
-        sys.exit(1)
-
-    client = OCRClient(url)
+    client = OCRClient(url, token_manager=manager)
     print(client.get_health())
     task = client.send(
-        "user_id",
         "/home/michou/Documents/dtnum/abrege/apps/server/tests/test_data/elysee-module-24161-fr.pdf",
-        headers=headers,
     )
     task_id = task["id"]
     status = task.get("status")
@@ -166,8 +206,5 @@ if __name__ == "__main__":
     while status not in [TaskStatus.COMPLETED.value] + error_status:
         task: dict = client.get_tasks(task_id)
         print(task.get("status"), task.get("percentage"))
+        print(task.get("user_id"), task.get("group_id"))
         status = task.get("status")
-        if task.get("output"):
-            result = OCRResult(**task.get("output"))
-            for page in result.pages:
-                print(sort_reader(page=page))

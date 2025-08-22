@@ -1,7 +1,7 @@
 import json
 from datetime import datetime
 
-from fastapi import APIRouter, status, HTTPException, Depends, Request
+from fastapi import APIRouter, status, HTTPException, Depends
 from fastapi.responses import JSONResponse
 
 from api.schemas.content import UrlContent, TextContent
@@ -86,14 +86,9 @@ def summarize_content(input: InputModel):
     response_model=TaskModel,
 )
 async def new_summarize_content(
-    request: Request,
     input: Input,
     ctx: RequestContext = Depends(TokenVerifier),
 ):
     input_model = InputModel(user_id=ctx.user_id, **input.model_dump())
-    # Récupérer seulement le header authorization
-    headers = {}
-    if "authorization" in request.headers:
-        headers["authorization"] = request.headers["authorization"]
-    input_model.parameters.headers = headers
+
     return summarize_content(input=input_model)
