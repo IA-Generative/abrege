@@ -11,7 +11,6 @@ from fastapi import (
     Form,
     APIRouter,
     Depends,
-    Request,
 )
 from src.clients import file_connector, celery_app
 from src.utils.logger import logger_abrege as logger
@@ -41,7 +40,6 @@ async def summarize_doc(
         description=f"Parameters {SummaryParameters().model_dump()}",
     ),
     extras: Optional[str] = Form(default="", description="Extras json payload"),
-    headers: Optional[dict] = Form(default=None, description="Request headers"),
 ):
     if extras is not None and extras:
         try:
@@ -59,7 +57,6 @@ async def summarize_doc(
     else:
         parameters: SummaryParameters = SummaryParameters()
 
-    parameters.headers = headers if headers is not None else {}
     if llm_guard is not None and parameters.custom_prompt is not None:
         try:
             parameters.custom_prompt = llm_guard.request_llm_guard_prompt(prompt=parameters.custom_prompt)
@@ -148,7 +145,6 @@ async def summarize_doc(
 
 @doc_router.post("/task/document", status_code=status.HTTP_201_CREATED, response_model=TaskModel)
 async def new_summarize_doc(
-    request: Request,
     file: UploadFile = File(...),
     prompt: Optional[str] = Form(None, description="Custom prompt for after summary"),
     parameters: Optional[str] = Form(
@@ -158,17 +154,10 @@ async def new_summarize_doc(
     extras: Optional[str] = Form(default="", description="Extras json payload"),
     ctx: RequestContext = Depends(TokenVerifier),
 ):
-    # Récupérer les headers et les convertir en dictionnaire
-    # Récupérer seulement le header authorization
-    headers = {}
-    if "authorization" in request.headers:
-        headers["authorization"] = request.headers["authorization"]
-
     return await summarize_doc(
         file=file,
         user_id=ctx.user_id,
         prompt=prompt,
         parameters=parameters,
         extras=extras,
-        headers=headers,  # Pass headers to the function
     )
