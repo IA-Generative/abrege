@@ -5,13 +5,13 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "boto3>=1.38.3",
-    "celery[redis]>=5.5.2",
-    "minio>=7.2.15",
+    "boto3>=1.40.15",
+    "celery[redis]>=5.5.3",
+    "minio>=7.2.16",
     "psycopg2-binary==2.9.10",
-    "pydantic-settings==2.9.1",
+    "pydantic-settings==2.10.1",
     "python-json-logger==3.3.0",
-    "sqlalchemy==2.0.40",
+    "sqlalchemy==2.0.43",
     "flower>=2.0.1",
     "toml>=0.10.2",
     "psutil>=7.0.0",
@@ -20,56 +20,56 @@ dependencies = [
 [dependency-groups]
 
 abrege-api = [
-    "aiohttp>=3.11.18",
-    "fastapi>=0.115.12",
+    "aiohttp>=3.12.15",
+    "fastapi>=0.116.1",
     "python-multipart>=0.0.20",
-    "requests>=2.32.3",
+    "requests>=2.32.5",
     "tqdm>=4.67.1",
     "python-magic==0.4.27",
-    "uvicorn>=0.34.2",
+    "uvicorn>=0.35.0",
     "prometheus-fastapi-instrumentator>=7.1.0",
-    "python-keycloak>=5.7.0",
+    "python-keycloak>=5.8.1",
     "aiofiles>=24.1.0",
 ]
 version = [
-    "commitizen>=4.4.1",
+    "commitizen>=4.8.3",
 ]
 test = [
-    "datasets==3.5.0",
+    "datasets==4.0.0",
     "httpx>=0.28.1",
-    "pytest>=8.3.5",
-    "pytest-asyncio>=0.26.0",
-    "pytest-cov>=6.1.1",
-    "pytest-xdist>=3.6.1",
-    "ruff>=0.11.2",
+    "pytest>=8.4.1",
+    "pytest-asyncio>=1.1.0",
+    "pytest-cov>=6.2.1",
+    "pytest-xdist>=3.8.0",
+    "ruff>=0.12.10",
 ]
 abrege-service = [
     "jinja2==3.1.6",
-    "langchain==0.3.24",
-    "langchain-openai>=0.3.14",
-    "langfuse>=3.2.3",
-    "langgraph==0.3.34",
-    "markitdown[docx,pdf,pptx,xlsx]==0.1.1",
-    "moviepy==2.1.2",
+    "langchain>=0.3.27",
+    "langchain-openai>=0.3.31",
+    "langfuse>=3.3.0",
+    "langgraph==0.6.6",
+    "markitdown[docx,pdf,pptx,xlsx]==0.1.2",
+    "moviepy==2.2.1",
     "odfpy>=1.4.1",
-    "openai==1.76.0",
+    "openai==1.101.0",
     "pdf2image>=1.17.0",
     "pydub==0.25.1",
-    "pymupdf4llm==0.0.21",
+    "pymupdf4llm==0.0.27",
     "pypandoc>=1.15",
-    "python-keycloak>=5.7.0",
-    "spire-doc>=13.6.4",
-    "tiktoken>=0.9.0",
-    "transformers>=4.51.3",
-    "unstructured==0.17.2",
+    "python-keycloak>=5.8.1",
+    "spire-doc>=13.8.0",
+    "tiktoken>=0.11.0",
+    "transformers>=4.55.3",
+    "unstructured==0.18.13",
     "vosk==0.3.45",
 ]
 evaluation = [
     "bert-score>=0.3.13",
-    "datasets==3.5.0",
-    "evaluate==0.4.3",
+    "datasets==4.0.0",
+    "evaluate==0.4.5",
     "fastapi>=0.115.12",
-    "hf-xet>=1.0.5",
+    "hf-xet>=1.1.8",
     "langchain>=0.3.24",
     "langchain-openai>=0.3.14",
     "langgraph>=0.3.34",
@@ -77,12 +77,12 @@ evaluation = [
     "rouge-score>=0.1.2",
 ]
 openai = [
-    "openai>=1.76.0",
+    "openai>=1.101.0",
 ]
 migration = [
-    "alembic>=1.15.2",
+    "alembic>=1.16.4",
     "psycopg2-binary==2.9.10",
-    "sqlalchemy==2.0.40",
+    "sqlalchemy>=2.0.43",
 ]
 
 
