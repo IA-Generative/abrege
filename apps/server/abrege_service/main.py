@@ -32,6 +32,7 @@ from src.schemas.content import URLModel, DocumentModel, TextModel
 from src.schemas.result import ResultModel
 from src.clients import celery_app, file_connector
 from src import __version__
+from src.utils.logger import logger_abrege
 
 openai_settings = OpenAISettings()
 cache_service = CacheService()
@@ -88,6 +89,7 @@ os.makedirs(tmp_folder, exist_ok=True)
 def launch(self, task: str):
     task: TaskModel = TaskModel.model_validate(json.loads(task))
     task.extras = task.extras or {}
+    extra_log = {"user_id": task.user_id, "task_id": task.id, "action": "launch"}
     try:
         task_table.update_task(
             task_id=task.id,
@@ -96,16 +98,19 @@ def launch(self, task: str):
                 updated_at=int(time.time()),
             ),
         )
-
+        t = time.time()
         if isinstance(task.input, URLModel):
+            logger_abrege.debug(f"Processing URL task: {task.id}", extra=extra_log)
             task = url_service.process_task(task=task)
 
         elif isinstance(task.input, DocumentModel):
+            logger_abrege.debug(f"Processing Document task: {task.id}", extra=extra_log)
             file_path = file_connector.get_by_task_id(user_id=task.user_id, task_id=task.id)
             task.input.file_path = file_path
             task.content_hash = hash_file(file_path)
             for service in services:
                 if service.is_available(task):
+                    logger_abrege.debug(f"Using service: {service.__class__.__name__}", extra=extra_log)
                     task = service.process_task(task=task)
                     break
 
@@ -113,6 +118,7 @@ def launch(self, task: str):
                 os.remove(file_path)
 
         elif isinstance(task.input, TextModel):
+            logger_abrege.debug(f"Processing Text task: {task.id}", extra=extra_log)
             task.content_hash = hash_string(task.input.text)
             task.output = ResultModel(
                 type="flat",
@@ -126,7 +132,14 @@ def launch(self, task: str):
         else:
             raise NotImplementedError("Content type not supported")
 
+        logger_abrege.debug(f"Task processed in {time.time() - t} seconds", extra=extra_log)
+
+        t = time.time()
         task = summary_service.process_task(task=task)
+        logger_abrege.info(
+            f"Summary Task {task.id} processed in {time.time() - t} seconds",
+            extra=extra_log,
+        )
         return task.model_dump()
 
     except Exception as e:
@@ -138,4 +151,5 @@ def launch(self, task: str):
                 extras={"error": f"{e} - {traceback.format_exc()}"},
             ),
         )
+        logger_abrege.error(f"Task {task.id} failed: {e} - {traceback.format_exc()}")
         raise e

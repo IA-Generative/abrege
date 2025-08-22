@@ -68,7 +68,7 @@ class OCRMIService(BaseService):
         task_ids = []
         for image in batch:
             with temp_image_file(image) as tmp_path:
-                task_ocr = self.ocr_mi_client.send(user_id=user_id, file_path=tmp_path, headers=headers)
+                task_ocr = self.ocr_mi_client.send(file_path=tmp_path)
                 task_ocr_id = task_ocr["id"]
                 task_ids.append(task_ocr_id)
                 logger.debug(
@@ -126,13 +126,14 @@ class OCRMIService(BaseService):
         global_status = TaskStatus.IN_PROGRESS.value
         index = 0
         text_found = ["" for i in range(len(images))]
+        logger.debug(f"Start processing {len(images)} images", extra=extra_log)
+        logger.debug(f"task parameters {task.parameters}", extra=extra_log)
         for batch in batch_list(images, batch_size=min(10, len(images))):
             task_ids = self.send_by_batch(
                 user_id=task.user_id,
                 task_id=task.id,
                 file_path=task.input.file_path,
                 batch=batch,
-                headers=task.parameters.headers if task.parameters else {},
             )
             task.output.extras["task_ocr_id"] = list(set(task_ids) & set(task.output.extras["task_ocr_id"]))
             logger.debug(f"batch size {len(batch)} get {task_ids} as ocr id", extra=extra_log)

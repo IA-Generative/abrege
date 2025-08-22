@@ -2,10 +2,16 @@ from fastapi.testclient import TestClient
 from fastapi import FastAPI
 
 from api.routes.summarize import router
+from api.core.security.factory import TokenVerifier
 from src.schemas.task import TaskModel
 
 
 def test_summarize_content_url():
+    def mock_verify(ctx) -> bool:
+        ctx.user_id = "test_user"
+        return True
+
+    TokenVerifier.verify = mock_verify
     app = FastAPI()
     app.include_router(router)
 
@@ -33,6 +39,12 @@ def test_summarize_content_text():
     app = FastAPI()
     app.include_router(router)
 
+    def mock_verify(ctx) -> bool:
+        ctx.user_id = "test_user"
+        return True
+
+    TokenVerifier.verify = mock_verify
+
     client = TestClient(app)
     response = client.post(
         "/task/text-url",
@@ -54,6 +66,11 @@ def test_summarize_content_text():
 
 
 def test_summarize_content_body_error():
+    def mock_verify(ctx) -> bool:
+        ctx.user_id = "test_user"
+        return True
+
+    TokenVerifier.verify = mock_verify
     app = FastAPI()
     app.include_router(router)
 
@@ -73,6 +90,11 @@ def test_summarize_content_body_error():
 
 
 def test_summarize_content_url_error():
+    def mock_verify(ctx) -> bool:
+        ctx.user_id = "test_user"
+        return True
+
+    TokenVerifier.verify = mock_verify
     app = FastAPI()
     app.include_router(router)
     input_data = {

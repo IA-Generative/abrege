@@ -1,11 +1,11 @@
 import json
 import pytest
+
 from fastapi.testclient import TestClient
 from io import BytesIO
 from fastapi import FastAPI
-from api.routes.document_summary import (
-    doc_router,
-)
+from api.core.security.factory import TokenVerifier
+from api.routes.document_summary import doc_router
 
 
 @pytest.fixture
@@ -22,6 +22,11 @@ def client():
 
 
 def test_summarize_doc(client: TestClient, mock_file: BytesIO):
+    def mock_verify(ctx) -> bool:
+        ctx.user_id = "test_user"
+        return True
+
+    TokenVerifier.verify = mock_verify
     form_data = {
         "user_id": "test_user",
         "prompt": None,
@@ -38,6 +43,12 @@ def test_summarize_doc(client: TestClient, mock_file: BytesIO):
 
 
 def test_summarize_doc_none_parameters_extras(client: TestClient, mock_file: BytesIO):
+    def mock_verify(ctx) -> bool:
+        ctx.user_id = "test_user"
+        return True
+
+    TokenVerifier.verify = mock_verify
+
     form_data = {
         "user_id": "test_user",
         "prompt": None,
@@ -54,6 +65,11 @@ def test_summarize_doc_none_parameters_extras(client: TestClient, mock_file: Byt
 
 
 def test_summarize_doc_no_valid_extras_or_paramters(client: TestClient, mock_file: BytesIO):
+    def mock_verify(ctx) -> bool:
+        ctx.user_id = "test_user"
+        return True
+
+    TokenVerifier.verify = mock_verify
     form_data = {
         "user_id": "test_user",
         "prompt": None,

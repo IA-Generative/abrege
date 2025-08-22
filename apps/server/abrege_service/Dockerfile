@@ -20,6 +20,7 @@ RUN apt-get update -y && \
         curl \
         unzip \
         poppler-utils \
+        libicu-dev \
         libatomic1 && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
