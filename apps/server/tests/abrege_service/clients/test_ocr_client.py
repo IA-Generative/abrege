@@ -16,7 +16,7 @@ except Exception:
 
 @pytest.mark.skipif(not is_ocr_available, reason=f"{url} is not avalaible")
 def test_client_ocr():
-    task = client.send("user_id", "tests/test_data/elysee-module-24161-fr.pdf")
+    task = client.send("tests/test_data/elysee-module-24161-fr.pdf")
     task_id = task["id"]
     status = task.get("status")
     error_status = [
