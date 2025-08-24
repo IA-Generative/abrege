@@ -3,6 +3,7 @@ import pytest
 from fastapi.testclient import TestClient
 from io import BytesIO
 from fastapi import FastAPI
+from starlette.datastructures import UploadFile
 from api.routes.document_summary import (
     doc_router,
 )
@@ -79,3 +80,27 @@ def test_summarize_doc_no_valid_extras_or_paramters(client: TestClient, mock_fil
     response = client.post("/task/document", data=form_data, files=files)
 
     assert response.status_code == 422
+
+
+def test_summarize_doc_without_size(client: TestClient, mock_file: BytesIO, monkeypatch):
+    class UploadFileNoSize(UploadFile):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            if hasattr(self, "size"):
+                delattr(self, "size")
+
+    monkeypatch.setattr("starlette.datastructures.UploadFile", UploadFileNoSize)
+
+    form_data = {
+        "user_id": "test_user",
+        "prompt": None,
+        "parameters": json.dumps({"key": "value"}),
+        "extras": json.dumps({"info": "test"}),
+    }
+
+    files = {"file": ("test.pdf", mock_file, "application/pdf")}
+
+    response = client.post("/task/document", data=form_data, files=files)
+
+    assert response.status_code == 201
+    assert "id" in response.json()

@@ -76,6 +76,8 @@ async def summarize_doc(
             with open(temp_file_path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
 
+        file_size = os.path.getsize(temp_file_path)
+
         logger.debug(task_data.model_dump())
 
         saved_path = file_connector.save(user_id, task_data.id, temp_file_path)
@@ -94,7 +96,7 @@ async def summarize_doc(
             raw_filename=os.path.basename(file.filename),
             content_type=file.content_type,
             ext=extension,
-            size=file.size,
+            size=file_size,
             extras=content.extras if content else {},
         )
 
