@@ -39,6 +39,7 @@ def dummy_task_large() -> TaskModel:
         "french",
         cache_dir="tests/data/text",
         streaming=True,
+        trust_remote_code=True,
     )
     dataset = dataset_stream["train"].shuffle(seed=42).take(20)
     text_found = []
