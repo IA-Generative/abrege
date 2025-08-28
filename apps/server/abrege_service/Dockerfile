@@ -39,6 +39,7 @@ RUN mkdir -p /app/data/models && \
 
 COPY apps/server/abrege_service /app/abrege_service
 COPY apps/server/src /app/src
+COPY apps/server/config /app/config
 
 ENV PYTHONPATH=/app
 ENV PATH="/app/.venv/bin:$PATH"

@@ -20,6 +20,7 @@ RUN uv sync --no-cache --group abrege-api --group migration
 
 COPY apps/server/api /app/api
 COPY apps/server/src/ /app/src
+COPY apps/server/config /app/config
 
 COPY apps/server/migration /app/migration
 COPY apps/server/src/ /app/src/

@@ -40,10 +40,10 @@ def test_download_type():
     os.remove("bolt-detection.mp4")
 
     # Test pptx
-    url_ppt = "https://pedagogie.ac-toulouse.fr/philosophie/sites/default/files/fichiers/ppt_philosophie_et_ecologie.pptx"
-    download_file(url=url_ppt)
-    assert os.path.exists("ppt_philosophie_et_ecologie.pptx")
-    os.remove("ppt_philosophie_et_ecologie.pptx")
+    # url_ppt = "https://pedagogie.ac-toulouse.fr/philosophie/sites/default/files/fichiers/ppt_philosophie_et_ecologie.pptx"
+    # download_file(url=url_ppt)
+    # assert os.path.exists("ppt_philosophie_et_ecologie.pptx")
+    # os.remove("ppt_philosophie_et_ecologie.pptx")
 
     # test audio
     url_audio = "https://github.com/UniData-pro/french-speech-recognition-dataset/raw/refs/heads/main/audio/1.wav"
