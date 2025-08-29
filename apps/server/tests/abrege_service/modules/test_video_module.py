@@ -28,7 +28,7 @@ def dummy_task() -> TaskModel:
 
 
 @pytest.mark.skipif(
-    os.path.exists("abrege_service/data/models/vosk-model-small-fr-0.22") is False,
+    os.path.exists("/app/data/models/vosk-model-small-fr-0.22") is False,
     reason="Model not found",
 )
 def test_video_service(dummy_task: TaskModel):
