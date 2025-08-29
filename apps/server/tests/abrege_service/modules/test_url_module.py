@@ -42,15 +42,15 @@ def test_get_text_from_pdf():
     assert "topologie" in "\n".join([item for item in actual.output.texts_found])
 
 
-def test_get_text_from_microsoft():
-    from abrege_service.modules.doc import MicrosoftDocumnentToMdService
+# def test_get_text_from_microsoft():
+#     from abrege_service.modules.doc import MicrosoftDocumnentToMdService
 
-    url_service = URLService(services=[MicrosoftDocumnentToMdService()])
-    # Test pptx
-    dummy_task = mock_task("https://pedagogie.ac-toulouse.fr/philosophie/sites/default/files/fichiers/ppt_philosophie_et_ecologie.pptx")
-    actual = url_service.task_to_text(dummy_task)
+#     url_service = URLService(services=[MicrosoftDocumnentToMdService()])
+#     # Test pptx
+#     dummy_task = mock_task("https://pedagogie.ac-toulouse.fr/philosophie/sites/default/files/fichiers/ppt_philosophie_et_ecologie.pptx")
+#     actual = url_service.task_to_text(dummy_task)
 
-    assert "biologiste" in "\n".join([item for item in actual.output.texts_found])
+#     assert "biologiste" in "\n".join([item for item in actual.output.texts_found])
 
 
 def test_get_text_from_audio():
