@@ -36,7 +36,7 @@ version = [
     "commitizen>=4.8.3",
 ]
 test = [
-    "datasets==4.0.0",
+    "datasets==3.6.0",
     "httpx>=0.28.1",
     "pytest>=8.4.1",
     "pytest-asyncio>=1.1.0",
@@ -67,7 +67,7 @@ abrege-service = [
 ]
 evaluation = [
     "bert-score>=0.3.13",
-    "datasets==4.0.0",
+    "datasets==3.6.0",
     "evaluate==0.4.5",
     "fastapi>=0.115.12",
     "hf-xet>=1.1.8",
