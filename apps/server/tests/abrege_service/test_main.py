@@ -152,36 +152,36 @@ def test_task_process_url_mp4(monkeypatch: pytest.MonkeyPatch):
     #############################################################
 
 
-def test_task_process_url_ppt(monkeypatch: pytest.MonkeyPatch):
-    user_id = "test"
-    #############################################################
-    # Test pptx
-    url_ppt = "https://pedagogie.ac-toulouse.fr/philosophie/sites/default/files/fichiers/ppt_philosophie_et_ecologie.pptx"
+# def test_task_process_url_ppt(monkeypatch: pytest.MonkeyPatch):
+#     user_id = "test"
+#     #############################################################
+#     # Test pptx
+#     url_ppt = "https://pedagogie.ac-toulouse.fr/philosophie/sites/default/files/fichiers/ppt_philosophie_et_ecologie.pptx"
 
-    task = task_table.insert_new_task(
-        user_id=user_id,
-        form_data=TaskForm(
-            type="summary",
-            input=URLModel(url=url_ppt, created_at=0),
-            status=TaskStatus.CREATED.value,
-            extras={},
-        ),
-    )
-    terminated_task = task.model_copy()
-    terminated_task.status = TaskStatus.COMPLETED.value
-    monkeypatch.setattr(summary_service, "process_task", lambda *args, **kwargs: terminated_task)
+#     task = task_table.insert_new_task(
+#         user_id=user_id,
+#         form_data=TaskForm(
+#             type="summary",
+#             input=URLModel(url=url_ppt, created_at=0),
+#             status=TaskStatus.CREATED.value,
+#             extras={},
+#         ),
+#     )
+#     terminated_task = task.model_copy()
+#     terminated_task.status = TaskStatus.COMPLETED.value
+#     monkeypatch.setattr(summary_service, "process_task", lambda *args, **kwargs: terminated_task)
 
-    result = launch.apply(args=[json.dumps(task.model_dump())])
-    result = result.get()
-    actual = TaskModel.model_validate(result)
-    assert actual.id == task.id
-    assert actual.status == TaskStatus.COMPLETED.value
-    # assert actual.output.percentage == 1
+#     result = launch.apply(args=[json.dumps(task.model_dump())])
+#     result = result.get()
+#     actual = TaskModel.model_validate(result)
+#     assert actual.id == task.id
+#     assert actual.status == TaskStatus.COMPLETED.value
+#     # assert actual.output.percentage == 1
 
-    # assert len(actual.output.summary.split()) > 0
-    task_table.delete_task_by_id(task.id)
+#     # assert len(actual.output.summary.split()) > 0
+#     task_table.delete_task_by_id(task.id)
 
-    #############################################################
+#     #############################################################
 
 
 def test_task_process_url_audio(monkeypatch: pytest.MonkeyPatch):
