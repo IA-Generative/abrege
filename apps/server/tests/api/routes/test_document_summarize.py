@@ -4,6 +4,8 @@ import pytest
 from fastapi.testclient import TestClient
 from io import BytesIO
 from fastapi import FastAPI
+from unittest.mock import MagicMock
+from src.clients import file_connector, celery_app
 from api.core.security.factory import TokenVerifier
 from api.routes.document_summary import doc_router
 
@@ -15,9 +17,11 @@ def mock_file() -> BytesIO:
 
 
 @pytest.fixture
-def client():
+def client(monkeypatch):
     app = FastAPI()
     app.include_router(doc_router)
+    monkeypatch.setattr(file_connector, "save", MagicMock(return_value="object_key"))
+    monkeypatch.setattr(celery_app, "send_task", MagicMock())
     return TestClient(app)
 
 
@@ -95,3 +99,48 @@ def test_summarize_doc_no_valid_extras_or_paramters(client: TestClient, mock_fil
     response = client.post("/task/document", data=form_data, files=files)
 
     assert response.status_code == 422
+
+
+def test_summarize_doc_invalid_content_type(client: TestClient, mock_file: BytesIO):
+    def mock_verify(ctx) -> bool:
+        ctx.user_id = "test_user"
+        return True
+
+    TokenVerifier.verify = mock_verify
+
+    form_data = {
+        "user_id": "test_user",
+        "prompt": None,
+        "parameters": None,
+        "extras": None,
+    }
+
+    files = {"file": ("test.exe", mock_file, "application/octet-stream")}
+
+    response = client.post("/task/document", data=form_data, files=files)
+
+    assert response.status_code == 415
+
+
+def test_summarize_doc_file_too_large(client: TestClient, monkeypatch):
+    def mock_verify(ctx) -> bool:
+        ctx.user_id = "test_user"
+        return True
+
+    TokenVerifier.verify = mock_verify
+
+    big_content = BytesIO(b"a" * 20)
+    form_data = {
+        "user_id": "test_user",
+        "prompt": None,
+        "parameters": None,
+        "extras": None,
+    }
+
+    monkeypatch.setattr("api.routes.document_summary.MAX_FILE_SIZE", 10)
+
+    files = {"file": ("test.pdf", big_content, "application/pdf")}
+
+    response = client.post("/task/document", data=form_data, files=files)
+
+    assert response.status_code == 413

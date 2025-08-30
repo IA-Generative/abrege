@@ -30,6 +30,17 @@ import shutil
 
 doc_router = APIRouter(tags=["Document"])
 
+MAX_FILE_SIZE = 200 * 1024 * 1024
+ALLOWED_CONTENT_TYPES = {
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "text/plain",
+    "application/vnd.oasis.opendocument.text",
+    "application/vnd.oasis.opendocument.presentation",
+}
+
 
 async def summarize_doc(
     file: UploadFile = File(...),
@@ -41,6 +52,19 @@ async def summarize_doc(
     ),
     extras: Optional[str] = Form(default="", description="Extras json payload"),
 ):
+    file.file.seek(0, 2)
+    size = file.file.tell()
+    file.file.seek(0)
+    if size > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="File exceeds the maximum allowed size",
+        )
+    if file.content_type not in ALLOWED_CONTENT_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Unsupported file type",
+        )
     if extras is not None and extras:
         try:
             extras = json.loads(extras)
@@ -77,6 +101,7 @@ async def summarize_doc(
             extras=extras,
         ),
     )
+    temp_file_path: Optional[str] = None
     try:
         # Créer un fichier temporaire
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
@@ -104,7 +129,7 @@ async def summarize_doc(
             raw_filename=os.path.basename(file.filename),
             content_type=file.content_type,
             ext=extension,
-            size=file.size,
+            size=size,
             extras=content.extras if content else {},
         )
 
@@ -129,7 +154,11 @@ async def summarize_doc(
         return task_data
 
     except Exception as e:
-        logger.error(f"Failed to upload file for user {user_id}, task {task_data.id}: {e} - {traceback.format_exc()}")
+        if temp_file_path and os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
+        logger.error(
+            f"Failed to upload file for user {user_id}, task {task_data.id}: {e} - {traceback.format_exc()}"
+        )
         task_table.update_task(
             task_id=task_data.id,
             form_data=TaskUpdateForm(

@@ -8,6 +8,7 @@ def get_content_type(file: UploadFile) -> str:
 
     content = file.file.read(1024)
     mime_type = mime.from_buffer(content)
+    file.file.seek(0)
 
     if mime_type == "application/zip":
         try:
@@ -21,4 +22,5 @@ def get_content_type(file: UploadFile) -> str:
                     return "application/vnd.openxmlformats-officedocument.presentationml.presentation"
         except zipfile.BadZipFile:
             pass
+    file.file.seek(0)
     return mime_type

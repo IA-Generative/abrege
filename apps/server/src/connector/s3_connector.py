@@ -41,7 +41,8 @@ class S3Connector(BaseFileConnector):
             self.client.upload_file(file_path, self.bucket_name, object_key)
             return object_key
         except ClientError as e:
-            raise Exception(f"Erreur lors de la sauvegarde du fichier : {e}")
+            error_msg = e.response.get("Error", {}).get("Message", str(e))
+            raise RuntimeError(f"Echec de l'upload S3 : {error_msg}") from e
 
     def delete_by_task_id(self, user_id: str, task_id: str) -> bool:
         object_key = f"{user_id}/{task_id}"
