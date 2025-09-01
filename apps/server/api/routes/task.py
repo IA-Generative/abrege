@@ -15,6 +15,7 @@ router = APIRouter(tags=["Tasks"])
 @router.get("/task/{id}", response_model=TaskModel)
 async def get_task(
     id: str,
+    show_text_found: bool = False,
     ctx: RequestContext = Depends(TokenVerifier),
 ) -> TaskModel:
     task = task_table.get_task_by_id(task_id=id)
@@ -25,6 +26,9 @@ async def get_task(
         extra={"task_id": task.id, "user_id": task.user_id},
     )
     task.position = task_table.get_position_in_queue(task_id=id)
+    if not show_text_found and task.output is not None:
+        task.output.texts_found = []
+
     return JSONResponse(task.model_dump(), status_code=TASK_STATUS_TO_HTTP.get(task.status, 200))
 
 
