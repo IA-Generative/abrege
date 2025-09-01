@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 import time
 from src.schemas.task import TaskModel, task_table, TaskStatus, TaskUpdateForm
 from src.schemas.result import ResultModel
-from src.schemas.content import DocumentModel
+from src.schemas.content import DocumentModel, URLModel, ContentModel
 
 
 class NoGivenInput(Exception): ...
@@ -23,6 +23,7 @@ class BaseService(ABC):
         task: TaskModel,
         result: Optional[ResultModel] = None,
         status: Optional[TaskStatus] = None,
+        input: Optional[DocumentModel | URLModel | ContentModel] = None,
     ) -> TaskModel:
         percentage = None
         if result is not None:
@@ -37,6 +38,7 @@ class BaseService(ABC):
                 extras=task.extras,
                 percentage=percentage,
                 content_hash=task.content_hash,
+                input=input,
             ),
         )
 
