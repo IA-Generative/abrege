@@ -53,7 +53,7 @@ class URLService(URLBaseService):
         task.input.ext = ext
         task.input.size = -1
 
-        task = self.update_task(task=task, input=task.input)
+        #  task = self.update_task(task=task, input=task.input)
 
         logger_abrege.info(f"{task.id} - content_type {content_type_calculated}")
         for service in self.services:
