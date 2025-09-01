@@ -12,6 +12,11 @@ class ContentModel(BaseModel):
 class URLModel(ContentModel):
     url: str
     type: str = "url"
+    file_path: Optional[str] = None
+    raw_filename: Optional[str] = None
+    content_type: Optional[str] = None
+    ext: Optional[str] = None
+    size: Optional[int] = None
 
 
 class DocumentModel(ContentModel):

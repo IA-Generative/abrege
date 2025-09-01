@@ -9,7 +9,7 @@ from abrege_service.utils.content_type import (
 )
 from src.schemas.task import TaskModel
 
-from src.schemas.content import URLModel, DocumentModel
+from src.schemas.content import URLModel
 from src.utils.url import check_url, download_file
 
 from src.utils.logger import logger_abrege
@@ -45,15 +45,16 @@ class URLService(URLBaseService):
         _, ext = os.path.split(filename)
 
         task.content_hash = hash_file(filename)
-        task.input = DocumentModel(
-            created_at=task.input.created_at,
-            extras=task.input.extras,
-            file_path=filename,
-            raw_filename=task.input.url,
-            content_type=content_type_calculated,
-            size=-1,
-            ext=ext,
-        )
+
+        task.input.file_path = filename
+        task.input.url = url
+        task.input.raw_filename = url
+        task.input.content_type = content_type_calculated
+        task.input.ext = ext
+        task.input.size = -1
+
+        task = self.update_task(task=task, input=task.input)
+
         logger_abrege.info(f"{task.id} - content_type {content_type_calculated}")
         for service in self.services:
             if service.is_available(task=task):
