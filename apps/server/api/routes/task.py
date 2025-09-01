@@ -27,6 +27,7 @@ async def get_task(
     )
     task.position = task_table.get_position_in_queue(task_id=id)
     if not show_text_found and task.output is not None:
+        task.output = task.output.model_copy()
         task.output.texts_found = []
 
     return JSONResponse(task.model_dump(), status_code=TASK_STATUS_TO_HTTP.get(task.status, 200))
