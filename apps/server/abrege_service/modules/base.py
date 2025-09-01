@@ -38,7 +38,7 @@ class BaseService(ABC):
                 extras=task.extras,
                 percentage=percentage,
                 content_hash=task.content_hash,
-                input=input,
+                # input=input,
             ),
         )
 
