@@ -17,3 +17,4 @@ tests/data/text
 .env.prod
 .DS_Store
 .env
+node_modules/
