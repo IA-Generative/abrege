@@ -1,0 +1,15 @@
+{
+  "name": "abrege-monorepo",
+  "private": true,
+  "scripts": {
+    "prepare": "husky",
+    "lint:frontend": "cd apps/client && pnpm run lint",
+    "lint:backend": "make lint",
+    "lint:all": "pnpm run lint:frontend && pnpm run lint:backend"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "husky": "^9.1.7"
+  }
+}
