@@ -13,9 +13,9 @@ help:
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-25s\033[0m %s\n", $$1, $$2}'
 
 install: install-uv ## Installation de l'environnement pour du développement local (gestionnaire de dépendances)
-	@if [ ! -d ".venv" ]; then \
+	@if [ ! -d "apps/server/.venv" ]; then \
 		echo "Synchronisation des dépendances..."; \
-		uv sync --group test --group abrege-api --group abrege-service; \
+		cd apps/server && uv sync --group test --group abrege-api --group abrege-service; \
 	else \
 		echo "Dépendances déjà synchronisées (suppose .venv existant)"; \
 	fi
@@ -43,9 +43,15 @@ install-local: ## Installation des dépendances systèmes
 		@echo "Installation automatique non supportée sur cette plateforme"
 	endif
 
-lint: install ## Lint le code du dépôt
-	uv add ruff
-	uv run ruff check --exclude '**/*.ipynb' .
+lint: ## Lint le code du dépôt
+	cd apps/server && \
+		uv run ruff check --exclude '**/*.ipynb' . && \
+		uv run ruff format --check .
+
+lint-fix: ## Lint et correction automatique du code backend
+	cd apps/server && \
+		uv run ruff check --exclude '**/*.ipynb' . --fix && \
+		uv run ruff format .
 
 up: ## Lance l'environnement de développement en conteneurs
 	docker compose up -d
