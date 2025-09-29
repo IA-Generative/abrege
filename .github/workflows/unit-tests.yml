@@ -1,9 +1,15 @@
 name: CI/CD Workflow
 
 on:
+  workflow_call:
+    inputs:
+      PYTHON_VERSION:
+        description: Python version used to run tests
+        required: true
+        type: string
   push:
     branches:
-      - '**'
+      - "**"
 
 jobs:
   run-test-src:
@@ -74,7 +80,6 @@ jobs:
           MAX_MODEL_TOKEN=16384
           PYPANDOC_PANDOC_FOLDER=/app/pandoc
           EOF
-
 
       - name: Install dependencies and run abrege service tests
         run: |
