@@ -39,4 +39,4 @@ def test_get_content_type():
         content_type = get_content_type(mock_file)
         assert (
             content_type == expected_file_mime_mapping[file_path]
-        ), f"Content type mismatch for {file_path}: expected {expected_file_mime_mapping[file_path]}, got {content_type}"
+        ), f"Content type mismatch for {file_path}: expected {expected_file_mime_mapping[file_path]}, got {content_type}"  # noqa: E501
