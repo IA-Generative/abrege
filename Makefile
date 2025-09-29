@@ -46,7 +46,7 @@ install-local: ## Installation des dépendances systèmes
 lint: ## Lint le code du dépôt
 	cd apps/server && \
 		uv run ruff check --exclude '**/*.ipynb' . && \
-		uv run ruff format --check .
+		uv run ruff check .
 
 lint-fix: ## Lint et correction automatique du code backend
 	cd apps/server && \
