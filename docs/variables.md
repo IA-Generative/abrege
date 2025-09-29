@@ -42,6 +42,18 @@ Ce projet utilise plusieurs fichiers de configuration via `pydantic_settings` po
 
 ---
 
+### `LangfuseSettings`
+
+| Variable                    | Description                          | Valeur par défaut |
+| --------------------------- | ------------------------------------ | ----------------- |
+| `LANGFUSE_HOST`             | URL de l'instance Langfuse           | `""`              |
+| `LANGFUSE_PUBLIC_KEY`       | Clé publique Langfuse                | `"pk-lf-xxx"`     |
+| `LANGFUSE_SECRET_KEY`       | Clé secrète Langfuse                 | `"sk-lf-xxxxxxx"` |
+| `LANGFUSE_TRACING_ENVIRONMENT` | Environnement de tracing Langfuse | `"prod"`          |
+| `TRACING_SERVICE`           | Service de tracing à utiliser        | `"langfuse"`      |
+
+---
+
 ### `RedisSettings`
 
 | Variable           | Description          | Valeur par défaut |
