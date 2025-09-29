@@ -1,12 +1,14 @@
-from typing import List
+from datetime import datetime
+from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import JSONResponse
 
-from src.schemas.task import task_table, TaskModel
+from src.schemas.task import TaskStatus, task_table, TaskModel
 from src.schemas.code_error import TASK_STATUS_TO_HTTP
 from src.utils.logger import logger_abrege
 from api.core.security.token import RequestContext
 from api.core.security.factory import TokenVerifier
+from src.clients import file_connector
 
 
 router = APIRouter(tags=["Tasks"])
@@ -54,3 +56,24 @@ async def get_tasks_read_user(
     ctx: RequestContext = Depends(TokenVerifier),
 ) -> List[TaskModel]:
     return read_user(user_id=ctx.user_id, offset=offset, limit=limit)
+
+
+@router.delete("/tasks/", response_model=Optional[list[TaskModel]])
+async def delete_tasks_by_date_and_status(
+    start_date: datetime,
+    end_date: datetime,
+    status: TaskStatus,
+    ctx: RequestContext = Depends(TokenVerifier),
+):
+    if not ctx.is_admin:
+        raise HTTPException(
+            status_code=403,
+            detail="Only Admin users can delete tasks by date and status",
+        )
+    results = task_table.delete_tasks_by_date_and_status(start_date=start_date, end_date=end_date, status=status)
+    if not results:
+        return []
+
+    for task in results:
+        file_connector.delete_by_task_id(user_id=task.user_id, task_id=task.id)
+    return results

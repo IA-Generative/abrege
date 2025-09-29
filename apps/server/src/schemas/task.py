@@ -232,5 +232,27 @@ class TaskTable:
             task = query.first()
             return TaskModel.model_validate(task) if task else None
 
+    def delete_tasks_by_date_and_status(self, start_date: datetime, end_date: datetime, status: TaskStatus) -> Optional[List[TaskModel]]:
+        with get_db() as db:
+            tasks_to_delete = (
+                db.query(Task)
+                .filter(
+                    Task.created_at >= int(start_date.timestamp()),
+                    Task.created_at <= int(end_date.timestamp()),
+                    Task.status == status.value,
+                )
+                .all()
+            )
+
+            if not tasks_to_delete:
+                logger.warning(f"No tasks found between {start_date} and {end_date}.")
+                return None
+
+            for task in tasks_to_delete:
+                db.delete(task)
+            db.commit()
+
+            return [TaskModel.model_validate(task) for task in tasks_to_delete]
+
 
 task_table = TaskTable()
