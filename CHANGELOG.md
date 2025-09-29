@@ -210,6 +210,70 @@
 - clean code
 - clean code
 
+## [0.2.0](https://github.com/IA-Generative/abrege/compare/0.1.0...v0.2.0) (2025-09-29)
+
+
+### Features
+
+* :art: add headers to api ([df71f85](https://github.com/IA-Generative/abrege/commit/df71f851e48df3b8a0fcdd36e0eb48f53db08fef))
+* :art: add types with openapi ts ([#164](https://github.com/IA-Generative/abrege/issues/164)) ([8c11001](https://github.com/IA-Generative/abrege/commit/8c1100190ba5eb7be6890c36fd024d41ba1b250a))
+* :chart_with_upwards_trend: add matomo tracking ([66b820d](https://github.com/IA-Generative/abrege/commit/66b820dc190a193a740ae002b312e4853fbedb13))
+* :passport_control: add authguard on route ([947f8e7](https://github.com/IA-Generative/abrege/commit/947f8e7abb6f1504c8e7866963b30f4414f37901))
+* :passport_control: add keycloak ([caff0b4](https://github.com/IA-Generative/abrege/commit/caff0b4cf712d8e3830a3d661aaf409bc496d570))
+* :sparkles: add commitlint ([bb392b8](https://github.com/IA-Generative/abrege/commit/bb392b8d126d3feedd8dfb047ee8da764d372755))
+* :sparkles: add husky and setup commitlint ([05b3fd2](https://github.com/IA-Generative/abrege/commit/05b3fd2abe9839afba62f4ccd8e899bf376c6fac))
+* :tada: add vuedsfr frontend ([#155](https://github.com/IA-Generative/abrege/issues/155)) ([75df72e](https://github.com/IA-Generative/abrege/commit/75df72e224b37a66535ac945803461a9f324ff4c))
+* :zap: reafacto frontend to apps/client ([#173](https://github.com/IA-Generative/abrege/issues/173)) ([af92983](https://github.com/IA-Generative/abrege/commit/af929831ba3fe867cd3960b0f3a987f060487628))
+* :zap: verify cache & config pwa ([937139a](https://github.com/IA-Generative/abrege/commit/937139a3f6a11610700b44aa171a20046c4ae05b))
+* add aiofiles dependency for asynchronous file handling in document summary ([e07cc51](https://github.com/IA-Generative/abrege/commit/e07cc51df035e005680e9fce238a7ec1a598ae68))
+* add environment configuration for Langfuse initialization ([4003379](https://github.com/IA-Generative/abrege/commit/4003379ea4889a6d8dd5b6242c1af95a50f6f853))
+* add group_id and content_hash columns to Task schema and update related methods ([36b056d](https://github.com/IA-Generative/abrege/commit/36b056d4cbaed37ed6f0533ca0f2e830f9c36a4a))
+* add headers support to OCRClient and related services ([4f30cc6](https://github.com/IA-Generative/abrege/commit/4f30cc6a594ef12c6170cf905b8c09331c71eaba))
+* add Keycloak integration for token verification and update dependencies ([e07cc51](https://github.com/IA-Generative/abrege/commit/e07cc51df035e005680e9fce238a7ec1a598ae68))
+* add Langfuse settings to environment variables documentation ([2015530](https://github.com/IA-Generative/abrege/commit/201553093982c06fe50cab433171c2f12ed9d09b))
+* add support for older Microsoft Word documents and update content type handling ([1fd7523](https://github.com/IA-Generative/abrege/commit/1fd7523ecdd6c64c1b290a1bd8b3303676c5892e))
+* add upgrade-revision target to create new database revision with user input ([891cb1c](https://github.com/IA-Generative/abrege/commit/891cb1c9ecd4387eafa3693161f6f78b8998e0a4))
+* clean authorization headers from parameters in task insert and update methods ([ece73c4](https://github.com/IA-Generative/abrege/commit/ece73c41b3ac32a99e6387e18bc921e6f7533652))
+* enhance DevToken and KeycloakToken classes with improved user info handling and context population ([eeb0993](https://github.com/IA-Generative/abrege/commit/eeb0993acf81fbc2b670e94c49a596e5e8a3fec1))
+* enhance logging system with environment-specific configuration ([e38755e](https://github.com/IA-Generative/abrege/commit/e38755ee9115c11f392dde9afdc0f43012fed0ec))
+* improve logging, header handling, and authentication in OCRMIService and document summary routes ([b23cfb0](https://github.com/IA-Generative/abrege/commit/b23cfb03f02324fcbbd8506410c2f179534d66eb))
+* improve OCRClient defaults, add CacheService, enhance logging, and refactor services ([b955914](https://github.com/IA-Generative/abrege/commit/b955914c144fd76b241afc8dfff50a043cf88c8c))
+* include is_admin field in RequestContext and update parse_header_context function ([f0ef6e0](https://github.com/IA-Generative/abrege/commit/f0ef6e00484efc2d19a1dd88b8834f7d4e8f4408))
+* integrate Langfuse for enhanced telemetry and monitoring ([d9e3cd1](https://github.com/IA-Generative/abrege/commit/d9e3cd1b54fa02e1d9d6beb9a411cdb0655e792b))
+* update OCRClient and document summary routes to include authorization headers ([02f1a26](https://github.com/IA-Generative/abrege/commit/02f1a26056df475e632a30b6f916a047dbc42130))
+* update upload document formats and mime types ([57586c1](https://github.com/IA-Generative/abrege/commit/57586c123cbcfd7c4d6e4c0a42239cdfb6510bf9))
+
+
+### Bug Fixes
+
+* :adhesive_bandage: fix keycloak.ts and App.vue ([a16931c](https://github.com/IA-Generative/abrege/commit/a16931c6a240dce9035a85861b1619f101afef70))
+* :ambulance: update dependencies ([ee3c0e5](https://github.com/IA-Generative/abrege/commit/ee3c0e5d852537242e34d39be781b57a9c124e1c))
+* :art: fix linting ([3ac4326](https://github.com/IA-Generative/abrege/commit/3ac4326636858eaaa96d7a75f944b5d6c0f7b347))
+* :bug: refactor links & add portal links ([#175](https://github.com/IA-Generative/abrege/issues/175)) ([2832807](https://github.com/IA-Generative/abrege/commit/2832807a44ad0bfba7f8c8fa06280c8e59bf6020))
+* :bug: update dependencies & content ([3f12ab7](https://github.com/IA-Generative/abrege/commit/3f12ab700d1e8c7d7cb447b35d4817cf0fe02566))
+* :label: fix error types ts ([407683e](https://github.com/IA-Generative/abrege/commit/407683ef6f97bdc3199c4f521c5b1be29aa0b337))
+* add more log ([#144](https://github.com/IA-Generative/abrege/issues/144)) ([#145](https://github.com/IA-Generative/abrege/issues/145)) ([#146](https://github.com/IA-Generative/abrege/issues/146)) ([#147](https://github.com/IA-Generative/abrege/issues/147)) ([803c31b](https://github.com/IA-Generative/abrege/commit/803c31bba2d87a08c7550f2c77c19ddb4cb712ff))
+* add retry and log to api call for llm call ([#149](https://github.com/IA-Generative/abrege/issues/149)) ([075bcbd](https://github.com/IA-Generative/abrege/commit/075bcbd4876aecc0f1c7d493190d278341c6c065))
+* **ci:** add workflow_call inputs for Python version in CI/CD workflow ([1f7f81b](https://github.com/IA-Generative/abrege/commit/1f7f81b84aa8cd062cda13081278223813d1a202))
+* comment out input parameter in task update method ([26c97f2](https://github.com/IA-Generative/abrege/commit/26c97f253bd54e0cb6ca64b9c2e6ac3713efda57))
+* comment out task update call in URLService to prevent unintended modifications ([edf9fbd](https://github.com/IA-Generative/abrege/commit/edf9fbd4191332329be0ab5c9cb0fcf193f343dc))
+* correct formatting issues in README.md ([5b69ab1](https://github.com/IA-Generative/abrege/commit/5b69ab1e03535b7e2a1bef437bc5c264b965df11))
+* correct path for alembic.ini in Dockerfile ([22baef4](https://github.com/IA-Generative/abrege/commit/22baef43b2f1298ff133e880447c2b42c86a709d))
+* corriger la liste des formats de fichiers supportés dans l'info-bulle de téléchargement ([a6a4827](https://github.com/IA-Generative/abrege/commit/a6a482737b24ccc8e07b34877cb774940f8264f8))
+* delete headers to api ([f466796](https://github.com/IA-Generative/abrege/commit/f466796d49a0f1ea3a351e5da0b0700cd68edafb))
+* downgrade datasets dependency from 4.0.0 to 3.6.0 in pyproject.toml and uv.lock ([eebfd3a](https://github.com/IA-Generative/abrege/commit/eebfd3a06b5b5c0f883fec481fa95c13e2aa8555))
+* fix alembic binary ([ea65b3f](https://github.com/IA-Generative/abrege/commit/ea65b3fea0b98095fe00cd5c4ff069e484a3d74f))
+* fix keycloak client id ([7c96d39](https://github.com/IA-Generative/abrege/commit/7c96d3900bc1fd34ca319b4ca7a06557b2de739f))
+* package fix ([#136](https://github.com/IA-Generative/abrege/issues/136)) ([6ed7101](https://github.com/IA-Generative/abrege/commit/6ed7101a4d0f7636b0308a70985e72a0c645d7f8))
+* remove commented out image tags from docker build configurations ([d595428](https://github.com/IA-Generative/abrege/commit/d595428c0f1bc02316393e86b953b6b0da3eea9b))
+* update apps/client/vite.config.ts ([1ac3a7d](https://github.com/IA-Generative/abrege/commit/1ac3a7d4808203da1d539cfeb7657879a0637e1d))
+* update lint command to exclude formatting check ([1a84270](https://github.com/IA-Generative/abrege/commit/1a842700b8403ae05625d46032635b02dbd5d73b))
+* update model path in audio, image, and video test modules ([545a7f5](https://github.com/IA-Generative/abrege/commit/545a7f54d79beac6a8114ae4a233a37b790ffbc8))
+* update version number in .release-please-manifest.json to 0.1.0 ([c88ca6b](https://github.com/IA-Generative/abrege/commit/c88ca6b3465febaae4a7d8513b0a73676e80a963))
+* update version number in pyproject.toml to 0.1.0 ([54fd69e](https://github.com/IA-Generative/abrege/commit/54fd69ec7abe19c0c534a2ecd329d49622f49082))
+* update version number of the 'abrege' package in uv.lock to 0.1.0 ([d389c13](https://github.com/IA-Generative/abrege/commit/d389c13d0514410ab9389a138a14ca478765672a))
+* use correct path ([ab1cbb3](https://github.com/IA-Generative/abrege/commit/ab1cbb395b9a7f2d41786a0601c6450a73df3c4e))
+
 ## [4.0.0](https://github.com/IA-Generative/abrege/compare/v3.0.0...v4.0.0) (2025-07-12)
 
 
