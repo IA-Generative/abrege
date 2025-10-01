@@ -57,6 +57,7 @@ up: ## Lance l'environnement de développement en conteneurs
 	docker compose up -d
 
 setup-frontend: clean-front ## Prépare le frontend pour le développement
+	pnpm install
 	cd apps/client && \
 		pnpm install && \
 		pnpm update
@@ -66,7 +67,6 @@ up-frontend: setup-frontend ## Lance l'environnement de développement en conten
 
 down: ## Eteint l'environnement de développement en conteneurs
 	docker compose down || true
-
 
 clean: ## Nettoyage du dépôt
 	find . -type d -name "__pycache__" -exec rm -r {} +
@@ -78,6 +78,7 @@ clean: ## Nettoyage du dépôt
 
 clean-front: ## Nettoyage du frontend
 	docker compose -f docker-compose.frontend.yml down || true
+	rm -rf node_modules
 	cd apps/client && \
  		rm -rf node_modules && \
 		rm -rf dist
