@@ -210,6 +210,18 @@
 - clean code
 - clean code
 
+## [1.1.0](https://github.com/IA-Generative/abrege/compare/v1.0.0...v1.1.0) (2025-10-24)
+
+
+### Features
+
+* add new Vue composition API functions and update component types ([c11de7b](https://github.com/IA-Generative/abrege/commit/c11de7b63078e7bfa9c4eaf61e8609a384f52316))
+
+
+### Bug Fixes
+
+* update navigation paths and links for consistency in SideBar and Index components ([3ec2722](https://github.com/IA-Generative/abrege/commit/3ec2722b75cb4fbb23489425c635ef00ee5017b0))
+
 ## [1.0.0](https://github.com/IA-Generative/abrege/compare/v0.2.0...v1.0.0) (2025-09-29)
 
 
