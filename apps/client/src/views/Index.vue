@@ -27,17 +27,17 @@ const tabs = ref([
 const myOtherTools = ref([
   {
     title: 'Converser avec le Chatbot',
-    to: '/webui',
+    to: '/outils-mirai/chat',
     imgSrc: ComminitySVG,
   },
   {
     title: 'Reconnaître un texte scanné',
-    to: '/ocr',
+    to: '/outils-mirai/ocr',
     imgSrc: DocumentSearch,
   },
   {
     title: 'Faire un compte rendu',
-    to: '/france-compte-rendu',
+    to: '/outils-mirai/compte-rendu',
     imgSrc: DocumentDownload,
   },
 ])
