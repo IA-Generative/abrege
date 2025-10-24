@@ -13,12 +13,12 @@ defineProps({
     default: () => [
       {
         title: 'Converser avec le Chatbot',
-        to: '/webui',
+        to: '/outils-mirai/chat',
         imgSrc: ComminitySVG,
       },
       {
         title: 'Résumer un texte',
-        to: '/resume',
+        to: '/outils-mirai/resume',
         imgSrc: PenSVG,
       },
     ],
@@ -50,7 +50,7 @@ const donneMonAvisButton = {
         <p class="side-bar__cgu__text">
           Veuillez impérativement consulter les <a
             class="side-bar__about__text"
-            :href="`${PORTAIL_URL}/cgu`"
+            :href="`${PORTAIL_URL}/conditions-generales-dutilisation`"
             target="_blank"
           >
             conditions d'utilisation
@@ -59,7 +59,7 @@ const donneMonAvisButton = {
         <p>
           Pour vous former et utiliser au mieux les fonctionnalités des outils de MIrAI, rendez-vous sur <a
             class="side-bar__about__text"
-            :href="`${PORTAIL_URL}/faq/introduction`"
+            :href="`${PORTAIL_URL}/ressources/foire-aux-questions`"
             target="_blank"
           >
             Introduction et acculturation à l'IA
