@@ -50,7 +50,7 @@ const logoText = ['Ministère', 'de l’intérieur']
     <template #before-quick-links>
       <DsfrDropdown
         :main-button="{
-          label: 'Outils MIrAI',
+          label: 'Applications MIrAI',
           icon: 'fr-icon-grid-fill',
           size: 'sm',
         }"
