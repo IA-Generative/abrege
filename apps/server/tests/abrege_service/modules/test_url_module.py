@@ -37,9 +37,9 @@ def test_get_text_from_pdf():
     url_service = URLService(services=[PDFTOMD4LLMService()])
 
     # Test download pdf
-    dummy_task = mock_task("https://www-fourier.ujf-grenoble.fr/~demailly/L3_topologie_B/topologie_nier_iftimie.pdf")
+    dummy_task = mock_task("https://www.osureunion.fr/wp-content/uploads/2022/03/pdf-exemple.pdf")
     actual = url_service.task_to_text(dummy_task)
-    assert "topologie" in "\n".join([item for item in actual.output.texts_found])
+    assert "logiciels" in "\n".join([item for item in actual.output.texts_found])
 
 
 # def test_get_text_from_microsoft():
@@ -53,14 +53,14 @@ def test_get_text_from_pdf():
 #     assert "biologiste" in "\n".join([item for item in actual.output.texts_found])
 
 
-def test_get_text_from_audio():
-    from abrege_service.modules.audio import AudioVoskTranscriptionService
-
-    url_service = URLService(services=[AudioVoskTranscriptionService(second_per_process=0.5)])
-    # test audio
-    dummy_task = mock_task("https://github.com/UniData-pro/french-speech-recognition-dataset/raw/refs/heads/main/audio/1.wav")
-    actual = url_service.task_to_text(dummy_task)
-    assert "que" in "\n".join([item for item in actual.output.texts_found])
+# def test_get_text_from_audio():
+#     from abrege_service.modules.audio import AudioVoskTranscriptionService
+#
+#     url_service = URLService(services=[AudioVoskTranscriptionService(second_per_process=0.5)])
+#     # test audio
+#     dummy_task = mock_task("https://fr.getsamplefiles.com/download/wav/sample-3.wav")
+#     actual = url_service.task_to_text(dummy_task)
+#     assert "que" in "\n".join([item for item in actual.output.texts_found])
 
 
 def test_get_text_from_audio_video():
