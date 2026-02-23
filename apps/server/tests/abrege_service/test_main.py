@@ -211,7 +211,7 @@ def test_task_process_url_mp4(monkeypatch: pytest.MonkeyPatch):
 #     # assert actual.output.percentage == 1
 #     task_table.delete_task_by_id(task.id)
 
-    #############################################################
+#############################################################
 
 
 def test_audio_document(monkeypatch: pytest.MonkeyPatch):
