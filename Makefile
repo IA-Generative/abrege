@@ -131,6 +131,6 @@ test-abrege-service: init-db
 	make down-services
 
 
-test-sdk-pyhton:
+test-sdk-python:
 	cd sdk && \
 		uv run pytest -s --cov=./abrege_sdk --cov-report=term-missing tests/ -ra -v --maxfail=0
