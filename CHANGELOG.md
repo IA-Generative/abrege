@@ -210,6 +210,18 @@
 - clean code
 - clean code
 
+## [1.2.0](https://github.com/IA-Generative/abrege/compare/v1.1.0...v1.2.0) (2026-02-23)
+
+
+### Features
+
+* **ci:** enhance CI workflows with frontend/backend detection and conditional linting ([b9b76f9](https://github.com/IA-Generative/abrege/commit/b9b76f9e6b5a6b7c1f4cda9fbc0bd0cc72f9e795))
+
+
+### Bug Fixes
+
+* **ci:** fix release please ([ef06fb3](https://github.com/IA-Generative/abrege/commit/ef06fb327cb61e65a45331925323ea38f6f1c35f))
+
 ## [1.1.0](https://github.com/IA-Generative/abrege/compare/v1.0.0...v1.1.0) (2025-10-24)
 
 
