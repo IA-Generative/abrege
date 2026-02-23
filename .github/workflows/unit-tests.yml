@@ -7,6 +7,11 @@ on:
         description: Python version used to run tests
         required: true
         type: string
+      run-backend:
+        description: Run backend tests
+        required: false
+        type: boolean
+        default: true
   push:
     branches:
       - "**"
@@ -14,6 +19,7 @@ on:
 jobs:
   run-test-src:
     runs-on: actions-runner-controller
+    if: inputs.run-backend == true || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
     steps:
@@ -31,6 +37,7 @@ jobs:
 
   run-test-abrege-api:
     runs-on: actions-runner-controller
+    if: inputs.run-backend == true || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
     steps:
@@ -48,6 +55,7 @@ jobs:
 
   run-test-abrege-service:
     runs-on: actions-runner-controller
+    if: inputs.run-backend == true || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
     steps:

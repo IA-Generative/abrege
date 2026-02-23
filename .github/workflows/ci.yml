@@ -15,6 +15,27 @@ env:
   PYTHON_VERSION: 3.x
 
 jobs:
+  detect-changes:
+    permissions:
+      pull-requests: read
+      contents: read
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}        
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'apps/client/**'
+            backend:
+              - 'apps/server/**'
+              - 'apps/server/pyproject.toml'
+              - 'apps/server/uv.lock'
   expose-vars:
     runs-on: ubuntu-24.04
     if: ${{ !github.event.pull_request.draft }}
@@ -25,11 +46,14 @@ jobs:
       run: echo "Exposing env vars"
 
   lint:
+    
     uses: ./.github/workflows/lint.yml
     needs:
-    - expose-vars
+      - expose-vars
+      - detect-changes
     with:
       PYTHON_VERSION: ${{ needs.expose-vars.outputs.PYTHON_VERSION }}
+      run-backend: ${{ needs.detect-changes.outputs.backend == 'true' }}
 
   unit-tests:
     uses: ./.github/workflows/unit-tests.yml
