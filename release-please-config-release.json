@@ -3,7 +3,28 @@
   "packages": {
     ".": {
       "release-type": "simple",
-      "prerelease": false
+      "prerelease": false, 
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "apps/client/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "toml",
+          "path": "apps/server/pyproject.toml",
+          "jsonpath": "project.version"
+        },
+        {
+          "path": "apps/server/uv.lock",
+          "type": "toml",
+          "jsonpath": "$.package[?(@.name.value=='abrege')].version"
+        },
+        {
+          "type": "generic",
+          "path": "README.md"
+        }
+      ]
     }
   }
 }
