@@ -22,7 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       frontend: ${{ steps.filter.outputs.frontend }}
-      backend: ${{ steps.filter.outputs.backend }}        
+      backend: ${{ steps.filter.outputs.backend }}
+      sdk: ${{ steps.filter.outputs.sdk }}        
     steps:
       - uses: actions/checkout@v4
 
@@ -36,6 +37,8 @@ jobs:
               - 'apps/server/**'
               - 'apps/server/pyproject.toml'
               - 'apps/server/uv.lock'
+            sdk:
+              - 'sdk/**'
   expose-vars:
     runs-on: ubuntu-24.04
     if: ${{ !github.event.pull_request.draft }}

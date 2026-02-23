@@ -12,6 +12,11 @@ on:
         required: false
         type: boolean
         default: true
+      run-sdk:
+        description: Run SDK tests  
+        required: false
+        type: boolean
+        default: true
   workflow_dispatch:
     inputs:
       PYTHON_VERSION:
@@ -41,3 +46,23 @@ jobs:
 
       - name: Run lint
         run: make lint
+  lint-sdk:
+    name: Lint SDK code
+    runs-on: ubuntu-24.04
+    if: inputs.run-sdk == true || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ inputs.PYTHON_VERSION }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Run lint on SDK
+        run: make lint-sdk
