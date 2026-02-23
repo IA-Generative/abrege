@@ -12,6 +12,11 @@ on:
         required: false
         type: boolean
         default: true
+      run-sdk:
+        description: Run SDK tests  
+        required: false
+        type: boolean
+        default: true
   push:
     branches:
       - "**"
@@ -52,6 +57,23 @@ jobs:
       - name: Install dependencies and run abrege api tests
         run: |
           make test-abrege-api
+  run-test-sdk:
+    runs-on: actions-runner-controller
+    if: inputs.run-sdk == true || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.x
+
+      - name: Install dependencies and run abrege sdk tests
+        run: |
+          make test-sdk-python
 
   run-test-abrege-service:
     runs-on: actions-runner-controller

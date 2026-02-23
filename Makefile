@@ -48,6 +48,11 @@ lint: ## Lint le code du dépôt
 		uv run ruff check --exclude '**/*.ipynb' . && \
 		uv run ruff check .
 
+lint-sdk: ## Lint le code du dépôt
+	cd sdk/ && \
+		uv run ruff check --exclude '**/*.ipynb' . && \
+		uv run ruff check .
+
 lint-fix: ## Lint et correction automatique du code backend
 	cd apps/server && \
 		uv run ruff check --exclude '**/*.ipynb' . --fix && \
@@ -124,3 +129,8 @@ test-abrege-api: init-db
 test-abrege-service: init-db
 	docker compose run --rm test_runner
 	make down-services
+
+
+test-sdk-python:
+	cd sdk && \
+		uv run pytest -s --cov=./abrege_sdk --cov-report=term-missing tests/ -ra -v --maxfail=0

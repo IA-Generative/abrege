@@ -23,6 +23,16 @@
         {
           "type": "generic",
           "path": "README.md"
+        }, 
+        {
+          "type": "toml",
+          "path": "sdk/pyproject.toml",
+          "jsonpath": "project.version"
+        }, 
+        {
+          "type": "toml",
+          "path": "sdk/uv.lock",
+          "jsonpath": "$.package[?(@.name.value=='abrege-sdk')].version"
         }
       ]
     }
