@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-const props = defineProps<{ visible: boolean, progress: number }>()
+const props = defineProps<{ visible: boolean, progress: number, text?: string }>()
 
 const progressColor = computed(() => {
   if (props.progress < 25) {
@@ -29,7 +29,7 @@ const progressColor = computed(() => {
     v-if="visible"
     class="mt-4"
   >
-    <div>En cours de chargement... ({{ progress }}%)</div>
+    <div>{{ text ?? 'En cours de chargement ...' }} ({{ progress }}%)</div>
     <div class="progress-bar-container">
       <div
         class="progress-bar"

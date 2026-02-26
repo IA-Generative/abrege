@@ -9,6 +9,7 @@ import CopiedTextTab from '@/components/CopiedTextTab.vue'
 import ResumeInfoBulle from '@/components/ResumeInfoBulle.vue'
 import UploadDocumentTab from '@/components/UploadDocumentTab.vue'
 import UrlTab from '@/components/UrlTab.vue'
+import TaskTab from '@/components/TaskTab.vue'
 // FIXME : Decomment for authentication
 // import { getKeycloak } from '@/utils/keycloak/keycloak'
 // const keycloak = getKeycloak()
@@ -22,6 +23,7 @@ const tabs = ref([
   { label: firstTabTitle, slot: 'tab-0-content' },
   { label: 'd\'une URL', slot: 'tab-1-content' },
   { label: 'd\'un document téléchargé', slot: 'tab-2-content' },
+  { label: 'des tâches', slot: 'tab-3-content' },
 ])
 
 const myOtherTools = ref([
@@ -71,6 +73,10 @@ const myOtherTools = ref([
           <template #tab-2-content>
             <ResumeInfoBulle />
             <UploadDocumentTab />
+          </template>
+          <template #tab-3-content>
+            <ResumeInfoBulle />
+            <TaskTab />
           </template>
         </CustomTabs>
       </div>

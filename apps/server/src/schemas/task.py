@@ -188,6 +188,11 @@ class TaskTable:
 
             return [TaskModel.model_validate(task) for task in tasks]
 
+    def count_tasks_by_user_id(self, user_id: str) -> int:
+        with get_db() as db:
+            count = db.query(func.count(Task.id)).filter(Task.user_id == user_id).scalar()
+            return count
+
     def delete_tasks_by_user_id(self, user_id: str) -> Optional[List[TaskModel]]:
         with get_db() as db:
             tasks_to_delete = db.query(Task).filter(Task.user_id == user_id).all()

@@ -20,6 +20,13 @@ function authGuard (_path: string) {
     _from: RouteLocationNormalized,
     next: NavigationGuardNext
   ) => {
+    // During development or when explicitly bypassed, skip the SSO redirect
+    const bypassSSO = (import.meta.env && import.meta.env.DEV) || import.meta.env.VITE_SSO_BYPASS === 'true' || (window as any).VITE_SSO_BYPASS === 'true'
+    if (bypassSSO) {
+      next()
+      return
+    }
+
     const keycloak = getKeycloak()
     if (!keycloak.authenticated) {
       redirectToSSO()
