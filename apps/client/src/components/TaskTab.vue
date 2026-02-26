@@ -16,11 +16,25 @@
 
       <tbody>
         <tr v-for="task in paginatedTasks" :key="task.id">
-          <td>{{ task.type }}</td>
+          <td>
+            <a
+              v-if="task.input?.url"
+              :href="task.input.url"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {{ task.input.url }}
+            </a>
+            <span v-else-if="task.input?.text">
+              {{ task.input.text.length > 30 ? task.input.text.slice(0, 30) + '...' : task.input.text }}
+            </span>
+            <span v-else-if="task.input?.raw_filename">{{ task.input.raw_filename }}</span>
+            <span v-else>Inconnu</span>
+          </td>
 
           <td>
-            <ProgressBar :visible="true" :progress="task.percentage ?? 0" :text="MapStatusToLabel(task.status)" />
-            <div class="fr-ml-1">{{ task.percentage ?? 0 }}%</div>
+            <ProgressBar :visible="true" :progress="task.percentage * 100 ?? 0" :text="MapStatusToLabel(task.status)" />
+            <div class="fr-ml-1">{{ task.percentage * 100 ?? 0 }}%</div>
           </td>
 
           <td>{{ formatDate(task.created_at) }}</td>
@@ -60,16 +74,52 @@
     </div>
 
     <!-- Modal -->
-    <div v-if="selectedTask" class="modal-overlay">
-      <div class="modal fr-card">
+    <div v-if="selectedTask" class="modal-overlay" @click.self="selectedTask = null">
+      <div class="modal fr-card" @click.stop>
+        <header class="modal-header fr-card">
+          <h3 class="fr-h3">Résumer</h3>  
+        </header>
 
-        <div class="summary-block">
-          <ResumeResult :resumeResult="selectedTask" />
-        </div>
 
-        <div class="fr-pt-2">
-          <DsfrButton size="sm" priority="secondary" @click="selectedTask = null">Fermer</DsfrButton>
-        </div>
+        <section class="modal-section fr-card">
+          <div class="section-title">Source</div>
+          <div class="section-content">
+            <div v-if="selectedTask.input?.url">
+              <a :href="selectedTask.input.url" target="_blank" rel="noopener noreferrer">{{ selectedTask.input.url }}</a>
+            </div>
+            <div v-else-if="selectedTask.input?.raw_filename">{{ selectedTask.input.raw_filename }}</div>
+            <div v-else>—</div>
+          </div>
+        </section>
+
+        <section class="modal-section fr-card">
+          <div class="section-title">Contenu</div>
+          <div class="section-content">
+            <div v-if="selectedTask.input?.text">
+              <textarea readonly class="summary-text" :value="selectedTask.input.text"></textarea>
+            </div>
+            <div v-else-if="selectedTask.input?.url">
+              <div>URL fournie. Cliquez sur le lien ci‑dessous pour ouvrir.</div>
+              <a :href="selectedTask.input.url" target="_blank" rel="noopener noreferrer">{{ selectedTask.input.url }}</a>
+            </div>
+            <div v-else>
+              <div>Contenu indisponible</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="modal-section modal-actions">
+          <div class="section-content">
+            <DsfrButton v-if="selectedTask.input?.url" size="sm" priority="tertiary" @click="copyToClipboard(selectedTask.input.url)">Copier l'URL</DsfrButton>
+            <DsfrButton v-else-if="selectedTask.input?.text" size="sm" priority="tertiary" @click="copyToClipboard(selectedTask.input.text)">Copier le texte</DsfrButton>
+            <DsfrButton v-else-if="selectedTask.input?.raw_filename" size="sm" priority="tertiary" @click="copyToClipboard(selectedTask.input.raw_filename)">Copier le nom</DsfrButton>
+            <span v-if="copySuccess" class="copy-success">Copié&nbsp;!</span>
+          </div>
+        </section>
+
+
+
+        
       </div>
     </div>
 
@@ -78,7 +128,6 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import ResumeResult from '@/components/ResumeResult.vue'
 import { onMounted, onBeforeUnmount } from 'vue'
 import { useAbregeStore } from '@/stores/abrege'
 
@@ -159,7 +208,23 @@ const totalPages = computed(() => {
 
 
 // ----- MODAL -----
-const selectedTask = ref(null)
+const selectedTask = ref({
+  // example structure:
+  // id: 'task123',
+  // type: 'summarization',
+  // status: 'completed',
+  // percentage: 1,
+  // created_at: '2024-01-01T12:00:00Z',
+  // updated_at: '2024-01-01T12:05:00Z',
+  // input: {
+  //   // url: 'https://example.com/article',
+  //   text: 'Some input text...',
+  //   raw_filename: 'document.pdf'
+  // },
+  // result: {
+  //   summary: 'This is a summary of the article...'
+  // }
+})
 
 const openModal = (task) => {
   if (!task || task.status !== 'completed') {
@@ -169,14 +234,64 @@ const openModal = (task) => {
 }
 
 const formatDate = (ts) => {
-  if (!ts) return ''
+  if (ts === null || ts === undefined || ts === '') return ''
   try {
-    return new Date(Number(ts)).toLocaleString()
-  }
-  catch (e) {
+    let n = Number(ts)
+    if (Number.isNaN(n)) return String(ts)
+    // If timestamp looks like seconds (<= 1e12), convert to milliseconds
+    if (n < 1e12) n = n * 1000
+    return new Date(n).toLocaleString()
+  } catch (e) {
     return String(ts)
   }
 }
+
+// copy helper for modal with visual feedback
+import { watch } from 'vue'
+const copySuccess = ref(false)
+let _copyTimeout = null
+
+const copyToClipboard = async (text) => {
+  try {
+    if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text)
+    } else {
+      // fallback: create textarea and execCopy
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.focus()
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+    }
+
+    // show feedback
+    copySuccess.value = true
+    if (_copyTimeout) clearTimeout(_copyTimeout)
+    _copyTimeout = setTimeout(() => (copySuccess.value = false), 2000)
+  } catch (e) {
+    console.error('Copy failed', e)
+  }
+}
+
+// close modal on Escape
+const _escHandler = (e) => {
+  if (e.key === 'Escape' || e.key === 'Esc') {
+    selectedTask.value = null
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', _escHandler)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', _escHandler)
+  if (_copyTimeout) clearTimeout(_copyTimeout)
+})
 
 // Summary rendering handled by `ResumeResult` component
 
@@ -236,6 +351,23 @@ const formatDate = (ts) => {
   z-index: 10000;
 }
 
+/* Ensure modal inner content has comfortable horizontal padding */
+.modal .modal-header,
+.modal .modal-section,
+.modal .modal-footer {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+/* Make textarea respect modal padding */
+.summary-text {
+  width: 100%;
+  min-height: 6rem;
+  resize: vertical;
+  box-sizing: border-box;
+  padding: 0.5rem;
+}
+
 .summary-block {
   margin-top: 1rem;
 }
@@ -244,5 +376,55 @@ const formatDate = (ts) => {
   max-height: 50vh;
   overflow: auto;
   padding-right: 0.5rem;
+}
+
+/* Modal sections */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+.modal-close {
+  background: transparent;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+.modal-section {
+  border-top: 1px solid #eee;
+  padding: 0.75rem 0;
+}
+.section-title {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+.section-content {
+  display: block;
+}
+.summary-text {
+  width: 100%;
+  min-height: 6rem;
+  resize: vertical;
+}
+.modal-actions .section-content > * {
+  margin-right: 0.5rem;
+}
+.modal-meta .meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem 1rem;
+}
+.modal-footer {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.copy-success {
+  color: #0b6623;
+  margin-left: 0.75rem;
+  font-weight: 600;
 }
 </style>

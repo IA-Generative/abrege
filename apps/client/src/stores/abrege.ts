@@ -338,7 +338,7 @@ export const useAbregeStore = defineStore('abrege', () => {
 
   let _stopUserTasksPolling = false
 
-  async function _pollUserTasksLoop (page = 1, page_size = 10, intervalMs = 10000) {
+  async function _pollUserTasksLoop (page = 1, page_size = 10, intervalMs = 100000) {
     _stopUserTasksPolling = false
     while (!_stopUserTasksPolling) {
       try {
