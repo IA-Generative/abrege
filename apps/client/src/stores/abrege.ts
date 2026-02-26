@@ -342,13 +342,12 @@ export const useAbregeStore = defineStore('abrege', () => {
     _stopUserTasksPolling = false
     while (!_stopUserTasksPolling) {
       try {
-        const { data } = await http.get(`/task/user/`, { params: { offset: page, limit: page_size } })
-        if (data && typeof data === 'object' && Array.isArray(data.items)) {
-          userTasksPaginated.value.total = data.total ?? 0
-          userTasksPaginated.value.page = data.page ?? page
-          userTasksPaginated.value.page_size = data.page_size ?? page_size
-          userTasksPaginated.value.items = data.items
-        }
+        const { data } = await http.get(`/task/user/`, { params: { offset: page, limit: page_size } })        
+        userTasksPaginated.value.total = data.total ?? 0
+        userTasksPaginated.value.page = data.page ?? page
+        userTasksPaginated.value.page_size = data.page_size ?? page_size
+        userTasksPaginated.value.items = data.items ?? []
+        
       }
       catch (err: any) {
         

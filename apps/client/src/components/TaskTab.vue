@@ -114,28 +114,30 @@ function sortBy(key) {
   }
 }
 
-const sortedTasks = computed(() => {
-  const source = allTasks.value
-  if (!sortKey.value) return [...source]
+// sort and expose paginated tasks (client-side sorting of current page)
+// `paginatedData` can be a ref (has `.value`) or a reactive proxy; resolve both cases.
+const paginatedTasks = computed(() => {
+  const resolved = paginatedData && Object.prototype.hasOwnProperty.call(paginatedData, 'value')
+    ? paginatedData.value
+    : paginatedData
 
-  return [...source].sort((a, b) => {
-    const av = a[sortKey.value]
-    const bv = b[sortKey.value]
-    if (av == null && bv == null) return 0
-    if (av == null) return 1
-    if (bv == null) return -1
-    if (typeof av === 'string' && typeof bv === 'string') {
-      return sortAsc.value ? av.localeCompare(bv) : bv.localeCompare(av)
-    }
-    return sortAsc.value ? (av < bv ? -1 : av > bv ? 1 : 0) : (av > bv ? -1 : av < bv ? 1 : 0)
+  const items = resolved?.items ?? []
+  if (!sortKey.value) return items
+  return [...items].sort((a, b) => {
+    const key = sortKey.value
+    const valA = a[key]
+    const valB = b[key]
+    if (valA === valB) return 0
+    return sortAsc.value ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1)
   })
 })
 
-// define loadPage after sortedTasks to avoid using it before initialization
+// define loadPage to start polling via store
 const loadPage = async (page = 1) => {
-  const pageSize = paginatedData.page_size
+  const pageSize = paginatedData?.page_size ?? 10
   // start polling via store (store updates paginatedData automatically)
   abrege.startPollingUserTasks(page, pageSize)
+  
 }
 
 onMounted(() => {
@@ -155,7 +157,6 @@ const totalPages = computed(() => {
   return Math.max(1, Math.ceil(total / pageSize))
 })
 
-const paginatedTasks = computed(() => paginatedData.value?.items ?? [])
 
 // ----- MODAL -----
 const selectedTask = ref(null)

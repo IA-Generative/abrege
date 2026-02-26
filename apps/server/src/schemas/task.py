@@ -184,7 +184,7 @@ class TaskTable:
 
             if not tasks:
                 logger.warning(f"No tasks found for user {user_id}.")
-                return None
+                return []
 
             return [TaskModel.model_validate(task) for task in tasks]
 
