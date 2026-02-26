@@ -58,7 +58,7 @@ async def get_tasks_read_user(
     ctx: RequestContext = Depends(TokenVerifier),
 ) -> Pagination[TaskModel]:
     tasks = read_user(user_id=ctx.user_id, offset=offset, limit=limit)
-    total = task_table.get_tasks_by_user_id(user_id=ctx.user_id)
+    total = task_table.count_tasks_by_user_id(user_id=ctx.user_id)
     return Pagination[TaskModel](total=total, page=offset, page_size=limit, items=tasks)
 
 
