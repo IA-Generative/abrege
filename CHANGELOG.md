@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [1.3.0](https://github.com/IA-Generative/abrege/compare/v1.2.0...v1.3.0) (2026-02-26)
+
+
+### Features
+
+* implement user task pagination and deletion functionality ([#277](https://github.com/IA-Generative/abrege/issues/277)) ([9f60247](https://github.com/IA-Generative/abrege/commit/9f602475a6a14c7d931e1fb2e9d9597523ec62b7))
+
 ## [1.2.0](https://github.com/IA-Generative/abrege/compare/v1.1.0...v1.2.0) (2026-02-23)
 
 
