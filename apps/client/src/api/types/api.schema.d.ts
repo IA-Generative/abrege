@@ -86,7 +86,8 @@ export interface paths {
     get: operations['read_api_task__id__get']
     put?: never
     post?: never
-    delete?: never
+    /** Delete */
+    delete: operations['delete_api_task__id__delete']
     options?: never
     head?: never
     patch?: never
@@ -454,6 +455,17 @@ export interface components {
        */
       custom_prompt?: string | null
     }
+    /** Pagination TaskModel */
+    PaginationTaskModel: {
+      /** Total */
+      total: number
+      /** Page */
+      page: number
+      /** Page Size */
+      page_size: number
+      /** Items */
+      items: components['schemas']['TaskModel'][]
+    }
     /** TaskModel */
     TaskModel: {
       /** Id */
@@ -763,7 +775,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['TaskModel'][]
+          'application/json': components['schemas']['PaginationTaskModel']
         }
       }
       /** @description Validation Error */
@@ -795,7 +807,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['TaskModel'][]
+          'application/json': components['schemas']['PaginationTaskModel']
         }
       }
       /** @description Validation Error */
@@ -857,6 +869,37 @@ export interface operations {
     responses: {
       /** @description Successful Response */
       201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TaskModel']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  delete_api_task__id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
         headers: {
           [name: string]: unknown
         }

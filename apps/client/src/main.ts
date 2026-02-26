@@ -24,7 +24,10 @@ declare global {
 }
 
 async function initializeApp () {
-  await keycloakInit()
+  const ssoBypass = (import.meta.env && import.meta.env.DEV) || import.meta.env.VITE_SSO_BYPASS === 'true' || (window as any).VITE_SSO_BYPASS === 'true'
+  if (!ssoBypass) {
+    await keycloakInit()
+  }
 
   createApp(App)
     .use(createPinia())

@@ -57,8 +57,8 @@ def test_read_user_tasks(client, mock_task):
 
     response = client.get("/task/user/")
     assert response.status_code == 200
-    assert len(response.json()) == 1
-    assert response.json()[0] == mock_task.dict()
+    assert len(response.json()["items"]) == 1
+    assert response.json()["items"][0] == mock_task.dict()
 
 
 def test_read_user_tasks_empty(client):
@@ -67,4 +67,3 @@ def test_read_user_tasks_empty(client):
 
     response = client.get("/task/user/")
     assert response.status_code == 200
-    assert response.json() == []

@@ -328,6 +328,60 @@ export const useAbregeStore = defineStore('abrege', () => {
     }
   }
 
+  // ----- POLLING FOR USER TASKS -----
+  const userTasksPaginated = ref({
+    total: 0,
+    page: 1,
+    page_size: 10,
+    items: [] as TaskModel[],
+  })
+
+  let _stopUserTasksPolling = false
+
+  async function _pollUserTasksLoop (page = 1, page_size = 10, intervalMs = 100000) {
+    _stopUserTasksPolling = false
+    while (!_stopUserTasksPolling) {
+      try {
+        const { data } = await http.get(`/task/user/`, { params: { offset: page, limit: page_size } })        
+        userTasksPaginated.value.total = data.total ?? 0
+        userTasksPaginated.value.page = data.page ?? page
+        userTasksPaginated.value.page_size = data.page_size ?? page_size
+        userTasksPaginated.value.items = data.items ?? []
+        
+      }
+      catch (err: any) {
+        
+      }
+      // wait before next poll
+      // stop early if requested
+      const wait = new Promise(resolve => setTimeout(resolve, intervalMs))
+      await wait
+    }
+  }
+
+  function startPollingUserTasks (page = 1, page_size = 10, intervalMs = 3000) {
+    // stop any existing poll
+    stopPollingUserTasks()
+    // load immediately and then continue polling
+    _pollUserTasksLoop(page, page_size, intervalMs)
+  }
+
+  function stopPollingUserTasks () {
+    _stopUserTasksPolling = true
+  }
+
+  // ----- DELETE TASK (wrapped here so UI can use store for actions) -----
+  async function deleteTask (taskId: string) {
+    try {
+      await http.delete(`/task/${taskId}`)
+      addSuccessMessage({ title: 'Tâche supprimée', description: 'La tâche a été supprimée avec succès.' })
+    }
+    catch (err: any) {
+      addErrorMessage({ title: 'Suppression impossible', description: `Erreur lors de la suppression: ${err?.message ?? err}` })
+      throw err
+    }
+  }
+
   const formattedPercentage = computed(() =>
     taskData.value && taskData.value.percentage != null
       ? Math.round(taskData.value.percentage * 100)
@@ -353,5 +407,10 @@ export const useAbregeStore = defineStore('abrege', () => {
     sendContentAndPoll,
     sendDocumentAndPoll,
     downloadContentSummary,
+    // polling & management
+    userTasksPaginated,
+    startPollingUserTasks,
+    stopPollingUserTasks,
+    deleteTask,
   }
 })

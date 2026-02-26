@@ -184,9 +184,14 @@ class TaskTable:
 
             if not tasks:
                 logger.warning(f"No tasks found for user {user_id}.")
-                return None
+                return []
 
             return [TaskModel.model_validate(task) for task in tasks]
+
+    def count_tasks_by_user_id(self, user_id: str) -> int:
+        with get_db() as db:
+            count = db.query(func.count(Task.id)).filter(Task.user_id == user_id).scalar()
+            return count
 
     def delete_tasks_by_user_id(self, user_id: str) -> Optional[List[TaskModel]]:
         with get_db() as db:
