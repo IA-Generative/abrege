@@ -1,6 +1,7 @@
 <template>
   <div class="task-container fr-container">
     <h2 class="fr-h2">Liste des tâches</h2>
+    <DsfrButton size="sm" priority="secondary" class="fr-ml-1" @click="statsVisible = true">Voir les statistiques</DsfrButton>
 
     <table class="fr-table task-table">
       <thead>
@@ -25,16 +26,15 @@
             >
               {{ task.input.url }}
             </a>
-            <span v-else-if="task.input?.text">
-              {{ task.input.text.length > 30 ? task.input.text.slice(0, 30) + '...' : task.input.text }}
+            <span v-else-if="task.output?.summary">
+              {{ task.output.summary.length > 30 ? task.output.summary.slice(0, 30) + '...' : task.output.summary }}
             </span>
             <span v-else-if="task.input?.raw_filename">{{ task.input.raw_filename }}</span>
             <span v-else>Inconnu</span>
           </td>
 
           <td>
-            <ProgressBar :visible="true" :progress="task.percentage * 100 ?? 0" :text="MapStatusToLabel(task.status)" />
-            <div class="fr-ml-1">{{ task.percentage * 100 ?? 0 }}%</div>
+            <ProgressBar :visible="true" :progress="(task.percentage ?? 0) * 100" :text="MapStatusToLabel(task.status)" />
           </td>
 
           <td>{{ formatDate(task.created_at) }}</td>
@@ -47,14 +47,7 @@
           </td>
 
           <td>
-            <DsfrButton
-              size="sm"
-              priority="tertiary"
-              :disabled="task.status !== 'completed' && (task.percentage ?? 0) < 100"
-              @click="removeTask(task.id)"
-            >
-              Supprimer
-            </DsfrButton>
+            <DsfrButton size="sm" priority="tertiary" @click="removeTask(task.id)">Supprimer</DsfrButton>
           </td>
         </tr>
       </tbody>
@@ -95,8 +88,8 @@
         <section class="modal-section fr-card">
           <div class="section-title">Contenu</div>
           <div class="section-content">
-            <div v-if="selectedTask.input?.text">
-              <textarea readonly class="summary-text" :value="selectedTask.input.text"></textarea>
+            <div v-if="selectedTask.output?.summary">
+              <textarea readonly class="summary-text" :value="selectedTask.output.summary"></textarea>
             </div>
             <div v-else-if="selectedTask.input?.url">
               <div>URL fournie. Cliquez sur le lien ci‑dessous pour ouvrir.</div>
@@ -111,7 +104,7 @@
         <section class="modal-section modal-actions">
           <div class="section-content">
             <DsfrButton v-if="selectedTask.input?.url" size="sm" priority="tertiary" @click="copyToClipboard(selectedTask.input.url)">Copier l'URL</DsfrButton>
-            <DsfrButton v-else-if="selectedTask.input?.text" size="sm" priority="tertiary" @click="copyToClipboard(selectedTask.input.text)">Copier le texte</DsfrButton>
+            <DsfrButton v-else-if="selectedTask.output?.summary" size="sm" priority="tertiary" @click="copyToClipboard(selectedTask.output.summary)">Copier le résumé</DsfrButton>
             <DsfrButton v-else-if="selectedTask.input?.raw_filename" size="sm" priority="tertiary" @click="copyToClipboard(selectedTask.input.raw_filename)">Copier le nom</DsfrButton>
             <span v-if="copySuccess" class="copy-success">Copié&nbsp;!</span>
           </div>
@@ -122,17 +115,45 @@
         
       </div>
     </div>
+    
+    <!-- Stats Modal -->
+    <StatModel v-if="statsVisible" @close="statsVisible = false" />
+
+      <!-- Connected users badge -->
+      <div class="connected-badge" title="Utilisateurs qu'ont utilisé le service aujourd'hui">
+        <span class="badge-emoji">👥</span>
+        <span class="badge-number">{{ connectedUsers ?? '—' }}</span>
+      </div>
 
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed } from 'vue'
 import { onMounted, onBeforeUnmount } from 'vue'
+import createHttpClient from '@/api/http-client'
+import { ABREGE_API_URL } from '@/utils/constants'
 import { useAbregeStore } from '@/stores/abrege'
+import StatModel from './StatModel.vue'
 
 const abrege = useAbregeStore()
 const paginatedData = abrege.userTasksPaginated
+
+// connected users today badge
+const connectedUsers = ref<number | null>(null)
+const http = createHttpClient(ABREGE_API_URL)
+
+const fetchConnectedUsers = async () => {
+  try {
+    const { data } = await http.get('/tasks/count-users-today')
+    // API returns { users_today: <number> }
+    connectedUsers.value = data?.users_today ?? null
+  }
+  catch (e) {
+    // keep null on error
+    connectedUsers.value = null
+  }
+}
 
 // Example full dataset (would come from API). We'll expose paginatedData matching the API schema:
 
@@ -181,16 +202,22 @@ const paginatedTasks = computed(() => {
   })
 })
 
-// define loadPage to start polling via store
-const loadPage = async (page = 1) => {
-  const pageSize = paginatedData?.page_size ?? 10
-  // start polling via store (store updates paginatedData automatically)
-  abrege.startPollingUserTasks(page, pageSize)
-  
+// define loadPage to start polling via store and refresh connected users
+const loadPage = async (page = 1, overridePageSize?: number) => {
+  const pageSize = overridePageSize ?? paginatedData?.page_size ?? 10
+  // fetch page once (no automatic polling)
+  await abrege.fetchUserTasks(page, pageSize)
+  // refresh connected users count whenever we load a page
+  try {
+    await fetchConnectedUsers()
+  } catch (e) {
+    // ignore errors here — fetchConnectedUsers already handles them
+  }
 }
 
 onMounted(() => {
   loadPage(1)
+  fetchConnectedUsers()
 })
 
 onBeforeUnmount(() => {
@@ -208,29 +235,51 @@ const totalPages = computed(() => {
 
 
 // ----- MODAL -----
-const selectedTask = ref({
-  // example structure:
-  // id: 'task123',
-  // type: 'summarization',
-  // status: 'completed',
-  // percentage: 1,
-  // created_at: '2024-01-01T12:00:00Z',
-  // updated_at: '2024-01-01T12:05:00Z',
-  // input: {
-  //   // url: 'https://example.com/article',
-  //   text: 'Some input text...',
-  //   raw_filename: 'document.pdf'
-  // },
-  // result: {
-  //   summary: 'This is a summary of the article...'
-  // }
-})
+// `selectedTask` starts as `null` so the modal is hidden by default.
+const selectedTask = ref(null)
+
+// stats modal visibility
+const statsVisible = ref(false)
+
+/* Example structure for reference: */
+// const selectedTask = {
+//   id: 'task123',
+//   type: 'summarization',
+//   status: 'completed',
+//   percentage: 1,
+//   created_at: '2024-01-01T12:00:00Z',
+//   updated_at: '2024-01-01T12:05:00Z',
+//   input: {
+//     text: 'Some input text...',
+//     raw_filename: 'document.pdf'
+//   },
+//   output: {
+//     summary: 'This is a summary of the article...'
+//   }
+// }
+
 
 const openModal = (task) => {
   if (!task || task.status !== 'completed') {
     return
   }
   selectedTask.value = task
+}
+
+// remove a task via the store API and refresh the current page
+const removeTask = async (taskId) => {
+  if (!taskId) return
+  try {
+    // call store action to delete
+    await abrege.deleteTask(taskId)
+    // reload current page
+    const currentPage = paginatedData && paginatedData.value ? paginatedData.value.page ?? 1 : (paginatedData.page ?? 1)
+    const pageSize = paginatedData && paginatedData.value ? paginatedData.value.page_size ?? 10 : (paginatedData.page_size ?? 10)
+    await loadPage(currentPage, pageSize)
+  }
+  catch (e) {
+    console.error('Failed to remove task', e)
+  }
 }
 
 const formatDate = (ts) => {
@@ -246,8 +295,8 @@ const formatDate = (ts) => {
   }
 }
 
-// copy helper for modal with visual feedback
-import { watch } from 'vue'
+// // copy helper for modal with visual feedback
+// import { watch } from 'vue'
 const copySuccess = ref(false)
 let _copyTimeout = null
 
@@ -302,11 +351,24 @@ onBeforeUnmount(() => {
 <style scoped>
 .task-container {
   padding: 20px;
+  position: relative;
 }
 
 .task-table {
   width: 100%;
   border-collapse: collapse;
+}
+
+/* Prevent long content (URLs, summaries) from expanding the page width */
+.task-table {
+  table-layout: fixed;
+}
+
+.task-table th,
+.task-table td {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
 }
 
 .task-table th,
@@ -427,4 +489,22 @@ onBeforeUnmount(() => {
   margin-left: 0.75rem;
   font-weight: 600;
 }
+
+/* connected badge */
+.connected-badge {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  background: #0b6bff;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 6px 18px rgba(11,107,255,0.15);
+  font-weight: 600;
+}
+.connected-badge .badge-emoji { font-size: 14px }
+.connected-badge .badge-number { min-width: 32px; text-align: center }
 </style>

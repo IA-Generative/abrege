@@ -342,15 +342,14 @@ export const useAbregeStore = defineStore('abrege', () => {
     _stopUserTasksPolling = false
     while (!_stopUserTasksPolling) {
       try {
-        const { data } = await http.get(`/task/user/`, { params: { offset: page, limit: page_size } })        
+        const { data } = await http.get(`/task/user/`, { params: { offset: page, limit: page_size } })
         userTasksPaginated.value.total = data.total ?? 0
         userTasksPaginated.value.page = data.page ?? page
         userTasksPaginated.value.page_size = data.page_size ?? page_size
         userTasksPaginated.value.items = data.items ?? []
-        
       }
       catch (err: any) {
-        
+        // swallow errors during polling
       }
       // wait before next poll
       // stop early if requested
@@ -368,6 +367,20 @@ export const useAbregeStore = defineStore('abrege', () => {
 
   function stopPollingUserTasks () {
     _stopUserTasksPolling = true
+  }
+
+  // One-shot fetch for user tasks (useful when we don't want continuous polling)
+  async function fetchUserTasks (page = 1, page_size = 10) {
+    try {
+      const { data } = await http.get(`/task/user/`, { params: { offset: page, limit: page_size } })
+      userTasksPaginated.value.total = data.total ?? 0
+      userTasksPaginated.value.page = data.page ?? page
+      userTasksPaginated.value.page_size = data.page_size ?? page_size
+      userTasksPaginated.value.items = data.items ?? []
+    }
+    catch (err: any) {
+      // keep existing behavior: swallow errors here (UI may show nothing)
+    }
   }
 
   // ----- DELETE TASK (wrapped here so UI can use store for actions) -----
@@ -411,6 +424,7 @@ export const useAbregeStore = defineStore('abrege', () => {
     userTasksPaginated,
     startPollingUserTasks,
     stopPollingUserTasks,
+    fetchUserTasks,
     deleteTask,
   }
 })
