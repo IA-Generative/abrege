@@ -9,6 +9,8 @@ services:
       target: dev
     env_file:
       - .env
+    environment:
+      - VITE_SSO_BYPASS=true
     ports:
     - 8082:3000
     volumes:

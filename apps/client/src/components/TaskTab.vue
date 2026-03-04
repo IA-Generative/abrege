@@ -25,8 +25,8 @@
             >
               {{ task.input.url }}
             </a>
-            <span v-else-if="task.input?.text">
-              {{ task.input.text.length > 30 ? task.input.text.slice(0, 30) + '...' : task.input.text }}
+            <span v-else-if="task.output?.summary">
+              {{ task.output.summary.length > 30 ? task.output.summary.slice(0, 30) + '...' : task.output.summary }}
             </span>
             <span v-else-if="task.input?.raw_filename">{{ task.input.raw_filename }}</span>
             <span v-else>Inconnu</span>
@@ -95,8 +95,8 @@
         <section class="modal-section fr-card">
           <div class="section-title">Contenu</div>
           <div class="section-content">
-            <div v-if="selectedTask.input?.text">
-              <textarea readonly class="summary-text" :value="selectedTask.input.text"></textarea>
+            <div v-if="selectedTask.output?.summary">
+              <textarea readonly class="summary-text" :value="selectedTask.output.summary"></textarea>
             </div>
             <div v-else-if="selectedTask.input?.url">
               <div>URL fournie. Cliquez sur le lien ci‑dessous pour ouvrir.</div>
@@ -111,7 +111,7 @@
         <section class="modal-section modal-actions">
           <div class="section-content">
             <DsfrButton v-if="selectedTask.input?.url" size="sm" priority="tertiary" @click="copyToClipboard(selectedTask.input.url)">Copier l'URL</DsfrButton>
-            <DsfrButton v-else-if="selectedTask.input?.text" size="sm" priority="tertiary" @click="copyToClipboard(selectedTask.input.text)">Copier le texte</DsfrButton>
+            <DsfrButton v-else-if="selectedTask.output?.summary" size="sm" priority="tertiary" @click="copyToClipboard(selectedTask.output.summary)">Copier le résumé</DsfrButton>
             <DsfrButton v-else-if="selectedTask.input?.raw_filename" size="sm" priority="tertiary" @click="copyToClipboard(selectedTask.input.raw_filename)">Copier le nom</DsfrButton>
             <span v-if="copySuccess" class="copy-success">Copié&nbsp;!</span>
           </div>
@@ -208,29 +208,48 @@ const totalPages = computed(() => {
 
 
 // ----- MODAL -----
-const selectedTask = ref({
-  // example structure:
-  // id: 'task123',
-  // type: 'summarization',
-  // status: 'completed',
-  // percentage: 1,
-  // created_at: '2024-01-01T12:00:00Z',
-  // updated_at: '2024-01-01T12:05:00Z',
-  // input: {
-  //   // url: 'https://example.com/article',
-  //   text: 'Some input text...',
-  //   raw_filename: 'document.pdf'
-  // },
-  // result: {
-  //   summary: 'This is a summary of the article...'
-  // }
-})
+// `selectedTask` starts as `null` so the modal is hidden by default.
+// const selectedTask = ref(null)
+
+/* Example structure for reference: */
+const selectedTask = {
+  id: 'task123',
+  type: 'summarization',
+  status: 'completed',
+  percentage: 1,
+  created_at: '2024-01-01T12:00:00Z',
+  updated_at: '2024-01-01T12:05:00Z',
+  input: {
+    text: 'Some input text...',
+    raw_filename: 'document.pdf'
+  },
+  output: {
+    summary: 'This is a summary of the article...'
+  }
+}
+
 
 const openModal = (task) => {
   if (!task || task.status !== 'completed') {
     return
   }
   selectedTask.value = task
+}
+
+// remove a task via the store API and refresh the current page
+const removeTask = async (taskId) => {
+  if (!taskId) return
+  try {
+    // call store action to delete
+    await abrege.deleteTask(taskId)
+    // reload current page
+    const currentPage = paginatedData && paginatedData.value ? paginatedData.value.page ?? 1 : (paginatedData.page ?? 1)
+    const pageSize = paginatedData && paginatedData.value ? paginatedData.value.page_size ?? 10 : (paginatedData.page_size ?? 10)
+    await loadPage(currentPage, pageSize)
+  }
+  catch (e) {
+    console.error('Failed to remove task', e)
+  }
 }
 
 const formatDate = (ts) => {
@@ -246,8 +265,8 @@ const formatDate = (ts) => {
   }
 }
 
-// copy helper for modal with visual feedback
-import { watch } from 'vue'
+// // copy helper for modal with visual feedback
+// import { watch } from 'vue'
 const copySuccess = ref(false)
 let _copyTimeout = null
 
