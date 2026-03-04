@@ -95,7 +95,7 @@ async def get_tasks_read_user(
     return Pagination[TaskModel](total=total, page=offset, page_size=limit, items=tasks)
 
 
-@router.delete("/task/{id}", response_model=TaskModel)
+@router.delete("/task/{id}", status_code=204)
 async def delete_task(
     id: str,
     ctx: RequestContext = Depends(TokenVerifier),

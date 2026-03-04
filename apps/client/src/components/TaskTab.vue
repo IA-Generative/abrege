@@ -210,12 +210,17 @@ const paginatedTasks = computed(() => {
   })
 })
 
-// define loadPage to start polling via store
-const loadPage = async (page = 1) => {
-  const pageSize = paginatedData?.page_size ?? 10
-  // start polling via store (store updates paginatedData automatically)
-  abrege.startPollingUserTasks(page, pageSize)
-  
+// define loadPage to start polling via store and refresh connected users
+const loadPage = async (page = 1, overridePageSize?: number) => {
+  const pageSize = overridePageSize ?? paginatedData?.page_size ?? 10
+  // fetch page once (no automatic polling)
+  await abrege.fetchUserTasks(page, pageSize)
+  // refresh connected users count whenever we load a page
+  try {
+    await fetchConnectedUsers()
+  } catch (e) {
+    // ignore errors here — fetchConnectedUsers already handles them
+  }
 }
 
 onMounted(() => {

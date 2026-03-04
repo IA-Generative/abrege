@@ -59,8 +59,10 @@
 </template>
 
 <script setup>
-import { reactive } from 'vue'
+import { reactive, ref, computed, onMounted } from 'vue'
 import { defineEmits } from 'vue'
+import createHttpClient from '@/api/http-client'
+import { ABREGE_API_URL } from '@/utils/constants'
 
 const emit = defineEmits(['close'])
 
@@ -68,33 +70,27 @@ function close() {
   emit('close')
 }
 
-// Mocked data to illustrate the shape coming from the backend
+const http = createHttpClient(ABREGE_API_URL)
+
+// loading / error
+const loading = ref(false)
+const error = ref(null)
+
+// reactive stats container (will be filled by the backend)
 const stats = reactive({
   global_stats: {
-    total_tasks: 128,
-    tasks_stats: {
-      queued: 20,
-      in_progress: 5,
-      completed: 90,
-      failed: 13,
-    },
+    total_tasks: 0,
+    tasks_stats: {},
   },
   user_stats: {
-    user_id: 'user_123',
-    total_tasks: 12,
-    tasks_stats: {
-      queued: 2,
-      completed: 8,
-      failed: 2,
-    },
+    user_id: null,
+    total_tasks: 0,
+    tasks_stats: {},
   },
-  // all_users_stats removed (table view not required)
 })
 
-// helpers for charts
-
-// pie chart helpers for user stats
 const COLORS = ['#4caf50', '#2196f3', '#ff9800', '#e91e63', '#9c27b0']
+
 function polarToCartesian(cx, cy, r, angle) {
   const a = (angle - 90) * Math.PI / 180.0
   return { x: cx + (r * Math.cos(a)), y: cy + (r * Math.sin(a)) }
@@ -113,36 +109,58 @@ function describeArc(cx, cy, r, startAngle, endAngle) {
   return d
 }
 
-const userSlices = (() => {
-  const items = stats.user_stats.tasks_stats
+// fetch real stats from backend
+const loadStats = async () => {
+  loading.value = true
+  error.value = null
+  try {
+    const { data } = await http.get('/task/stats')
+    if (data) {
+      stats.global_stats = data.global_stats ?? stats.global_stats
+      stats.user_stats = data.user_stats ?? stats.user_stats
+    }
+  }
+  catch (e) {
+    error.value = e?.message ?? String(e)
+  }
+  finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  loadStats()
+})
+
+const userSlices = computed(() => {
+  const items = stats.user_stats.tasks_stats || {}
   const entries = Object.entries(items)
-  const total = entries.reduce((s, [, v]) => s + v, 0) || 1
+  const total = entries.reduce((s, [, v]) => s + (v || 0), 0) || 1
   let angle = 0
   return entries.map(([k, v], i) => {
-    const portion = (v / total) * 360
+    const portion = ((v || 0) / total) * 360
     const path = describeArc(16, 16, 16, angle, angle + portion)
     angle += portion
-    return { label: k, value: v, color: COLORS[i % COLORS.length], path }
+    return { label: k, value: v || 0, color: COLORS[i % COLORS.length], path }
   })
-})()
+})
 
-const userLegend = userSlices.map(s => ({ label: s.label, value: s.value, color: s.color }))
+const userLegend = computed(() => userSlices.value.map(s => ({ label: s.label, value: s.value, color: s.color })))
 
-// global pie (from stats.global_stats.tasks_stats)
-const globalSlices = (() => {
-  const items = stats.global_stats.tasks_stats
+const globalSlices = computed(() => {
+  const items = stats.global_stats.tasks_stats || {}
   const entries = Object.entries(items)
-  const total = entries.reduce((s, [, v]) => s + v, 0) || 1
+  const total = entries.reduce((s, [, v]) => s + (v || 0), 0) || 1
   let angle = 0
   return entries.map(([k, v], i) => {
-    const portion = (v / total) * 360
+    const portion = ((v || 0) / total) * 360
     const path = describeArc(16, 16, 16, angle, angle + portion)
     angle += portion
-    return { label: k, value: v, color: COLORS[i % COLORS.length], path }
+    return { label: k, value: v || 0, color: COLORS[i % COLORS.length], path }
   })
-})()
+})
 
-const globalLegend = globalSlices.map(s => ({ label: s.label, value: s.value, color: s.color }))
+const globalLegend = computed(() => globalSlices.value.map(s => ({ label: s.label, value: s.value, color: s.color })))
 </script>
 
 <style scoped>
