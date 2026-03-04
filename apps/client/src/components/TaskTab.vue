@@ -34,8 +34,7 @@
           </td>
 
           <td>
-            <ProgressBar :visible="true" :progress="task.percentage * 100 ?? 0" :text="MapStatusToLabel(task.status)" />
-            <div class="fr-ml-1">{{ task.percentage * 100 ?? 0 }}%</div>
+            <ProgressBar :visible="true" :progress="(task.percentage ?? 0) * 100" :text="MapStatusToLabel(task.status)" />
           </td>
 
           <td>{{ formatDate(task.created_at) }}</td>
@@ -48,14 +47,7 @@
           </td>
 
           <td>
-            <DsfrButton
-              size="sm"
-              priority="tertiary"
-              :disabled="task.status !== 'completed' && (task.percentage ?? 0) < 100"
-              @click="removeTask(task.id)"
-            >
-              Supprimer
-            </DsfrButton>
+            <DsfrButton size="sm" priority="tertiary" @click="removeTask(task.id)">Supprimer</DsfrButton>
           </td>
         </tr>
       </tbody>
@@ -128,7 +120,7 @@
     <StatModel v-if="statsVisible" @close="statsVisible = false" />
 
       <!-- Connected users badge -->
-      <div class="connected-badge" title="Utilisateurs connectés aujourd'hui">
+      <div class="connected-badge" title="Utilisateurs qu'ont utilisé le service aujourd'hui">
         <span class="badge-emoji">👥</span>
         <span class="badge-number">{{ connectedUsers ?? '—' }}</span>
       </div>
