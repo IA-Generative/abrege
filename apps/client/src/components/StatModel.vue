@@ -31,7 +31,7 @@
         <div class="chart-col">
           <div class="section-title">Statistiques utilisateur</div>
           <div class="section-content center-col">
-            <div class="stat-row"><strong>Utilisateur :</strong> {{ stats.user_stats.user_id }}</div>
+            <div class="stat-row"><strong>Utilisateur :</strong> Vous </div>
             <div class="stat-row"><strong>Total :</strong> {{ stats.user_stats.total_tasks }}</div>
             <div class="chart-block">
               <svg :width="180" :height="180" viewBox="0 0 32 32" class="pie">
