@@ -367,6 +367,18 @@ onBeforeUnmount(() => {
   border-collapse: collapse;
 }
 
+/* Prevent long content (URLs, summaries) from expanding the page width */
+.task-table {
+  table-layout: fixed;
+}
+
+.task-table th,
+.task-table td {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
+}
+
 .task-table th,
 .task-table td {
   border: 1px solid #ddd;
