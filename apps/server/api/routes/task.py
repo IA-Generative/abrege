@@ -1,4 +1,5 @@
 from typing import List
+from datetime import datetime
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import JSONResponse
 
@@ -6,7 +7,7 @@ from fastapi.responses import JSONResponse
 from api.core.security.token import RequestContext
 from api.core.security.factory import TokenVerifier
 
-from src.schemas.task import task_table, TaskModel
+from src.schemas.task import task_table, TaskModel, TaskStats
 from src.schemas.pagination import Pagination
 from src.schemas.code_error import TASK_STATUS_TO_HTTP
 from src.clients import file_connector
@@ -37,10 +38,42 @@ async def get_task(
     return JSONResponse(task.model_dump(), status_code=TASK_STATUS_TO_HTTP.get(task.status, 200))
 
 
+@router.get("/task/stats", response_model=TaskStats)
+async def get_statistics(
+    skip: int = 0,
+    limit: int = 10,
+    ctx: RequestContext = Depends(TokenVerifier),
+) -> TaskStats:
+    try:
+        stats = task_table.statistics(user_id=ctx.user_id, is_admin=bool(
+            ctx.is_admin), skip=skip, limit=limit)
+        return stats
+    except Exception as e:
+        logger_abrege.exception(e, extra={"user_id": ctx.user_id})
+        raise HTTPException(500, detail=str(e))
+
+
+@router.get("/task/unique_users")
+async def get_unique_users_today(
+    ctx: RequestContext = Depends(TokenVerifier),
+) -> JSONResponse:
+    try:
+        now = datetime.now()
+        start = int(datetime(now.year, now.month, now.day).timestamp())
+        end = start + 24 * 60 * 60
+        count = task_table.count_unique_users_between_dates(
+            start_date=start, end_date=end)
+        return JSONResponse({"users_today": count})
+    except Exception as e:
+        logger_abrege.exception(e, extra={"user_id": ctx.user_id})
+        raise HTTPException(500, detail=str(e))
+
+
 def read_user(user_id: str, offset: int = 1, limit: int = 10) -> List[TaskModel]:
     tmp_log = {"user_id": user_id}
     try:
-        tasks = task_table.get_tasks_by_user_id(user_id=user_id, page=offset, page_size=limit)
+        tasks = task_table.get_tasks_by_user_id(
+            user_id=user_id, page=offset, page_size=limit)
         logger_abrege.debug(f"[Task found: {len(tasks)}]", extra=tmp_log)
         if tasks is None:
             raise HTTPException(404, detail=f"{id} not found")

@@ -1,6 +1,7 @@
 <template>
   <div class="task-container fr-container">
     <h2 class="fr-h2">Liste des tâches</h2>
+    <DsfrButton size="sm" priority="secondary" class="fr-ml-1" @click="statsVisible = true">Voir les statistiques</DsfrButton>
 
     <table class="fr-table task-table">
       <thead>
@@ -122,17 +123,45 @@
         
       </div>
     </div>
+    
+    <!-- Stats Modal -->
+    <StatModel v-if="statsVisible" @close="statsVisible = false" />
+
+      <!-- Connected users badge -->
+      <div class="connected-badge" title="Utilisateurs connectés aujourd'hui">
+        <span class="badge-emoji">👥</span>
+        <span class="badge-number">{{ connectedUsers ?? '—' }}</span>
+      </div>
 
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed } from 'vue'
 import { onMounted, onBeforeUnmount } from 'vue'
+import createHttpClient from '@/api/http-client'
+import { ABREGE_API_URL } from '@/utils/constants'
 import { useAbregeStore } from '@/stores/abrege'
+import StatModel from './StatModel.vue'
 
 const abrege = useAbregeStore()
 const paginatedData = abrege.userTasksPaginated
+
+// connected users today badge
+const connectedUsers = ref<number | null>(null)
+const http = createHttpClient(ABREGE_API_URL)
+
+const fetchConnectedUsers = async () => {
+  try {
+    const { data } = await http.get('/task/unique_users')
+    // API returns { users_today: <number> }
+    connectedUsers.value = data?.users_today ?? null
+  }
+  catch (e) {
+    // keep null on error
+    connectedUsers.value = null
+  }
+}
 
 // Example full dataset (would come from API). We'll expose paginatedData matching the API schema:
 
@@ -191,6 +220,7 @@ const loadPage = async (page = 1) => {
 
 onMounted(() => {
   loadPage(1)
+  fetchConnectedUsers()
 })
 
 onBeforeUnmount(() => {
@@ -210,6 +240,9 @@ const totalPages = computed(() => {
 // ----- MODAL -----
 // `selectedTask` starts as `null` so the modal is hidden by default.
 const selectedTask = ref(null)
+
+// stats modal visibility
+const statsVisible = ref(false)
 
 /* Example structure for reference: */
 // const selectedTask = {
@@ -321,6 +354,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .task-container {
   padding: 20px;
+  position: relative;
 }
 
 .task-table {
@@ -446,4 +480,22 @@ onBeforeUnmount(() => {
   margin-left: 0.75rem;
   font-weight: 600;
 }
+
+/* connected badge */
+.connected-badge {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  background: #0b6bff;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 6px 18px rgba(11,107,255,0.15);
+  font-weight: 600;
+}
+.connected-badge .badge-emoji { font-size: 14px }
+.connected-badge .badge-number { min-width: 32px; text-align: center }
 </style>
