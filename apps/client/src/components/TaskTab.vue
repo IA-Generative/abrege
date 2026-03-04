@@ -209,24 +209,24 @@ const totalPages = computed(() => {
 
 // ----- MODAL -----
 // `selectedTask` starts as `null` so the modal is hidden by default.
-// const selectedTask = ref(null)
+const selectedTask = ref(null)
 
 /* Example structure for reference: */
-const selectedTask = {
-  id: 'task123',
-  type: 'summarization',
-  status: 'completed',
-  percentage: 1,
-  created_at: '2024-01-01T12:00:00Z',
-  updated_at: '2024-01-01T12:05:00Z',
-  input: {
-    text: 'Some input text...',
-    raw_filename: 'document.pdf'
-  },
-  output: {
-    summary: 'This is a summary of the article...'
-  }
-}
+// const selectedTask = {
+//   id: 'task123',
+//   type: 'summarization',
+//   status: 'completed',
+//   percentage: 1,
+//   created_at: '2024-01-01T12:00:00Z',
+//   updated_at: '2024-01-01T12:05:00Z',
+//   input: {
+//     text: 'Some input text...',
+//     raw_filename: 'document.pdf'
+//   },
+//   output: {
+//     summary: 'This is a summary of the article...'
+//   }
+// }
 
 
 const openModal = (task) => {
