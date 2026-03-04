@@ -38,7 +38,7 @@ async def get_task(
     return JSONResponse(task.model_dump(), status_code=TASK_STATUS_TO_HTTP.get(task.status, 200))
 
 
-@router.get("/task/stats", response_model=TaskStats)
+@router.get("/tasks/stats", response_model=TaskStats)
 async def get_statistics(
     skip: int = 0,
     limit: int = 10,
@@ -53,7 +53,7 @@ async def get_statistics(
         raise HTTPException(500, detail=str(e))
 
 
-@router.get("/task/unique_users")
+@router.get("/tasks/count-users-today")
 async def get_unique_users_today(
     ctx: RequestContext = Depends(TokenVerifier),
 ) -> JSONResponse:

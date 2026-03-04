@@ -114,7 +114,7 @@ const loadStats = async () => {
   loading.value = true
   error.value = null
   try {
-    const { data } = await http.get('/task/stats')
+    const { data } = await http.get('/tasks/stats')
     if (data) {
       stats.global_stats = data.global_stats ?? stats.global_stats
       stats.user_stats = data.user_stats ?? stats.user_stats

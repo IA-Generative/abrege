@@ -153,7 +153,7 @@ const http = createHttpClient(ABREGE_API_URL)
 
 const fetchConnectedUsers = async () => {
   try {
-    const { data } = await http.get('/task/unique_users')
+    const { data } = await http.get('/tasks/count-users-today')
     // API returns { users_today: <number> }
     connectedUsers.value = data?.users_today ?? null
   }
