@@ -5,7 +5,6 @@ import { storeToRefs } from 'pinia'
 import useToaster from '@/composables/use-toaster'
 import { useAbregeStore } from '@/stores/abrege'
 import FileParamsModal from './FileParamsModal.vue'
-import ParamsResume from './ParamsResume.vue'
 import ResumeResult from './ResumeResult.vue'
 
 type TaskModel = components['schemas']['TaskModel']
@@ -30,6 +29,17 @@ const {
 const resumeResults = ref<TaskModel[]>([])
 const percentage = computed(() => formattedPercentage.value)
 
+const mergeEnabled = ref(false)
+const mergeParams = ref({
+  language: 'French',
+  size: null as number | null,
+  customPrompt: null as string | null,
+})
+const languageOptions = [
+  { value: 'French', text: 'Français (par défaut)' },
+  { value: 'English', text: 'Anglais' },
+]
+
 function handleFileChange (files: FileList | File[]) {
   const fileArray = Array.isArray(files) ? files : Array.from(files)
   if (fileArray.length) {
@@ -40,11 +50,13 @@ function handleFileChange (files: FileList | File[]) {
 async function onSubmit () {
   try {
     isLoading.value = true
+    const taskIds: string[] = []
     for (const [i, file] of abregeStore.fileUpload.entries()) {
       const fp = abregeStore.fileParams[i]
       await abregeStore.sendDocumentAndPoll(file, fp?.customPrompt, fp?.language, fp?.size)
 
       if (taskData.value?.id) {
+        taskIds.push(taskData.value.id)
         const result = await abregeStore.downloadContentSummary(taskData.value.id)
         resumeResults.value.push(result)
       }
@@ -53,6 +65,14 @@ async function onSubmit () {
           title: 'Erreur lors de la génération de résumé :',
           description: storeError.value,
         })
+      }
+    }
+
+    if (mergeEnabled.value && taskIds.length > 1) {
+      await abregeStore.mergeTasksAndPoll(taskIds)
+      if (abregeStore.taskData?.id) {
+        const mergeResult = await abregeStore.downloadContentSummary(abregeStore.taskData.id)
+        resumeResults.value.push(mergeResult)
       }
     }
 
@@ -70,8 +90,8 @@ async function onSubmit () {
 }
 
 function removeFile (index: number) {
-  abregeStore.fileUpload = abregeStore.fileUpload.filter((_, i) => i !== index)
-  abregeStore.fileParams = abregeStore.fileParams.filter((_, i) => i !== index)
+  abregeStore.fileUpload = abregeStore.fileUpload.filter((_: File, i: number) => i !== index)
+  abregeStore.fileParams = abregeStore.fileParams.filter((_: unknown, i: number) => i !== index)
 }
 
 const expandedFileIndex = ref<number | null>(null)
@@ -145,13 +165,53 @@ if (storeError.value) {
         </div>
       </li>
     </ul>
+    <div
+      v-if="abregeStore.fileUpload.length > 1"
+      class="merge-section"
+    >
+      <DsfrCheckbox
+        v-model="mergeEnabled"
+        label="Résumer l'ensemble des fichiers"
+        name="merge-enabled"
+      />
+      <div
+        v-if="mergeEnabled"
+        class="merge-params"
+      >
+        <div class="merge-param-row">
+          <DsfrSelect
+            v-model="mergeParams.language"
+            label="Langue du résumé global"
+            :options="languageOptions"
+          />
+        </div>
+        <div class="merge-param-row">
+          <DsfrInput
+            v-model="mergeParams.size"
+            label="Nombre de mots"
+            label-visible
+            placeholder="4000 (par défaut)"
+            hint="Nombre de mots approximatif pour le résumé global"
+            type="number"
+          />
+        </div>
+        <div class="merge-param-row">
+          <DsfrInput
+            v-model="mergeParams.customPrompt"
+            :label-visible="true"
+            :is-textarea="true"
+            label="Instruction pour le résumé global"
+            hint="Laissez vide pour un résumé synthétique par défaut"
+          />
+        </div>
+      </div>
+    </div>
     <FileParamsModal
       v-if="expandedFileIndex !== null && abregeStore.fileParams[expandedFileIndex]"
-      :file-name="abregeStore.fileUpload[expandedFileIndex].name"
+      :item-label="abregeStore.fileUpload[expandedFileIndex].name"
       :params="abregeStore.fileParams[expandedFileIndex]"
       @close="closeFileParams"
     />
-    <ParamsResume />
     <div
       v-if="isPolling"
       class="is-generating-container"
@@ -212,5 +272,20 @@ if (storeError.value) {
   text-overflow: ellipsis;
   white-space: nowrap;
   flex: 1;
+}
+
+.merge-section {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: var(--blue-france-975-75, #f5f5fe);
+  border-left: 3px solid var(--blue-france-sun-113-625, #000091);
+  border-radius: 4px;
+}
+
+.merge-params {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 </style>

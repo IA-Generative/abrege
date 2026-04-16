@@ -54,6 +54,8 @@ const VALID_MIME_TYPES = [
 export const useAbregeStore = defineStore('abrege', () => {
   const textToResume = ref('')
   const urlToResume = ref('')
+  const urlList = ref<string[]>([])
+  const urlListParams = ref<{ customPrompt: string | null, language: string | null, size: number | null }[]>([])
   const fileUpload = ref<File[]>([])
   const fileParams = ref<{ customPrompt: string | null, language: string | null, size: number | null }[]>([])
 
@@ -209,18 +211,23 @@ export const useAbregeStore = defineStore('abrege', () => {
     error.value = undefined
   }
 
-  async function sendContentAndPoll (type: 'text' | 'url') {
+  async function sendContentAndPoll (type: 'text' | 'url', contentOverride?: string, overrideParams?: { customPrompt?: string | null, language?: string | null, size?: number | null }) {
     const ok = await healthCheck()
     if (!ok) {
       return
     }
 
+    const resolvedLanguage = overrideParams?.language ?? paramsValue.value.selectOptionSelected
+    const resolvedSize = overrideParams?.size != null ? overrideParams.size : Number(paramsValue.value.inputValue)
+    const resolvedPrompt = overrideParams?.customPrompt !== undefined ? overrideParams.customPrompt : paramsValue.value.customPrompt
+
+    const defaultContent = type === 'url' ? urlToResume.value : textToResume.value
     const body = {
-      content: { [type]: type === 'url' ? urlToResume.value : textToResume.value },
+      content: { [type]: contentOverride ?? defaultContent },
       parameters: {
-        language: paramsValue.value.selectOptionSelected,
-        size: Number(paramsValue.value.inputValue),
-        custom_prompt: paramsValue.value.customPrompt,
+        language: resolvedLanguage,
+        size: resolvedSize,
+        custom_prompt: resolvedPrompt,
       },
     }
 
@@ -394,6 +401,24 @@ export const useAbregeStore = defineStore('abrege', () => {
     }
   }
 
+  async function mergeTasksAndPoll (taskIds: string[]) {
+    const ok = await healthCheck()
+    if (!ok) return
+
+    try {
+      const { data: task } = await http.post<TaskModel>('/tasks/merge/', taskIds)
+      if (!task || !task.id) {
+        throw new Error('Réponse API invalide: ID de tâche manquant')
+      }
+      await pollTask(task.id)
+    }
+    catch (err: any) {
+      error.value = err.message || 'Erreur lors du merge des tâches.'
+      isPolling.value = false
+      throw err
+    }
+  }
+
   const formattedPercentage = computed(() =>
     taskData.value && taskData.value.percentage != null
       ? Math.round(taskData.value.percentage * 100)
@@ -404,6 +429,8 @@ export const useAbregeStore = defineStore('abrege', () => {
     // State
     textToResume,
     urlToResume,
+    urlList,
+    urlListParams,
     fileUpload,
     fileParams,
     paramsValue,
@@ -420,6 +447,7 @@ export const useAbregeStore = defineStore('abrege', () => {
     sendContentAndPoll,
     sendDocumentAndPoll,
     downloadContentSummary,
+    mergeTasksAndPoll,
     // polling & management
     userTasksPaginated,
     startPollingUserTasks,

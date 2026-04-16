@@ -1,7 +1,8 @@
 <script lang="ts" setup>
 
 const props = defineProps<{
-  fileName: string
+  itemLabel: string
+  itemIcon?: string
   params: { customPrompt: string | null, language: string | null, size: number | null }
 }>()
 
@@ -44,14 +45,15 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onEsc))
 </script>
 
 <template>
-  <div
-    class="modal-overlay"
-    @click.self="emit('close')"
-  >
+  <Teleport to="body">
     <div
-      class="modal"
-      @click.stop
+      class="modal-overlay"
+      @click.self="emit('close')"
     >
+      <div
+        class="modal"
+        @click.stop
+      >
       <div class="modal-header">
         <button
           class="fr-btn--close fr-btn"
@@ -72,10 +74,11 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onEsc))
         </h1>
         <p class="fr-text--sm fr-text-mention--grey fr-mb-3w">
           <span
-            class="fr-icon-file-line fr-mr-1v"
+            :class="itemIcon ?? 'fr-icon-file-line'"
+            class="fr-mr-1v"
             aria-hidden="true"
           />
-          {{ fileName }}
+          {{ itemLabel }}
         </p>
         <p class="fr-hint-text fr-mb-3w">
           Ces paramètres s'appliquent uniquement à ce fichier. Laissez une valeur vide pour utiliser les paramètres globaux.
@@ -117,6 +120,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onEsc))
       </div>
     </div>
   </div>
+  </Teleport>
 </template>
 
 <style scoped>

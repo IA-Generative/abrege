@@ -14,6 +14,7 @@ declare module 'vue' {
   export interface GlobalComponents {
     AppHeader: typeof import('./components/AppHeader.vue')['default']
     AppToaster: typeof import('./components/AppToaster.vue')['default']
+    ClassificationTab: typeof import('./components/ClassificationTab.vue')['default']
     CopiedTextTab: typeof import('./components/CopiedTextTab.vue')['default']
     CustomCard: typeof import('./components/CustomCard.vue')['default']
     CustomTabs: typeof import('./components/CustomTabs.vue')['default']
@@ -23,6 +24,7 @@ declare module 'vue' {
     DsfrButton: typeof import('@gouvminint/vue-dsfr')['DsfrButton']
     DsfrButtonGroup: typeof import('@gouvminint/vue-dsfr')['DsfrButtonGroup']
     DsfrCallout: typeof import('@gouvminint/vue-dsfr')['DsfrCallout']
+    DsfrCheckbox: typeof import('@gouvminint/vue-dsfr')['DsfrCheckbox']
     DsfrDropdown: typeof import('./components/DsfrDropdown.vue')['default']
     DsfrFileUpload: typeof import('@gouvminint/vue-dsfr')['DsfrFileUpload']
     DsfrHeader: typeof import('@gouvminint/vue-dsfr')['DsfrHeader']
@@ -49,6 +51,7 @@ declare module 'vue' {
 declare global {
   const AppHeader: typeof import('./components/AppHeader.vue')['default']
   const AppToaster: typeof import('./components/AppToaster.vue')['default']
+  const ClassificationTab: typeof import('./components/ClassificationTab.vue')['default']
   const CopiedTextTab: typeof import('./components/CopiedTextTab.vue')['default']
   const CustomCard: typeof import('./components/CustomCard.vue')['default']
   const CustomTabs: typeof import('./components/CustomTabs.vue')['default']
@@ -58,6 +61,7 @@ declare global {
   const DsfrButton: typeof import('@gouvminint/vue-dsfr')['DsfrButton']
   const DsfrButtonGroup: typeof import('@gouvminint/vue-dsfr')['DsfrButtonGroup']
   const DsfrCallout: typeof import('@gouvminint/vue-dsfr')['DsfrCallout']
+  const DsfrCheckbox: typeof import('@gouvminint/vue-dsfr')['DsfrCheckbox']
   const DsfrDropdown: typeof import('./components/DsfrDropdown.vue')['default']
   const DsfrFileUpload: typeof import('@gouvminint/vue-dsfr')['DsfrFileUpload']
   const DsfrHeader: typeof import('@gouvminint/vue-dsfr')['DsfrHeader']

@@ -15,6 +15,16 @@ class BaseParameters(BaseModel):
     headers: dict | None = Field(default_factory=dict, description="Headers to include in the request")
 
 
+class Label(BaseModel):
+    name: str
+    definition: str
+
+
+class ClassificationParameters(BaseParameters):
+    labels: list[Label] = Field(..., description="Labels for classification")
+
+
 class SummaryParameters(BaseParameters):
     method: MethodType | None = "map_reduce"
     custom_prompt: str | None = Field(None, description="Custom prompt you want after the sumup")
+    classification: Optional[ClassificationParameters] = None
