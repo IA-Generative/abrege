@@ -1,7 +1,9 @@
 #######################
 # Step 1: Base target #
 #######################
-FROM python:3.11.9-slim AS base
+ARG DOCKERHUB_MIRROR_URL
+
+FROM ${DOCKERHUB_MIRROR_URL:-docker.io}/python:3.11.9-slim AS base
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 RUN apt-get update -y && \

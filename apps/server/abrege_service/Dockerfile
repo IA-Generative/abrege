@@ -1,4 +1,6 @@
-FROM python:3.11-slim AS builder
+ARG DOCKERHUB_MIRROR_URL
+
+FROM ${DOCKERHUB_MIRROR_URL:-docker.io}/python:3.11-slim AS builder
 
 # Copier les binaires uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
