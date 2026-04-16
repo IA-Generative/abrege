@@ -210,6 +210,20 @@
 - clean code
 - clean code
 
+## [1.4.0](https://github.com/IA-Generative/abrege/compare/v1.3.0...v1.4.0) (2026-04-16)
+
+
+### Features
+
+* add FileParamsModal component and support for multiple file uploads ([0365b6b](https://github.com/IA-Generative/abrege/commit/0365b6ba65aedf06ed774e1bc22330fac774f449))
+* **release:** enhance release workflow with additional outputs and configuration ([1347676](https://github.com/IA-Generative/abrege/commit/13476760f35c4d5ade9cdd099a22fea98166f21f))
+* **service:** add new approach ([428007b](https://github.com/IA-Generative/abrege/commit/428007b87a393700beb863ec59e5efd7ead131a8))
+
+
+### Bug Fixes
+
+* **ci:** update Dockerfiles to use DOCKERHUB_MIRROR_URL for base images ([950d899](https://github.com/IA-Generative/abrege/commit/950d8992723f0f9b86609ed76a6e2af1360e5959))
+
 ## [1.3.0](https://github.com/IA-Generative/abrege/compare/v1.2.0...v1.3.0) (2026-02-26)
 
 
