@@ -54,7 +54,8 @@ const VALID_MIME_TYPES = [
 export const useAbregeStore = defineStore('abrege', () => {
   const textToResume = ref('')
   const urlToResume = ref('')
-  const fileUpload = ref<File | null>(null)
+  const fileUpload = ref<File[]>([])
+  const fileParams = ref<{ customPrompt: string | null, language: string | null, size: number | null }[]>([])
 
   const status = ref<string | null>(null)
   const percentage = ref<number>(0)
@@ -242,13 +243,8 @@ export const useAbregeStore = defineStore('abrege', () => {
     }
   }
 
-  async function sendDocumentAndPoll () {
-    if (!fileUpload.value) {
-      error.value = 'Aucun fichier sélectionné'
-      return Promise.reject(error.value)
-    }
-
-    const validation = validateFile(fileUpload.value)
+  async function sendDocumentAndPoll (file: File, fileCustomPrompt?: string | null, fileLanguage?: string | null, fileSize?: number | null) {
+    const validation = validateFile(file)
     if (!validation.valid) {
       error.value = validation.message
       return
@@ -261,11 +257,14 @@ export const useAbregeStore = defineStore('abrege', () => {
 
     try {
       const formData = new FormData()
-      formData.append('file', fileUpload.value)
+      formData.append('file', file)
+      const resolvedPrompt = fileCustomPrompt !== undefined ? fileCustomPrompt : paramsValue.value.customPrompt
+      const resolvedLanguage = fileLanguage !== undefined && fileLanguage !== null ? fileLanguage : paramsValue.value.selectOptionSelected
+      const resolvedSize = fileSize !== undefined && fileSize !== null ? fileSize : Number(paramsValue.value.inputValue)
       formData.append('parameters', JSON.stringify({
-        language: paramsValue.value.selectOptionSelected,
-        size: Number(paramsValue.value.inputValue),
-        custom_prompt: paramsValue.value.customPrompt,
+        language: resolvedLanguage,
+        size: resolvedSize,
+        custom_prompt: resolvedPrompt,
       }))
 
       const { data: task } = await http.post<TaskModel>(
@@ -406,6 +405,7 @@ export const useAbregeStore = defineStore('abrege', () => {
     textToResume,
     urlToResume,
     fileUpload,
+    fileParams,
     paramsValue,
     taskData,
     position,
