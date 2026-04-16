@@ -4,7 +4,40 @@
     ".": {
       "release-type": "simple",
       "prerelease": true,
-      "prerelease-type": "rc"
+      "versioning": "prerelease",
+      "include-component-in-tag": false,
+      "initial-version": "0.1.0",
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "apps/client/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "toml",
+          "path": "apps/server/pyproject.toml",
+          "jsonpath": "project.version"
+        },
+        {
+          "path": "apps/server/uv.lock",
+          "type": "toml",
+          "jsonpath": "$.package[?(@.name.value=='abrege')].version"
+        },
+        {
+          "type": "generic",
+          "path": "README.md"
+        }, 
+        {
+          "type": "toml",
+          "path": "sdk/pyproject.toml",
+          "jsonpath": "project.version"
+        }, 
+        {
+          "type": "toml",
+          "path": "sdk/uv.lock",
+          "jsonpath": "$.package[?(@.name.value=='abrege-sdk')].version"
+        }
+      ]
     }
   }
 }
