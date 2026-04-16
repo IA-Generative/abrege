@@ -5,6 +5,7 @@ import ComminitySVG from '@/assets/pictograms/community.svg'
 import DocumentSearch from '@/assets/pictograms/document-search.svg'
 import ResumeCard from '@/assets/resume-card.png'
 
+import ClassificationTab from '@/components/ClassificationTab.vue'
 import CopiedTextTab from '@/components/CopiedTextTab.vue'
 import ResumeInfoBulle from '@/components/ResumeInfoBulle.vue'
 import UploadDocumentTab from '@/components/UploadDocumentTab.vue'
@@ -23,7 +24,8 @@ const tabs = ref([
   { label: firstTabTitle, slot: 'tab-0-content' },
   { label: 'd\'une URL', slot: 'tab-1-content' },
   { label: 'd\'un document téléchargé', slot: 'tab-2-content' },
-  { label: 'des tâches', slot: 'tab-3-content' },
+  { label: 'classification', slot: 'tab-3-content' },
+  { label: 'des tâches', slot: 'tab-4-content' },
 ])
 
 const myOtherTools = ref([
@@ -75,6 +77,9 @@ const myOtherTools = ref([
             <UploadDocumentTab />
           </template>
           <template #tab-3-content>
+            <ClassificationTab />
+          </template>
+          <template #tab-4-content>
             <ResumeInfoBulle />
             <TaskTab />
           </template>

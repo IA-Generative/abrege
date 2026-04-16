@@ -3,6 +3,7 @@ import os
 import traceback
 from typing import Optional
 from datetime import datetime
+from typing import Annotated
 from fastapi import (
     File,
     UploadFile,
@@ -14,7 +15,14 @@ from fastapi import (
 )
 from src.clients import file_connector, celery_app
 from src.utils.logger import logger_abrege as logger
-from src.schemas.task import task_table, TaskForm, TaskUpdateForm, TaskStatus, TaskModel
+from src.schemas.task import (
+    task_table,
+    TaskForm,
+    TaskUpdateForm,
+    TaskStatus,
+    TaskModel,
+    TaskName,
+)
 from src.schemas.content import DocumentModel
 from api.schemas.content import Content
 from src.schemas.parameters import SummaryParameters
@@ -29,6 +37,7 @@ import tempfile
 import shutil
 
 doc_router = APIRouter(tags=["Document"])
+TokenDep = Annotated[RequestContext, Depends(TokenVerifier)]
 
 
 async def summarize_doc(
@@ -120,7 +129,7 @@ async def summarize_doc(
         os.remove(temp_file_path)
 
         celery_app.send_task(
-            "worker.tasks.abrege",
+            name=TaskName.MERGE.value,
             args=[json.dumps(task_data.model_dump())],
             task_id=task_data.id,
             retries=2,
@@ -145,15 +154,19 @@ async def summarize_doc(
 
 @doc_router.post("/task/document", status_code=status.HTTP_201_CREATED, response_model=TaskModel)
 async def new_summarize_doc(
+    ctx: TokenDep,
     file: UploadFile = File(...),
-    prompt: Optional[str] = Form(None, description="Custom prompt for after summary"),
-    parameters: Optional[str] = Form(
-        default="",
-        description=f"Parameters {SummaryParameters().model_dump()}",
-    ),
-    extras: Optional[str] = Form(default="", description="Extras json payload"),
-    ctx: RequestContext = Depends(TokenVerifier),
+    prompt: Annotated[Optional[str], Form(description="Custom prompt for after summary")] = None,
+    parameters: Annotated[
+        Optional[str],
+        Form(
+            description=f"Parameters {SummaryParameters().model_dump()}",
+        ),
+    ] = "",
+    extras: Annotated[Optional[str], Form(description="Extras json payload")] = "",
 ):
+    if ctx.user_id is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
     return await summarize_doc(
         file=file,
         user_id=ctx.user_id,

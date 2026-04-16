@@ -2,15 +2,15 @@ from datetime import datetime
 import uuid
 import time
 from typing import Dict, List, Optional, Any, Union
-from enum import Enum
+from enum import Enum, StrEnum
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import Column, String, JSON, BigInteger, select, Float, Integer, func
 from sqlalchemy.exc import SQLAlchemyError
 
 from src.internal.db import get_db, Base
-from src.schemas.content import URLModel, DocumentModel, TextModel
+from src.schemas.content import URLModel, DocumentModel, TextModel, MergeModel
 from src.schemas.result import ResultModel, SummaryModel
-from src.schemas.parameters import SummaryParameters
+from src.schemas.parameters import SummaryParameters, ClassificationParameters
 from src.schemas.pagination import Pagination
 from src.utils.logger import logger_abrege as logger
 
@@ -47,9 +47,9 @@ class TaskModel(BaseModel):
     status: str = "queued"
     group_id: Optional[str] = None
     percentage: Optional[float] = None
-    input: Optional[Union[URLModel, DocumentModel, TextModel]] = None
+    input: Optional[Union[URLModel, DocumentModel, TextModel, MergeModel]] = None
     output: Optional[Union[ResultModel, SummaryModel]] = None
-    parameters: Optional[SummaryParameters] = SummaryParameters()
+    parameters: Optional[Union[SummaryParameters, ClassificationParameters]] = SummaryParameters()
     position: Optional[int] = None
 
     created_at: int
@@ -64,9 +64,9 @@ class TaskForm(BaseModel):
     status: Optional[str] = None
     percentage: Optional[float] = None
     position: Optional[int] = None
-    input: Optional[Union[URLModel, DocumentModel, TextModel]] = None
+    input: Optional[Union[URLModel, DocumentModel, TextModel, MergeModel]] = None
     output: Optional[Union[ResultModel, SummaryModel]] = None
-    parameters: Optional[SummaryParameters] = None
+    parameters: Optional[Union[SummaryParameters, ClassificationParameters]] = None
     updated_at: Optional[int] = None
     extras: Optional[Dict[str, Any]] = None
     content_hash: Optional[str] = None
@@ -77,9 +77,9 @@ class TaskUpdateForm(BaseModel):
     status: Optional[str] = None
     percentage: Optional[float] = None
     position: Optional[int] = None
-    input: Optional[Union[URLModel, DocumentModel, TextModel]] = None
+    input: Optional[Union[URLModel, DocumentModel, TextModel, MergeModel]] = None
     output: Optional[Union[ResultModel, SummaryModel]] = None
-    parameters: Optional[SummaryParameters] = None
+    parameters: Optional[Union[SummaryParameters, ClassificationParameters]] = None
     updated_at: Optional[int] = None
     extras: Optional[Dict[str, Any]] = None
     content_hash: Optional[str] = None
@@ -112,12 +112,17 @@ class TaskStats(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     global_stats: TaskStatsGlobal
     user_stats: TaskStatsUser
-    all_users_stats: Pagination[TaskStatsUser] = Field(
-        None, description="Statistiques paginées pour tous les utilisateurs")
+    all_users_stats: Pagination[TaskStatsUser] = Field(None, description="Statistiques paginées pour tous les utilisateurs")
+
+
+class TaskName(StrEnum):
+    MERGE = "worker.tasks.merge-abrege"
+    ABREGE = "worker.tasks.abrege"
+    CLASSIFICATION = "worker.tasks.classification"
 
 
 class TaskTable:
-    def health_check(self) -> bool:
+    def health_check(self) -> tuple[bool, Optional[str]]:
         with get_db() as db:
             try:
                 db.execute(select(Task).limit(1))
@@ -130,8 +135,7 @@ class TaskTable:
             # Nettoyer les parameters pour enlever le token
             cleaned_form_data = form_data.model_copy()
             if cleaned_form_data.parameters and cleaned_form_data.parameters.headers:
-                cleaned_headers = {k: v for k, v in cleaned_form_data.parameters.headers.items(
-                ) if k.lower() != "authorization"}
+                cleaned_headers = {k: v for k, v in cleaned_form_data.parameters.headers.items() if k.lower() != "authorization"}
                 cleaned_form_data.parameters.headers = cleaned_headers
 
             knowledge = TaskModel(
@@ -168,8 +172,7 @@ class TaskTable:
             # Nettoyer les parameters pour enlever le token
             cleaned_form_data = form_data.model_copy()
             if cleaned_form_data.parameters and cleaned_form_data.parameters.headers:
-                cleaned_headers = {k: v for k, v in cleaned_form_data.parameters.headers.items(
-                ) if k.lower() != "authorization"}
+                cleaned_headers = {k: v for k, v in cleaned_form_data.parameters.headers.items() if k.lower() != "authorization"}
                 cleaned_form_data.parameters.headers = cleaned_headers
 
             updates = cleaned_form_data.model_dump(exclude_unset=True)
@@ -203,8 +206,7 @@ class TaskTable:
     def get_tasks_by_user_id(self, user_id: str, page: int = 1, page_size: int = 10) -> Optional[List[TaskModel]]:
         offset = (page - 1) * page_size
         with get_db() as db:
-            tasks = db.query(Task).filter(Task.user_id == user_id).offset(
-                offset).limit(page_size).all()
+            tasks = db.query(Task).filter(Task.user_id == user_id).offset(offset).limit(page_size).all()
 
             if not tasks:
                 logger.warning(f"No tasks found for user {user_id}.")
@@ -214,8 +216,7 @@ class TaskTable:
 
     def count_tasks_by_user_id(self, user_id: str) -> int:
         with get_db() as db:
-            count = db.query(func.count(Task.id)).filter(
-                Task.user_id == user_id).scalar()
+            count = db.query(func.count(Task.id)).filter(Task.user_id == user_id).scalar()
             return count
 
     def delete_tasks_by_user_id(self, user_id: str) -> Optional[List[TaskModel]]:
@@ -276,29 +277,28 @@ class TaskTable:
             )
             tasks_stats_dict = {status: count for status, count in tasks_stats}
 
-            global_stats = TaskStatsGlobal(
-                total_tasks=total_tasks, tasks_stats=tasks_stats_dict)
+            global_stats = TaskStatsGlobal(total_tasks=total_tasks, tasks_stats=tasks_stats_dict)
 
             # Statistiques de l'utilisateur courant
-            user_total_tasks = db.query(func.count(Task.id)).filter(
-                Task.user_id == user_id).scalar()
+            user_total_tasks = db.query(func.count(Task.id)).filter(Task.user_id == user_id).scalar()
             user_tasks_stats = (
                 db.query(Task.status, func.count(Task.id))  # noqa
                 .filter(Task.user_id == user_id)
                 .group_by(Task.status)
                 .all()
             )
-            user_tasks_stats_dict = {
-                status: count for status, count in user_tasks_stats}
+            user_tasks_stats_dict = {status: count for status, count in user_tasks_stats}
             user_stats = TaskStatsUser(
-                user_id=user_id, total_tasks=user_total_tasks, tasks_stats=user_tasks_stats_dict)
+                user_id=user_id,
+                total_tasks=user_total_tasks,
+                tasks_stats=user_tasks_stats_dict,
+            )
 
             # Statistiques par utilisateur (paginated)
             user_stats_list = []
             pagination_stats = None
             if is_admin:
-                user_stats_count = db.query(func.count(
-                    func.distinct(Task.user_id))).scalar()
+                user_stats_count = db.query(func.count(func.distinct(Task.user_id))).scalar()
                 user_stats_query = (
                     db.query(Task.user_id, func.count(Task.id))  # noqa
                     .group_by(Task.user_id)
@@ -314,24 +314,30 @@ class TaskTable:
                         .group_by(Task.status)
                         .all()
                     )
-                    user_tasks_stats_dict = {
-                        status: count for status, count in user_tasks_stats}
+                    user_tasks_stats_dict = {status: count for status, count in user_tasks_stats}
                     user_stats_list.append(
-                        TaskStatsUser(user_id=user_id, total_tasks=count, tasks_stats=user_tasks_stats_dict))
-                pagination_stats = Pagination[TaskStatsUser](total=user_stats_count, page=skip // limit + 1,
-                                                             page_size=limit,
-                                                             items=user_stats_list)
+                        TaskStatsUser(
+                            user_id=user_id,
+                            total_tasks=count,
+                            tasks_stats=user_tasks_stats_dict,
+                        )
+                    )
+                pagination_stats = Pagination[TaskStatsUser](
+                    total=user_stats_count,
+                    page=skip // limit + 1,
+                    page_size=limit,
+                    items=user_stats_list,
+                )
 
-            return TaskStats(global_stats=global_stats, all_users_stats=pagination_stats, user_stats=user_stats)
+            return TaskStats(
+                global_stats=global_stats,
+                all_users_stats=pagination_stats,
+                user_stats=user_stats,
+            )
 
     def count_unique_users_between_dates(self, start_date: int, end_date: int) -> int:
         with get_db() as db:
-            unique_users = (
-                db.query(Task.user_id)
-                .filter(Task.created_at >= start_date, Task.created_at <= end_date)
-                .distinct()
-                .count()
-            )
+            unique_users = db.query(Task.user_id).filter(Task.created_at >= start_date, Task.created_at <= end_date).distinct().count()
             return unique_users
 
 

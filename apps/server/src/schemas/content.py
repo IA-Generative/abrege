@@ -1,5 +1,5 @@
 from typing import Dict, Optional, Any
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ContentModel(BaseModel):
@@ -7,6 +7,7 @@ class ContentModel(BaseModel):
     type: str
     created_at: int
     extras: Optional[Dict[str, Any]] = None
+    merge_id: Optional[str] = None
 
 
 class URLModel(ContentModel):
@@ -26,6 +27,11 @@ class DocumentModel(ContentModel):
     ext: str
     size: int
     type: str = "document"
+
+
+class MergeModel(ContentModel):
+    type: str = "merge"
+    task_ids: list[str] = Field(default_factory=list)
 
 
 class TextModel(ContentModel):

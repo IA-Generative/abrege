@@ -27,12 +27,15 @@ from abrege_service.models.summary.parallele_summary_chain import (
 )
 from abrege_service.config.openai import OpenAISettings
 
-from src.schemas.task import TaskModel, task_table, TaskStatus, TaskUpdateForm
+from src.schemas.task import TaskModel, task_table, TaskStatus, TaskUpdateForm, TaskName
 from src.schemas.content import URLModel, DocumentModel, TextModel
 from src.schemas.result import ResultModel
 from src.clients import celery_app, file_connector
+from celery import Task
 from src import __version__
 from src.utils.logger import logger_abrege
+from abrege_service.tasks.merge import launch_merge
+
 
 openai_settings = OpenAISettings()
 cache_service = CacheService()
@@ -85,7 +88,28 @@ tmp_folder = os.environ.get("CACHE_FOLDER")
 os.makedirs(tmp_folder, exist_ok=True)
 
 
-@celery_app.task(name="worker.tasks.abrege", bind=True)
+class AbregeTask(Task):
+    def on_failure(self, exc, task_id, args, kwargs, einfo):
+        logger_abrege.error(f"Task {task_id} failed: {exc} - {traceback.format_exc()}")
+
+    def on_success(self, retval, task_id, args, kwargs):
+        logger_abrege.info(f"Task {task_id} completed successfully")
+        try:
+            task = task_table.get_task_by_id(task_id=task_id)
+            if task is None or task.input is None:
+                logger_abrege.error(f"Task {task_id} not found on success")
+                return
+            task_merge = task_table.get_task_by_id(task_id=task.input.merge_id)
+            if task_merge is None:
+                logger_abrege.error(f"Merge Task {task.input.merge_id} not found on success of task {task_id}")
+                return
+            launch_merge.apply_async(args=[json.dumps(task_merge.model_dump())])
+
+        except Exception as e:
+            logger_abrege.error(f"Failed to retrieve task {task_id} on success: {e} - {traceback.format_exc()}")
+
+
+@celery_app.task(name=TaskName.ABREGE.value, bind=True, base=AbregeTask)
 def launch(self, task: str):
     task: TaskModel = TaskModel.model_validate(json.loads(task))
     task.extras = task.extras or {}
