@@ -53,8 +53,12 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           target-branch: ${{ github.ref_name }}
-          manifest-file: ${{ github.ref_name == 'dev' && '.release-please-manifest-prerelease.json' || '.release-please-manifest.json' }}
-          config-file: ${{ github.ref_name == 'dev' && 'release-please-config-prerelease.json' || 'release-please-config-release.json' }}
+          manifest-file: ${{ github.ref_name == 'dev' &&
+            '.release-please-manifest-prerelease.json' ||
+            '.release-please-manifest.json' }}
+          config-file: ${{ github.ref_name == 'dev' &&
+            'release-please-config-prerelease.json' ||
+            'release-please-config-release.json' }}
 
       - name: Set registry prefix (lowercase)
         if: ${{ steps.release.outputs.release_created == 'true' }}
@@ -78,7 +82,7 @@ jobs:
         if: ${{ steps.release.outputs.release_created == 'true' }}
         uses: docker/build-push-action@v7
         with:
-          context: apps/server
+          context: .
           file: apps/server/api/Dockerfile
           target: base
           push: true
@@ -91,7 +95,7 @@ jobs:
         if: ${{ steps.release.outputs.release_created == 'true' }}
         uses: docker/build-push-action@v7
         with:
-          context: apps/server
+          context: .
           file: apps/server/abrege_service/Dockerfile
           target: builder
           push: true
@@ -117,7 +121,7 @@ jobs:
         if: ${{ steps.release.outputs.release_created == 'true' }}
         uses: docker/build-push-action@v7
         with:
-          context: apps/server
+          context: .
           file: apps/server/migration/Dockerfile
           push: true
           tags: |
