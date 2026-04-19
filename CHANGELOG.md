@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [1.6.1](https://github.com/IA-Generative/abrege/compare/v1.6.0...v1.6.1) (2026-04-19)
+
+
+### Bug Fixes
+
+* **ocr:** update token retrieval to use environment variable for OCR API key ([ac7f3af](https://github.com/IA-Generative/abrege/commit/ac7f3afab391c166858cedd63f2899dbc8a411f2))
+
 ## [1.6.0](https://github.com/IA-Generative/abrege/compare/v1.5.2...v1.6.0) (2026-04-19)
 
 
