@@ -16,6 +16,7 @@ dependencies = [
     "toml>=0.10.2",
     "psutil>=7.0.0",
     "pyyaml>=6.0.2",
+    "aiofiles>=24.1.0",
 ]
 
 [dependency-groups]

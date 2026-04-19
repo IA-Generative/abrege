@@ -17,6 +17,7 @@ from src.schemas.result import SummaryModel, Text
 from src.schemas.parameters import SummaryParameters
 from src.schemas.task import TaskModel, TaskStatus
 from src.utils.logger import logger_abrege
+from abrege_service.config.openai import OpenAISettings
 
 
 from abrege_service.models.base import BaseSummaryService
@@ -27,7 +28,7 @@ from abrege_service.utils.text import (
     group_by_max_word_sum,
 )
 
-
+openai_settings = OpenAISettings()
 # Prompt pour l'étape de "map"
 map_template = """The following is a set of documents:
 {text}
@@ -69,7 +70,17 @@ except Exception as e:
 
 
 class LangChainAsyncMapReduceService(BaseSummaryService):
-    def __init__(self, llm: ChatOpenAI, max_token: int = 128_000, max_concurrency: int = 5):
+    def __init__(
+        self,
+        llm: ChatOpenAI = ChatOpenAI(
+            model=openai_settings.OPENAI_API_MODEL,
+            temperature=0.0,
+            api_key=openai_settings.OPENAI_API_KEY,
+            base_url=openai_settings.OPENAI_API_BASE,
+        ),
+        max_token: int = 128_000,
+        max_concurrency: int = 5,
+    ):
         super().__init__()
         self.llm = llm
         self.max_concurrency = max_concurrency

@@ -4,46 +4,26 @@ import time
 import json
 import traceback
 
-import openai
-from langchain_openai import ChatOpenAI
 
 from abrege_service.modules.cache import CacheService
 
 from abrege_service.models.summary.parallele_summary_chain import (
     LangChainAsyncMapReduceService,
 )
-from abrege_service.config.openai import OpenAISettings
 
-from src.schemas.task import TaskModel, task_table, TaskStatus, TaskUpdateForm, TaskName
+from src.schemas.task import task_table
+from src.models.task import TaskModel, TaskStatus, TaskUpdateForm, TaskName
 from src.schemas.content import MergeModel
 from src.schemas.result import ResultModel, SummaryModel
 from src.clients import celery_app
 from src import __version__
 from src.utils.logger import logger_abrege
 
-openai_settings = OpenAISettings()
+
 cache_service = CacheService()
 
 
-async_client = openai.AsyncOpenAI(
-    api_key=openai_settings.OPENAI_API_KEY,
-    base_url=openai_settings.OPENAI_API_BASE,
-)
-
-client = openai.OpenAI(
-    api_key=openai_settings.OPENAI_API_KEY,
-    base_url=openai_settings.OPENAI_API_BASE,
-)
-
-
-llm = ChatOpenAI(
-    model=openai_settings.OPENAI_API_MODEL,
-    temperature=0.0,
-    api_key=openai_settings.OPENAI_API_KEY,
-    base_url=openai_settings.OPENAI_API_BASE,
-)
 summary_service = LangChainAsyncMapReduceService(
-    llm=llm,
     max_token=int(os.getenv("MAX_MODEL_TOKEN", 128_000)),
     max_concurrency=int(os.getenv("MAX_CONCURRENCY_LLM_CALL", 5)),
 )
@@ -95,6 +75,11 @@ def launch_merge(task: str) -> dict:
                     )
                     current_progess = t.percentage if t.percentage else 0
                     progress += current_progess
+                else:
+                    logger_abrege.debug(
+                        f"Task {t.output} references completed task id {task_id}",
+                        extra=extra_log,
+                    )
                     if isinstance(t.output, SummaryModel):
                         tasks_to_merge.append(t.output.summary)
 
@@ -107,21 +92,23 @@ def launch_merge(task: str) -> dict:
             summaries_found=tasks_to_merge,
             texts_found=tasks_to_merge,
         )
+        task.output = output
+        task_table.update_task(
+            task_id=task.id,
+            form_data=TaskUpdateForm(
+                status=TaskStatus.IN_PROGRESS.value,
+                updated_at=int(time.time()),
+                percentage=task.output.percentage,
+                output=task.output,
+            ),
+        )
+        logger_abrege.info(tasks_to_merge, extra=extra_log)
+        logger_abrege.debug(
+            f"Task {task.id} merge progress: {progress} / {len(input_task_ids)}",
+            extra=extra_log,
+        )
         if len(tasks_to_merge) != len(input_task_ids):
-            logger_abrege.error(f"Task {task.id} has no completed tasks to merge", extra=extra_log)
-
-            task_found = task_table.update_task(
-                task_id=task.id,
-                form_data=TaskUpdateForm(
-                    status=TaskStatus.IN_PROGRESS.value,
-                    updated_at=int(time.time()),
-                    percentage=progress / len(input_task_ids),
-                    output=output,
-                ),
-            )
-            if not task_found:
-                raise ValueError(f"Failed to update task {task.id} with merge progress")
-            return task_found.model_dump()
+            raise ValueError(f"Not all tasks are completed for merge. Progress: {progress} / {len(input_task_ids)}")
 
         t = time.time()
 
@@ -138,7 +125,7 @@ def launch_merge(task: str) -> dict:
                 status=TaskStatus.COMPLETED.value,
                 updated_at=int(time.time()),
                 percentage=1,
-                output=output,
+                output=task.output,
             ),
         )
         return task.model_dump()

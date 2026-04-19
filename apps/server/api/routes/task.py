@@ -2,25 +2,24 @@ from typing import List, Annotated
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Depends, status as http_status
 from fastapi.responses import JSONResponse
-import json
 
 
 from api.core.security.token import RequestContext
 from api.core.security.factory import TokenVerifier
+from src.services.merge_task_service import merge_task_service
+from src.models.merge_task import MergeTaskCreateForm
 
-from src.schemas.task import (
-    task_table,
+from src.schemas.task import task_table
+from src.models.task import (
     TaskModel,
     TaskStats,
     TaskStatus,
-    TaskName,
     TaskForm,
 )
 from src.schemas.content import MergeModel
 from src.schemas.pagination import Pagination
-from src.clients import file_connector, celery_app
+from src.clients import file_connector
 from src.utils.logger import logger_abrege
-from src import __version__
 
 
 router = APIRouter(tags=["Tasks"])
@@ -135,39 +134,28 @@ async def merge_tasks(
     task_ids: List[str],
     ctx: TokenDep,
 ) -> TaskModel:
-    tasks = []
-    for task_id in task_ids:
-        task = task_table.get_task_by_id(task_id=task_id)
-        if task is None or task.user_id != ctx.user_id:
-            raise HTTPException(http_status.HTTP_404_NOT_FOUND, detail=f"{task_id} not found")
-        if task.status != TaskStatus.COMPLETED.value:
-            raise HTTPException(
-                http_status.HTTP_400_BAD_REQUEST,
-                detail=f"{task_id} is not completed and cannot be merged",
-            )
-        tasks.append(task)
-
-    new_task = TaskForm(
-        user_id=ctx.user_id,
-        input=MergeModel(task_ids=task_ids),
+    new_task_form = TaskForm(
+        input=MergeModel(task_ids=task_ids, created_at=int(datetime.now().timestamp())),
         output=None,
         status=TaskStatus.QUEUED.value,
         type="merge",
-        created_at=int(datetime.now().timestamp()),
-        model_name="merge",
-        model_version=__version__,
     )
-    new_task = task_table.insert_new_task(user_id=new_task.user_id, form_data=new_task)
+    new_task = task_table.insert_new_task(user_id=ctx.user_id, form_data=new_task_form)
     if new_task is None:
         raise HTTPException(
             http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create merge task",
         )
 
-    celery_app.send_task(
-        name=TaskName.MERGE.value,
-        args=[json.dumps(new_task.model_dump())],
-        task_id=new_task.id,
-    )
+    for task_id in task_ids:
+        merge_task_service.create_merge_task(
+            merge_task_create=MergeTaskCreateForm(
+                related_task=task_id,
+                merge_id=new_task.id,
+                type="document",
+                user_id=ctx.user_id,
+                group_id=ctx.user_id,
+            )
+        )
 
     return new_task

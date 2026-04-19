@@ -12,6 +12,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AppFooter: typeof import('./components/AppFooter.vue')['default']
     AppHeader: typeof import('./components/AppHeader.vue')['default']
     AppToaster: typeof import('./components/AppToaster.vue')['default']
     ClassificationTab: typeof import('./components/ClassificationTab.vue')['default']
@@ -37,6 +38,7 @@ declare module 'vue' {
     ProgressBar: typeof import('./components/ProgressBar.vue')['default']
     ResumeInfoBulle: typeof import('./components/ResumeInfoBulle.vue')['default']
     ResumeResult: typeof import('./components/ResumeResult.vue')['default']
+    ResumeResultModal: typeof import('./components/ResumeResultModal.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SideBar: typeof import('./components/SideBar.vue')['default']
@@ -49,6 +51,7 @@ declare module 'vue' {
 
 // For TSX support
 declare global {
+  const AppFooter: typeof import('./components/AppFooter.vue')['default']
   const AppHeader: typeof import('./components/AppHeader.vue')['default']
   const AppToaster: typeof import('./components/AppToaster.vue')['default']
   const ClassificationTab: typeof import('./components/ClassificationTab.vue')['default']
@@ -74,6 +77,7 @@ declare global {
   const ProgressBar: typeof import('./components/ProgressBar.vue')['default']
   const ResumeInfoBulle: typeof import('./components/ResumeInfoBulle.vue')['default']
   const ResumeResult: typeof import('./components/ResumeResult.vue')['default']
+  const ResumeResultModal: typeof import('./components/ResumeResultModal.vue')['default']
   const RouterLink: typeof import('vue-router')['RouterLink']
   const RouterView: typeof import('vue-router')['RouterView']
   const SideBar: typeof import('./components/SideBar.vue')['default']

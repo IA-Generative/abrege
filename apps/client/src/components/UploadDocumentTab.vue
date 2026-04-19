@@ -4,79 +4,71 @@ import { storeToRefs } from 'pinia'
 
 import useToaster from '@/composables/use-toaster'
 import { useAbregeStore } from '@/stores/abrege'
+import { useParallelFileProcessing } from '@/composables/use-parallel-file-processing'
 import FileParamsModal from './FileParamsModal.vue'
-import ResumeResult from './ResumeResult.vue'
+import ResumeResultModal from './ResumeResultModal.vue'
 
 type TaskModel = components['schemas']['TaskModel']
 
-const uploadLabel = 'Ajouter des fichiers'
-const uploadHint = 'Taille maximale : 200MB par fichier. Formats supportés (texte, présentation, audio et vidéo) : PDF, DOC, DOCX, PPTX, ODT, ODP, TXT. Les images scannées ne fonctionnent pas.'
 const uploadAccept = ['.pdf', '.docx', '.pptx', '.txt', '.odt', '.odp', '.doc']
 const generateButtonLabel = 'Générer'
 const isLoading = ref(false)
 
+const fileInputRef = ref<HTMLInputElement | null>(null)
+
+function triggerFilePicker () {
+  fileInputRef.value?.click()
+}
+
+function handleFileAdd (event: Event) {
+  const input = event.target as HTMLInputElement
+  const newFiles = Array.from(input.files ?? [])
+  if (!newFiles.length) return
+  const existing = abregeStore.fileUpload
+  const combined = [...existing, ...newFiles]
+  abregeStore.fileUpload = combined
+  abregeStore.fileParams = combined.map((_, i) => abregeStore.fileParams[i] ?? { customPrompt: null, language: null, size: null })
+  parallelProcessing.syncFiles(combined.length)
+  input.value = ''
+}
+
 const abregeStore = useAbregeStore()
 const { addErrorMessage } = useToaster()
 
-const {
-  taskData,
-  isPolling,
-  formattedPercentage,
-  status,
-  error: storeError,
-} = storeToRefs(abregeStore)
+const parallelProcessing = useParallelFileProcessing()
+const fileStates = parallelProcessing.fileStates
+const mergeState = parallelProcessing.mergeState
 
-const resumeResults = ref<TaskModel[]>([])
-const percentage = computed(() => formattedPercentage.value)
+const resumeResults = ref<{ filename: string, task: TaskModel }[]>([])
+const showResultModal = ref(false)
+const showResultModalIndex = ref(0)
 
 const mergeEnabled = ref(false)
+const showMergeParams = ref(false)
 const mergeParams = ref({
   language: 'French',
   size: null as number | null,
   customPrompt: null as string | null,
 })
-const languageOptions = [
-  { value: 'French', text: 'Français (par défaut)' },
-  { value: 'English', text: 'Anglais' },
-]
 
-function handleFileChange (files: FileList | File[]) {
-  const fileArray = Array.isArray(files) ? files : Array.from(files)
-  if (fileArray.length) {
-    abregeStore.fileUpload = fileArray
-    abregeStore.fileParams = fileArray.map(() => ({ customPrompt: null, language: null, size: null }))
-  }
-}
 async function onSubmit () {
   try {
     isLoading.value = true
-    const taskIds: string[] = []
-    for (const [i, file] of abregeStore.fileUpload.entries()) {
-      const fp = abregeStore.fileParams[i]
-      await abregeStore.sendDocumentAndPoll(file, fp?.customPrompt, fp?.language, fp?.size)
+    resumeResults.value = []
 
-      if (taskData.value?.id) {
-        taskIds.push(taskData.value.id)
-        const result = await abregeStore.downloadContentSummary(taskData.value.id)
-        resumeResults.value.push(result)
-      }
-      else if (storeError.value) {
-        addErrorMessage({
-          title: 'Erreur lors de la génération de résumé :',
-          description: storeError.value,
-        })
-      }
+    const files = abregeStore.fileUpload
+    const params = abregeStore.fileParams.map(fp => ({
+      customPrompt: fp?.customPrompt ?? null,
+      language: fp?.language ?? null,
+      size: fp?.size ?? null,
+    }))
+
+    const results = await parallelProcessing.processAll(files, params, mergeEnabled.value)
+    resumeResults.value = results
+
+    if (mergeEnabled.value && mergeState.value.status === 'done' && mergeState.value.result) {
+      resumeResults.value.push({ filename: 'Résumé global', task: mergeState.value.result })
     }
-
-    if (mergeEnabled.value && taskIds.length > 1) {
-      await abregeStore.mergeTasksAndPoll(taskIds)
-      if (abregeStore.taskData?.id) {
-        const mergeResult = await abregeStore.downloadContentSummary(abregeStore.taskData.id)
-        resumeResults.value.push(mergeResult)
-      }
-    }
-
-    abregeStore.reset()
   }
   catch (error) {
     addErrorMessage({
@@ -92,6 +84,7 @@ async function onSubmit () {
 function removeFile (index: number) {
   abregeStore.fileUpload = abregeStore.fileUpload.filter((_: File, i: number) => i !== index)
   abregeStore.fileParams = abregeStore.fileParams.filter((_: unknown, i: number) => i !== index)
+  parallelProcessing.syncFiles(abregeStore.fileUpload.length)
 }
 
 const expandedFileIndex = ref<number | null>(null)
@@ -106,14 +99,9 @@ function closeFileParams () {
 
 function newSearch () {
   resumeResults.value = []
+  showResultModal.value = false
+  parallelProcessing.syncFiles(abregeStore.fileUpload.length)
   abregeStore.reset()
-}
-
-if (storeError.value) {
-  addErrorMessage({
-    title: 'Erreur : ',
-    description: storeError.value,
-  })
 }
 </script>
 
@@ -122,23 +110,29 @@ if (storeError.value) {
     class="tab-container"
     @submit.prevent
   >
-    <ResumeResult
-      v-for="(result, index) in resumeResults"
-      :key="index"
-      :resume-result="result"
+    <ResumeResultModal
+      v-if="showResultModal && resumeResults.length"
+      :results="resumeResults"
+      :initial-index="showResultModalIndex"
+      @close="showResultModal = false"
       @re-generate="newSearch"
     />
-    <DsfrFileUpload
-      :label="uploadLabel"
-      :hint="uploadHint"
-      :accept="uploadAccept"
+    <!-- Hidden file input -->
+    <input
+      ref="fileInputRef"
+      type="file"
+      :accept="uploadAccept.join(',')"
       multiple
-      @change="handleFileChange"
+      class="sr-only"
+      @change="handleFileAdd"
     />
-    <ul
-      v-if="abregeStore.fileUpload.length"
-      class="file-list"
-    >
+
+    <!-- File list with add button -->
+    <div class="file-list-container">
+      <ul
+        v-if="abregeStore.fileUpload.length"
+        class="file-list"
+      >
       <li
         v-for="(file, index) in abregeStore.fileUpload"
         :key="index"
@@ -151,60 +145,114 @@ if (storeError.value) {
               size="sm"
               label="Paramètres"
               tertiary
-              :disabled="isPolling || isLoading"
+              :disabled="isLoading"
               @click="openFileParams(index)"
             />
             <DsfrButton
               size="sm"
               label="Retirer"
               secondary
-              :disabled="isPolling || isLoading"
+              :disabled="isLoading"
               @click="removeFile(index)"
             />
           </div>
         </div>
+        <!-- Progress bar per file -->
+        <ProgressBar
+          v-if="fileStates[index]?.status === 'processing' || fileStates[index]?.status === 'uploading'"
+          :visible="true"
+          :progress="fileStates[index].percentage"
+          :text="fileStates[index]?.status === 'uploading' ? 'Envoi...' : undefined"
+        />
+        <!-- Result button per file -->
+        <div
+          v-if="fileStates[index]?.status === 'done' || fileStates[index]?.status === 'error'"
+          class="file-list-result"
+        >
+          <DsfrButton
+            size="sm"
+            :label="fileStates[index]?.status === 'error' ? 'Échec' : 'Voir le résumé'"
+            :disabled="fileStates[index]?.status !== 'done'"
+            secondary
+            @click="() => {
+              const resultIndex = resumeResults.findIndex(r => r.filename === file.name)
+              if (resultIndex >= 0) {
+                showResultModalIndex = resultIndex
+                showResultModal = true
+              }
+            }"
+          />
+          <span
+            v-if="fileStates[index]?.status === 'error'"
+            class="file-error-msg"
+          >{{ fileStates[index].error }}</span>
+        </div>
       </li>
-    </ul>
-    <div
-      v-if="abregeStore.fileUpload.length > 1"
-      class="merge-section"
-    >
-      <DsfrCheckbox
-        v-model="mergeEnabled"
-        label="Résumer l'ensemble des fichiers"
-        name="merge-enabled"
-      />
-      <div
-        v-if="mergeEnabled"
-        class="merge-params"
+
+      <!-- Merge item -->
+      <li
+        v-if="abregeStore.fileUpload.length > 1"
+        class="file-list-item file-list-item--merge"
       >
-        <div class="merge-param-row">
-          <DsfrSelect
-            v-model="mergeParams.language"
-            label="Langue du résumé global"
-            :options="languageOptions"
-          />
+        <div class="file-list-row">
+          <label class="file-list-name">
+            <input
+              v-model="mergeEnabled"
+              type="checkbox"
+              class="fr-mr-1w"
+              :disabled="isLoading"
+            />
+            Résumé global
+          </label>
+          <div class="file-list-actions">
+            <DsfrButton
+              size="sm"
+              label="Paramètres"
+              tertiary
+              :disabled="isLoading || !mergeEnabled"
+              @click="showMergeParams = true"
+            />
+          </div>
         </div>
-        <div class="merge-param-row">
-          <DsfrInput
-            v-model="mergeParams.size"
-            label="Nombre de mots"
-            label-visible
-            placeholder="4000 (par défaut)"
-            hint="Nombre de mots approximatif pour le résumé global"
-            type="number"
+        <ProgressBar
+          v-if="mergeState.status === 'processing' || mergeState.status === 'pending'"
+          :visible="true"
+          :progress="mergeState.percentage"
+          :text="mergeState.status === 'pending' ? 'En attente...' : undefined"
+        />
+        <div
+          v-if="mergeState.status === 'done' || mergeState.status === 'error'"
+          class="file-list-result"
+        >
+          <DsfrButton
+            size="sm"
+            :label="mergeState.status === 'error' ? 'Échec' : 'Voir le résumé global'"
+            :disabled="mergeState.status !== 'done'"
+            secondary
+            @click="() => {
+              const idx = resumeResults.findIndex(r => r.filename === 'Résumé global')
+              if (idx >= 0) { showResultModalIndex = idx; showResultModal = true }
+            }"
           />
+          <span
+            v-if="mergeState.status === 'error'"
+            class="file-error-msg"
+          >{{ mergeState.error }}</span>
         </div>
-        <div class="merge-param-row">
-          <DsfrInput
-            v-model="mergeParams.customPrompt"
-            :label-visible="true"
-            :is-textarea="true"
-            label="Instruction pour le résumé global"
-            hint="Laissez vide pour un résumé synthétique par défaut"
-          />
-        </div>
-      </div>
+      </li>
+      </ul>
+
+      <DsfrButton
+        size="sm"
+        label="Ajouter un fichier"
+        icon="ri:add-line"
+        secondary
+        :disabled="isLoading"
+        @click="triggerFilePicker"
+      />
+      <p class="file-hint fr-hint-text">
+        Formats supportés : PDF, DOC, DOCX, PPTX, ODT, ODP, TXT — 200 Mo max par fichier.
+      </p>
     </div>
     <FileParamsModal
       v-if="expandedFileIndex !== null && abregeStore.fileParams[expandedFileIndex]"
@@ -212,23 +260,23 @@ if (storeError.value) {
       :params="abregeStore.fileParams[expandedFileIndex]"
       @close="closeFileParams"
     />
-    <div
-      v-if="isPolling"
-      class="is-generating-container"
-    >
-      <ProgressBar
-        :visible="isPolling"
-        :progress="percentage"
-      />
-      <DsfrAlert
-        type="info"
-        description="Le temps de traitement varie en fonction de la taille de la source, dans certains cas cela peut prendre quelques minutes."
-      />
-    </div>
+    <FileParamsModal
+      v-if="showMergeParams"
+      item-label="Résumé global"
+      item-icon="ri:git-merge-line"
+      :params="mergeParams"
+      @close="showMergeParams = false"
+    />
+    <DsfrAlert
+      v-if="isLoading"
+      type="info"
+      description="Les fichiers sont traités en parallèle. Le temps de traitement varie en fonction de la taille de chaque fichier."
+      class="fr-mb-2w"
+    />
     <DsfrButton
       size="lg"
       :label="generateButtonLabel"
-      :disabled="isPolling || !abregeStore.fileUpload.length || isLoading"
+      :disabled="isLoading || !abregeStore.fileUpload.length"
       @click="onSubmit"
     />
   </form>
@@ -272,6 +320,44 @@ if (storeError.value) {
   text-overflow: ellipsis;
   white-space: nowrap;
   flex: 1;
+}
+
+.file-list-result {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.file-error-msg {
+  font-size: 0.75rem;
+  color: var(--text-default-error);
+}
+
+.file-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.file-waiting {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-mention-grey);
+}
+
+.file-hint {
+  margin: 0;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .merge-section {

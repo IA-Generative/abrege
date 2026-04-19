@@ -136,6 +136,8 @@ class ImageFromVLM(BaseService):
     def task_to_text(self, task: TaskModel, **kwargs):
         if task.extras is None:
             task.extras = {}
+        if task.input is None:
+            raise ValueError("Task input is None")
 
         if task.output is None:
             task.output = ResultModel(
@@ -163,25 +165,29 @@ class ImageFromVLM(BaseService):
         }
         logger_abrege.info("start to extract content", extra=extra_log)
         process_pages = 0
-        for batch in chunks(images, self.batch_size):
+        for image in images:
             t = time.time()
             results = []
-            for image in batch:
-                res = self.process_image_sync(image)
-                results.append(res)
 
-            task.output.percentage += len(results) / len(images)
-            process_pages += len(results)
-            task.output.texts_found.extend(results)
-            task = self.update_task(task=task, status=TaskStatus.IN_PROGRESS.value, result=task.output)
             logger_abrege.debug(
-                f"Status {process_pages} / {len(images)} - time process batch (nb items: {len(batch)}): {time.time() - t:.2f}s",
+                f"Process page {process_pages + len(results) + 1} / {len(images)}",
+                extra=extra_log,
+            )
+            res = self.process_image_sync(image)
+            results.append(res)
+
+            task.output.percentage = len(results) / len(images)
+            process_pages = len(results)
+            task.output.texts_found.extend(results)
+            task = self.update_task(task=task, status=TaskStatus.IN_PROGRESS, result=task.output)
+            logger_abrege.debug(
+                f"Status {process_pages} / {len(images)} - time process : {time.time() - t:.2f}s",
                 extra=extra_log,
             )
 
         task = self.update_task(
             task=task,
-            status=TaskStatus.IN_PROGRESS.value,
+            status=TaskStatus.IN_PROGRESS,
             result=task.output,
         )
         return task
