@@ -18,7 +18,7 @@ class BaseTokenManager(ABC):
 
 class DummyTokenManager(BaseTokenManager):
     def get_token(self) -> str:
-        return "dummy_token"
+        return os.getenv("OCR_API_KEY", "dummy_token")
 
 
 class TokenManager(BaseTokenManager):
@@ -108,7 +108,7 @@ class OCRClient(BaseBackend):
     def __init__(
         self,
         url: str,
-        token_manager: BaseTokenManager = TOKEN_MANAGER_FACTORY[TokenManager.__name__](),
+        token_manager: BaseTokenManager = TOKEN_MANAGER_FACTORY[DummyTokenManager.__name__](),
     ):
         self.url = url
         self.token_manager = token_manager
