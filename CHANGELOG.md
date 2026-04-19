@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [1.5.0](https://github.com/IA-Generative/abrege/compare/v1.4.0...v1.5.0) (2026-04-19)
+
+
+### Features
+
+* **api:** implement API key authentication and enhance FastAPI documentation endpoints ([80026ea](https://github.com/IA-Generative/abrege/commit/80026ea4f260d52f64a6ae80a58ed2c08737e9e8))
+
 ## [1.4.0](https://github.com/IA-Generative/abrege/compare/v1.3.0...v1.4.0) (2026-04-16)
 
 
