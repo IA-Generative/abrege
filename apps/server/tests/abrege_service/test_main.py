@@ -4,7 +4,7 @@ import pytest
 from src.clients import file_connector
 from src.schemas.task import task_table, TaskForm, TaskModel, TaskStatus
 from src.schemas.content import TextModel, URLModel, DocumentModel
-from abrege_service.main import launch, ocr_service, summary_service
+from abrege_service.tasks.abrege import launch, ocr_service, summary_service
 
 is_ocr_available = False
 

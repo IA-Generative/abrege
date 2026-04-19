@@ -135,6 +135,8 @@ def launch(self, task: str):
                 updated_at=int(time.time()),
             ),
         )
+        logger_abrege.info(f"Task {task.id} started processing", extra=extra_log)
+        logger_abrege.info(f"Task input: {task.input}", extra=extra_log)
         t = time.time()
         if isinstance(task.input, URLModel):
             logger_abrege.debug(f"Processing URL task: {task.id}", extra=extra_log)
@@ -147,7 +149,7 @@ def launch(self, task: str):
             task.content_hash = hash_file(file_path)
             for service in services:
                 if service.is_available(task):
-                    logger_abrege.debug(f"Using service: {service.__class__.__name__}", extra=extra_log)
+                    logger_abrege.info(f"Using service: {service.__class__.__name__}", extra=extra_log)
                     task = service.process_task(task=task)
                     break
 
@@ -168,6 +170,8 @@ def launch(self, task: str):
 
         else:
             raise NotImplementedError("Content type not supported")
+        if task.output is None:
+            raise ValueError("Task output is None after processing")
 
         logger_abrege.debug(f"Task processed in {time.time() - t} seconds", extra=extra_log)
 

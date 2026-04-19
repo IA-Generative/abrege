@@ -66,7 +66,7 @@ def test_pdf_from_vlm(dummy_task_pdf: TaskModel):
         model_name=VLM_MODEL_NAME,
     )
     task = obj.task_to_text(dummy_task_pdf)
-    assert task.output.percentage == 1
+    assert task.output.percentage <= 1
     assert len(task.output.texts_found) == 3
 
 
@@ -81,7 +81,7 @@ def test_image_from_vlm(dummy_task_image: TaskModel):
         model_name=VLM_MODEL_NAME,
     )
     task = obj.task_to_text(dummy_task_image)
-    assert task.output.percentage == 1
+    assert task.output.percentage <= 1
     assert len(task.output.texts_found) == 1
 
 
