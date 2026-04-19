@@ -56,6 +56,8 @@ async def get_statistics(
     skip: int = 0,
     limit: int = 10,
 ) -> TaskStats:
+    if ctx.user_id is None:
+        raise HTTPException(status_code=http_status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
     try:
         stats = task_table.statistics(user_id=ctx.user_id, is_admin=bool(ctx.is_admin), skip=skip, limit=limit)
         return stats
@@ -99,6 +101,8 @@ async def get_tasks_read_user(
     offset: int = 1,
     limit: int = 10,
 ) -> Pagination[TaskModel]:
+    if ctx.user_id is None:
+        raise HTTPException(status_code=http_status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
     tasks = read_user(user_id=ctx.user_id, offset=offset, limit=limit)
     total = task_table.count_tasks_by_user_id(user_id=ctx.user_id)
     return Pagination[TaskModel](total=total, page=offset, page_size=limit, items=tasks)

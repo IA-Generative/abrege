@@ -130,7 +130,7 @@ class TaskTable:
             except SQLAlchemyError as e:
                 return False, str(e)
 
-    def insert_new_task(self, user_id: str, form_data: TaskForm) -> Optional[TaskModel]:
+    def insert_new_task(self, user_id: str, form_data: TaskForm) -> TaskModel:
         with get_db() as db:
             # Nettoyer les parameters pour enlever le token
             cleaned_form_data = form_data.model_copy()
@@ -203,7 +203,7 @@ class TaskTable:
             db.commit()
             return TaskModel.model_validate(task)
 
-    def get_tasks_by_user_id(self, user_id: str, page: int = 1, page_size: int = 10) -> Optional[List[TaskModel]]:
+    def get_tasks_by_user_id(self, user_id: str, page: int = 1, page_size: int = 10) -> List[TaskModel]:
         offset = (page - 1) * page_size
         with get_db() as db:
             tasks = db.query(Task).filter(Task.user_id == user_id).offset(offset).limit(page_size).all()
