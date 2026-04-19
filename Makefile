@@ -127,7 +127,7 @@ test-abrege-api: init-db
 	make down-services
 
 test-abrege-service: init-db
-	docker compose run --rm test_runner
+	docker compose run --rm abrege_service uv run pytest -s --cov=./abrege_service/ --cov-report=term-missing tests/abrege_service/ -ra -v --maxfail=1
 	make down-services
 
 
