@@ -24,6 +24,12 @@ function createHttpClient (baseURL: string): AxiosInstance {
         if (config.headers && typeof config.headers.set === 'function') {
           config.headers.set('Authorization', `${keycloak.tokenParsed?.typ || 'Bearer'} ${keycloak.token}`)
         }
+      } else {
+        const ssoBypass = import.meta.env.DEV || import.meta.env.VITE_SSO_BYPASS === 'true' || (window as any).VITE_SSO_BYPASS === 'true'
+        const apiKey = (window as any).VITE_API_KEY ?? import.meta.env.VITE_API_KEY
+        if (ssoBypass && apiKey && config.headers && typeof config.headers.set === 'function') {
+          config.headers.set('Authorization', `Bearer ${apiKey}`)
+        }
       }
       return config
     },

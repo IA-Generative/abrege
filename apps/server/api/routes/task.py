@@ -18,7 +18,6 @@ from src.schemas.task import (
 )
 from src.schemas.content import MergeModel
 from src.schemas.pagination import Pagination
-from src.schemas.code_error import TASK_STATUS_TO_HTTP
 from src.clients import file_connector, celery_app
 from src.utils.logger import logger_abrege
 from src import __version__
@@ -48,10 +47,7 @@ async def get_task(
         if task.output is not None:
             task.output.texts_found = []
 
-    return JSONResponse(
-        task.model_dump(),
-        status_code=TASK_STATUS_TO_HTTP.get(task.status, http_status.HTTP_200_OK),
-    )
+    return task
 
 
 @router.get("/tasks/stats")

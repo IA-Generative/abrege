@@ -11,6 +11,9 @@ from abrege_service.utils.lazy_pdf import LazyPdfImageList
 from src.schemas.task import TaskModel, TaskStatus
 from src.schemas.result import ResultModel
 from src.utils.logger import logger_abrege
+from abrege_service.config.openai import OpenAISettings
+
+openai_settings = OpenAISettings()
 
 
 def chunks(lst: list, batch_size: int):
@@ -26,11 +29,18 @@ class ImageService(BaseService):
 class ImageFromVLM(BaseService):
     def __init__(
         self,
-        client: openai.AsyncOpenAI,
-        model_name: str,
+        model_name: str = openai_settings.OPENAI_VLM_MODEL_NAME,
         content_type_allowed=IMAGE_CONTENT_TYPES + PDF_CONTENT_TYPES,
         service_weight=0.5,
         batch_size: int = 4,
+        client: openai.AsyncOpenAI = openai.AsyncOpenAI(
+            api_key=openai_settings.OPENAI_API_KEY,
+            base_url=openai_settings.OPENAI_API_BASE,
+        ),
+        sync_client: openai.OpenAI = openai.OpenAI(
+            api_key=openai_settings.OPENAI_API_KEY,
+            base_url=openai_settings.OPENAI_API_BASE,
+        ),
         retry: int = 2,
         sleep: int = 3,
     ):
@@ -46,6 +56,29 @@ class ImageFromVLM(BaseService):
             """
         self.retry = retry
         self.sleep = sleep
+        self.sync_client = sync_client
+
+    def process_image_sync(self, image: Image.Image) -> str:
+        t = time.time()
+        base64_image = pil_image_to_base64(image)
+        response = self.sync_client.chat.completions.create(
+            model=self.model_name,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": self.prompt},
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
+                        },
+                    ],
+                }
+            ],
+            # max_tokens=8192,
+        )
+        logger_abrege.debug(f"{time.time() - t:.2f}s to get result from llm")
+        return response.choices[0].message.content
 
     async def process_image(self, image: Image.Image) -> str:
         t = time.time()
@@ -59,6 +92,7 @@ class ImageFromVLM(BaseService):
         for i in range(self.retry):
             attempt = i + 1
             try:
+                logger_abrege.debug(f"Attempt {attempt} to process image with VLM", extra=extra_log)
                 t = time.time()
                 response = await self.client.chat.completions.create(
                     model=self.model_name,
@@ -92,7 +126,7 @@ class ImageFromVLM(BaseService):
                 logger_abrege.debug(f"Error Waiting {wait_time}s before retrying...", extra=extra_log)
                 await asyncio.sleep(wait_time)
         logger_abrege.warning(f"Max retry was exceed {self.retry}", extra=extra_log)
-        return "No Content will be found due too llm call error"
+        raise Exception(f"Failed to process image after {self.retry} attempts")
 
     async def process_batch_async(self, batch: list[Image.Image]):
         tasks = [self.process_image(image) for image in batch]
@@ -131,7 +165,11 @@ class ImageFromVLM(BaseService):
         process_pages = 0
         for batch in chunks(images, self.batch_size):
             t = time.time()
-            results = asyncio.run(self.process_batch_async(batch))
+            results = []
+            for image in batch:
+                res = self.process_image_sync(image)
+                results.append(res)
+
             task.output.percentage += len(results) / len(images)
             process_pages += len(results)
             task.output.texts_found.extend(results)
