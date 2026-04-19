@@ -210,6 +210,22 @@
 - clean code
 - clean code
 
+## [1.6.0](https://github.com/IA-Generative/abrege/compare/v1.5.2...v1.6.0) (2026-04-19)
+
+
+### Features
+
+* **content-types:** add additional audio and video content types ([96e93d4](https://github.com/IA-Generative/abrege/commit/96e93d42ed74158028fe7a9499ea82cf6ccc3ddc))
+* **merge:** task merged ([7334097](https://github.com/IA-Generative/abrege/commit/7334097f7783dc81b31c05c7e70c04ab8fa9b32e))
+* **upload:** extend accepted file formats and add tooltip for supported formats ([96e93d4](https://github.com/IA-Generative/abrege/commit/96e93d42ed74158028fe7a9499ea82cf6ccc3ddc))
+
+
+### Bug Fixes
+
+* **.gitignore:** add data directory to ignore list ([d2baaa0](https://github.com/IA-Generative/abrege/commit/d2baaa04c61c6b3959d1329fd0a262a14d1f001d))
+* **logging:** improve logging for task processing and add error handling for task output ([96e93d4](https://github.com/IA-Generative/abrege/commit/96e93d42ed74158028fe7a9499ea82cf6ccc3ddc))
+* **tests:** update test command for abrege_service to include coverage reporting ([b6ba040](https://github.com/IA-Generative/abrege/commit/b6ba0409c40101db08381df21212cbf8e0b34efd))
+
 ## [1.5.2](https://github.com/IA-Generative/abrege/compare/v1.5.1...v1.5.2) (2026-04-19)
 
 
