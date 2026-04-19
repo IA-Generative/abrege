@@ -18,3 +18,4 @@ tests/data/text
 .DS_Store
 *.env
 node_modules/
+data/
