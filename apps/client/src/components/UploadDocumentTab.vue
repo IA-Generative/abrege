@@ -10,7 +10,7 @@ import ResumeResultModal from './ResumeResultModal.vue'
 
 type TaskModel = components['schemas']['TaskModel']
 
-const uploadAccept = ['.pdf', '.docx', '.pptx', '.txt', '.odt', '.odp', '.doc']
+const uploadAccept = ['.pdf', '.docx', '.pptx', '.txt', '.odt', '.odp', '.doc', '.mp3', '.wav', '.ogg', '.mp4', '.m4a', '.flac', '.aac', '.webm', '.avi', '.mov', '.mkv', '.flv', '.wmv', '.mpeg', '.mpg', '.3gp', '.3g2', '.m4v', '.ts']
 const generateButtonLabel = 'Générer'
 const isLoading = ref(false)
 
@@ -88,6 +88,7 @@ function removeFile (index: number) {
 }
 
 const expandedFileIndex = ref<number | null>(null)
+const showFormatsTooltip = ref(false)
 
 function openFileParams (index: number) {
   expandedFileIndex.value = index
@@ -250,9 +251,32 @@ function newSearch () {
         :disabled="isLoading"
         @click="triggerFilePicker"
       />
-      <p class="file-hint fr-hint-text">
-        Formats supportés : PDF, DOC, DOCX, PPTX, ODT, ODP, TXT — 200 Mo max par fichier.
-      </p>
+      <div class="file-hint-row">
+        <button
+          type="button"
+          class="file-hint-btn"
+          aria-label="Formats supportés"
+          @mouseenter="showFormatsTooltip = true"
+          @mouseleave="showFormatsTooltip = false"
+          @focus="showFormatsTooltip = true"
+          @blur="showFormatsTooltip = false"
+        >
+          <span class="fr-icon-information-line" aria-hidden="true" /> Formats supportés
+        </button>
+        <div
+          v-if="showFormatsTooltip"
+          class="file-formats-tooltip"
+          role="tooltip"
+        >
+          <p class="tooltip-section-title">Documents</p>
+          <p>PDF, DOC, DOCX, PPTX, ODT, ODP, TXT</p>
+          <p class="tooltip-section-title">Vidéo</p>
+          <p>MP4, AVI, MOV, MKV, WMV, FLV, WebM, MPEG, 3GP, M4V, TS</p>
+          <p class="tooltip-section-title">Audio</p>
+          <p>MP3, WAV, OGG, MP4, M4A, AAC, FLAC, WebM</p>
+          <p class="tooltip-limit">200 Mo max par fichier</p>
+        </div>
+      </div>
     </div>
     <FileParamsModal
       v-if="expandedFileIndex !== null && abregeStore.fileParams[expandedFileIndex]"
@@ -347,6 +371,63 @@ function newSearch () {
 
 .file-hint {
   margin: 0;
+}
+
+.file-hint-row {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.file-hint-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.8rem;
+  color: var(--text-action-high-blue-france, #000091);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.file-hint-btn:hover {
+  text-decoration: underline;
+}
+
+.file-formats-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  white-space: nowrap;
+  z-index: 100;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.file-formats-tooltip p {
+  margin: 0;
+}
+
+.tooltip-section-title {
+  font-weight: 700;
+  margin-top: 0.4rem !important;
+  color: var(--text-title-grey, #3a3a3a);
+}
+
+.tooltip-section-title:first-child {
+  margin-top: 0 !important;
+}
+
+.tooltip-limit {
+  margin-top: 0.5rem !important;
+  color: var(--text-mention-grey, #777);
+  font-style: italic;
 }
 
 .sr-only {

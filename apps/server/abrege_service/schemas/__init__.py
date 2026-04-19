@@ -27,13 +27,30 @@ MICROSOFT_PRESENTATION_CONTENT_TYPES = [
     "application/vnd.openxmlformats-officedocument.presentationml.presentation",
 ]
 AUDIO_CONTENT_TYPES = [
+    # MP3
     "audio/mpeg",
+    "audio/mp3",
+    "audio/x-mpeg",
+    # WAV
     "audio/wav",
     "audio/x-wav",
+    "audio/vnd.wave",
+    "audio/wave",
+    # OGG
     "audio/ogg",
+    "application/ogg",
+    # MP4 / M4A
     "audio/mp4",
     "audio/x-m4a",
+    # AAC
+    "audio/aac",
+    "audio/x-aac",
+    # FLAC
     "audio/flac",
+    "audio/x-flac",
+    "application/x-flac",
+    # WebM audio
+    "audio/webm",
 ]
 
 PDF_CONTENT_TYPES = [
@@ -67,7 +84,12 @@ VIDEO_CONTENT_TYPES = [
     "video/webm",  # WEBM
     "video/ogg",  # OGG
     "video/3gpp",  # 3GP
+    "video/3gpp2",  # 3G2
     "video/quicktime",  # MOV
+    "video/x-matroska",  # MKV
+    "video/x-ms-wmv",  # WMV
+    "video/mp2t",  # TS / MPEG-TS
+    "video/x-m4v",  # M4V (iTunes)
 ]
 
 ALL_CONTENT_TYPES = (
