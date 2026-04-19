@@ -8,7 +8,7 @@ from fastapi import (
     File,
     UploadFile,
     HTTPException,
-    status,
+    status as http_status,
     Form,
     APIRouter,
     Depends,
@@ -54,7 +54,7 @@ async def summarize_doc(
         try:
             extras = json.loads(extras)
         except Exception as e:
-            raise HTTPException(status_code=422, detail=f"{e}")
+            raise HTTPException(status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"{e}")
     else:
         extras = {}
 
@@ -62,7 +62,7 @@ async def summarize_doc(
         try:
             parameters: SummaryParameters = SummaryParameters.model_validate_json(parameters)
         except Exception as e:
-            raise HTTPException(status_code=422, detail=f"{e}")
+            raise HTTPException(status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"{e}")
     else:
         parameters: SummaryParameters = SummaryParameters()
 
@@ -70,9 +70,15 @@ async def summarize_doc(
         try:
             parameters.custom_prompt = llm_guard.request_llm_guard_prompt(prompt=parameters.custom_prompt)
         except LLMGuardRequestException:
-            raise HTTPException(status_code=400, detail=" Bad request for the guard")
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail=" Bad request for the guard",
+            )
         except LLMGuardMaliciousPromptException:
-            raise HTTPException(status_code=422, detail="Unprocessable Entity (Suspicious)")
+            raise HTTPException(
+                status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Unprocessable Entity (Suspicious)",
+            )
 
     content = Content(prompt=prompt, extras=extras)
 
@@ -86,6 +92,7 @@ async def summarize_doc(
             extras=extras,
         ),
     )
+
     try:
         # Créer un fichier temporaire
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
@@ -105,7 +112,7 @@ async def summarize_doc(
 
         _, extension = os.path.splitext(file.filename)
 
-        extras = task_data.extras
+        extras = task_data.extras  # ty:ignore[invalid-assignment]
 
         document_content = DocumentModel(
             created_at=int(datetime.now().timestamp()),
@@ -125,6 +132,11 @@ async def summarize_doc(
                 extras=extras,
             ),
         )
+        if task_data is None:
+            raise HTTPException(
+                status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to update task with document content",
+            )
 
         os.remove(temp_file_path)
 
@@ -147,12 +159,12 @@ async def summarize_doc(
             ),
         )
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="File upload failed",
         )
 
 
-@doc_router.post("/task/document", status_code=status.HTTP_201_CREATED, response_model=TaskModel)
+@doc_router.post("/task/document", status_code=http_status.HTTP_201_CREATED, response_model=TaskModel)
 async def new_summarize_doc(
     ctx: TokenDep,
     file: UploadFile = File(...),
@@ -166,7 +178,7 @@ async def new_summarize_doc(
     extras: Annotated[Optional[str], Form(description="Extras json payload")] = "",
 ):
     if ctx.user_id is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+        raise HTTPException(status_code=http_status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
     return await summarize_doc(
         file=file,
         user_id=ctx.user_id,
