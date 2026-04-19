@@ -4,6 +4,7 @@ import traceback
 from typing import Optional
 from datetime import datetime
 from typing import Annotated
+import aiofiles
 from fastapi import (
     File,
     UploadFile,
@@ -15,8 +16,9 @@ from fastapi import (
 )
 from src.clients import file_connector, celery_app
 from src.utils.logger import logger_abrege as logger
-from src.schemas.task import (
-    task_table,
+from src.schemas.task import task_table
+
+from src.models.task import (
     TaskForm,
     TaskUpdateForm,
     TaskStatus,
@@ -33,8 +35,7 @@ from api.clients.llm_guard import (
 )
 from api.core.security.token import RequestContext
 from api.core.security.factory import TokenVerifier
-import tempfile
-import shutil
+
 
 doc_router = APIRouter(tags=["Document"])
 TokenDep = Annotated[RequestContext, Depends(TokenVerifier)]
@@ -48,15 +49,8 @@ async def summarize_doc(
         default="",
         description=f"Parameters {SummaryParameters().model_dump()}",
     ),
-    extras: Optional[str] = Form(default="", description="Extras json payload"),
 ):
-    if extras is not None and extras:
-        try:
-            extras = json.loads(extras)
-        except Exception as e:
-            raise HTTPException(status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"{e}")
-    else:
-        extras = {}
+    extras = {}
 
     if parameters is not None and parameters:
         try:
@@ -94,13 +88,13 @@ async def summarize_doc(
     )
 
     try:
-        # Créer un fichier temporaire
-        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+        async with aiofiles.tempfile.NamedTemporaryFile(delete=False) as temp_file:
             temp_file_path = temp_file.name
 
-            # Copier directement le contenu du fichier uploadé
-            file.file.seek(0)  # S'assurer qu'on est au début du fichier
-            shutil.copyfileobj(file.file, temp_file)
+            # Lecture par chunks pour économiser la mémoire
+            chunk_size = 8192  # 8KB chunks
+            while chunk := await file.read(chunk_size):
+                await temp_file.write(chunk)
 
         logger.debug(task_data.model_dump())
 
@@ -175,7 +169,6 @@ async def new_summarize_doc(
             description=f"Parameters {SummaryParameters().model_dump()}",
         ),
     ] = "",
-    extras: Annotated[Optional[str], Form(description="Extras json payload")] = "",
 ):
     if ctx.user_id is None:
         raise HTTPException(status_code=http_status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
@@ -184,5 +177,4 @@ async def new_summarize_doc(
         user_id=ctx.user_id,
         prompt=prompt,
         parameters=parameters,
-        extras=extras,
     )

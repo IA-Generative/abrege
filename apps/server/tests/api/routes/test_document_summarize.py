@@ -31,7 +31,6 @@ def test_summarize_doc(client: TestClient, mock_file: BytesIO):
         "user_id": "test_user",
         "prompt": None,
         "parameters": json.dumps({"key": "value"}),
-        "extras": json.dumps({"info": "test"}),
     }
 
     files = {"file": ("test.pdf", mock_file, "application/pdf")}
@@ -53,7 +52,6 @@ def test_summarize_doc_none_parameters_extras(client: TestClient, mock_file: Byt
         "user_id": "test_user",
         "prompt": None,
         "parameters": None,
-        "extras": None,
     }
 
     files = {"file": ("test.pdf", mock_file, "application/pdf")}
@@ -81,7 +79,7 @@ def test_summarize_doc_no_valid_extras_or_paramters(client: TestClient, mock_fil
 
     response = client.post("/task/document", data=form_data, files=files)
 
-    assert response.status_code == 422
+    assert response.status_code == 201
 
     form_data = {
         "user_id": "test_user",

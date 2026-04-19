@@ -38,7 +38,7 @@ def test_read_task(client, mock_task):
     TokenVerifier.verify = mock_verify
 
     response = client.get("/task/123")
-    assert response.status_code == 201
+    assert response.status_code == 200
     assert response.json() == mock_task.dict()
 
 
@@ -53,7 +53,12 @@ def test_read_task_not_found(client):
 
 def test_read_user_tasks(client, mock_task):
     task_table.get_tasks_by_user_id = MagicMock(return_value=[mock_task])
-    TokenVerifier.verify = MagicMock(return_value=True)
+
+    def mock_verify(ctx) -> bool:
+        ctx.user_id = "dev"
+        return True
+
+    TokenVerifier.verify = mock_verify
 
     response = client.get("/task/user/")
     assert response.status_code == 200
@@ -63,7 +68,12 @@ def test_read_user_tasks(client, mock_task):
 
 def test_read_user_tasks_empty(client):
     task_table.get_tasks_by_user_id = MagicMock(return_value=[])
-    TokenVerifier.verify = MagicMock(return_value=True)
+
+    def mock_verify(ctx) -> bool:
+        ctx.user_id = "dev"
+        return True
+
+    TokenVerifier.verify = mock_verify
 
     response = client.get("/task/user/")
     assert response.status_code == 200
