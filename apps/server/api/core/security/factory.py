@@ -32,6 +32,21 @@ class DevToken(BaseVerifyToken):
         return False
 
 
+class ApiKeyToken(BaseVerifyToken):
+    def __init__(self):
+        super().__init__(verify_token=True, is_fastapi=True)
+        warnings.warn(message="YOU USE DEV MODE PLEASE DON'T USE THAT IN PRODUCTION")
+        self._api_keys = os.environ.get("API_KEYS", "secret").split(",")  # Support multiple API keys
+
+    def verify(self, ctx: RequestContext):
+        if ctx.token in self._api_keys:
+            ctx.user_id = "api_key_user"
+            ctx.roles = ["admin"]
+            ctx.is_admin = True
+            return True
+        return False
+
+
 class KeycloakToken(BaseVerifyToken):
     def __init__(self):
         super().__init__(verify_token=True, is_fastapi=True)
@@ -46,9 +61,12 @@ class KeycloakToken(BaseVerifyToken):
             realm_name=self.realm_name,
             client_secret_key=os.environ.get("KEYCLOAK_CLIENT_SECRET", "secret"),
         )
+        self.api_token = ApiKeyToken()
 
     def verify(self, ctx: RequestContext) -> bool:
         """Vérifie le token JWT avec Keycloak et remplit ctx avec les infos utilisateur"""
+        if self.api_token.verify(ctx):
+            return True
         try:
             user_info = self.keycloak_openid.introspect(ctx.token)
             logging.debug(f"Token info: {user_info.keys()}")
@@ -79,6 +97,7 @@ SECURITY_FACTORY: dict[str, BaseVerifyToken] = {
     "full-access": AllowAllAccess,
     "dev": DevToken,
     "keycloak": KeycloakToken,
+    "api-key": ApiKeyToken,
 }
 
 TokenVerifier: BaseVerifyToken = SECURITY_FACTORY[os.environ.get("VERIFY_TOKEN_MODEL", "keycloak")]()

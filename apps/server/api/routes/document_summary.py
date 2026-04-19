@@ -129,7 +129,7 @@ async def summarize_doc(
         os.remove(temp_file_path)
 
         celery_app.send_task(
-            name=TaskName.MERGE.value,
+            name=TaskName.ABREGE.value,
             args=[json.dumps(task_data.model_dump())],
             task_id=task_data.id,
             retries=2,

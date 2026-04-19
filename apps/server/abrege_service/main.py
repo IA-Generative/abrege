@@ -46,12 +46,8 @@ microsoft_service_older = MicrosoftOlderDocumentToMdService()
 libre_office_service = LibreOfficeDocumentToMdService()
 flat_text_service = FlatTextService()
 
-async_client = openai.AsyncOpenAI(
-    api_key=openai_settings.OPENAI_API_KEY,
-    base_url=openai_settings.OPENAI_API_BASE,
-)
 if os.environ.get("OCR_SERVICE_LLM") == "LLM":
-    ocr_service = ImageFromVLM(client=async_client, model_name=openai_settings.OPENAI_VLM_MODEL_NAME)
+    ocr_service = ImageFromVLM()
 else:
     ocr_service = OCRMIService(url_ocr=os.environ.get("OCR_BACKEND_URL"))
 services: List[BaseService] = [
