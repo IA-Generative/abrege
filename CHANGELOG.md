@@ -210,6 +210,14 @@
 - clean code
 - clean code
 
+## [1.5.1](https://github.com/IA-Generative/abrege/compare/v1.5.0...v1.5.1) (2026-04-19)
+
+
+### Bug Fixes
+
+* **api:** standardize HTTP status codes and improve error handling in document summary and task routes ([73b97a9](https://github.com/IA-Generative/abrege/commit/73b97a93a9e68fee9016df399d2d22da8f2a39ba))
+* **ci:** add latest tags for main branch in Docker build configurations ([eee8243](https://github.com/IA-Generative/abrege/commit/eee8243d754c0b280eb6c507c659ab644853f554))
+
 ## [1.5.0](https://github.com/IA-Generative/abrege/compare/v1.4.0...v1.5.0) (2026-04-19)
 
 
