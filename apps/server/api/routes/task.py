@@ -42,11 +42,15 @@ async def read_user(
     tmp_log = {"user_id": user_id}
     with logger_abrege.contextualize(**tmp_log):  # ty:ignore[unresolved-attribute]
         try:
-            tasks = await service.get_tasks_by_user_id(db=db, user_id=user_id, page=offset, page_size=limit)
+            tasks = await service.get_tasks_by_user_id(
+                db=db, user_id=user_id, page=offset, page_size=limit
+            )
             logger_abrege.debug(f"[Task found: {len(tasks)}]")
         except Exception as e:
             logger_abrege.error(e)
-            raise HTTPException(http_status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{str(e)} not found")
+            raise HTTPException(
+                http_status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{str(e)} not found"
+            )
 
         return tasks
 
@@ -65,7 +69,9 @@ async def search_task(
     if status is not None:
         filters["status"] = status
     if not filters:
-        raise HTTPException(http_status.HTTP_400_BAD_REQUEST, detail="At least one filter is required")
+        raise HTTPException(
+            http_status.HTTP_400_BAD_REQUEST, detail="At least one filter is required"
+        )
     task = await service.search_task_by_fields(db=db, **filters)
     return task
 
@@ -79,8 +85,12 @@ async def get_tasks_read_user(
     limit: int = 10,
 ) -> Pagination[TaskModel]:
     if ctx.user_id is None:
-        raise HTTPException(status_code=http_status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
-    tasks = await read_user(service=service, db=db, user_id=ctx.user_id, offset=offset, limit=limit)
+        raise HTTPException(
+            status_code=http_status.HTTP_401_UNAUTHORIZED, detail="Unauthorized"
+        )
+    tasks = await read_user(
+        service=service, db=db, user_id=ctx.user_id, offset=offset, limit=limit
+    )
     total = await service.count_tasks_by_user_id(db=db, user_id=ctx.user_id)
     return Pagination[TaskModel](total=total, page=offset, page_size=limit, items=tasks)
 
@@ -94,7 +104,7 @@ async def get_task(
     show_text_found: bool = False,
 ) -> TaskModel:
     task = await service.get_task_by_id(db=db, task_id=id)
-    if task is None or task.user_id != ctx.user_id:
+    if task is None or (not ctx.is_admin and task.user_id != ctx.user_id):
         raise HTTPException(http_status.HTTP_404_NOT_FOUND, detail=f"{id} not found")
     with logger_abrege.contextualize(  # ty:ignore[unresolved-attribute]
         task_id=task.id, user_id=task.user_id
@@ -121,7 +131,9 @@ async def get_statistics(
     end_date: Optional[int] = None,
 ) -> TaskStats:
     if ctx.user_id is None:
-        raise HTTPException(status_code=http_status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+        raise HTTPException(
+            status_code=http_status.HTTP_401_UNAUTHORIZED, detail="Unauthorized"
+        )
     try:
         stats = await service.get_statistics(
             db=db,
@@ -148,7 +160,9 @@ async def get_unique_users_today(
         now = datetime.now()
         start = int(datetime(now.year, now.month, now.day).timestamp())
         end = start + 24 * 60 * 60
-        count = await service.count_unique_users_between_dates(db=db, start_date=start, end_date=end)
+        count = await service.count_unique_users_between_dates(
+            db=db, start_date=start, end_date=end
+        )
         return JSONResponse({"users_today": count})
     except Exception as e:
         logger_abrege.exception(e, extra={"user_id": ctx.user_id})
@@ -164,11 +178,13 @@ async def update_task(
     service: TaskServiceDep,
 ) -> TaskModel:
     task = await service.get_task_by_id(db=db, task_id=id)
-    if task is None or task.user_id != ctx.user_id:
+    if task is None or (not ctx.is_admin and task.user_id != ctx.user_id):
         raise HTTPException(http_status.HTTP_404_NOT_FOUND, detail=f"{id} not found")
     updated = await service.update_task(db=db, task_id=id, form_data=form_data)
     if updated is None:
-        raise HTTPException(http_status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Update failed")
+        raise HTTPException(
+            http_status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Update failed"
+        )
     return updated
 
 
@@ -238,14 +254,18 @@ async def merge_tasks(
     service: TaskServiceDep,
 ) -> TaskModel:
     if ctx.user_id is None:
-        raise HTTPException(status_code=http_status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+        raise HTTPException(
+            status_code=http_status.HTTP_401_UNAUTHORIZED, detail="Unauthorized"
+        )
     new_task_form = TaskForm(
         input=MergeModel(task_ids=task_ids, created_at=int(datetime.now().timestamp())),
         output=None,
         status=TaskStatus.QUEUED.value,
         type="merge",
     )
-    new_task = await service.insert_new_task(db=db, user_id=ctx.user_id, form_data=new_task_form)
+    new_task = await service.insert_new_task(
+        db=db, user_id=ctx.user_id, form_data=new_task_form
+    )
 
     for task_id in task_ids:
         merge_task_service.create_merge_task(
