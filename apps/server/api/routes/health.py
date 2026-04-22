@@ -1,7 +1,6 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 import datetime
-from typing import Annotated
 
 
 from src.utils.logger import logger_abrege
@@ -18,9 +17,7 @@ async def healthcheck():
     dependencies = []
     status = HealtStatus.HEALTHY
     status_code = 200
-    dependencies.append(
-        Health(name="task-table", version=__version__, up_time=up_time, status=status)
-    )
+    dependencies.append(Health(name="task-table", version=__version__, up_time=up_time, status=status))
     logger_abrege.debug("Health avalaible")
     global_health = Health(
         name=__name__,
