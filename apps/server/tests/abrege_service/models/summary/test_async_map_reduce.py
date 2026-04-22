@@ -48,7 +48,7 @@ def dummy_task_large() -> TaskModel:
         text_found.append(data["text"])
 
     task = task_table.insert_new_task(
-        user_id="1",
+        user_id="api_key_user",
         form_data=TaskForm(
             type="summary",
             status=TaskStatus.CREATED.value,

@@ -1,6 +1,7 @@
 import requests
 from loguru import logger
 import os
+from src.models.task import TaskModel
 
 
 class ServerClient:
@@ -42,3 +43,10 @@ class ServerClient:
     def upsert_chunks(self, chunks: list[dict]) -> list[dict]:
         response = self.request("POST", "/api/v1/chunks/bulk", json={"chunks": chunks})
         return response.json()
+
+    def search_task_by_fields(self, **filters) -> TaskModel | None:
+        response = self.request("GET", "/api/task/search", params=filters)
+        data = response.json()
+        if data:
+            return TaskModel.model_validate(data)
+        return None

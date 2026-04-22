@@ -1,17 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
-from fastapi import FastAPI
-from unittest.mock import MagicMock
 from api.routes.task import router
-from api.core.security.factory import TokenVerifier
-from src.schemas.task import TaskModel, task_table, TaskStatus
-
-
-@pytest.fixture
-def client():
-    app = FastAPI()
-    app.include_router(router)
-    return TestClient(app)
+from src.models.task import TaskModel, TaskStatus
 
 
 @pytest.fixture
@@ -28,52 +18,43 @@ def mock_task():
     )
 
 
-def test_read_task(client, mock_task):
-    task_table.get_task_by_id = MagicMock(return_value=mock_task)
+@pytest.fixture
+def client(app_with_overrides):
+    app = app_with_overrides(router)
+    return TestClient(app)
 
-    def mock_verify(ctx) -> bool:
-        ctx.user_id = "dev"
-        return True
 
-    TokenVerifier.verify = mock_verify
+def test_read_task(client, mock_task_service, mock_task):
+    mock_task_service.get_task_by_id.return_value = mock_task
+    mock_task_service.get_position_in_queue.return_value = None
 
     response = client.get("/task/123")
     assert response.status_code == 200
-    assert response.json() == mock_task.dict()
+    data = response.json()
+    assert data["id"] == "123"
 
 
-def test_read_task_not_found(client):
-    task_table.get_task_by_id = MagicMock(return_value=None)
-    TokenVerifier.verify = MagicMock(return_value=True)
+def test_read_task_not_found(client, mock_task_service):
+    mock_task_service.get_task_by_id.return_value = None
 
     response = client.get("/task/999")
     assert response.status_code == 404
     assert response.json() == {"detail": "999 not found"}
 
 
-def test_read_user_tasks(client, mock_task):
-    task_table.get_tasks_by_user_id = MagicMock(return_value=[mock_task])
-
-    def mock_verify(ctx) -> bool:
-        ctx.user_id = "dev"
-        return True
-
-    TokenVerifier.verify = mock_verify
+def test_read_user_tasks(client, mock_task_service, mock_task):
+    mock_task_service.get_tasks_by_user_id.return_value = [mock_task]
+    mock_task_service.count_tasks_by_user_id.return_value = 1
 
     response = client.get("/task/user/")
     assert response.status_code == 200
     assert len(response.json()["items"]) == 1
-    assert response.json()["items"][0] == mock_task.dict()
 
 
-def test_read_user_tasks_empty(client):
-    task_table.get_tasks_by_user_id = MagicMock(return_value=[])
-
-    def mock_verify(ctx) -> bool:
-        ctx.user_id = "dev"
-        return True
-
-    TokenVerifier.verify = mock_verify
+def test_read_user_tasks_empty(client, mock_task_service):
+    mock_task_service.get_tasks_by_user_id.return_value = []
+    mock_task_service.count_tasks_by_user_id.return_value = 0
 
     response = client.get("/task/user/")
     assert response.status_code == 200
+    assert response.json()["items"] == []

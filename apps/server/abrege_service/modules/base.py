@@ -1,7 +1,7 @@
 from typing import List, Optional
 from abc import ABC, abstractmethod
 import time
-from src.schemas.task import TaskModel, task_table, TaskStatus, TaskUpdateForm
+from src.models.task import TaskModel, TaskStatus, TaskUpdateForm
 from src.schemas.result import ResultModel
 from src.schemas.content import DocumentModel, URLModel, ContentModel
 from abrege_service.clients.server import ServerClient
@@ -19,7 +19,6 @@ class NoGivenInput(Exception): ...
 
 class BaseService(ABC):
     def __init__(self, content_type_allowed: List[str] = [], service_weight: float = 0.5):
-        self.task_table = task_table
         self.content_type_allowed = content_type_allowed
         self.service_weight = service_weight
 

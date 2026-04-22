@@ -113,9 +113,11 @@ async def summarize_content(
 async def new_summarize_content(
     input: Input,
     ctx: TokenDep,
+    db: DbDep,
+    service: TaskServiceDep,
 ):
     if ctx.user_id is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
     input_model = InputModel(user_id=ctx.user_id, **input.model_dump())
 
-    return await summarize_content(input=input_model, service=TaskService(), db=AsyncSession())
+    return await summarize_content(input=input_model, service=service, db=db)

@@ -62,3 +62,9 @@ class TaskService:
 
     async def get_tasks_by_ids(self, db: AsyncSession, user_id: str, task_ids: list[str]) -> list[TaskModel]:
         return await self.task_repo.get_tasks(db=db, user_id=user_id, task_ids=task_ids)
+
+    async def count_unique_users_between_dates(self, db: AsyncSession, start_date: int, end_date: int) -> int:
+        return await self.task_repo.count_unique_users_between_dates(db=db, start_date=start_date, end_date=end_date)
+
+    async def search_task_by_fields(self, db: AsyncSession, **filters) -> TaskModel | None:
+        return await self.task_repo.search_task_by_fields(db=db, **filters)

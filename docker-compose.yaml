@@ -53,6 +53,11 @@ services:
       - EMBEDDING_MODEL=bge-multilingual-gemma2
     env_file:
       - .env
+    depends_on:
+      redis:
+        condition: service_started
+      abrege_api:
+        condition: service_healthy
 
   abrege_api:
     image: abrege-api
@@ -60,6 +65,18 @@ services:
       context: .
       dockerfile: apps/server/api/Dockerfile
       target: dev
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request;
+            urllib.request.urlopen('http://localhost:5000/api/health')\" || exit
+            1",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     ports:
       - 5000:5000
     volumes:
@@ -91,10 +108,10 @@ services:
     restart: always
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -h localhost -p 5432" ]
-      interval: 1m30s
-      timeout: 30s
-      retries: 5
-      start_period: 30s
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: secret

@@ -9,7 +9,6 @@ from api.core.security.factory import TokenVerifier
 from src.services.merge_task_service import merge_task_service
 from src.models.merge_task import MergeTaskCreateForm
 
-from src.schemas.task import task_table
 from src.models.task import (
     TaskModel,
     TaskStats,
@@ -31,6 +30,59 @@ router = APIRouter(tags=["Tasks"])
 TokenDep = Annotated[RequestContext, Depends(TokenVerifier)]
 DbDep = Annotated[AsyncSession, Depends(get_async_session_dep)]
 TaskServiceDep = Annotated[TaskService, Depends(TaskService)]
+
+
+async def read_user(
+    service: TaskService,
+    db: AsyncSession,
+    user_id: str,
+    offset: int = 1,
+    limit: int = 10,
+) -> List[TaskModel]:
+    tmp_log = {"user_id": user_id}
+    with logger_abrege.contextualize(**tmp_log):  # ty:ignore[unresolved-attribute]
+        try:
+            tasks = await service.get_tasks_by_user_id(db=db, user_id=user_id, page=offset, page_size=limit)
+            logger_abrege.debug(f"[Task found: {len(tasks)}]")
+        except Exception as e:
+            logger_abrege.error(e)
+            raise HTTPException(http_status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{str(e)} not found")
+
+        return tasks
+
+
+@router.get("/task/search")
+async def search_task(
+    ctx: TokenDep,
+    db: DbDep,
+    service: TaskServiceDep,
+    content_hash: Optional[str] = None,
+    status: Optional[str] = None,
+) -> TaskModel | None:
+    filters = {}
+    if content_hash is not None:
+        filters["content_hash"] = content_hash
+    if status is not None:
+        filters["status"] = status
+    if not filters:
+        raise HTTPException(http_status.HTTP_400_BAD_REQUEST, detail="At least one filter is required")
+    task = await service.search_task_by_fields(db=db, **filters)
+    return task
+
+
+@router.get("/task/user/")
+async def get_tasks_read_user(
+    ctx: TokenDep,
+    db: DbDep,
+    service: TaskServiceDep,
+    offset: int = 1,
+    limit: int = 10,
+) -> Pagination[TaskModel]:
+    if ctx.user_id is None:
+        raise HTTPException(status_code=http_status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+    tasks = await read_user(service=service, db=db, user_id=ctx.user_id, offset=offset, limit=limit)
+    total = await service.count_tasks_by_user_id(db=db, user_id=ctx.user_id)
+    return Pagination[TaskModel](total=total, page=offset, page_size=limit, items=tasks)
 
 
 @router.get("/task/{id}")
@@ -89,49 +141,18 @@ async def get_statistics(
 @router.get("/tasks/count-users-today")
 async def get_unique_users_today(
     ctx: TokenDep,
+    db: DbDep,
+    service: TaskServiceDep,
 ) -> JSONResponse:
     try:
         now = datetime.now()
         start = int(datetime(now.year, now.month, now.day).timestamp())
         end = start + 24 * 60 * 60
-        count = task_table.count_unique_users_between_dates(start_date=start, end_date=end)
+        count = await service.count_unique_users_between_dates(db=db, start_date=start, end_date=end)
         return JSONResponse({"users_today": count})
     except Exception as e:
         logger_abrege.exception(e, extra={"user_id": ctx.user_id})
         raise HTTPException(http_status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-
-
-async def read_user(
-    service: TaskService,
-    db: AsyncSession,
-    user_id: str,
-    offset: int = 1,
-    limit: int = 10,
-) -> List[TaskModel]:
-    tmp_log = {"user_id": user_id}
-    try:
-        tasks = await service.get_tasks_by_user_id(db=db, user_id=user_id, page=offset, page_size=limit)
-        logger_abrege.debug(f"[Task found: {len(tasks)}]", extra=tmp_log)
-    except Exception as e:
-        logger_abrege.error(e, extra=tmp_log)
-        raise HTTPException(http_status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{str(e)} not found")
-
-    return tasks
-
-
-@router.get("/task/user/")
-async def get_tasks_read_user(
-    ctx: TokenDep,
-    db: DbDep,
-    service: TaskServiceDep,
-    offset: int = 1,
-    limit: int = 10,
-) -> Pagination[TaskModel]:
-    if ctx.user_id is None:
-        raise HTTPException(status_code=http_status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
-    tasks = await read_user(service=service, db=db, user_id=ctx.user_id, offset=offset, limit=limit)
-    total = await service.count_tasks_by_user_id(db=db, user_id=ctx.user_id)
-    return Pagination[TaskModel](total=total, page=offset, page_size=limit, items=tasks)
 
 
 @router.put("/task/{id}")

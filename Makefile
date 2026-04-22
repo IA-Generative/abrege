@@ -107,10 +107,10 @@ down-services:
 	docker compose down --remove-orphans || true
 
 init-db:
-	docker compose up -d redis db minio migration
-	sleep 2
-	docker compose run migration uv run alembic upgrade head
-	sleep 2
+	docker compose up -d --remove-orphans redis db minio
+	@echo "Attente de la base de données..."
+	@docker compose exec db sh -c 'until pg_isready -h localhost -p 5432; do sleep 1; done'
+	docker compose run --rm migration uv run alembic upgrade head
 
 upgrade-revision: ## Crée une nouvelle révision de base de données
 	@read -p "Message de révision : " msg; \
@@ -120,21 +120,30 @@ upgrade-revision: ## Crée une nouvelle révision de base de données
 upgrade-db: ## Met à jour la base de données à la dernière révision
 	docker compose run --rm migration uv run alembic upgrade head
 
-test-src: init-db
-	docker compose up -d abrege_api
+wait-api:
+	@echo "Attente de l'API..."
+	@until docker compose exec abrege_api python -c "import urllib.request; urllib.request.urlopen('http://localhost:5000/api/health')" > /dev/null 2>&1; do sleep 2; done
+	@echo "API prête."
+
+test-src: init-db ## Tests sur les sources (repository)
+	docker compose up -d --remove-orphans abrege_api
+	@$(MAKE) wait-api
 	docker compose exec abrege_api uv run pytest -s --cov=./src --cov-report=term-missing tests/src/repository -ra -v --maxfail=0
-	make down-services
+	@$(MAKE) down-services
 
-test-abrege-api: init-db
-	docker compose up -d abrege_api
+test-abrege-api: init-db ## Tests de l'API
+	docker compose up -d --remove-orphans abrege_api
+	@$(MAKE) wait-api
 	docker compose exec abrege_api uv run pytest -s --cov=./api --cov-report=term-missing tests/api/ -ra -v --maxfail=0
-	make down-services
+	@$(MAKE) down-services
 
-test-abrege-service: init-db
+test-abrege-service: init-db ## Tests du service abrégé
+	docker compose up -d --remove-orphans abrege_api
+	@$(MAKE) wait-api
 	docker compose run --rm abrege_service uv run pytest -s --cov=./abrege_service/ --cov-report=term-missing tests/abrege_service/ -ra -v --maxfail=1
-	make down-services
+	@$(MAKE) down-services
 
 
-test-sdk-python:
+test-sdk-python: ## Tests du SDK Python
 	cd sdk && \
 		uv run pytest -s --cov=./abrege_sdk --cov-report=term-missing tests/ -ra -v --maxfail=0

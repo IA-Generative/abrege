@@ -7,7 +7,7 @@ import pytest
 
 def mock_task(url) -> TaskModel:
     task = task_table.insert_new_task(
-        user_id="1",
+        user_id="api_key_user",
         form_data=TaskForm(
             type="summary",
             status=TaskStatus.CREATED.value,
