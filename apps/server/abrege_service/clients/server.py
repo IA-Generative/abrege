@@ -11,6 +11,7 @@ class ServerClient:
         headers: dict[str, str] | None = {
             "Authorization": f"Bearer {os.getenv('SERVER_API_KEY', 'secret-api')}",
             "X-User-Id": os.getenv("SERVER_USER_ID", "test_user"),
+            "X-Roles": os.getenv("SERVER_USER_ROLES", "admin"),
         },
         blocking: bool = True,
     ):
