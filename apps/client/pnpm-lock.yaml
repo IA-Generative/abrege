@@ -14,6 +14,9 @@ importers:
       '@gouvminint/vue-dsfr':
         specifier: ^8.13.1
         version: 8.13.1(@iconify/vue@4.3.0(vue@3.5.28(typescript@5.9.3)))(vue-router@4.6.4(vue@3.5.28(typescript@5.9.3)))(vue@3.5.28(typescript@5.9.3))
+      '@lottiefiles/dotlottie-vue':
+        specifier: ^0.11.11
+        version: 0.11.11(vue@3.5.28(typescript@5.9.3))
       '@tailwindcss/vite':
         specifier: ^4.1.18
         version: 4.1.18(vite@7.3.1(@types/node@24.10.13)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.46.0)(yaml@2.8.2))
@@ -1101,6 +1104,14 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
+
+  '@lottiefiles/dotlottie-vue@0.11.11':
+    resolution: {integrity: sha512-rYjN1PdDVyy8iMbKIqBTKNfg7DoFu/MrG9ARuSjqGIf/daNEIpygOVwfrcN21TFatDvDc7MxFvWu8OBTzGVwNw==}
+    peerDependencies:
+      vue: ^3.3.4
+
+  '@lottiefiles/dotlottie-web@0.71.0':
+    resolution: {integrity: sha512-CliQttL0Rk0or/aDQkqUJXnC9Cm5TxzNdOqy/YlzKlU6mu+XgTMwyt5/HpPiltlMeaqBmM9mOzfevpyP4QmudQ==}
 
   '@one-ini/wasm@0.1.1':
     resolution: {integrity: sha512-XuySG1E38YScSJoMlqovLru4KTUNSjgVTIjyh7qMX6aNN5HY5Ct5LhRJdxO79JtTzKfzV/bnWpz+zquYrISsvw==}
@@ -5518,6 +5529,13 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
+
+  '@lottiefiles/dotlottie-vue@0.11.11(vue@3.5.28(typescript@5.9.3))':
+    dependencies:
+      '@lottiefiles/dotlottie-web': 0.71.0
+      vue: 3.5.28(typescript@5.9.3)
+
+  '@lottiefiles/dotlottie-web@0.71.0': {}
 
   '@one-ini/wasm@0.1.1': {}
 

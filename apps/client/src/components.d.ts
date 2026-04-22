@@ -12,6 +12,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AppChatbot: typeof import('./components/AppChatbot.vue')['default']
     AppFooter: typeof import('./components/AppFooter.vue')['default']
     AppHeader: typeof import('./components/AppHeader.vue')['default']
     AppToaster: typeof import('./components/AppToaster.vue')['default']
@@ -51,6 +52,7 @@ declare module 'vue' {
 
 // For TSX support
 declare global {
+  const AppChatbot: typeof import('./components/AppChatbot.vue')['default']
   const AppFooter: typeof import('./components/AppFooter.vue')['default']
   const AppHeader: typeof import('./components/AppHeader.vue')['default']
   const AppToaster: typeof import('./components/AppToaster.vue')['default']
