@@ -70,7 +70,9 @@ class ImageFromVLM(BaseService):
                         {"type": "text", "text": self.prompt},
                         {
                             "type": "image_url",
-                            "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{base64_image}"
+                            },
                         },
                     ],
                 }
@@ -86,13 +88,14 @@ class ImageFromVLM(BaseService):
         base64_image = pil_image_to_base64(image)
         logger_abrege.debug(
             f"time to transform into base64 :{time.time() - t:.2f}",
-            extra=extra_log,
         )
         attempt = 0
         for i in range(self.retry):
             attempt = i + 1
             try:
-                logger_abrege.debug(f"Attempt {attempt} to process image with VLM", extra=extra_log)
+                logger_abrege.debug(
+                    f"Attempt {attempt} to process image with VLM",
+                )
                 t = time.time()
                 response = await self.client.chat.completions.create(
                     model=self.model_name,
@@ -103,29 +106,38 @@ class ImageFromVLM(BaseService):
                                 {"type": "text", "text": self.prompt},
                                 {
                                     "type": "image_url",
-                                    "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
+                                    "image_url": {
+                                        "url": f"data:image/jpeg;base64,{base64_image}"
+                                    },
                                 },
                             ],
                         }
                     ],
                     # max_tokens=8192,
                 )
-                logger_abrege.debug(f"{time.time() - t:.2f}s to get result from llm", extra=extra_log)
+                logger_abrege.debug(
+                    f"{time.time() - t:.2f}s to get result from llm",
+                )
                 return response.choices[0].message.content
             except openai.APIConnectionError as e:
                 logger_abrege.error(
                     f"openai.APIConnectionError {str(e)} - {traceback.format_exc()}",
-                    extra=extra_log,
                 )
 
             except Exception as e:
-                logger_abrege.error(f"Exception : {str(e)} - {traceback.format_exc()}", extra=extra_log)
+                logger_abrege.error(
+                    f"Exception : {str(e)} - {traceback.format_exc()}",
+                )
 
             if attempt < self.retry:
                 wait_time = self.sleep * (2 ** (attempt - 1))  # backoff exponentiel
-                logger_abrege.debug(f"Error Waiting {wait_time}s before retrying...", extra=extra_log)
+                logger_abrege.debug(
+                    f"Error Waiting {wait_time}s before retrying...",
+                )
                 await asyncio.sleep(wait_time)
-        logger_abrege.warning(f"Max retry was exceed {self.retry}", extra=extra_log)
+        logger_abrege.warning(
+            f"Max retry was exceed {self.retry}",
+        )
         raise Exception(f"Failed to process image after {self.retry} attempts")
 
     async def process_batch_async(self, batch: list[Image.Image]):
@@ -163,7 +175,9 @@ class ImageFromVLM(BaseService):
             "file_path-process": task.input.file_path,
             "process_name": self.__class__.__name__,
         }
-        logger_abrege.info("start to extract content", extra=extra_log)
+        logger_abrege.info(
+            "start to extract content",
+        )
         process_pages = 0
         for image in images:
             t = time.time()
@@ -171,7 +185,6 @@ class ImageFromVLM(BaseService):
 
             logger_abrege.debug(
                 f"Process page {process_pages + len(results) + 1} / {len(images)}",
-                extra=extra_log,
             )
             res = self.process_image_sync(image)
             results.append(res)
@@ -179,10 +192,11 @@ class ImageFromVLM(BaseService):
             task.output.percentage = len(results) / len(images)
             process_pages = len(results)
             task.output.texts_found.extend(results)
-            task = self.update_task(task=task, status=TaskStatus.IN_PROGRESS, result=task.output)
+            task = self.update_task(
+                task=task, status=TaskStatus.IN_PROGRESS, result=task.output
+            )
             logger_abrege.debug(
                 f"Status {process_pages} / {len(images)} - time process : {time.time() - t:.2f}s",
-                extra=extra_log,
             )
 
         task = self.update_task(

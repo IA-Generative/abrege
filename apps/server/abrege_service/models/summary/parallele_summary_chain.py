@@ -53,8 +53,12 @@ COMBINE_PROMPT = PromptTemplate(
 Langfuse(
     public_key=os.environ.get("LANGFUSE_PUBLIC_KEY", "your-public-key"),
     secret_key=os.environ.get("LANGFUSE_SECRET_KEY", "your-secret-key"),
-    environment=os.environ.get("LANGFUSE_ENVIRONMENT", "local"),  # Optional: defaults to production
-    host=os.environ.get("LANGFUSE_HOST", "https://cloud.langfuse.com"),  # Optional: defaults to https://cloud.langfuse.com
+    environment=os.environ.get(
+        "LANGFUSE_ENVIRONMENT", "local"
+    ),  # Optional: defaults to production
+    host=os.environ.get(
+        "LANGFUSE_HOST", "https://cloud.langfuse.com"
+    ),  # Optional: defaults to https://cloud.langfuse.com
 )
 
 # Get the configured client instance
@@ -84,9 +88,15 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
         super().__init__()
         self.llm = llm
         self.max_concurrency = max_concurrency
-        self.llm_chain_map = load_summarize_chain(llm, chain_type="stuff", prompt=MAP_PROMPT)
-        self.combine_document_chain = load_summarize_chain(llm, chain_type="stuff", prompt=COMBINE_PROMPT)
-        self.collapse_document_chain = load_summarize_chain(llm, chain_type="stuff", prompt=COMBINE_PROMPT)
+        self.llm_chain_map = load_summarize_chain(
+            llm, chain_type="stuff", prompt=MAP_PROMPT
+        )
+        self.combine_document_chain = load_summarize_chain(
+            llm, chain_type="stuff", prompt=COMBINE_PROMPT
+        )
+        self.collapse_document_chain = load_summarize_chain(
+            llm, chain_type="stuff", prompt=COMBINE_PROMPT
+        )
         if isinstance(max_token, str):
             max_token = int(max_token)
         self.max_token = max_token
@@ -109,7 +119,7 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
             result=task.output,
         )
         current_percentage = task.percentage
-        logger_abrege.debug(f"current percentage {current_percentage * 100:.2f}%", extra=extra_log)
+        logger_abrege.debug(f"current percentage {current_percentage * 100:.2f}%")
 
         current_text = task.output.texts_found
         nb_total_documents = len(current_text)
@@ -120,18 +130,20 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
         logger_abrege.debug(f"max_token {max_token} - {type(max_token)}")
         logger_abrege.debug(
             f"Current number of documents {nb_total_documents}%",
-            extra=extra_log,
         )
         try:
-            transform_texts: list[str] = split_texts_by_token_limit(texts=current_text, max_tokens=max_token, model=self.llm.model_name)
+            transform_texts: list[str] = split_texts_by_token_limit(
+                texts=current_text, max_tokens=max_token, model=self.llm.model_name
+            )
 
         except Exception as e:
             logger_abrege.warning(f"{self.llm.model_name} - {e}")
-            transform_texts: list[str] = split_texts_by_word_limit(current_text, max_words=int(max_token * 0.75))
+            transform_texts: list[str] = split_texts_by_word_limit(
+                current_text, max_words=int(max_token * 0.75)
+            )
         nb_total_documents = len(transform_texts)
         logger_abrege.debug(
             f"After transformation, number of documents {nb_total_documents} - max_words {int(max_token * 0.75)} - {[len(text.split()) for text in transform_texts]}",  # noqa
-            extra=extra_log,
         )
         percentage_left = 1 - current_percentage
 
@@ -161,18 +173,21 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
                             "langfuse_tags": ["map_one_document"],
                         }
 
-                    summary = await self.llm_chain_map.ainvoke(inputs, config=tmp_copy_config)
+                    summary = await self.llm_chain_map.ainvoke(
+                        inputs, config=tmp_copy_config
+                    )
                     copy_log = extra_log.copy()
                     copy_log["process_name"] = "llm_chain_map.ainvoke"
                     copy_log["process_time"] = perf_counter() - t_doc_summary
-                    logger_abrege.info(f"{counter} / {nb_total_documents} processed", extra=copy_log)
+                    logger_abrege.info(
+                        f"{counter} / {nb_total_documents} processed", extra=copy_log
+                    )
                     async with lock:
                         counter += 1
                         percentage_map = counter / (nb_total_documents + 1)
                         percentage_map = percentage_left * percentage_map
                         logger_abrege.debug(
                             f"left percentage {100 * percentage_left:.2f}% {100 * current_percentage:.2f}% current_ma_percentage {100 * percentage_map:.2f}",
-                            extra=extra_log,
                         )
                         task.percentage = current_percentage + percentage_map
                         new_summary: str = summary["output_text"]
@@ -189,9 +204,13 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
                             status=TaskStatus.IN_PROGRESS,
                         )
 
-                    return Document(page_content=summary["output_text"], metadata=doc.metadata)
+                    return Document(
+                        page_content=summary["output_text"], metadata=doc.metadata
+                    )
                 except Exception as e:
-                    logger_abrege.error(f"{e} - {traceback.format_exc()}", extra=extra_log)
+                    logger_abrege.error(
+                        f"{e} - {traceback.format_exc()}",
+                    )
                     raise e
 
         docs = [Document(page_content=text) for text in transform_texts]
@@ -211,14 +230,15 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
         max_word = int(self.max_token * 0.75)
         logger_abrege.info(
             f"Collapse document because current total words {total_words} > {self.max_token}",
-            extra=extra_log,
         )
         if total_words > max_word:
             semaphore = asyncio.Semaphore(self.max_concurrency)
             lock = asyncio.Lock()
             counter = 0
             current_percentage = task.percentage
-            logger_abrege.debug(f"current percentage {current_percentage * 100:.2f}%", extra=extra_log)
+            logger_abrege.debug(
+                f"current percentage {current_percentage * 100:.2f}%",
+            )
             nb_total_documents = len(docs)
             partition_texts = group_by_max_word_sum(texts=texts, threshold=max_word)
             nb_total_documents = len(partition_texts)
@@ -250,7 +270,9 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
                                 "langfuse_session_id": task.id,
                                 "langfuse_tags": ["collapse_summary_document"],
                             }
-                        summary = await self.collapse_document_chain.ainvoke(inputs, config=tmp_copy_config)
+                        summary = await self.collapse_document_chain.ainvoke(
+                            inputs, config=tmp_copy_config
+                        )
                         copy_log = extra_log.copy()
                         copy_log["process_name"] = "collapse_summary_chain.ainvoke"
                         copy_log["process_time"] = perf_counter() - t_doc_summary
@@ -261,11 +283,12 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
                         async with lock:
                             counter += 1
                             percentage_map = counter / (nb_total_documents + 1)
-                            percentage_map = current_percentage + percentage_left * percentage_map
+                            percentage_map = (
+                                current_percentage + percentage_left * percentage_map
+                            )
                             logger_abrege.debug(
                                 f"left percentage {100 * percentage_left:.2f}%| old percentage {100 * current_percentage:.2f}%"
                                 f"current_ma_percentage {100 * percentage_map:.2f}",
-                                extra=extra_log,
                             )
                             task.percentage = current_percentage + percentage_map
                             new_summary: str = summary["output_text"]
@@ -284,10 +307,14 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
 
                         return Document(page_content=summary["output_text"])
                     except Exception as e:
-                        logger_abrege.error(f"{e} - {traceback.format_exc()}", extra=extra_log)
+                        logger_abrege.error(
+                            f"{e} - {traceback.format_exc()}",
+                        )
                         raise e
 
-            return await asyncio.gather(*[collapse_summary_document(doc) for doc in partition_documents])
+            return await asyncio.gather(
+                *[collapse_summary_document(doc) for doc in partition_documents]
+            )
         else:
             return docs
 
