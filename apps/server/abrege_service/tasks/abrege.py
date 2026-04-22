@@ -27,7 +27,6 @@ from abrege_service.models.summary.parallele_summary_chain import (
 )
 from abrege_service.config.openai import OpenAISettings
 
-from src.schemas.task import task_table
 from src.models.task import TaskModel, TaskStatus, TaskUpdateForm, TaskName
 from src.schemas.content import URLModel, DocumentModel, TextModel
 from src.schemas.result import ResultModel
@@ -38,8 +37,11 @@ from src.utils.logger import logger_abrege
 from src.services.merge_task_service import merge_task_service
 from src.models.merge_task import MergeTaskUpdateForm
 from .merge import launch_merge
+from abrege_service.clients.server import ServerClient
+from .chunk_task import launch_chunking
 
 openai_settings = OpenAISettings()
+server_client = ServerClient()
 cache_service = CacheService()
 audio_service = AudioVoskTranscriptionService(service_ratio_representaion=0.5)
 video_service = VideoTranscriptionService(service_ratio_representaion=0.5)
@@ -100,6 +102,11 @@ class AbregeTask(Task):
 
     def on_success(self, retval, task_id, args, kwargs):
         logger_abrege.info(f"Task {task_id} completed successfully")
+        current_task = server_client.get_task(task_id=task_id)
+        launch_chunking.apply_async(
+            args=[json.dumps(current_task)],
+            task_id=f"{task_id}-chunking",
+        )
         task = merge_task_service.get_by_related_task_id(task_id=task_id)
         if task:
             merge_task_service.update_merge_task(
@@ -112,7 +119,8 @@ class AbregeTask(Task):
             task = merge_task_service.get_by_related_task_id(task_id=task_id)
             if task and merge_task_service.is_merge_completed(merge_id=task.merge_id):
                 logger_abrege.info(f"All tasks for merge {task.merge_id} are completed. Marking merge as completed.")
-                merge_task_model = task_table.get_task_by_id(task_id=task.merge_id)
+                merge_task_model = server_client.get_task(task_id=task.merge_id)
+                merge_task_model = TaskModel.model_validate(merge_task_model)
                 if merge_task_model is None:
                     logger_abrege.error(f"Merge TaskModel {task.merge_id} not found")
                     return
@@ -129,12 +137,12 @@ def launch(self: AbregeTask, task: str):
     extra_log = {"user_id": task.user_id, "task_id": task.id, "action": "launch"}
     with logger_abrege.contextualize(**extra_log):  # ty:ignore[unresolved-attribute]
         try:
-            task_table.update_task(
+            server_client.update_task(
                 task_id=task.id,
-                form_data=TaskUpdateForm(
+                data=TaskUpdateForm(
                     status=TaskStatus.IN_PROGRESS.value,
                     updated_at=int(time.time()),
-                ),
+                ).model_dump(exclude_none=True),
             )
             logger_abrege.info("Task started processing")
             logger_abrege.info(f"Task input: {task.input}")
@@ -184,13 +192,13 @@ def launch(self: AbregeTask, task: str):
             return task.model_dump()
 
         except Exception as e:
-            task_table.update_task(
+            server_client.update_task(
                 task_id=task.id,
-                form_data=TaskUpdateForm(
+                data=TaskUpdateForm(
                     status=TaskStatus.FAILED.value,
                     updated_at=int(time.time()),
                     extras={"error": f"{e} - {traceback.format_exc()}"},
-                ),
+                ).model_dump(exclude_none=True),
             )
             logger_abrege.error(f"Task {task.id} failed: {e} - {traceback.format_exc()}")
             raise e
