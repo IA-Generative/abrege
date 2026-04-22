@@ -111,7 +111,9 @@ class AbregeTask(Task):
             )
             task = merge_task_service.get_by_related_task_id(task_id=task_id)
             if task and merge_task_service.is_merge_completed(merge_id=task.merge_id):
-                logger_abrege.info(f"All tasks for merge {task.merge_id} are completed. Marking merge as completed.")
+                logger_abrege.info(
+                    f"All tasks for merge {task.merge_id} are completed. Marking merge as completed."
+                )
                 merge_task_model = task_table.get_task_by_id(task_id=task.merge_id)
                 if merge_task_model is None:
                     logger_abrege.error(f"Merge TaskModel {task.merge_id} not found")
@@ -123,74 +125,80 @@ class AbregeTask(Task):
 
 
 @celery_app.task(name=TaskName.ABREGE.value, bind=True, base=AbregeTask)
-def launch(self, task: str):
+def launch(self: AbregeTask, task: str):
     task: TaskModel = TaskModel.model_validate(json.loads(task))
     task.extras = task.extras or {}
     extra_log = {"user_id": task.user_id, "task_id": task.id, "action": "launch"}
-    try:
-        task_table.update_task(
-            task_id=task.id,
-            form_data=TaskUpdateForm(
-                status=TaskStatus.IN_PROGRESS.value,
-                updated_at=int(time.time()),
-            ),
-        )
-        logger_abrege.info(f"Task {task.id} started processing", extra=extra_log)
-        logger_abrege.info(f"Task input: {task.input}", extra=extra_log)
-        t = time.time()
-        if isinstance(task.input, URLModel):
-            logger_abrege.debug(f"Processing URL task: {task.id}", extra=extra_log)
-            task = url_service.process_task(task=task)
-
-        elif isinstance(task.input, DocumentModel):
-            logger_abrege.debug(f"Processing Document task: {task.id}", extra=extra_log)
-            file_path = file_connector.get_by_task_id(user_id=task.user_id, task_id=task.id)
-            task.input.file_path = file_path
-            task.content_hash = hash_file(file_path)
-            for service in services:
-                if service.is_available(task):
-                    logger_abrege.info(f"Using service: {service.__class__.__name__}", extra=extra_log)
-                    task = service.process_task(task=task)
-                    break
-
-            if os.path.exists(file_path):
-                os.remove(file_path)
-
-        elif isinstance(task.input, TextModel):
-            logger_abrege.debug(f"Processing Text task: {task.id}", extra=extra_log)
-            task.content_hash = hash_string(task.input.text)
-            task.output = ResultModel(
-                type="flat",
-                created_at=task.input.created_at,
-                model_name="flat",
-                model_version=__version__,
-                percentage=1,
-                texts_found=[task.input.text],
+    with logger_abrege.contextualize(**extra_log):  # ty:ignore[unresolved-attribute]
+        try:
+            task_table.update_task(
+                task_id=task.id,
+                form_data=TaskUpdateForm(
+                    status=TaskStatus.IN_PROGRESS.value,
+                    updated_at=int(time.time()),
+                ),
             )
+            logger_abrege.info("Task started processing")
+            logger_abrege.info(f"Task input: {task.input}")
+            t = time.time()
+            if isinstance(task.input, URLModel):
+                logger_abrege.debug(f"Processing URL task: {task.id}")
+                task = url_service.process_task(task=task)
 
-        else:
-            raise NotImplementedError("Content type not supported")
-        if task.output is None:
-            raise ValueError("Task output is None after processing")
+            elif isinstance(task.input, DocumentModel):
+                logger_abrege.debug(f"Processing Document task: {task.id}")
+                file_path = file_connector.get_by_task_id(
+                    user_id=task.user_id, task_id=task.id
+                )
+                task.input.file_path = file_path
+                task.content_hash = hash_file(file_path)
+                for service in services:
+                    if service.is_available(task):
+                        logger_abrege.info(
+                            f"Using service: {service.__class__.__name__}"
+                        )
+                        task = service.process_task(task=task)
+                        break
 
-        logger_abrege.debug(f"Task processed in {time.time() - t} seconds", extra=extra_log)
+                if os.path.exists(file_path):
+                    os.remove(file_path)
 
-        t = time.time()
-        task = summary_service.process_task(task=task)
-        logger_abrege.info(
-            f"Summary Task {task.id} processed in {time.time() - t} seconds",
-            extra=extra_log,
-        )
-        return task.model_dump()
+            elif isinstance(task.input, TextModel):
+                logger_abrege.debug(f"Processing Text task: {task.id}")
+                task.content_hash = hash_string(task.input.text)
+                task.output = ResultModel(
+                    type="flat",
+                    created_at=task.input.created_at,
+                    model_name="flat",
+                    model_version=__version__,
+                    percentage=1,
+                    texts_found=[task.input.text],
+                )
 
-    except Exception as e:
-        task_table.update_task(
-            task_id=task.id,
-            form_data=TaskUpdateForm(
-                status=TaskStatus.FAILED.value,
-                updated_at=int(time.time()),
-                extras={"error": f"{e} - {traceback.format_exc()}"},
-            ),
-        )
-        logger_abrege.error(f"Task {task.id} failed: {e} - {traceback.format_exc()}")
-        raise e
+            else:
+                raise NotImplementedError("Content type not supported")
+            if task.output is None:
+                raise ValueError("Task output is None after processing")
+
+            logger_abrege.debug(f"Task processed in {time.time() - t} seconds")
+
+            t = time.time()
+            task = summary_service.process_task(task=task)
+            logger_abrege.info(
+                f"Summary Task {task.id} processed in {time.time() - t} seconds",
+            )
+            return task.model_dump()
+
+        except Exception as e:
+            task_table.update_task(
+                task_id=task.id,
+                form_data=TaskUpdateForm(
+                    status=TaskStatus.FAILED.value,
+                    updated_at=int(time.time()),
+                    extras={"error": f"{e} - {traceback.format_exc()}"},
+                ),
+            )
+            logger_abrege.error(
+                f"Task {task.id} failed: {e} - {traceback.format_exc()}"
+            )
+            raise e

@@ -18,7 +18,9 @@ class TaskModel(BaseModel):
     percentage: Optional[float] = None
     input: Optional[Union[URLModel, DocumentModel, TextModel, MergeModel]] = None
     output: Optional[Union[ResultModel, SummaryModel]] = None
-    parameters: Optional[Union[SummaryParameters, ClassificationParameters]] = SummaryParameters()
+    parameters: Optional[Union[SummaryParameters, ClassificationParameters]] = (
+        SummaryParameters()
+    )
     position: Optional[int] = None
 
     created_at: int
@@ -64,6 +66,7 @@ class TaskStatus(str, Enum):
     RETRYING = "retrying"  # En cours de nouvelle tentative après échec
     CANCELED = "canceled"  # Annulée manuellement ou par logique métier
     TIMEOUT = "timeout"  # N’a pas pu terminer dans le temps imparti
+    REVOKED = "revoked"  # Révoquée via l’API de gestion des tâches (ex: Celery)
 
 
 class TaskStatsGlobal(BaseModel):
@@ -81,7 +84,9 @@ class TaskStats(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     global_stats: TaskStatsGlobal
     user_stats: TaskStatsUser
-    all_users_stats: Pagination[TaskStatsUser] = Field(None, description="Statistiques paginées pour tous les utilisateurs")
+    all_users_stats: Pagination[TaskStatsUser] = Field(
+        None, description="Statistiques paginées pour tous les utilisateurs"
+    )
 
 
 class TaskName(StrEnum):
