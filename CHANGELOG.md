@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [1.8.1](https://github.com/IA-Generative/abrege/compare/v1.8.0...v1.8.1) (2026-04-22)
+
+
+### Bug Fixes
+
+* **chat:** correct spelling of "Abrege" in chatbot header ([0b2ef16](https://github.com/IA-Generative/abrege/commit/0b2ef16baf9f2975128957d012b2f3e27c1c0e84))
+
 ## [1.8.0](https://github.com/IA-Generative/abrege/compare/v1.7.0...v1.8.0) (2026-04-22)
 
 
