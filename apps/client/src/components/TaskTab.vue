@@ -1,227 +1,219 @@
 <template>
-  <div class="task-container fr-container">
-    <h2 class="fr-h2">
-      Liste des tâches
-    </h2>
-    <DsfrButton
-      size="sm"
-      priority="secondary"
-      class="fr-ml-1"
-      @click="statsVisible = true"
-    >
-      Voir les statistiques
-    </DsfrButton>
+  <div class="tasks-page">
 
-    <table class="fr-table task-table">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th @click="sortBy('type')">
-            Type ⬍
-          </th>
-          <th>Source</th>
-          <th @click="sortBy('percentage')">
-            Pourcentage ⬍
-          </th>
-          <th @click="sortBy('created_at')">
-            Créé le ⬍
-          </th>
-          <th @click="sortBy('updated_at')">
-            Mis à jour le ⬍
-          </th>
-          <th>Voir résumé</th>
-          <th>Supprimer</th>
-        </tr>
-      </thead>
+    <!-- Header -->
+    <div class="tasks-header">
+      <div>
+        <h2 class="tasks-title">Tâches</h2>
+        <p class="tasks-subtitle">{{ paginatedDataSafe.total ?? 0 }} tâche{{ (paginatedDataSafe.total ?? 0) !== 1 ? 's' : '' }} au total</p>
+      </div>
+      <div class="tasks-header-actions">
+        <button class="action-btn" @click="statsVisible = true">
+          <span class="fr-icon-bar-chart-box-line" aria-hidden="true" />
+          Statistiques
+        </button>
+        <button class="action-btn" @click="leaderboardVisible = true">
+          <span class="fr-icon-trophy-line" aria-hidden="true" />
+          Leaderboard
+        </button>
+        <div class="users-pill" title="Utilisateurs actifs aujourd'hui">
+          <span class="fr-icon-user-line" style="font-size:13px" aria-hidden="true" />
+          <span>{{ connectedUsers ?? '—' }}</span>
+        </div>
+      </div>
+    </div>
 
-      <tbody>
-        <template
-          v-for="task in paginatedTasks"
-          :key="task.id"
+    <!-- Sort bar -->
+    <div class="sort-bar">
+      <span class="sort-label">Trier par</span>
+      <button :class="['sort-btn', sortKey === 'created_at' ? 'sort-active' : '']" @click="sortBy('created_at')">
+        Date <span>{{ sortKey === 'created_at' ? (sortAsc ? '↑' : '↓') : '' }}</span>
+      </button>
+      <button :class="['sort-btn', sortKey === 'type' ? 'sort-active' : '']" @click="sortBy('type')">
+        Type <span>{{ sortKey === 'type' ? (sortAsc ? '↑' : '↓') : '' }}</span>
+      </button>
+      <button :class="['sort-btn', sortKey === 'percentage' ? 'sort-active' : '']" @click="sortBy('percentage')">
+        Avancement <span>{{ sortKey === 'percentage' ? (sortAsc ? '↑' : '↓') : '' }}</span>
+      </button>
+    </div>
+
+    <!-- Task list -->
+    <div class="task-list">
+      <template v-for="row in flatRows" :key="row._rowKey">
+
+        <!-- Empty state placeholder -->
+        <div
+          v-if="row._isEmpty"
+          class="task-empty-row"
+          :style="{ marginLeft: `${row._depth * 32 + 16}px` }"
         >
-          <tr :class="{ 'merge-row': task.type === 'merge' }">
-            <td>
-              <code
-                :title="task.id"
-                style="font-size: 0.75rem; cursor: default"
-              >{{ task.id?.slice(0, 8) }}…</code>
-            </td>
-            <td>{{ task.type ?? '—' }}</td>
-            <td>
-              <button
-                v-if="task.type === 'merge'"
-                class="merge-expand-btn"
-                :title="expandedMergeRows.has(task.id) ? 'Masquer les sources' : 'Voir les sources'"
-                @click="toggleMergeExpand(task)"
-              >
-                {{ (task.input as any)?.task_ids?.length ?? 0 }} source(s)
-                {{ expandedMergeRows.has(task.id) ? '▲' : '▼' }}
-              </button>
-              <span v-else-if="task.input?.raw_filename">{{ task.input.raw_filename }}</span>
-              <a
-                v-else-if="task.input?.url"
-                :href="task.input.url"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {{ task.input.url }}
-              </a>
-              <span v-else>—</span>
-            </td>
-            <td>
-              <ProgressBar
-                :visible="true"
-                :progress="(task.percentage ?? 0) * 100"
-                :text="MapStatusToLabel(task.status)"
-              />
-            </td>
-            <td>{{ formatDate(task.created_at) }}</td>
-            <td>{{ formatDate(task.updated_at) }}</td>
-            <td>
-              <DsfrButton
-                size="sm"
-                priority="secondary"
-                :disabled="task.status !== 'completed'"
-                @click="openModal(task)"
-              >
-                Voir résumé
-              </DsfrButton>
-            </td>
-            <td>
-              <DsfrButton
-                size="sm"
-                priority="tertiary"
-                @click="removeTask(task.id)"
-              >
-                Supprimer
-              </DsfrButton>
-            </td>
-          </tr>
+          <span class="fr-icon-list-unordered" style="font-size:13px" aria-hidden="true" />
+          Aucune sous-tâche
+        </div>
 
-          <!-- Sous-ligne expansible pour les tâches merge -->
-          <tr
-            v-if="task.type === 'merge' && expandedMergeRows.has(task.id)"
-            class="merge-expand-row"
-          >
-            <td colspan="8">
-              <div class="merge-children">
-                <div
-                  v-if="!mergeChildTasks[task.id]"
-                  class="merge-loading"
+        <!-- Task card -->
+        <div
+          v-else
+          class="task-card"
+          :class="[`depth-${Math.min(row._depth, 3)}`, `status-${row.status}`]"
+          :style="{ marginLeft: `${row._depth * 32}px` }"
+        >
+          <!-- Connector line for children -->
+          <div v-if="row._depth > 0" class="connector-line" />
+
+          <div class="task-card-inner">
+            <!-- Left: expand + status dot -->
+            <div class="task-card-left">
+              <button
+                v-if="row.type === 'merge'"
+                class="expand-toggle"
+                :class="{ 'is-expanded': expandedIds.includes(row.id) }"
+                :aria-label="expandedIds.includes(row.id) ? 'Réduire' : 'Développer'"
+                @click="toggleExpand(row)"
+              >
+                <span v-if="loadingChildren.includes(row.id)" class="spinner" />
+                <span v-else class="fr-icon-arrow-right-s-line expand-icon" aria-hidden="true" />
+              </button>
+              <div v-else class="expand-spacer" />
+              <div class="status-dot" :class="`dot-${row.status}`" :title="MapStatusToLabel(row.status)" />
+            </div>
+
+            <!-- Center: main info -->
+            <div class="task-card-body">
+              <div class="task-card-top">
+                <span class="task-type-badge" :class="`badge-${row.type?.replace(/[^a-z]/g, '-')}`">
+                  {{ MapTaskTypeToLabel(row.type) }}
+                </span>
+                <code class="task-id" :title="row.id">{{ row.id.slice(0, 8) }}…</code>
+                <span v-if="row.input?.raw_filename" class="task-filename">
+                  <span class="fr-icon-file-line" style="font-size:11px" aria-hidden="true" />
+                  {{ row.input.raw_filename }}
+                </span>
+                <a
+                  v-else-if="row.input?.url"
+                  :href="row.input.url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="task-filename"
                 >
-                  Chargement des sources…
-                </div>
-                <table
-                  v-else
-                  class="merge-children-table"
-                >
-                  <thead>
-                    <tr>
-                      <th>ID</th>
-                      <th>Source</th>
-                      <th>Statut</th>
-                      <th>Voir résumé</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      v-for="child in mergeChildTasks[task.id]"
-                      :key="child.id"
-                    >
-                      <td>
-                        <code
-                          :title="child.id"
-                          style="font-size: 0.75rem; cursor: default"
-                        >{{ child.id?.slice(0, 8) }}…</code>
-                      </td>
-                      <td>
-                        <span v-if="child.input?.raw_filename">{{ child.input.raw_filename }}</span>
-                        <a
-                          v-else-if="child.input?.url"
-                          :href="child.input.url"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >{{ child.input.url }}</a>
-                        <span v-else>—</span>
-                      </td>
-                      <td>{{ MapStatusToLabel(child.status) }}</td>
-                      <td>
-                        <DsfrButton
-                          size="sm"
-                          priority="secondary"
-                          :disabled="child.status !== 'completed'"
-                          @click="openModal(child)"
-                        >
-                          Voir résumé
-                        </DsfrButton>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                  {{ row.input.url }}
+                </a>
               </div>
-            </td>
-          </tr>
-        </template>
-      </tbody>
-    </table>
+
+              <!-- Progress bar -->
+              <div class="task-progress-row">
+                <div class="task-progress-track">
+                  <div
+                    class="task-progress-fill"
+                    :class="`fill-${row.status}`"
+                    :style="{ width: `${(row.percentage ?? 0) * 100}%` }"
+                  />
+                </div>
+                <span class="task-progress-pct">{{ Math.round((row.percentage ?? 0) * 100) }}%</span>
+                <span class="task-status-label" :class="`label-${row.status}`">{{ MapStatusToLabel(row.status) }}</span>
+                <span v-if="row.position != null" class="task-position-badge" :title="`Position en file d'attente : ${row.position + 1}`">
+                  <span class="fr-icon-timer-line" style="font-size:11px" aria-hidden="true" />
+                  #{{ row.position + 1 }}
+                </span>
+              </div>
+
+              <!-- Dates -->
+              <div class="task-dates">
+                <span>
+                  <span class="fr-icon-calendar-line" style="font-size:11px" aria-hidden="true" />
+                  {{ formatDate(row.created_at) }}
+                </span>
+                <span v-if="row.updated_at !== row.created_at" class="task-date-sep">·</span>
+                <span v-if="row.updated_at !== row.created_at">
+                  <span class="fr-icon-refresh-line" style="font-size:11px" aria-hidden="true" />
+                  {{ formatDate(row.updated_at) }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Right: actions -->
+            <div class="task-card-actions">
+              <button
+                class="task-action-btn primary"
+                :disabled="row.status !== 'completed'"
+                :title="row.status !== 'completed' ? 'Disponible une fois terminé' : 'Voir le résumé'"
+                @click="openModal(row)"
+              >
+                <span class="fr-icon-eye-line" aria-hidden="true" />
+              </button>
+              <button
+                class="task-action-btn danger"
+                title="Supprimer"
+                @click="removeTask(row.id)"
+              >
+                <span class="fr-icon-delete-line" aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </template>
+
+      <!-- Empty list -->
+      <div v-if="flatRows.length === 0" class="tasks-empty">
+        <span class="fr-icon-time-line" style="font-size:32px; color:#cbd5e1" aria-hidden="true" />
+        <p>Aucune tâche pour le moment</p>
+      </div>
+    </div>
 
     <!-- Pagination -->
-    <div class="pagination fr-mt-2">
-      <DsfrButton
-        size="sm"
-        priority="tertiary"
-        :disabled="paginatedData.page === 1"
-        @click="loadPage(paginatedData.page - 1)"
-      >
-        Précédent
-      </DsfrButton>
-      <span class="fr-ml-2 fr-mr-2">Page {{ paginatedData.page }} / {{ totalPages }}</span>
-      <DsfrButton
-        size="sm"
-        priority="tertiary"
-        :disabled="paginatedData.page === totalPages"
-        @click="loadPage(paginatedData.page + 1)"
-      >
-        Suivant
-      </DsfrButton>
+    <div class="tasks-pagination">
+      <button class="page-btn" :disabled="paginatedDataSafe.page === 1" @click="loadPage(paginatedDataSafe.page - 1)">
+        <span class="fr-icon-arrow-left-s-line" aria-hidden="true" />
+      </button>
+      <span class="page-info">Page <strong>{{ paginatedDataSafe.page }}</strong> / {{ totalPages }}</span>
+      <button class="page-btn" :disabled="paginatedDataSafe.page === totalPages" @click="loadPage(paginatedDataSafe.page + 1)">
+        <span class="fr-icon-arrow-right-s-line" aria-hidden="true" />
+      </button>
     </div>
 
     <!-- Modal résumé -->
     <ResumeResultModal
       v-if="selectedTask"
-      :results="[{ filename: selectedTask.input?.raw_filename || selectedTask.input?.url || 'Tâche', task: selectedTask }]"
+      :results="[{ filename: (selectedTask as any).input?.raw_filename || (selectedTask as any).input?.url || 'Tâche', task: selectedTask }]"
       @close="selectedTask = null"
       @re-generate="selectedTask = null"
     />
 
     <!-- Stats Modal -->
-    <StatModel
-      v-if="statsVisible"
-      @close="statsVisible = false"
-    />
-
-    <!-- Connected users badge -->
-    <div
-      class="connected-badge"
-      title="Utilisateurs qu'ont utilisé le service aujourd'hui"
-    >
-      <span class="badge-emoji">👥</span>
-      <span class="badge-number">{{ connectedUsers ?? '—' }}</span>
-    </div>
+    <StatModel v-if="statsVisible" @close="statsVisible = false" />
+    <LeaderboardModal v-if="leaderboardVisible" @close="leaderboardVisible = false" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { storeToRefs } from 'pinia'
 import createHttpClient from '@/api/http-client'
 import { ABREGE_API_URL } from '@/utils/constants'
 import { useAbregeStore } from '@/stores/abrege'
 import StatModel from './StatModel.vue'
+import ResumeResultModal from './ResumeResultModal.vue'
+import LeaderboardModal from './LeaderboardModal.vue'
+
+type TaskModel = {
+  id: string
+  type: string
+  status: string
+  percentage?: number | null
+  input?: any
+  output?: any
+  created_at: number
+  updated_at: number
+  position?: number | null
+  [k: string]: any
+}
+
+type FlatRow = TaskModel & { _rowKey: string; _isParent: boolean; _isEmpty?: boolean; _depth: number }
 
 const abrege = useAbregeStore()
-const paginatedData = abrege.userTasksPaginated
+const { userTasksPaginated: paginatedData } = storeToRefs(abrege)
 
-// ----- UTILISATEURS CONNECTÉS -----
 const connectedUsers = ref<number | null>(null)
 const http = createHttpClient(ABREGE_API_URL)
 
@@ -235,37 +227,83 @@ const fetchConnectedUsers = async () => {
   }
 }
 
+const data_task_mock = { total: 0, page: 1, page_size: 10, items: [] as TaskModel[] }
+
 // ----- TRI -----
 const sortKey = ref('')
 const sortAsc = ref(true)
 
-function MapStatusToLabel (status: string) {
+function MapTaskTypeToLabel(type: string) {
+  const map: Record<string, string> = {
+    abrege: 'Résumé',
+    merge: 'Fusion',
+    classification: 'Classification',
+    default: 'Défaut',
+  }
+  return map[type] ?? type
+}
+
+function MapStatusToLabel(status: string) {
   const map: Record<string, string> = {
     queued: 'En attente',
     in_progress: 'En cours',
+    started: 'Démarré',
     completed: 'Terminé',
     failed: 'Échoué',
+    revoked: 'Révoqué',
+    canceled: 'Annulé',
+    timeout: 'Timeout',
+    created: 'Créé',
   }
   return map[status] || status
 }
 
-function sortBy (key: string) {
+function sortBy(key: string) {
   if (sortKey.value === key) {
     sortAsc.value = !sortAsc.value
-  }
-  else {
+  } else {
     sortKey.value = key
     sortAsc.value = true
   }
 }
 
+// ----- TREE (merge expand) -----
+const expandedIds = ref<string[]>([])
+const loadingChildren = ref<string[]>([])
+const childrenCache = ref<Record<string, TaskModel[]>>({})
+
+async function toggleExpand(task: TaskModel) {
+  const id = task.id
+  if (expandedIds.value.includes(id)) {
+    expandedIds.value = expandedIds.value.filter(x => x !== id)
+    return
+  }
+  if (!(id in childrenCache.value)) {
+    loadingChildren.value = [...loadingChildren.value, id]
+    try {
+      const taskIds: string[] = (task.input as any)?.task_ids ?? []
+      const children = await Promise.all(
+        taskIds.map(async (tid: string) => {
+          try {
+            const { data } = await http.get(`/task/${tid}`)
+            return data as TaskModel
+          } catch {
+            return null
+          }
+        }),
+      )
+      childrenCache.value = { ...childrenCache.value, [id]: children.filter(Boolean) as TaskModel[] }
+    } finally {
+      loadingChildren.value = loadingChildren.value.filter(x => x !== id)
+    }
+  }
+  expandedIds.value = [...expandedIds.value, id]
+}
+
 const paginatedTasks = computed(() => {
-  const resolved = paginatedData && Object.prototype.hasOwnProperty.call(paginatedData, 'value')
-    ? (paginatedData as any).value
-    : paginatedData
-  const items = resolved?.items ?? []
+  const items = paginatedData.value?.items ?? []
   if (!sortKey.value) return items
-  return [...items].sort((a, b) => {
+  return [...items].sort((a: any, b: any) => {
     const valA = a[sortKey.value]
     const valB = b[sortKey.value]
     if (valA === valB) return 0
@@ -273,205 +311,478 @@ const paginatedTasks = computed(() => {
   })
 })
 
-// ----- PAGINATION -----
-const totalPages = computed(() => {
-  const total = (paginatedData as any).value?.total ?? 0
-  const pageSize = (paginatedData as any).value?.page_size ?? 1
-  return Math.max(1, Math.ceil(total / pageSize))
+const rootTasks = computed((): TaskModel[] => {
+  return (paginatedTasks.value || []) as TaskModel[]
+})
+
+function buildRows(tasks: TaskModel[], depth: number, rows: FlatRow[]) {
+  for (const task of tasks) {
+    const isExpanded = expandedIds.value.includes(task.id)
+    rows.push({
+      ...task,
+      _rowKey: `${task.id}__d${depth}`,
+      _isParent: true,
+      _depth: depth,
+    })
+    if (isExpanded) {
+      const children = childrenCache.value[task.id] ?? []
+      if (children.length === 0) {
+        rows.push({ ...task, _rowKey: `${task.id}__empty`, _isParent: false, _isEmpty: true, _depth: depth + 1 })
+      } else {
+        buildRows(children, depth + 1, rows)
+      }
+    }
+  }
+}
+
+const flatRows = computed((): FlatRow[] => {
+  const rows: FlatRow[] = []
+  buildRows(rootTasks.value, 0, rows)
+  return rows
+})
+
+const paginatedDataSafe = computed(() => {
+  if ((paginatedData.value?.items ?? []).length > 0) return paginatedData.value
+  return data_task_mock
 })
 
 const loadPage = async (page = 1, overridePageSize?: number) => {
-  const pageSize = overridePageSize ?? (paginatedData as any)?.page_size ?? 10
+  const pageSize = overridePageSize ?? paginatedData.value?.page_size ?? 10
   await abrege.fetchUserTasks(page, pageSize)
-  await fetchConnectedUsers()
+  expandedIds.value = []
+  childrenCache.value = {}
+  try { await fetchConnectedUsers() } catch { }
 }
 
-// ----- FORMATAGE -----
-const formatDate = (ts: unknown) => {
-  if (ts === null || ts === undefined || ts === '') return ''
-  try {
-    let n = Number(ts)
-    if (Number.isNaN(n)) return String(ts)
-    if (n < 1e12) n = n * 1000
-    return new Date(n).toLocaleString()
-  }
-  catch {
-    return String(ts)
-  }
-}
+onMounted(() => {
+  void loadPage(1)
+  void fetchConnectedUsers()
+})
 
-// ----- MERGE EXPAND -----
-const expandedMergeRows = ref(new Set<string>())
-const mergeChildTasks = ref<Record<string, any[]>>({})
+onBeforeUnmount(() => {
+  if (typeof abrege.stopPollingUserTasks === 'function') {
+    abrege.stopPollingUserTasks()
+  }
+})
 
-async function toggleMergeExpand (task: any) {
-  const id = task.id
-  if (expandedMergeRows.value.has(id)) {
-    expandedMergeRows.value = new Set([...expandedMergeRows.value].filter(x => x !== id))
-    return
-  }
-  expandedMergeRows.value = new Set([...expandedMergeRows.value, id])
-  if (!mergeChildTasks.value[id]) {
-    const taskIds: string[] = (task.input as any)?.task_ids ?? []
-    const children = await Promise.all(
-      taskIds.map(async (tid: string) => {
-        try {
-          const { data } = await http.get(`/task/${tid}`)
-          return data
-        }
-        catch {
-          return null
-        }
-      }),
-    )
-    mergeChildTasks.value = { ...mergeChildTasks.value, [id]: children.filter(Boolean) }
-  }
-}
+const totalPages = computed(() => {
+  const resolved = paginatedDataSafe.value || {}
+  const total = resolved.total ?? 0
+  const pageSize = resolved.page_size ?? 1
+  return Math.max(1, Math.ceil(total / pageSize))
+})
 
 // ----- MODAL -----
-const selectedTask = ref(null)
+const selectedTask = ref<TaskModel | null>(null)
 const statsVisible = ref(false)
+const leaderboardVisible = ref(false)
 
 const openModal = (task: any) => {
   if (!task || task.status !== 'completed') return
   selectedTask.value = task
 }
 
-// ----- SUPPRESSION -----
 const removeTask = async (taskId: string) => {
   if (!taskId) return
   try {
     await abrege.deleteTask(taskId)
-    const page = (paginatedData as any).value?.page ?? (paginatedData as any).page ?? 1
-    const pageSize = (paginatedData as any).value?.page_size ?? (paginatedData as any).page_size ?? 10
-    await loadPage(page, pageSize)
   }
   catch (e) {
     console.error('Failed to remove task', e)
   }
-}
-
-// ----- LIFECYCLE -----
-const onEsc = (e: KeyboardEvent) => {
-  if (e.key === 'Escape') selectedTask.value = null
-}
-
-onMounted(() => {
-  loadPage(1)
-  window.addEventListener('keydown', onEsc)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('keydown', onEsc)
-  if (typeof abrege.stopPollingUserTasks === 'function') {
-    abrege.stopPollingUserTasks()
+  finally {
+    delete childrenCache.value[taskId]
+    expandedIds.value = expandedIds.value.filter(x => x !== taskId)
+    const currentPage = paginatedData.value?.page ?? 1
+    const pageSize = paginatedData.value?.page_size ?? 10
+    await loadPage(currentPage, pageSize)
   }
-})
+}
+
+const formatDate = (ts: any) => {
+  if (ts === null || ts === undefined || ts === '') return ''
+  try {
+    let n = Number(ts)
+    if (Number.isNaN(n)) return String(ts)
+    if (n < 1e12) n = n * 1000
+    return new Date(n).toLocaleString()
+  } catch { return String(ts) }
+}
 </script>
 
 <style scoped>
-.task-container {
-  padding: 20px;
-  position: relative;
-}
-
-.task-table {
-  width: 100%;
-  table-layout: fixed;
-  border-collapse: collapse;
-}
-
-.task-table th,
-.task-table td {
-  border: 1px solid #ddd;
-  padding: 8px;
-  text-align: center;
-  cursor: pointer;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  white-space: normal;
-}
-
-.pagination {
-  margin-top: 15px;
+/* ── Layout ── */
+.tasks-page {
+  padding: 24px 32px;
+  max-width: 900px;
+  margin: 0 auto;
   display: flex;
-  justify-content: center;
-  gap: 15px;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.connected-badge {
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  background: #0b6bff;
-  color: white;
-  padding: 6px 10px;
-  border-radius: 999px;
+/* ── Header ── */
+.tasks-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.tasks-title {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+.tasks-subtitle {
+  font-size: 0.8125rem;
+  color: #94a3b8;
+  margin: 2px 0 0;
+}
+.tasks-header-actions {
   display: flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 6px 18px rgba(11, 107, 255, 0.15);
+}
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.action-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
+.users-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-radius: 999px;
+  font-size: 0.8125rem;
   font-weight: 600;
 }
 
-.connected-badge .badge-emoji {
-  font-size: 14px;
+/* ── Sort bar ── */
+.sort-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
-
-.connected-badge .badge-number {
-  min-width: 32px;
-  text-align: center;
+.sort-label {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 500;
+  margin-right: 4px;
 }
-
-.merge-row td {
-  background: var(--blue-france-975-75, #f5f5fe);
-}
-
-.merge-expand-btn {
-  background: none;
-  border: 1px solid var(--blue-france-sun-113-625, #000091);
-  color: var(--blue-france-sun-113-625, #000091);
-  border-radius: 4px;
-  padding: 2px 8px;
-  font-size: 0.8rem;
+.sort-btn {
+  padding: 4px 12px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  color: #64748b;
   cursor: pointer;
+  transition: all 0.15s;
+}
+.sort-btn:hover { background: #f8fafc; }
+.sort-active {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
+/* ── Task List ── */
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ── Task Card ── */
+.task-card {
+  position: relative;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+.task-card:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+  border-color: #cbd5e1;
+}
+
+/* depth tinting */
+.depth-1 { background: #fafbff; border-color: #dde5ff; }
+.depth-2 { background: #f8f8ff; border-color: #c5ceff; }
+.depth-3 { background: #f5f5ff; border-color: #b0b8ff; }
+
+/* status left accent */
+.status-completed { border-left: 3px solid #10b981; }
+.status-failed    { border-left: 3px solid #ef4444; }
+.status-in_progress, .status-started { border-left: 3px solid #3b82f6; }
+.status-queued, .status-created { border-left: 3px solid #94a3b8; }
+
+/* connector line */
+.connector-line {
+  position: absolute;
+  left: -20px;
+  top: 50%;
+  width: 16px;
+  height: 1px;
+  background: #cbd5e1;
+}
+
+.task-card-inner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+}
+
+/* ── Left ── */
+.task-card-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.expand-toggle {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #64748b;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.expand-toggle:hover { background: #f1f5f9; border-color: #cbd5e1; }
+.expand-toggle.is-expanded .expand-icon { transform: rotate(90deg); }
+.expand-icon { transition: transform 0.2s; font-size: 14px; }
+.expand-spacer { width: 26px; height: 26px; flex-shrink: 0; }
+
+.spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid #e2e8f0;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dot-completed  { background: #10b981; }
+.dot-failed     { background: #ef4444; }
+.dot-in_progress, .dot-started { background: #3b82f6; animation: pulse 1.5s infinite; }
+.dot-queued, .dot-created { background: #94a3b8; }
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ── Body ── */
+.task-card-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.task-card-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.task-type-badge {
+  padding: 2px 8px;
+  border-radius: 5px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  background: #eff6ff;
+  color: #1d4ed8;
   white-space: nowrap;
 }
 
-.merge-expand-btn:hover {
-  background: var(--blue-france-950-100, #ececfe);
+.task-id {
+  font-size: 0.6875rem;
+  color: #94a3b8;
+  font-family: monospace;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  padding: 1px 6px;
+  border-radius: 4px;
 }
 
-.merge-expand-row td {
-  background: var(--grey-950-100, #f0f0f0);
-  padding: 0.75rem 1rem;
+.task-filename {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.75rem;
+  color: #64748b;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 220px;
 }
 
-.merge-children {
-  padding: 0.25rem 0;
+.task-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
-
-.merge-loading {
-  font-style: italic;
-  color: #666;
-  padding: 0.5rem;
+.task-progress-track {
+  flex: 1;
+  height: 4px;
+  background: #f1f5f9;
+  border-radius: 99px;
+  overflow: hidden;
 }
-
-.merge-children-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85rem;
+.task-progress-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.4s ease;
+  background: #94a3b8;
 }
-
-.merge-children-table th,
-.merge-children-table td {
-  border: 1px solid #ddd;
-  padding: 6px 8px;
-  text-align: center;
-}
-
-.merge-children-table thead th {
-  background: var(--blue-france-925-125, #e3e3fd);
+.fill-completed  { background: #10b981; }
+.fill-failed     { background: #ef4444; }
+.fill-in_progress, .fill-started { background: #3b82f6; }
+.task-progress-pct {
+  font-size: 0.6875rem;
   font-weight: 600;
+  color: #64748b;
+  width: 30px;
+  text-align: right;
+  white-space: nowrap;
+}
+.task-status-label {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  color: #64748b;
+}
+.label-completed  { color: #059669; }
+.label-failed     { color: #dc2626; }
+.label-in_progress, .label-started { color: #2563eb; }
+
+.task-position-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: #d97706;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 9999px;
+  padding: 1px 7px;
+  white-space: nowrap;
+}
+
+.task-dates {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.6875rem;
+  color: #94a3b8;
+}
+.task-date-sep { color: #cbd5e1; }
+
+/* ── Actions ── */
+.task-card-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.task-action-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  color: #64748b;
+  transition: all 0.15s;
+}
+.task-action-btn:hover:not(:disabled) { background: #f8fafc; border-color: #cbd5e1; }
+.task-action-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.task-action-btn.primary:not(:disabled):hover { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+.task-action-btn.danger:hover:not(:disabled)  { background: #fff1f2; border-color: #fecaca; color: #dc2626; }
+
+/* ── Empty & placeholder ── */
+.task-empty-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-style: italic;
+}
+.tasks-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 48px 0;
+  color: #94a3b8;
+  font-size: 0.875rem;
+}
+
+/* ── Pagination ── */
+.tasks-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.page-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #64748b;
+  transition: all 0.15s;
+}
+.page-btn:hover:not(:disabled) { background: #f8fafc; border-color: #cbd5e1; }
+.page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.page-info {
+  font-size: 0.8125rem;
+  color: #64748b;
 }
 </style>

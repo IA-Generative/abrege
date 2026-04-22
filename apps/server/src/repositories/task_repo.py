@@ -149,6 +149,13 @@ class TaskRepository:
         task = task.scalar_one_or_none()
         return TaskModel.model_validate(task) if task else None
 
+    def _apply_date_filters(self, query, start_date: Optional[int] = None, end_date: Optional[int] = None):
+        if start_date is not None:
+            query = query.filter(Task.created_at >= start_date)
+        if end_date is not None:
+            query = query.filter(Task.created_at <= end_date)
+        return query
+
     async def statistics(
         self,
         db: AsyncSession,
@@ -156,19 +163,29 @@ class TaskRepository:
         is_admin: bool = False,
         skip: int = 0,
         limit: int = 10,
+        start_date: Optional[int] = None,
+        end_date: Optional[int] = None,
     ) -> TaskStats:
         # Statistiques globales
-        total_tasks = (await db.execute(select(func.count(Task.id)))).scalar_one()
+        q_total = select(func.count(Task.id))
+        q_total = self._apply_date_filters(q_total, start_date, end_date)
+        total_tasks = (await db.execute(q_total)).scalar_one()
 
-        tasks_stats = (await db.execute(select(Task.status, func.count(Task.id)).group_by(Task.status))).all()
+        q_stats = select(Task.status, func.count(Task.id)).group_by(Task.status)
+        q_stats = self._apply_date_filters(q_stats, start_date, end_date)
+        tasks_stats = (await db.execute(q_stats)).all()
         tasks_stats_dict = {status: count for status, count in tasks_stats}
 
         global_stats = TaskStatsGlobal(total_tasks=total_tasks, tasks_stats=tasks_stats_dict)
 
         # Statistiques de l'utilisateur courant
-        user_total_tasks = (await db.execute(select(func.count(Task.id)).filter(Task.user_id == user_id))).scalar_one()
+        q_user_total = select(func.count(Task.id)).filter(Task.user_id == user_id)
+        q_user_total = self._apply_date_filters(q_user_total, start_date, end_date)
+        user_total_tasks = (await db.execute(q_user_total)).scalar_one()
 
-        user_tasks_stats = (await db.execute(select(Task.status, func.count(Task.id)).filter(Task.user_id == user_id).group_by(Task.status))).all()
+        q_user_stats = select(Task.status, func.count(Task.id)).filter(Task.user_id == user_id).group_by(Task.status)
+        q_user_stats = self._apply_date_filters(q_user_stats, start_date, end_date)
+        user_tasks_stats = (await db.execute(q_user_stats)).all()
         user_tasks_stats_dict = {status: count for status, count in user_tasks_stats}
         user_stats = TaskStatsUser(
             user_id=user_id,
@@ -178,13 +195,20 @@ class TaskRepository:
 
         # Statistiques par utilisateur (paginated)
         user_stats_list = []
+        user_stats_count = 0
         if is_admin:
-            user_stats_count = (await db.execute(select(func.count(func.distinct(Task.user_id))))).scalar_one()
+            q_distinct = select(func.count(func.distinct(Task.user_id)))
+            q_distinct = self._apply_date_filters(q_distinct, start_date, end_date)
+            user_stats_count = (await db.execute(q_distinct)).scalar_one()
 
-            user_stats_query = (await db.execute(select(Task.user_id, func.count(Task.id)).group_by(Task.user_id).offset(skip).limit(limit))).all()
+            q_per_user = select(Task.user_id, func.count(Task.id)).group_by(Task.user_id).offset(skip).limit(limit)
+            q_per_user = self._apply_date_filters(q_per_user, start_date, end_date)
+            user_stats_query = (await db.execute(q_per_user)).all()
 
             for uid, count in user_stats_query:
-                per_user_stats = (await db.execute(select(Task.status, func.count(Task.id)).filter(Task.user_id == uid).group_by(Task.status))).all()
+                q_per = select(Task.status, func.count(Task.id)).filter(Task.user_id == uid).group_by(Task.status)
+                q_per = self._apply_date_filters(q_per, start_date, end_date)
+                per_user_stats = (await db.execute(q_per)).all()
                 per_user_stats_dict = {status: count for status, count in per_user_stats}
                 user_stats_list.append(
                     TaskStatsUser(
