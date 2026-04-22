@@ -1,28 +1,37 @@
 <script setup lang="ts">
-import { nextTick, ref, watch } from 'vue'
+import { nextTick, ref } from 'vue'
 import { DotLottieVue } from '@lottiefiles/dotlottie-vue'
-import type { ChatMessage, ChatSource, ChatTask } from '@/composables/use-chatbot'
-import ChatTaskFilterModal from './ChatTaskFilterModal.vue'
+import type { ChatMessage, ChatSource } from '@/composables/use-ocr-chatbot'
 
 const CAT_LOTTIE = 'https://assets-v2.lottiefiles.com/a/1614c7a4-563f-11f0-bc77-27cc630b4a7e/ZsiRI8cM3m.lottie'
 const PAWS_LOTTIE = 'https://assets-v2.lottiefiles.com/a/298baac0-1161-11ee-bd48-97a84b28beeb/8kwnLuLFzE.lottie'
 
-const props = defineProps<{
+// Couleurs cycliques pour différencier visuellement les sources
+const SOURCE_COLORS = [
+  'bg-blue-50   border-blue-300   text-blue-700   hover:bg-blue-100',
+  'bg-violet-50 border-violet-300 text-violet-700 hover:bg-violet-100',
+  'bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-emerald-100',
+  'bg-amber-50  border-amber-300  text-amber-700  hover:bg-amber-100',
+  'bg-rose-50   border-rose-300   text-rose-700   hover:bg-rose-100',
+  'bg-cyan-50   border-cyan-300   text-cyan-700   hover:bg-cyan-100',
+]
+const SOURCE_NUMBER_COLORS = [
+  'bg-blue-200   text-blue-800',
+  'bg-violet-200 text-violet-800',
+  'bg-emerald-200 text-emerald-800',
+  'bg-amber-200  text-amber-800',
+  'bg-rose-200   text-rose-800',
+  'bg-cyan-200   text-cyan-800',
+]
+
+defineProps<{
   messages: ChatMessage[]
   isLoading: boolean
-  selectedTaskIds: string[]
-  availableTasks: ChatTask[]
-  tasksLoading: boolean
-  tasksTotal: number
-  tasksPage: number
-  tasksPageSize: number
 }>()
 
 const emit = defineEmits<{
   send: [content: string]
-  'update:selectedTaskIds': [ids: string[]]
-  fetchTasks: [page: number]
-  openSource: [taskId: string]
+  jumpTo: [source: ChatSource]
 }>()
 
 const isOpen = ref(false)
@@ -30,17 +39,6 @@ const input = ref('')
 const messagesEl = ref<HTMLElement | null>(null)
 const feedback = ref<Map<number, 'up' | 'down'>>(new Map())
 const copiedId = ref<number | null>(null)
-const filterOpen = ref(false)
-
-function openFilterModal () {
-  filterOpen.value = true
-  emit('fetchTasks', 1)
-}
-
-// Close filter modal when chatbot closes
-watch(isOpen, (open) => {
-  if (!open) filterOpen.value = false
-})
 
 function setFeedback (msgId: number, vote: 'up' | 'down') {
   const current = feedback.value.get(msgId)
@@ -57,12 +55,6 @@ function copyMessage (msgId: number, text: string) {
   navigator.clipboard.writeText(text)
   copiedId.value = msgId
   setTimeout(() => { if (copiedId.value === msgId) copiedId.value = null }, 2000)
-}
-
-function extractFilename (path: string): string {
-  if (!path) return 'Document'
-  const parts = path.replace(/\\/g, '/').split('/')
-  return parts[parts.length - 1] || path
 }
 
 async function submit () {
@@ -101,23 +93,7 @@ function onKeydown (e: KeyboardEvent) {
           <!-- Header -->
           <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 bg-slate-50 shrink-0">
             <DotLottieVue :src="CAT_LOTTIE" :loop="true" :autoplay="true" style="width:32px;height:32px;" />
-            <span class="text-sm font-semibold text-slate-700 flex-1">Assistant Abrégé</span>
-            <button
-              class="relative shrink-0 flex items-center justify-center w-7 h-7 rounded-full transition-colors"
-              :class="selectedTaskIds.length
-                ? 'bg-blue-100 text-blue-600 hover:bg-blue-200'
-                : 'hover:bg-slate-200 text-slate-400 hover:text-slate-600'"
-              :title="selectedTaskIds.length
-                ? `${selectedTaskIds.length} document(s) sélectionné(s)`
-                : 'Filtrer par document'"
-              @click="openFilterModal"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-              <span
-                v-if="selectedTaskIds.length"
-                class="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-blue-600 text-white text-[8px] font-bold flex items-center justify-center"
-              >{{ selectedTaskIds.length }}</span>
-            </button>
+            <span class="text-sm font-semibold text-slate-700 flex-1">Assistant OCR</span>
             <button
               class="shrink-0 flex items-center justify-center w-6 h-6 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition-colors"
               aria-label="Fermer"
@@ -126,20 +102,6 @@ function onKeydown (e: KeyboardEvent) {
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>
           </div>
-
-          <!-- Task filter modal -->
-          <ChatTaskFilterModal
-            :visible="filterOpen"
-            :selected-task-ids="selectedTaskIds"
-            :available-tasks="availableTasks"
-            :tasks-loading="tasksLoading"
-            :tasks-total="tasksTotal"
-            :tasks-page="tasksPage"
-            :tasks-page-size="tasksPageSize"
-            @update:visible="filterOpen = $event"
-            @update:selected-task-ids="emit('update:selectedTaskIds', $event)"
-            @fetch-tasks="emit('fetchTasks', $event)"
-          />
 
           <!-- Messages -->
           <div
@@ -151,8 +113,8 @@ function onKeydown (e: KeyboardEvent) {
               v-if="!messages.length"
               class="h-full flex flex-col items-center justify-center text-center text-slate-400 text-sm gap-2"
             >
-              <span class="fr-icon-question-line text-3xl opacity-30" aria-hidden="true" />
-              <p>Posez une question.<br>L'assistant est là pour vous aider.</p>
+              <span class="fr-icon-search-line text-3xl opacity-30" aria-hidden="true" />
+              <p>Posez une question sur le document.<br>Les sources seront localisées à la zone OCR près.</p>
             </div>
 
             <!-- Message list -->
@@ -182,28 +144,29 @@ function onKeydown (e: KeyboardEvent) {
                   {{ msg.content }}
                 </p>
 
-                <!-- Sources -->
                 <div
-                  v-if="msg.role === 'bot' && !msg.isLoading && msg.sources && msg.sources.length > 0"
-                  class="mt-2 pt-1.5 border-t border-slate-200/60"
+                  v-if="msg.sources?.length"
+                  class="mt-2 flex flex-wrap gap-1.5"
                 >
-                  <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Sources</p>
                   <button
                     v-for="(src, si) in msg.sources"
                     :key="si"
-                    class="flex items-start gap-1.5 text-[11px] py-0.5 w-full text-left rounded transition-colors"
-                    :class="src.task_id
-                      ? 'text-blue-500 hover:text-blue-700 cursor-pointer hover:underline'
-                      : 'text-slate-500 cursor-default'"
-                    :title="src.task_id ? 'Voir le résumé' : ''"
-                    @click="src.task_id && emit('openSource', src.task_id)"
+                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border transition-colors cursor-pointer shadow-sm"
+                    :class="SOURCE_COLORS[si % SOURCE_COLORS.length]"
+                    :title="src.text"
+                    @click="emit('jumpTo', src)"
                   >
-                    <span class="fr-icon-file-line shrink-0" style="font-size:11px;" aria-hidden="true" />
-                    <span class="break-all leading-tight">{{ src.filename || extractFilename(src.storage_path) }}</span>
+                    <span
+                      class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full text-[9px] font-bold shrink-0 opacity-80"
+                      :class="SOURCE_NUMBER_COLORS[si % SOURCE_NUMBER_COLORS.length]"
+                    >{{ si + 1 }}</span>
+                    <span class="fr-icon-map-pin-2-line" style="font-size: 10px;" aria-hidden="true" />
+                    {{ src.pageLabel }} · {{ (src.boxIndices?.length ?? 1) > 1 ? `${src.boxIndices.length} zones` : '1 zone' }}
+                    <span v-if="src.score != null" class="opacity-60 ml-0.5">{{ Math.round(src.score * 100) }}%</span>
                   </button>
                 </div>
 
-                <!-- Action buttons (bot only) -->
+                <!-- Action buttons (bot only, after sources) -->
                 <div
                   v-if="msg.role === 'bot' && !msg.isLoading"
                   class="flex items-center gap-0 mt-1"
@@ -252,23 +215,11 @@ function onKeydown (e: KeyboardEvent) {
           </div>
 
           <!-- Input -->
-          <div class="shrink-0 border-t border-slate-100">
-            <!-- Active filter indicator -->
-            <div
-              v-if="selectedTaskIds.length"
-              class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-[11px] text-blue-600"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3 h-3 shrink-0"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-              <span class="truncate">{{ selectedTaskIds.length }} document(s) sélectionné(s)</span>
-              <button class="ml-auto shrink-0 hover:text-blue-800" @click="emit('update:selectedTaskIds', [])" title="Supprimer le filtre">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3 h-3"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-              </button>
-            </div>
-            <div class="px-3 py-2.5 flex gap-2 items-end">
+          <div class="shrink-0 px-3 py-2.5 border-t border-slate-100 flex gap-2 items-end">
             <textarea
               v-model="input"
               rows="1"
-              placeholder="Posez une question…"
+              placeholder="Posez une question sur le document…"
               class="flex-1 resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-200 text-slate-800 placeholder-slate-400 transition-colors"
               :disabled="isLoading"
               @keydown="onKeydown"
@@ -281,7 +232,6 @@ function onKeydown (e: KeyboardEvent) {
             >
               <span class="fr-icon-send-plane-fill" style="font-size: 14px;" aria-hidden="true" />
             </button>
-            </div>
           </div>
         </div>
       </Transition>
@@ -289,7 +239,7 @@ function onKeydown (e: KeyboardEvent) {
       <!-- FAB button -->
       <button
         class="relative flex items-center justify-center w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white shadow-lg transition-all"
-        :aria-label="isOpen ? 'Fermer l\'assistant' : 'Ouvrir l\'assistant'"
+        :aria-label="isOpen ? 'Fermer l\'assistant' : 'Ouvrir l\'assistant OCR'"
         @click="isOpen = !isOpen"
       >
         <Transition
@@ -321,24 +271,41 @@ function onKeydown (e: KeyboardEvent) {
 </template>
 
 <style scoped>
-.typing-dots {
-  display: inline-flex;
+/* Cat chasing yarn animation */
+.cat-chase {
+  display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 0;
+  width: 72px;
+  position: relative;
+  height: 24px;
 }
-.typing-dots span {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: #94a3b8;
-  animation: typing-bounce 1.4s infinite ease-in-out both;
-}
-.typing-dots span:nth-child(1) { animation-delay: 0s; }
-.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
-.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
 
-@keyframes typing-bounce {
-  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
-  40% { transform: scale(1); opacity: 1; }
+.cat-chase .yarn {
+  font-size: 18px;
+  position: absolute;
+  left: 0;
+  animation: yarn-roll 1.2s ease-in-out infinite alternate;
+}
+
+.cat-chase .cat {
+  font-size: 18px;
+  position: absolute;
+  left: 0;
+  animation: cat-run 1.2s ease-in-out infinite alternate;
+  transform-origin: center;
+}
+
+/* yarn rolls to the right */
+@keyframes yarn-roll {
+  0%   { left: 42px; transform: rotate(0deg); }
+  100% { left: 8px;  transform: rotate(-360deg); }
+}
+
+/* cat follows it */
+@keyframes cat-run {
+  0%   { left: 52px; transform: scaleX(1); }
+  100% { left: 18px; transform: scaleX(1); }
 }
 </style>
+

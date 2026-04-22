@@ -150,7 +150,10 @@ async def ask(
                     content_hash=task.content_hash,
                 )
                 task_input = task.input
-                raw_fn = getattr(task_input, "raw_filename", None) or getattr(task_input, "url", None)
+                if isinstance(task_input, dict):
+                    raw_fn = task_input.get("raw_filename") or task_input.get("url")
+                else:
+                    raw_fn = getattr(task_input, "raw_filename", None) or getattr(task_input, "url", None)
                 for _ in chunk_data:
                     source_task_map[len(sources)] = (str(task.id), raw_fn)
                     sources.append(_)
@@ -164,6 +167,20 @@ async def ask(
                 threshold=None,
             ),
         )
+        # Resolve content_hash → task to populate task_id / filename
+        hash_to_task: dict[str, tuple[str, str | None]] = {}
+        for idx, s in enumerate(sources):
+            if s.content_hash and s.content_hash not in hash_to_task:
+                task = await task_service.task_repo.search_task_by_fields(db_session, content_hash=s.content_hash, user_id=ctx.user_id)
+                if task:
+                    t_input = task.input
+                    if isinstance(t_input, dict):
+                        fn = t_input.get("raw_filename") or t_input.get("url")
+                    else:
+                        fn = getattr(t_input, "raw_filename", None) or getattr(t_input, "url", None)
+                    hash_to_task[s.content_hash] = (str(task.id), fn)
+            if s.content_hash and s.content_hash in hash_to_task:
+                source_task_map[idx] = hash_to_task[s.content_hash]
 
     messages = [m.model_dump() for m in body.messages]
 
