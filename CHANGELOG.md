@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [1.10.0](https://github.com/IA-Generative/abrege/compare/v1.9.1...v1.10.0) (2026-04-22)
+
+
+### Features
+
+* **task:** add revoke task functionality and update UI actions ([df4e841](https://github.com/IA-Generative/abrege/commit/df4e841ec1d905ba9db951bb81eb6ae904e7f3fc))
+
 ## [1.9.1](https://github.com/IA-Generative/abrege/compare/v1.9.0...v1.9.1) (2026-04-22)
 
 
