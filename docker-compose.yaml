@@ -48,6 +48,9 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_API_BASE=${OPENAI_API_BASE}
       - OPENAI_API_MODEL=${OPENAI_API_MODEL}
+      - SERVER_API_KEY=test-api-key
+      - SERVER_BASE_URL=http://abrege-api:5000
+      - EMBEDDING_MODEL=bge-multilingual-gemma2
     env_file:
       - .env
 
@@ -67,6 +70,10 @@ services:
     environment:
       DEV_MODE: "true"
       CELERY_APP_NAME: default
+      DATABASE_URL: postgresql://postgres:secret@postgres:5432/example_db
+      DATABASE_ASYNC_URL: postgresql+asyncpg://postgres:secret@db:5432/example_db
+      API_KEYS: test-api-key
+      EMBEDDING_MODEL: bge-multilingual-gemma2
     depends_on:
       redis:
         condition: service_started
@@ -115,39 +122,6 @@ services:
       db:
         condition: service_healthy
 
-  # test_runner:
-  #   image: abrege-service
-  #   build:
-  #     target: test
-  #     context: .
-  #     dockerfile: apps/server/abrege_service/Dockerfile
-  #   command:
-  #     - uv
-  #     - run
-  #     - pytest
-  #     - -s
-  #     - --cov=./abrege_service/
-  #     - --cov-report=term-missing
-  #     - tests/abrege_service/
-  #     - -ra
-  #     - -v
-  #     - --maxfail=1
-  #   volumes:
-  #     - ./apps/server/abrege_service/:/app/abrege_service/
-  #     - ./apps/server/src/:/app/src/
-  #     - ./apps/server/tests/:/app/tests/
-  #   depends_on:
-  #     - db
-  #     - redis
-  #     - minio
-  #   environment:
-  #     OPENAI_API_KEY: ${OPENAI_API_KEY}
-  #     OPENAI_API_BASE: ${OPENAI_API_BASE}
-  #     OPENAI_API_MODEL: ${OPENAI_API_MODEL}
-  #     MAX_MODEL_TOKEN: 16300
-  #   env_file:
-  #     - .env
-  #   mem_limit: 1g
   abrege_frontend:
     container_name: abrege_frontend
     restart: always
@@ -160,6 +134,7 @@ services:
       - .env
     environment:
       - VITE_SSO_BYPASS=true
+      - VITE_API_KEY=test-api-key
     ports:
       - 8082:3000
     volumes:
