@@ -1,4 +1,4 @@
-from typing import List, Annotated
+from typing import List, Annotated, Optional
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Depends, status as http_status
 from fastapi.responses import JSONResponse
@@ -65,6 +65,8 @@ async def get_statistics(
     service: TaskServiceDep,
     skip: int = 0,
     limit: int = 10,
+    start_date: Optional[int] = None,
+    end_date: Optional[int] = None,
 ) -> TaskStats:
     if ctx.user_id is None:
         raise HTTPException(status_code=http_status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
@@ -75,6 +77,8 @@ async def get_statistics(
             is_admin=bool(ctx.is_admin),
             skip=skip,
             limit=limit,
+            start_date=start_date,
+            end_date=end_date,
         )
         return stats
     except Exception as e:

@@ -31,8 +31,25 @@ class TaskService:
     async def get_position_in_queue(self, db: AsyncSession, task_id: str) -> int | None:
         return await self.task_repo.get_position_in_queue(db, task_id)
 
-    async def get_statistics(self, db: AsyncSession, user_id: str, is_admin: bool, skip: int, limit: int) -> TaskStats:
-        return await self.task_repo.statistics(db=db, user_id=user_id, is_admin=is_admin, skip=skip, limit=limit)
+    async def get_statistics(
+        self,
+        db: AsyncSession,
+        user_id: str,
+        is_admin: bool,
+        skip: int,
+        limit: int,
+        start_date: int | None = None,
+        end_date: int | None = None,
+    ) -> TaskStats:
+        return await self.task_repo.statistics(
+            db=db,
+            user_id=user_id,
+            is_admin=is_admin,
+            skip=skip,
+            limit=limit,
+            start_date=start_date,
+            end_date=end_date,
+        )
 
     async def get_tasks_by_user_id(self, db: AsyncSession, user_id: str, page: int, page_size: int) -> list[TaskModel]:
         return await self.task_repo.get_tasks_by_user_id(db=db, user_id=user_id, page=page, page_size=page_size)

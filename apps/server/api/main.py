@@ -5,6 +5,7 @@ from api.routes.summarize import router as summarize_router
 from api.routes.document_summary import doc_router
 from api.routes.task import router as task_router
 from api.routes.v1.chunk import router as chunk_router
+from api.routes.v1.leaderboard import router as leaderboard_router
 from src import __version__, __name__ as name
 from prometheus_fastapi_instrumentator import Instrumentator
 
@@ -33,3 +34,4 @@ app.include_router(summarize_router, prefix="/api")
 app.include_router(task_router, prefix="/api")
 app.include_router(doc_router, prefix="/api")
 app.include_router(chunk_router, prefix="/api")
+app.include_router(leaderboard_router, prefix="/api")
