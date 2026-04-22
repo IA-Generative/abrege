@@ -101,7 +101,7 @@ function onKeydown (e: KeyboardEvent) {
           <!-- Header -->
           <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 bg-slate-50 shrink-0">
             <DotLottieVue :src="CAT_LOTTIE" :loop="true" :autoplay="true" style="width:32px;height:32px;" />
-            <span class="text-sm font-semibold text-slate-700 flex-1">Assistant Abrégé</span>
+            <span class="text-sm font-semibold text-slate-700 flex-1">Assistant Abrege</span>
             <button
               class="relative shrink-0 flex items-center justify-center w-7 h-7 rounded-full transition-colors"
               :class="selectedTaskIds.length
