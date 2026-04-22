@@ -233,3 +233,9 @@ class TaskRepository:
     async def count_unique_users_between_dates(self, db: AsyncSession, start_date: int, end_date: int) -> int:
         result = await db.execute(select(func.count(func.distinct(Task.user_id))).filter(Task.created_at >= start_date, Task.created_at <= end_date))
         return result.scalar_one()
+
+    async def get_tasks(self, db: AsyncSession, user_id: str, task_ids: list[str]) -> List[TaskModel]:
+        query = select(Task).filter(Task.id.in_(task_ids), Task.user_id == user_id)
+        tasks = await db.execute(query)
+        tasks = tasks.scalars().all()
+        return [TaskModel.model_validate(task) for task in tasks]

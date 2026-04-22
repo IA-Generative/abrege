@@ -1,14 +1,24 @@
 <script setup lang="ts">
-import { nextTick, ref } from 'vue'
-import type { ChatMessage } from '@/composables/use-chatbot'
+import { nextTick, ref, watch } from 'vue'
+import type { ChatMessage, ChatSource, ChatTask } from '@/composables/use-chatbot'
+import ChatTaskFilterModal from './ChatTaskFilterModal.vue'
 
-defineProps<{
+const props = defineProps<{
   messages: ChatMessage[]
   isLoading: boolean
+  selectedTaskIds: string[]
+  availableTasks: ChatTask[]
+  tasksLoading: boolean
+  tasksTotal: number
+  tasksPage: number
+  tasksPageSize: number
 }>()
 
 const emit = defineEmits<{
   send: [content: string]
+  'update:selectedTaskIds': [ids: string[]]
+  fetchTasks: [page: number]
+  openSource: [taskId: string]
 }>()
 
 const isOpen = ref(false)
@@ -16,6 +26,17 @@ const input = ref('')
 const messagesEl = ref<HTMLElement | null>(null)
 const feedback = ref<Map<number, 'up' | 'down'>>(new Map())
 const copiedId = ref<number | null>(null)
+const filterOpen = ref(false)
+
+function openFilterModal () {
+  filterOpen.value = true
+  emit('fetchTasks', 1)
+}
+
+// Close filter modal when chatbot closes
+watch(isOpen, (open) => {
+  if (!open) filterOpen.value = false
+})
 
 function setFeedback (msgId: number, vote: 'up' | 'down') {
   const current = feedback.value.get(msgId)
@@ -32,6 +53,12 @@ function copyMessage (msgId: number, text: string) {
   navigator.clipboard.writeText(text)
   copiedId.value = msgId
   setTimeout(() => { if (copiedId.value === msgId) copiedId.value = null }, 2000)
+}
+
+function extractFilename (path: string): string {
+  if (!path) return 'Document'
+  const parts = path.replace(/\\/g, '/').split('/')
+  return parts[parts.length - 1] || path
 }
 
 async function submit () {
@@ -72,6 +99,22 @@ function onKeydown (e: KeyboardEvent) {
             <span class="fr-icon-chat-3-line text-blue-600" style="font-size:20px;" aria-hidden="true" />
             <span class="text-sm font-semibold text-slate-700 flex-1">Assistant Abrégé</span>
             <button
+              class="relative shrink-0 flex items-center justify-center w-7 h-7 rounded-full transition-colors"
+              :class="selectedTaskIds.length
+                ? 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                : 'hover:bg-slate-200 text-slate-400 hover:text-slate-600'"
+              :title="selectedTaskIds.length
+                ? `${selectedTaskIds.length} document(s) sélectionné(s)`
+                : 'Filtrer par document'"
+              @click="openFilterModal"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+              <span
+                v-if="selectedTaskIds.length"
+                class="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-blue-600 text-white text-[8px] font-bold flex items-center justify-center"
+              >{{ selectedTaskIds.length }}</span>
+            </button>
+            <button
               class="shrink-0 flex items-center justify-center w-6 h-6 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition-colors"
               aria-label="Fermer"
               @click="isOpen = false"
@@ -79,6 +122,20 @@ function onKeydown (e: KeyboardEvent) {
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>
           </div>
+
+          <!-- Task filter modal -->
+          <ChatTaskFilterModal
+            :visible="filterOpen"
+            :selected-task-ids="selectedTaskIds"
+            :available-tasks="availableTasks"
+            :tasks-loading="tasksLoading"
+            :tasks-total="tasksTotal"
+            :tasks-page="tasksPage"
+            :tasks-page-size="tasksPageSize"
+            @update:visible="filterOpen = $event"
+            @update:selected-task-ids="emit('update:selectedTaskIds', $event)"
+            @fetch-tasks="emit('fetchTasks', $event)"
+          />
 
           <!-- Messages -->
           <div
@@ -120,6 +177,27 @@ function onKeydown (e: KeyboardEvent) {
                 <p v-else>
                   {{ msg.content }}
                 </p>
+
+                <!-- Sources -->
+                <div
+                  v-if="msg.role === 'bot' && !msg.isLoading && msg.sources && msg.sources.length > 0"
+                  class="mt-2 pt-1.5 border-t border-slate-200/60"
+                >
+                  <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Sources</p>
+                  <button
+                    v-for="(src, si) in msg.sources"
+                    :key="si"
+                    class="flex items-start gap-1.5 text-[11px] py-0.5 w-full text-left rounded transition-colors"
+                    :class="src.task_id
+                      ? 'text-blue-500 hover:text-blue-700 cursor-pointer hover:underline'
+                      : 'text-slate-500 cursor-default'"
+                    :title="src.task_id ? 'Voir le résumé' : ''"
+                    @click="src.task_id && emit('openSource', src.task_id)"
+                  >
+                    <span class="fr-icon-file-line shrink-0" style="font-size:11px;" aria-hidden="true" />
+                    <span class="break-all leading-tight">{{ src.filename || extractFilename(src.storage_path) }}</span>
+                  </button>
+                </div>
 
                 <!-- Action buttons (bot only) -->
                 <div
@@ -170,7 +248,19 @@ function onKeydown (e: KeyboardEvent) {
           </div>
 
           <!-- Input -->
-          <div class="shrink-0 px-3 py-2.5 border-t border-slate-100 flex gap-2 items-end">
+          <div class="shrink-0 border-t border-slate-100">
+            <!-- Active filter indicator -->
+            <div
+              v-if="selectedTaskIds.length"
+              class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-[11px] text-blue-600"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3 h-3 shrink-0"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+              <span class="truncate">{{ selectedTaskIds.length }} document(s) sélectionné(s)</span>
+              <button class="ml-auto shrink-0 hover:text-blue-800" @click="emit('update:selectedTaskIds', [])" title="Supprimer le filtre">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3 h-3"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              </button>
+            </div>
+            <div class="px-3 py-2.5 flex gap-2 items-end">
             <textarea
               v-model="input"
               rows="1"
@@ -187,6 +277,7 @@ function onKeydown (e: KeyboardEvent) {
             >
               <span class="fr-icon-send-plane-fill" style="font-size: 14px;" aria-hidden="true" />
             </button>
+            </div>
           </div>
         </div>
       </Transition>

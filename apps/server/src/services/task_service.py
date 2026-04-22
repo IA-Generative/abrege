@@ -59,3 +59,6 @@ class TaskService:
 
     async def delete_tasks_by_user_id(self, db: AsyncSession, user_id: str) -> None:
         await self.task_repo.delete_tasks_by_user_id(db=db, user_id=user_id)
+
+    async def get_tasks_by_ids(self, db: AsyncSession, user_id: str, task_ids: list[str]) -> list[TaskModel]:
+        return await self.task_repo.get_tasks(db=db, user_id=user_id, task_ids=task_ids)

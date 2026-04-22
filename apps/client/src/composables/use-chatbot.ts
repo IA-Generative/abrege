@@ -1,10 +1,29 @@
 import { ref } from 'vue'
+import createHttpClient from '@/api/http-client'
+import { ABREGE_API_URL } from '@/utils/constants'
+
+const http = createHttpClient(ABREGE_API_URL)
+
+export interface ChatSource {
+  storage_path: string
+  text: string
+  task_id?: string
+  filename?: string
+}
 
 export interface ChatMessage {
   id: number
   role: 'user' | 'bot'
   content: string
   isLoading?: boolean
+  sources?: ChatSource[]
+}
+
+export interface ChatTask {
+  id: string
+  title: string
+  status: string
+  created_at: string
 }
 
 function storageKey () {
@@ -34,7 +53,34 @@ export function useChatbot () {
   const persisted = loadMessages()
   const messages = ref<ChatMessage[]>(persisted)
   const isLoading = ref(false)
+  const selectedTaskIds = ref<string[]>([])
+  const availableTasks = ref<ChatTask[]>([])
+  const tasksLoading = ref(false)
+  const tasksTotal = ref(0)
+  const tasksPage = ref(1)
+  const tasksPageSize = 10
   let nextId = persisted.length ? Math.max(...persisted.map(m => m.id)) + 1 : 1
+
+  async function fetchAvailableTasks (page = 1) {
+    tasksLoading.value = true
+    try {
+      const { data } = await http.get('/task/user/', { params: { offset: page, limit: tasksPageSize } })
+      availableTasks.value = (data.items ?? [])
+        .filter((t: any) => t.status === 'completed')
+        .map((t: any) => ({
+          id: t.id,
+          title: t.input?.raw_filename ?? t.input?.url ?? t.id,
+          status: t.status,
+          created_at: t.created_at,
+        }))
+      tasksTotal.value = data.total ?? 0
+      tasksPage.value = page
+    }
+    catch { /* swallow */ }
+    finally {
+      tasksLoading.value = false
+    }
+  }
 
   async function sendMessage (content: string) {
     if (!content.trim() || isLoading.value) return
@@ -44,12 +90,44 @@ export function useChatbot () {
     isLoading.value = true
 
     try {
-      // TODO: appeler le backend quand il sera prêt
-      // Pour l'instant, réponse placeholder
+      // Build conversation history for the API (map 'bot' → 'assistant')
+      const apiMessages = messages.value.map(m => ({
+        role: m.role === 'bot' ? 'assistant' as const : 'user' as const,
+        content: m.content,
+      }))
+
+      // Get embedding for the user's query
+      const { data: embedData } = await http.post('/chat/embed', { text: content })
+      const queryVector: number[] = embedData.vector
+
+      // Call chat/ask
+      const { data } = await http.post('/chat/ask', {
+        messages: apiMessages,
+        query_vector: queryVector,
+        filter_by_task: selectedTaskIds.value,
+        top_k: 5,
+      })
+
+      const sources: ChatSource[] = (data.sources ?? []).map((s: any) => ({
+        storage_path: s.storage_path,
+        text: s.text,
+        task_id: s.task_id,
+        filename: s.filename,
+      }))
+
       const botMsg: ChatMessage = {
         id: nextId++,
         role: 'bot',
-        content: 'Le backend du chatbot n\'est pas encore connecté. Cette fonctionnalité sera disponible prochainement.',
+        content: data.message?.content ?? 'Pas de réponse.',
+        sources,
+      }
+      messages.value = [...messages.value, botMsg]
+    }
+    catch (err: any) {
+      const botMsg: ChatMessage = {
+        id: nextId++,
+        role: 'bot',
+        content: `Erreur : ${err?.response?.data?.detail ?? err?.message ?? 'Impossible de contacter le serveur.'}`,
       }
       messages.value = [...messages.value, botMsg]
     }
@@ -64,5 +142,5 @@ export function useChatbot () {
     sessionStorage.removeItem(storageKey())
   }
 
-  return { messages, isLoading, sendMessage, clearMessages }
+  return { messages, isLoading, sendMessage, clearMessages, selectedTaskIds, availableTasks, tasksLoading, tasksTotal, tasksPage, tasksPageSize, fetchAvailableTasks }
 }
