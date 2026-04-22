@@ -89,3 +89,4 @@ class TaskName(StrEnum):
     MERGE = "worker.tasks.merge-abrege"
     ABREGE = "worker.tasks.abrege"
     CLASSIFICATION = "worker.tasks.classification"
+    CHUNKING = "worker.tasks.chunking"

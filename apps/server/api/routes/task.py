@@ -130,6 +130,23 @@ async def get_tasks_read_user(
     return Pagination[TaskModel](total=total, page=offset, page_size=limit, items=tasks)
 
 
+@router.put("/task/{id}")
+async def update_task(
+    id: str,
+    form_data: TaskUpdateForm,
+    ctx: TokenDep,
+    db: DbDep,
+    service: TaskServiceDep,
+) -> TaskModel:
+    task = await service.get_task_by_id(db=db, task_id=id)
+    if task is None or task.user_id != ctx.user_id:
+        raise HTTPException(http_status.HTTP_404_NOT_FOUND, detail=f"{id} not found")
+    updated = await service.update_task(db=db, task_id=id, form_data=form_data)
+    if updated is None:
+        raise HTTPException(http_status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Update failed")
+    return updated
+
+
 @router.delete("/task/{id}", status_code=http_status.HTTP_204_NO_CONTENT)
 async def delete_task(
     id: str,

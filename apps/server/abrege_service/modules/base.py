@@ -4,6 +4,14 @@ import time
 from src.schemas.task import TaskModel, task_table, TaskStatus, TaskUpdateForm
 from src.schemas.result import ResultModel
 from src.schemas.content import DocumentModel, URLModel, ContentModel
+from abrege_service.clients.server import ServerClient
+from loguru import logger
+import sys
+
+logger.remove()
+logger.add(sys.stdout, level="DEBUG")
+
+client = ServerClient()
 
 
 class NoGivenInput(Exception): ...
@@ -29,18 +37,20 @@ class BaseService(ABC):
         if result is not None:
             percentage = result.percentage * self.service_weight
 
-        return self.task_table.update_task(
+        task_data = client.update_task(
             task_id=task.id,
-            form_data=TaskUpdateForm(
+            data=TaskUpdateForm(
                 status=status,
                 output=result,
                 updated_at=int(time.time()),
                 extras=task.extras,
                 percentage=percentage,
                 content_hash=task.content_hash,
-                # input=input,
-            ),
+            ).model_dump(exclude_none=True),
         )
+        logger.debug(f"Task {task.id} updated with status {status} and percentage {percentage}")
+
+        return TaskModel.model_validate(task_data)
 
     @abstractmethod
     def task_to_text(self, task: TaskModel, **kwargs) -> TaskModel: ...
