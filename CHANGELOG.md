@@ -210,6 +210,20 @@
 - clean code
 - clean code
 
+## [1.7.0](https://github.com/IA-Generative/abrege/compare/v1.6.1...v1.7.0) (2026-04-22)
+
+
+### Features
+
+* Add leaderboard functionality and enhance task statistics ([ba13c9b](https://github.com/IA-Generative/abrege/commit/ba13c9bf8c54c9c89158663ced5ab2020c165127))
+* **api:** implement server client and chunking functionality with task updates ([9c596a2](https://github.com/IA-Generative/abrege/commit/9c596a2795e42258081323f2adf556b9969430bd))
+* **api:** refactor document summary and summarize routes to use TaskService and async database session ([e959adf](https://github.com/IA-Generative/abrege/commit/e959adf38ea9791b01bd172ed82fc51d51df10c7))
+* **chat:** add chat functionality with OpenAI integration ([ea4c583](https://github.com/IA-Generative/abrege/commit/ea4c58339c07d116633c1ecfd1ef27fc19d12863))
+* **chat:** enhance chat functionality with Lottie animations and add OCR chatbot component ([a3f9666](https://github.com/IA-Generative/abrege/commit/a3f966648e5eb4950fed3dea7f72be97e7690329))
+* **chunk:** Remove test_logger.py and update dependencies in uv.lock to include aiosqlite, asyncpg, loguru, and win32-setctime with their respective versions. ([5880b12](https://github.com/IA-Generative/abrege/commit/5880b1239be9e6d1c65a4b7f7a446f9441a705f0))
+* **docker:** add environment variables for API keys and database connections ([a046954](https://github.com/IA-Generative/abrege/commit/a046954a1914be4ae63575b49a92925b7c60c94c))
+* **task:** implement TaskRepository and TaskService for task management ([df78c71](https://github.com/IA-Generative/abrege/commit/df78c7100fdb07f727ea463d492ec8357ff41833))
+
 ## [1.6.1](https://github.com/IA-Generative/abrege/compare/v1.6.0...v1.6.1) (2026-04-19)
 
 
