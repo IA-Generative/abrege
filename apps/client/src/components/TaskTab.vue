@@ -142,6 +142,14 @@
                 <span class="fr-icon-eye-line" aria-hidden="true" />
               </button>
               <button
+                v-if="['queued', 'started', 'in_progress'].includes(row.status)"
+                class="task-action-btn warning"
+                title="Révoquer"
+                @click="revokeTask(row.id)"
+              >
+                <span class="fr-icon-stop-circle-line" aria-hidden="true" />
+              </button>
+              <button
                 class="task-action-btn danger"
                 title="Supprimer"
                 @click="removeTask(row.id)"
@@ -380,6 +388,21 @@ const leaderboardVisible = ref(false)
 const openModal = (task: any) => {
   if (!task || task.status !== 'completed') return
   selectedTask.value = task
+}
+
+const revokeTask = async (taskId: string) => {
+  if (!taskId) return
+  try {
+    await abrege.revokeTask(taskId)
+  }
+  catch (e) {
+    console.error('Failed to revoke task', e)
+  }
+  finally {
+    const currentPage = paginatedData.value?.page ?? 1
+    const pageSize = paginatedData.value?.page_size ?? 10
+    await loadPage(currentPage, pageSize)
+  }
 }
 
 const removeTask = async (taskId: string) => {
@@ -736,8 +759,9 @@ const formatDate = (ts: any) => {
 }
 .task-action-btn:hover:not(:disabled) { background: #f8fafc; border-color: #cbd5e1; }
 .task-action-btn:disabled { opacity: 0.35; cursor: not-allowed; }
-.task-action-btn.primary:not(:disabled):hover { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
-.task-action-btn.danger:hover:not(:disabled)  { background: #fff1f2; border-color: #fecaca; color: #dc2626; }
+.task-action-btn.primary:not(:disabled):hover  { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+.task-action-btn.warning:not(:disabled):hover  { background: #fffbeb; border-color: #fde68a; color: #d97706; }
+.task-action-btn.danger:hover:not(:disabled)   { background: #fff1f2; border-color: #fecada; color: #dc2626; }
 
 /* ── Empty & placeholder ── */
 .task-empty-row {
