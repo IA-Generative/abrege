@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [1.9.1](https://github.com/IA-Generative/abrege/compare/v1.9.0...v1.9.1) (2026-04-22)
+
+
+### Bug Fixes
+
+* **task:** enhance task access control for non-admin users ([0c8b3b5](https://github.com/IA-Generative/abrege/commit/0c8b3b562e1e0b97fd5a0cb61e728113be701c1a))
+
 ## [1.9.0](https://github.com/IA-Generative/abrege/compare/v1.8.1...v1.9.0) (2026-04-22)
 
 
