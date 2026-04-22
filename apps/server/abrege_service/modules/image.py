@@ -3,7 +3,6 @@ import openai
 from PIL import Image
 import traceback
 import asyncio
-from uuid import uuid4
 from abrege_service.schemas import IMAGE_CONTENT_TYPES, PDF_CONTENT_TYPES
 from abrege_service.modules.base import BaseService
 from abrege_service.utils.images import pil_image_to_base64
@@ -84,7 +83,6 @@ class ImageFromVLM(BaseService):
 
     async def process_image(self, image: Image.Image) -> str:
         t = time.time()
-        extra_log = {"process_id": uuid4().hex}
         base64_image = pil_image_to_base64(image)
         logger_abrege.debug(
             f"time to transform into base64 :{time.time() - t:.2f}",
@@ -169,12 +167,7 @@ class ImageFromVLM(BaseService):
             images = LazyPdfImageList(task.input.file_path)
         else:
             raise NotImplementedError("")
-        extra_log = {
-            "task_id": task.id,
-            "user_id": task.user_id,
-            "file_path-process": task.input.file_path,
-            "process_name": self.__class__.__name__,
-        }
+
         logger_abrege.info(
             "start to extract content",
         )
