@@ -59,11 +59,6 @@ class OCRMIService(BaseService):
         batch: list[Image.Image],
         headers: dict = None,
     ) -> list[str]:
-        extra_log = {
-            "user_id": user_id,
-            "file_path": file_path,
-            "parent-task-id": task_id,
-        }
         logger.debug(
             f"{len(batch)} images",
         )
@@ -79,11 +74,6 @@ class OCRMIService(BaseService):
         return task_ids
 
     def task_to_text(self, task: TaskModel, **kwargs) -> TaskModel:
-        extra_log = {
-            "task_id": task.id,
-            "user_id": task.user_id,
-            "file_path": task.input.file_path,
-        }
         if task.extras is None:
             task.extras = {}
         if task.output is None:
