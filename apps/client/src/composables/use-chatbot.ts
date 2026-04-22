@@ -24,6 +24,8 @@ export interface ChatTask {
   title: string
   status: string
   created_at: string
+  chunked?: boolean | null // null = loading, true = ready, false = not chunked
+  submitting?: boolean
 }
 
 function storageKey () {
@@ -72,13 +74,65 @@ export function useChatbot () {
           title: t.input?.raw_filename ?? t.input?.url ?? t.id,
           status: t.status,
           created_at: t.created_at,
+          chunked: null as boolean | null,
+          submitting: false,
         }))
       tasksTotal.value = data.total ?? 0
       tasksPage.value = page
+      // Check chunk status for each task in background
+      for (const task of availableTasks.value) {
+        checkChunkedStatus(task.id)
+      }
     }
     catch { /* swallow */ }
     finally {
       tasksLoading.value = false
+    }
+  }
+
+  async function checkChunkedStatus (taskId: string) {
+    try {
+      const { data } = await http.get(`/v1/chunks/is-chunked/${taskId}`)
+      const task = availableTasks.value.find(t => t.id === taskId)
+      if (task) task.chunked = !!data
+    }
+    catch {
+      const task = availableTasks.value.find(t => t.id === taskId)
+      if (task) task.chunked = false
+    }
+  }
+
+  async function submitChunks (taskId: string) {
+    const task = availableTasks.value.find(t => t.id === taskId)
+    if (!task) return
+    task.submitting = true
+    try {
+      await http.post(`/v1/chunks/task/${taskId}/submit-chunks`)
+      task.chunked = null
+      // Poll until chunked
+      const poll = setInterval(async () => {
+        try {
+          const { data } = await http.get(`/v1/chunks/is-chunked/${taskId}`)
+          if (data) {
+            task.chunked = true
+            task.submitting = false
+            clearInterval(poll)
+          }
+        }
+        catch { /* keep polling */ }
+      }, 3000)
+      // Stop polling after 2 minutes
+      setTimeout(() => {
+        clearInterval(poll)
+        if (task.submitting) {
+          task.submitting = false
+          task.chunked = false
+        }
+      }, 120_000)
+    }
+    catch {
+      task.submitting = false
+      task.chunked = false
     }
   }
 
@@ -142,5 +196,5 @@ export function useChatbot () {
     sessionStorage.removeItem(storageKey())
   }
 
-  return { messages, isLoading, sendMessage, clearMessages, selectedTaskIds, availableTasks, tasksLoading, tasksTotal, tasksPage, tasksPageSize, fetchAvailableTasks }
+  return { messages, isLoading, sendMessage, clearMessages, selectedTaskIds, availableTasks, tasksLoading, tasksTotal, tasksPage, tasksPageSize, fetchAvailableTasks, submitChunks }
 }

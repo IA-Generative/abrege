@@ -23,6 +23,7 @@ const emit = defineEmits<{
   'update:selectedTaskIds': [ids: string[]]
   fetchTasks: [page: number]
   openSource: [taskId: string]
+  submitChunks: [taskId: string]
 }>()
 
 const isOpen = ref(false)
@@ -139,6 +140,7 @@ function onKeydown (e: KeyboardEvent) {
             @update:visible="filterOpen = $event"
             @update:selected-task-ids="emit('update:selectedTaskIds', $event)"
             @fetch-tasks="emit('fetchTasks', $event)"
+            @submit-chunks="emit('submitChunks', $event)"
           />
 
           <!-- Messages -->

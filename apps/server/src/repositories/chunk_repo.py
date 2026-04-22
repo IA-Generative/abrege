@@ -156,6 +156,19 @@ class ChunkRepository:
             for score, c in scored
         ]
 
+    async def is_chunks_exist(self, db: AsyncSession, user_id: str, content_hash: str) -> bool:
+        stmt = (
+            select(ChunkTable.id)
+            .where(
+                ChunkTable.content_hash == content_hash,
+                ChunkTable.user_id == user_id,
+            )
+            .limit(1)
+        )
+
+        result = await db.execute(stmt)
+        return result.scalar() is not None
+
 
 # ---------------------------------------------------------------------------
 # Helpers

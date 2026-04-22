@@ -44,5 +44,8 @@ class ChunkService:
             threshold=request.threshold,
         )
 
+    async def is_chunks_exist(self, db: AsyncSession, user_id: str, content_hash: str) -> bool:
+        return await self.chunk_repo.is_chunks_exist(db, user_id, content_hash)
+
 
 chunk_service = ChunkService()

@@ -16,6 +16,7 @@ const emit = defineEmits<{
   'update:visible': [value: boolean]
   'update:selectedTaskIds': [ids: string[]]
   fetchTasks: [page: number]
+  submitChunks: [taskId: string]
 }>()
 
 const totalPages = computed(() => Math.max(1, Math.ceil(props.tasksTotal / props.tasksPageSize)))
@@ -30,6 +31,8 @@ function goToPage (page: number) {
 }
 
 function toggleTask (taskId: string) {
+  const task = props.availableTasks.find(t => t.id === taskId)
+  if (!task?.chunked) return
   const current = props.selectedTaskIds
   const next = current.includes(taskId)
     ? current.filter(id => id !== taskId)
@@ -41,8 +44,9 @@ function clearFilter () {
   emit('update:selectedTaskIds', [])
 }
 
-function formatDate (iso: string) {
-  return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+function formatDate (ts: string) {
+  const d = new Date(Number(ts) * 1000)
+  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 </script>
 
@@ -96,29 +100,66 @@ function formatDate (iso: string) {
               <p>Aucun document terminé disponible.</p>
             </div>
             <div v-else class="space-y-1">
-              <label
+              <div
                 v-for="task in availableTasks"
                 :key="task.id"
-                class="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-colors group"
-                :class="selectedTaskIds.includes(task.id)
-                  ? 'bg-blue-500/15 ring-1 ring-blue-400/30'
-                  : 'hover:bg-white/5'"
+                class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors group"
+                :class="[
+                  task.chunked === true
+                    ? (selectedTaskIds.includes(task.id) ? 'bg-blue-500/15 ring-1 ring-blue-400/30' : 'hover:bg-white/5')
+                    : 'opacity-50 grayscale pointer-events-none select-none',
+                ]"
               >
                 <input
                   type="checkbox"
                   :checked="selectedTaskIds.includes(task.id)"
-                  class="rounded border-slate-500 text-blue-500 focus:ring-blue-500 w-4 h-4 shrink-0 bg-transparent"
+                  :disabled="task.chunked !== true"
+                  class="rounded border-slate-500 text-blue-500 focus:ring-blue-500 w-4 h-4 shrink-0 bg-transparent disabled:opacity-30 disabled:cursor-not-allowed"
                   @change="toggleTask(task.id)"
                 >
-                <div class="flex-1 min-w-0">
+                <div
+                  class="flex-1 min-w-0"
+                  :class="task.chunked === true ? 'cursor-pointer' : 'cursor-not-allowed'"
+                  @click="toggleTask(task.id)"
+                >
                   <p
                     class="text-sm font-medium truncate"
                     :class="selectedTaskIds.includes(task.id) ? 'text-blue-300' : 'text-slate-200'"
                   >{{ task.title }}</p>
                   <p class="text-[11px] text-slate-500 mt-0.5">{{ formatDate(task.created_at) }}</p>
                 </div>
-                <span class="fr-icon-file-text-line text-slate-600 group-hover:text-slate-400 shrink-0" style="font-size:16px;" aria-hidden="true" />
-              </label>
+                <!-- Chunk status indicator -->
+                <div class="shrink-0 flex items-center pointer-events-auto">
+                  <!-- Loading -->
+                  <span
+                    v-if="task.chunked === null || task.submitting"
+                    class="inline-flex items-center gap-1 text-[10px] text-amber-400"
+                    :title="task.submitting ? 'Le document est en cours de préparation, veuillez patienter…' : 'Vérification en cours…'"
+                  >
+                    <svg class="w-3.5 h-3.5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                    <span v-if="task.submitting">Préparation…</span>
+                  </span>
+                  <!-- Ready -->
+                  <span
+                    v-else-if="task.chunked"
+                    class="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-medium"
+                    title="Ce document est prêt, vous pouvez poser des questions dessus"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><path d="M20 6 9 17l-5-5"/></svg>
+                    Disponible
+                  </span>
+                  <!-- Not chunked — submit button -->
+                  <button
+                    v-else
+                    class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 transition-colors"
+                    title="Ce document n'est pas encore prêt pour le chat. Cliquez pour le préparer."
+                    @click.stop="emit('submitChunks', task.id)"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3 h-3"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                    Préparer
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 

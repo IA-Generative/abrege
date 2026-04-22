@@ -9,7 +9,7 @@ import { ABREGE_API_URL } from './utils/constants'
 
 const http = createHttpClient(ABREGE_API_URL)
 const toaster = useToaster()
-const { messages: chatMessages, isLoading: chatLoading, sendMessage, selectedTaskIds, availableTasks, tasksLoading, tasksTotal, tasksPage, tasksPageSize, fetchAvailableTasks } = useChatbot()
+const { messages: chatMessages, isLoading: chatLoading, sendMessage, selectedTaskIds, availableTasks, tasksLoading, tasksTotal, tasksPage, tasksPageSize, fetchAvailableTasks, submitChunks } = useChatbot()
 
 const sourceTask = ref<any>(null)
 
@@ -47,6 +47,7 @@ async function openSourceTask (taskId: string) {
     @update:selected-task-ids="selectedTaskIds = $event"
     @fetch-tasks="fetchAvailableTasks"
     @open-source="openSourceTask"
+    @submit-chunks="submitChunks"
   />
   <ResumeResultModal
     v-if="sourceTask"
