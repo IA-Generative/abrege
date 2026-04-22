@@ -59,21 +59,15 @@ async def summarize_doc(
 
     if parameters is not None and parameters:
         try:
-            parameters: SummaryParameters = SummaryParameters.model_validate_json(
-                parameters
-            )
+            parameters: SummaryParameters = SummaryParameters.model_validate_json(parameters)
         except Exception as e:
-            raise HTTPException(
-                status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"{e}"
-            )
+            raise HTTPException(status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"{e}")
     else:
         parameters: SummaryParameters = SummaryParameters()
 
     if llm_guard is not None and parameters.custom_prompt is not None:
         try:
-            parameters.custom_prompt = llm_guard.request_llm_guard_prompt(
-                prompt=parameters.custom_prompt
-            )
+            parameters.custom_prompt = llm_guard.request_llm_guard_prompt(prompt=parameters.custom_prompt)
         except LLMGuardRequestException:
             raise HTTPException(
                 status_code=http_status.HTTP_400_BAD_REQUEST,
@@ -156,9 +150,7 @@ async def summarize_doc(
         return task_data
 
     except Exception as e:
-        logger.error(
-            f"Failed to upload file for user {user_id}, task {task_data}: {e} - {traceback.format_exc()}"
-        )
+        logger.error(f"Failed to upload file for user {user_id}, task {task_data}: {e} - {traceback.format_exc()}")
         await service.update_task(
             db=db,
             task_id=task_data.id,  # ty:ignore[unresolved-attribute]
@@ -173,17 +165,13 @@ async def summarize_doc(
         )
 
 
-@doc_router.post(
-    "/task/document", status_code=http_status.HTTP_201_CREATED, response_model=TaskModel
-)
+@doc_router.post("/task/document", status_code=http_status.HTTP_201_CREATED, response_model=TaskModel)
 async def new_summarize_doc(
     ctx: TokenDep,
     db: DbDep,
     service: TaskServiceDep,
     file: UploadFile = File(...),
-    prompt: Annotated[
-        Optional[str], Form(description="Custom prompt for after summary")
-    ] = None,
+    prompt: Annotated[Optional[str], Form(description="Custom prompt for after summary")] = None,
     parameters: Annotated[
         Optional[str],
         Form(
@@ -192,9 +180,7 @@ async def new_summarize_doc(
     ] = "",
 ):
     if ctx.user_id is None:
-        raise HTTPException(
-            status_code=http_status.HTTP_401_UNAUTHORIZED, detail="Unauthorized"
-        )
+        raise HTTPException(status_code=http_status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
     return await summarize_doc(
         file=file,
         user_id=ctx.user_id,
