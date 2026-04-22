@@ -1,25 +1,16 @@
 import os
-import socket
 import logging
 import logging.config
-import psutil
 import traceback
 import yaml
-from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, Any
-from pythonjsonlogger import jsonlogger
 from loguru import logger as _logger
 import sys
 
 try:
     from pynvml import (
         nvmlInit,
-        nvmlDeviceGetHandleByIndex,
-        nvmlDeviceGetUtilizationRates,
-        nvmlDeviceGetPowerUsage,
-        nvmlDeviceGetTemperature,
-        NVML_TEMPERATURE_GPU,
     )
 
     nvmlInit()
@@ -43,9 +34,7 @@ def deep_merge_dict(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str,
     return result
 
 
-def load_logging_config(
-    config_path: str = "../../config/logging.yaml", environment: Optional[str] = None
-) -> Dict[str, Any]:
+def load_logging_config(config_path: str = "../../config/logging.yaml", environment: Optional[str] = None) -> Dict[str, Any]:
     """
     Charge la configuration de logging depuis un fichier YAML
 
@@ -63,9 +52,7 @@ def load_logging_config(
         with open(config_file, "r", encoding="utf-8") as f:
             config = yaml.safe_load(f)
     except Exception as e:
-        print(
-            f"Erreur lors du chargement de la configuration: {e} - {traceback.format_exc()}"
-        )
+        print(f"Erreur lors du chargement de la configuration: {e} - {traceback.format_exc()}")
         raise
 
     # Applique la configuration spécifique à l'environnement si fournie
@@ -82,9 +69,7 @@ def load_logging_config(
     return config
 
 
-def setup_logger(
-    name: str = "abrege", config_path: str = "../../config/logging.yaml"
-) -> logging.Logger:
+def setup_logger(name: str = "abrege", config_path: str = "../../config/logging.yaml") -> logging.Logger:
     """
     Configure et retourne un logger basé sur la configuration YAML
 

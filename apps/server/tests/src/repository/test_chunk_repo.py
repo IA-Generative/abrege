@@ -84,15 +84,13 @@ async def test_insert(db, repo):
     chunk_base = _make_chunk_base()
     expected_model = _make_chunk_model()
 
-    mock_row = _mock_row(expected_model)
+    # mock_row = _mock_row(expected_model)
     db.refresh = AsyncMock(side_effect=lambda r: None)
 
-    with patch(
-        "src.repositories.chunk_repo.uuid.uuid4", return_value="chunk-id-1"
-    ), patch(
-        "src.repositories.chunk_repo.time.time", return_value=1700000000
-    ), patch.object(
-        ChunkModel, "model_validate", return_value=expected_model
+    with (
+        patch("src.repositories.chunk_repo.uuid.uuid4", return_value="chunk-id-1"),
+        patch("src.repositories.chunk_repo.time.time", return_value=1700000000),
+        patch.object(ChunkModel, "model_validate", return_value=expected_model),
     ):
         result = await repo.insert(db, chunk_base)
 
@@ -120,14 +118,11 @@ async def test_upsert_bulk_single_chunk(db, repo):
     chunk_base = _make_chunk_base()
     expected_model = _make_chunk_model()
 
-    with patch.object(
-        repo, "delete_by_content_hash", new_callable=AsyncMock
-    ) as mock_delete, patch(
-        "src.repositories.chunk_repo.uuid.uuid4", return_value="chunk-id-1"
-    ), patch(
-        "src.repositories.chunk_repo.time.time", return_value=1700000000
-    ), patch.object(
-        ChunkModel, "model_validate", return_value=expected_model
+    with (
+        patch.object(repo, "delete_by_content_hash", new_callable=AsyncMock) as mock_delete,
+        patch("src.repositories.chunk_repo.uuid.uuid4", return_value="chunk-id-1"),
+        patch("src.repositories.chunk_repo.time.time", return_value=1700000000),
+        patch.object(ChunkModel, "model_validate", return_value=expected_model),
     ):
         result = await repo.upsert_bulk(db, [chunk_base])
 
@@ -156,12 +151,11 @@ async def test_upsert_bulk_multiple_chunks(db, repo):
         call_count += 1
         return result
 
-    with patch.object(repo, "delete_by_content_hash", new_callable=AsyncMock), patch(
-        "src.repositories.chunk_repo.uuid.uuid4", side_effect=["id-a", "id-b"]
-    ), patch(
-        "src.repositories.chunk_repo.time.time", return_value=1700000000
-    ), patch.object(
-        ChunkModel, "model_validate", side_effect=validate_side_effect
+    with (
+        patch.object(repo, "delete_by_content_hash", new_callable=AsyncMock),
+        patch("src.repositories.chunk_repo.uuid.uuid4", side_effect=["id-a", "id-b"]),
+        patch("src.repositories.chunk_repo.time.time", return_value=1700000000),
+        patch.object(ChunkModel, "model_validate", side_effect=validate_side_effect),
     ):
         result = await repo.upsert_bulk(db, chunks)
 
@@ -255,9 +249,7 @@ async def test_search_returns_sorted_results(db, repo):
         _make_chunk_model(id="c3", vector=[0.0, 1.0, 0.0], text="orthogonal"),
     ]
 
-    with patch.object(
-        repo, "get_by_content_hash", new_callable=AsyncMock, return_value=chunks
-    ):
+    with patch.object(repo, "get_by_content_hash", new_callable=AsyncMock, return_value=chunks):
         results = await repo.search(
             db,
             user_id="user-1",
@@ -276,13 +268,9 @@ async def test_search_returns_sorted_results(db, repo):
 
 @pytest.mark.asyncio
 async def test_search_top_k_limits_results(db, repo):
-    chunks = [
-        _make_chunk_model(id=f"c{i}", vector=[float(i), 0.0, 0.0]) for i in range(1, 6)
-    ]
+    chunks = [_make_chunk_model(id=f"c{i}", vector=[float(i), 0.0, 0.0]) for i in range(1, 6)]
 
-    with patch.object(
-        repo, "get_by_content_hash", new_callable=AsyncMock, return_value=chunks
-    ):
+    with patch.object(repo, "get_by_content_hash", new_callable=AsyncMock, return_value=chunks):
         results = await repo.search(
             db,
             user_id="user-1",
@@ -301,9 +289,7 @@ async def test_search_threshold_filters_results(db, repo):
         _make_chunk_model(id="c2", vector=[0.0, 1.0, 0.0]),
     ]
 
-    with patch.object(
-        repo, "get_by_content_hash", new_callable=AsyncMock, return_value=chunks
-    ):
+    with patch.object(repo, "get_by_content_hash", new_callable=AsyncMock, return_value=chunks):
         results = await repo.search(
             db,
             user_id="user-1",
@@ -319,12 +305,8 @@ async def test_search_threshold_filters_results(db, repo):
 
 @pytest.mark.asyncio
 async def test_search_empty_chunks(db, repo):
-    with patch.object(
-        repo, "get_by_content_hash", new_callable=AsyncMock, return_value=[]
-    ):
-        results = await repo.search(
-            db, user_id="user-1", query_vector=[1.0, 0.0, 0.0], content_hash="abc123"
-        )
+    with patch.object(repo, "get_by_content_hash", new_callable=AsyncMock, return_value=[]):
+        results = await repo.search(db, user_id="user-1", query_vector=[1.0, 0.0, 0.0], content_hash="abc123")
 
     assert results == []
 
@@ -333,12 +315,8 @@ async def test_search_empty_chunks(db, repo):
 async def test_search_without_content_hash_uses_get_by_user(db, repo):
     chunks = [_make_chunk_model(id="c1", vector=[1.0, 0.0, 0.0])]
 
-    with patch.object(
-        repo, "get_by_user", new_callable=AsyncMock, return_value=chunks
-    ) as mock_get:
-        results = await repo.search(
-            db, user_id="user-1", query_vector=[1.0, 0.0, 0.0], content_hash=None
-        )
+    with patch.object(repo, "get_by_user", new_callable=AsyncMock, return_value=chunks) as mock_get:
+        results = await repo.search(db, user_id="user-1", query_vector=[1.0, 0.0, 0.0], content_hash=None)
 
     mock_get.assert_awaited_once_with(db, "user-1")
     assert len(results) == 1
@@ -351,12 +329,8 @@ async def test_search_skips_mismatched_vector_dimensions(db, repo):
         _make_chunk_model(id="c2", vector=[1.0, 0.0]),  # wrong dim
     ]
 
-    with patch.object(
-        repo, "get_by_content_hash", new_callable=AsyncMock, return_value=chunks
-    ):
-        results = await repo.search(
-            db, user_id="user-1", query_vector=[1.0, 0.0, 0.0], content_hash="abc123"
-        )
+    with patch.object(repo, "get_by_content_hash", new_callable=AsyncMock, return_value=chunks):
+        results = await repo.search(db, user_id="user-1", query_vector=[1.0, 0.0, 0.0], content_hash="abc123")
 
     assert len(results) == 1
     assert results[0].id == "c1"
