@@ -389,6 +389,18 @@ export const useAbregeStore = defineStore('abrege', () => {
     }
   }
 
+  // ----- REVOKE TASK -----
+  async function revokeTask (taskId: string) {
+    try {
+      await http.delete(`/task/${taskId}/revoke`)
+      addSuccessMessage({ title: 'Tâche révoquée', description: 'La tâche a été révoquée avec succès.' })
+    }
+    catch (err: any) {
+      addErrorMessage({ title: 'Révocation impossible', description: `Erreur lors de la révocation: ${err?.message ?? err}` })
+      throw err
+    }
+  }
+
   // ----- DELETE TASK (wrapped here so UI can use store for actions) -----
   async function deleteTask (taskId: string) {
     try {
@@ -454,5 +466,6 @@ export const useAbregeStore = defineStore('abrege', () => {
     stopPollingUserTasks,
     fetchUserTasks,
     deleteTask,
+    revokeTask,
   }
 })
