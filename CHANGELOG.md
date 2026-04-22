@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [1.9.0](https://github.com/IA-Generative/abrege/compare/v1.8.1...v1.9.0) (2026-04-22)
+
+
+### Features
+
+* **chat:** add chunking functionality and submit chunks feature ([90cc5c7](https://github.com/IA-Generative/abrege/commit/90cc5c77d4dfd9b3df88997608e98bac999aab37))
+
 ## [1.8.1](https://github.com/IA-Generative/abrege/compare/v1.8.0...v1.8.1) (2026-04-22)
 
 
