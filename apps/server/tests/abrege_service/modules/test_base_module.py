@@ -31,7 +31,7 @@ def mock_base_service() -> BaseService:
 @pytest.fixture(scope="function")
 def dummy_task() -> TaskModel:
     task = task_table.insert_new_task(
-        user_id="1",
+        user_id="api_key_user",
         form_data=TaskForm(
             type="summary",
             status=TaskStatus.CREATED.value,

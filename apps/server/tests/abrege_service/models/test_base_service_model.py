@@ -8,7 +8,7 @@ from abrege_service.models.base import BaseSummaryService, TextResultNotGiven
 @pytest.fixture(scope="module")
 def dummy_task() -> TaskModel:
     task = task_table.insert_new_task(
-        user_id="1",
+        user_id="api_key_user",
         form_data=TaskForm(
             type="summary",
             status=TaskStatus.CREATED.value,
@@ -51,7 +51,12 @@ def mock_model_service() -> BaseSummaryService:
                 summary="Done",
                 word_count=1,
             )
-            task = self.update_result_task(task=task, result=result, status=TaskStatus.COMPLETED.value, percentage=0.5)
+            task = self.update_result_task(
+                task=task,
+                result=result,
+                status=TaskStatus.COMPLETED.value,
+                percentage=0.5,
+            )
 
             return task
 

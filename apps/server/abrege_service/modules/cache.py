@@ -1,8 +1,12 @@
 from abrege_service.modules.base import BaseService
-from src.schemas.task import TaskModel, TaskStatus
+from src.models.task import TaskModel, TaskStatus
+from abrege_service.clients.server import ServerClient
 
 
 from src.utils.logger import logger_abrege
+
+
+server_client = ServerClient()
 
 
 class CacheService(BaseService):
@@ -12,13 +16,13 @@ class CacheService(BaseService):
     def is_available(self, task: TaskModel) -> bool:
         if task.content_hash:
             logger_abrege.debug(f"[task_id {task.id}] Checking cache for task with content_hash: {task.content_hash}")
-            if self.task_table.search_task_by_fields(content_hash=task.content_hash, status=TaskStatus.COMPLETED.value):
+            if server_client.search_task_by_fields(content_hash=task.content_hash, status=TaskStatus.COMPLETED.value):
                 logger_abrege.debug(f"[task_id {task.id}] Task found in cache with content_hash: {task.content_hash}")
                 return True
         return False
 
     def task_to_text(self, task: TaskModel, **kwargs) -> TaskModel:
-        task_found = self.task_table.search_task_by_fields(content_hash=task.content_hash, status=TaskStatus.COMPLETED.value)
+        task_found = server_client.search_task_by_fields(content_hash=task.content_hash, status=TaskStatus.COMPLETED.value)
 
         if task_found:
             task.output = task_found.output

@@ -14,7 +14,7 @@ is_openai_set = all([OPENAI_API_KEY, OPENAI_BASE_URL, VLM_MODEL_NAME])
 @pytest.fixture(scope="module")
 def dummy_task_pdf() -> TaskModel:
     task = task_table.insert_new_task(
-        user_id="1",
+        user_id="api_key_user",
         form_data=TaskForm(
             type="summary",
             status=TaskStatus.CREATED.value,
@@ -36,7 +36,7 @@ def dummy_task_pdf() -> TaskModel:
 @pytest.fixture(scope="module")
 def dummy_task_image() -> TaskModel:
     task = task_table.insert_new_task(
-        user_id="1",
+        user_id="api_key_user",
         form_data=TaskForm(
             type="summary",
             status=TaskStatus.CREATED.value,

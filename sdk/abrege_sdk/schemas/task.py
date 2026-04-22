@@ -7,8 +7,6 @@ from abrege_sdk.schemas.result import ResultModel, SummaryModel
 from abrege_sdk.schemas.parameters import SummaryParameters
 
 
-
-
 class TaskModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: str
@@ -18,7 +16,7 @@ class TaskModel(BaseModel):
     group_id: Optional[str] = None
     percentage: Optional[float] = None
     input: Optional[Union[URLModel, DocumentModel, TextModel]] = None
-    output: Optional[Union[ResultModel, SummaryModel]] = None
+    output: Optional[Union[SummaryModel, ResultModel]] = None
     parameters: Optional[SummaryParameters] = SummaryParameters()
     position: Optional[int] = None
 
@@ -35,7 +33,7 @@ class TaskForm(BaseModel):
     percentage: Optional[float] = None
     position: Optional[int] = None
     input: Optional[Union[URLModel, DocumentModel, TextModel]] = None
-    output: Optional[Union[ResultModel, SummaryModel]] = None
+    output: Optional[Union[SummaryModel, ResultModel]] = None
     parameters: Optional[SummaryParameters] = None
     updated_at: Optional[int] = None
     extras: Optional[Dict[str, Any]] = None
@@ -48,7 +46,7 @@ class TaskUpdateForm(BaseModel):
     percentage: Optional[float] = None
     position: Optional[int] = None
     input: Optional[Union[URLModel, DocumentModel, TextModel]] = None
-    output: Optional[Union[ResultModel, SummaryModel]] = None
+    output: Optional[Union[SummaryModel, ResultModel]] = None
     parameters: Optional[SummaryParameters] = None
     updated_at: Optional[int] = None
     extras: Optional[Dict[str, Any]] = None

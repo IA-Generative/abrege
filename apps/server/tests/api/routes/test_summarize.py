@@ -1,21 +1,34 @@
+import pytest
+from unittest.mock import patch, AsyncMock
 from fastapi.testclient import TestClient
-from fastapi import FastAPI
 
 from api.routes.summarize import router
-from api.core.security.factory import TokenVerifier
-from src.schemas.task import TaskModel
+from src.models.task import TaskModel, TaskStatus
 
 
-def test_summarize_content_url():
-    def mock_verify(ctx) -> bool:
-        ctx.user_id = "test_user"
-        return True
+@pytest.fixture
+def client(app_with_overrides):
+    app = app_with_overrides(router)
+    return TestClient(app)
 
-    TokenVerifier.verify = mock_verify
-    app = FastAPI()
-    app.include_router(router)
 
-    client = TestClient(app)
+@pytest.fixture
+def mock_created_task():
+    return TaskModel(
+        id="abc-123",
+        user_id="dev",
+        status=TaskStatus.CREATED.value,
+        type="summary",
+        created_at=1000,
+        updated_at=1000,
+    )
+
+
+@patch("api.routes.summarize.celery_app")
+def test_summarize_content_url(mock_celery, client, mock_task_service, mock_created_task):
+    mock_task_service.insert_new_task.return_value = mock_created_task
+    mock_celery.send_task = AsyncMock()
+
     response = client.post(
         "/task/text-url",
         json={
@@ -35,17 +48,11 @@ def test_summarize_content_url():
     assert TaskModel.model_validate(data)
 
 
-def test_summarize_content_text():
-    app = FastAPI()
-    app.include_router(router)
+@patch("api.routes.summarize.celery_app")
+def test_summarize_content_text(mock_celery, client, mock_task_service, mock_created_task):
+    mock_task_service.insert_new_task.return_value = mock_created_task
+    mock_celery.send_task = AsyncMock()
 
-    def mock_verify(ctx) -> bool:
-        ctx.user_id = "test_user"
-        return True
-
-    TokenVerifier.verify = mock_verify
-
-    client = TestClient(app)
     response = client.post(
         "/task/text-url",
         json={
@@ -65,16 +72,7 @@ def test_summarize_content_text():
     assert TaskModel.model_validate(data)
 
 
-def test_summarize_content_body_error():
-    def mock_verify(ctx) -> bool:
-        ctx.user_id = "test_user"
-        return True
-
-    TokenVerifier.verify = mock_verify
-    app = FastAPI()
-    app.include_router(router)
-
-    client = TestClient(app)
+def test_summarize_content_body_error(client):
     response = client.post(
         "/task/text-url",
         json={
@@ -86,27 +84,20 @@ def test_summarize_content_body_error():
         },
     )
 
-    assert response.status_code == 422, response.json()
+    assert response.status_code == 400, response.json()
 
 
-def test_summarize_content_url_error():
-    def mock_verify(ctx) -> bool:
-        ctx.user_id = "test_user"
-        return True
-
-    TokenVerifier.verify = mock_verify
-    app = FastAPI()
-    app.include_router(router)
-    input_data = {
-        "user_id": "test_user",
-        "content": {
-            "url": "https://22222.24",  # URL invalide
-            "prompt": "Summarize this page",
-            "extras": {"key": "value"},
+def test_summarize_content_url_error(client, mock_task_service):
+    response = client.post(
+        "/task/text-url",
+        json={
+            "user_id": "test_user",
+            "content": {
+                "url": "https://22222.24",
+                "prompt": "Summarize this page",
+                "extras": {"key": "value"},
+            },
         },
-    }
-
-    client = TestClient(app)
-    response = client.post("/task/text-url", json=input_data)
+    )
 
     assert response.status_code == 500

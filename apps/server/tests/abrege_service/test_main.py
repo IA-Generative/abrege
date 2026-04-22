@@ -16,7 +16,7 @@ except Exception as e:
 
 
 def test_task_process_text(monkeypatch: pytest.MonkeyPatch):
-    user_id = "test"
+    user_id = "api_key_user"
     task = task_table.insert_new_task(
         user_id=user_id,
         form_data=TaskForm(
@@ -30,7 +30,7 @@ def test_task_process_text(monkeypatch: pytest.MonkeyPatch):
     terminated_task.status = TaskStatus.COMPLETED.value
     monkeypatch.setattr(summary_service, "process_task", lambda *args, **kwargs: terminated_task)
 
-    result = launch.apply(args=[json.dumps(task.model_dump())])
+    result = launch.apply(args=[json.dumps(task.model_dump())], task_id=task.id)
     result = result.get()
     actual = TaskModel.model_validate(result)
     assert actual.id == task.id
@@ -38,7 +38,7 @@ def test_task_process_text(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_task_process_url(monkeypatch: pytest.MonkeyPatch):
-    user_id = "test"
+    user_id = "api_key_user"
     #############################################################
     # Test donwload html
     url_html = "https://google.com"
@@ -55,7 +55,7 @@ def test_task_process_url(monkeypatch: pytest.MonkeyPatch):
     terminated_task.status = TaskStatus.COMPLETED.value
     monkeypatch.setattr(summary_service, "process_task", lambda *args, **kwargs: terminated_task)
 
-    result = launch.apply(args=[json.dumps(task.model_dump())])
+    result = launch.apply(args=[json.dumps(task.model_dump())], task_id=task.id)
     result = result.get()
     actual = TaskModel.model_validate(result)
     assert actual.id == task.id
@@ -67,7 +67,7 @@ def test_task_process_url(monkeypatch: pytest.MonkeyPatch):
 
 @pytest.mark.skipif(condition=not is_ocr_available, reason="Ocr not available")
 def test_task_process_url_pdf(monkeypatch: pytest.MonkeyPatch):
-    user_id = "test"
+    user_id = "api_key_user"
     #############################################################
     # Test download pdf
     url_pdf = "https://www.i2m.univ-amu.fr/perso/thierry.gallouet/licence.d/topo/chap1.pdf"
@@ -84,7 +84,7 @@ def test_task_process_url_pdf(monkeypatch: pytest.MonkeyPatch):
     terminated_task.status = TaskStatus.COMPLETED.value
     monkeypatch.setattr(summary_service, "process_task", lambda *args, **kwargs: terminated_task)
 
-    result = launch.apply(args=[json.dumps(task.model_dump())])
+    result = launch.apply(args=[json.dumps(task.model_dump())], task_id=task.id)
     result = result.get()
     actual = TaskModel.model_validate(result)
     assert actual.id == task.id
@@ -97,7 +97,7 @@ def test_task_process_url_pdf(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_task_process_url_png(monkeypatch: pytest.MonkeyPatch):
-    user_id = "test"
+    user_id = "api_key_user"
     #############################################################
     # Test download png (Not implemented yet)
     url_png = "https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png"
@@ -115,7 +115,7 @@ def test_task_process_url_png(monkeypatch: pytest.MonkeyPatch):
     terminated_task.status = TaskStatus.COMPLETED.value
     monkeypatch.setattr(summary_service, "process_task", lambda *args, **kwargs: terminated_task)
 
-    launch.apply(args=[json.dumps(task.model_dump())])
+    launch.apply(args=[json.dumps(task.model_dump())], task_id=task.id)
     task = task_table.get_task_by_id(task_id=task.id)
     assert task.id == task.id
     assert task.status in [TaskStatus.COMPLETED.value, TaskStatus.FAILED.value]
@@ -124,7 +124,7 @@ def test_task_process_url_png(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_task_process_url_mp4(monkeypatch: pytest.MonkeyPatch):
-    user_id = "test"
+    user_id = "api_key_user"
     #############################################################
     # Test mp4 :
     url_mp4 = "https://github.com/intel-iot-devkit/sample-videos/raw/master/bolt-detection.mp4"
@@ -142,7 +142,7 @@ def test_task_process_url_mp4(monkeypatch: pytest.MonkeyPatch):
     terminated_task.status = TaskStatus.COMPLETED.value
     monkeypatch.setattr(summary_service, "process_task", lambda *args, **kwargs: terminated_task)
 
-    result = launch.apply(args=[json.dumps(task.model_dump())])
+    result = launch.apply(args=[json.dumps(task.model_dump())], task_id=task.id)
     result = result.get()
     actual = TaskModel.model_validate(result)
     assert actual.id == task.id
@@ -153,7 +153,7 @@ def test_task_process_url_mp4(monkeypatch: pytest.MonkeyPatch):
 
 
 # def test_task_process_url_ppt(monkeypatch: pytest.MonkeyPatch):
-#     user_id = "test"
+#     user_id = "api_key_user"
 #     #############################################################
 #     # Test pptx
 #     url_ppt = "https://pedagogie.ac-toulouse.fr/philosophie/sites/default/files/fichiers/ppt_philosophie_et_ecologie.pptx"
@@ -171,7 +171,7 @@ def test_task_process_url_mp4(monkeypatch: pytest.MonkeyPatch):
 #     terminated_task.status = TaskStatus.COMPLETED.value
 #     monkeypatch.setattr(summary_service, "process_task", lambda *args, **kwargs: terminated_task)
 
-#     result = launch.apply(args=[json.dumps(task.model_dump())])
+#     result = launch.apply(args=[json.dumps(task.model_dump())], task_id=task.id)
 #     result = result.get()
 #     actual = TaskModel.model_validate(result)
 #     assert actual.id == task.id
@@ -185,7 +185,7 @@ def test_task_process_url_mp4(monkeypatch: pytest.MonkeyPatch):
 
 
 # def test_task_process_url_audio(monkeypatch: pytest.MonkeyPatch):
-#     user_id = "test"
+#     user_id = "api_key_user"
 #     #############################################################
 #     # Test wav
 #     url_audio = "https://github.com/UniData-pro/french-speech-recognition-dataset/raw/refs/heads/main/audio/1.wav"
@@ -203,7 +203,7 @@ def test_task_process_url_mp4(monkeypatch: pytest.MonkeyPatch):
 #     terminated_task.status = TaskStatus.COMPLETED.value
 #     monkeypatch.setattr(summary_service, "process_task", lambda *args, **kwargs: terminated_task)
 #
-#     result = launch.apply(args=[json.dumps(task.model_dump())])
+#     result = launch.apply(args=[json.dumps(task.model_dump())], task_id=task.id)
 #     result = result.get()
 #     actual = TaskModel.model_validate(result)
 #     assert actual.id == task.id
@@ -216,7 +216,7 @@ def test_task_process_url_mp4(monkeypatch: pytest.MonkeyPatch):
 
 def test_audio_document(monkeypatch: pytest.MonkeyPatch):
     audio_path = "tests/data/audio/1.wav"
-    user_id = "test"
+    user_id = "api_key_user"
     task = task_table.insert_new_task(
         user_id=user_id,
         form_data=TaskForm(
@@ -249,7 +249,7 @@ def test_audio_document(monkeypatch: pytest.MonkeyPatch):
     terminated_task.status = TaskStatus.COMPLETED.value
     monkeypatch.setattr(summary_service, "process_task", lambda *args, **kwargs: terminated_task)
 
-    result = launch.apply(args=[json.dumps(task.model_dump())])
+    result = launch.apply(args=[json.dumps(task.model_dump())], task_id=task.id)
     result = result.get()
     actual = TaskModel.model_validate(result)
     assert actual.id == task.id
@@ -262,7 +262,7 @@ def test_audio_document(monkeypatch: pytest.MonkeyPatch):
 
 def test_video_document(monkeypatch: pytest.MonkeyPatch):
     video_path = "tests/data/video/bonjour.mp4"
-    user_id = "test"
+    user_id = "api_key_user"
     task = task_table.insert_new_task(
         user_id=user_id,
         form_data=TaskForm(
@@ -295,7 +295,7 @@ def test_video_document(monkeypatch: pytest.MonkeyPatch):
     terminated_task.status = TaskStatus.COMPLETED.value
     monkeypatch.setattr(summary_service, "process_task", lambda *args, **kwargs: terminated_task)
 
-    result = launch.apply(args=[json.dumps(task.model_dump())])
+    result = launch.apply(args=[json.dumps(task.model_dump())], task_id=task.id)
     result = result.get()
     actual = TaskModel.model_validate(result)
     assert actual.id == task.id
@@ -308,7 +308,7 @@ def test_video_document(monkeypatch: pytest.MonkeyPatch):
 @pytest.mark.skipif(condition=not is_ocr_available, reason="Ocr not available")
 def test_pdf_document(monkeypatch: pytest.MonkeyPatch):
     video_path = "tests/test_data/elysee-module-24161-fr.pdf"
-    user_id = "test"
+    user_id = "api_key_user"
     task = task_table.insert_new_task(
         user_id=user_id,
         form_data=TaskForm(
@@ -341,7 +341,7 @@ def test_pdf_document(monkeypatch: pytest.MonkeyPatch):
     terminated_task.status = TaskStatus.COMPLETED.value
     monkeypatch.setattr(summary_service, "process_task", lambda *args, **kwargs: terminated_task)
 
-    result = launch.apply(args=[json.dumps(task.model_dump())])
+    result = launch.apply(args=[json.dumps(task.model_dump())], task_id=task.id)
     result = result.get()
     actual = TaskModel.model_validate(result)
     assert actual.id == task.id
@@ -353,7 +353,7 @@ def test_pdf_document(monkeypatch: pytest.MonkeyPatch):
 
 def test_docx_document(monkeypatch: pytest.MonkeyPatch):
     video_path = "tests/test_data/Cadrage.docx"
-    user_id = "test"
+    user_id = "api_key_user"
     task = task_table.insert_new_task(
         user_id=user_id,
         form_data=TaskForm(
@@ -386,7 +386,7 @@ def test_docx_document(monkeypatch: pytest.MonkeyPatch):
     terminated_task.status = TaskStatus.COMPLETED.value
     monkeypatch.setattr(summary_service, "process_task", lambda *args, **kwargs: terminated_task)
 
-    result = launch.apply(args=[json.dumps(task.model_dump())])
+    result = launch.apply(args=[json.dumps(task.model_dump())], task_id=task.id)
     result = result.get()
     actual = TaskModel.model_validate(result)
     assert actual.id == task.id
@@ -398,7 +398,7 @@ def test_docx_document(monkeypatch: pytest.MonkeyPatch):
 
 def test_odt_document(monkeypatch: pytest.MonkeyPatch):
     video_path = "tests/test_data/Lettre_de_Camus.odt"
-    user_id = "test"
+    user_id = "api_key_user"
     task = task_table.insert_new_task(
         user_id=user_id,
         form_data=TaskForm(
@@ -431,7 +431,7 @@ def test_odt_document(monkeypatch: pytest.MonkeyPatch):
     terminated_task.status = TaskStatus.COMPLETED.value
     monkeypatch.setattr(summary_service, "process_task", lambda *args, **kwargs: terminated_task)
 
-    result = launch.apply(args=[json.dumps(task.model_dump())])
+    result = launch.apply(args=[json.dumps(task.model_dump())], task_id=task.id)
     result = result.get()
     actual = TaskModel.model_validate(result)
     assert actual.id == task.id

@@ -17,7 +17,7 @@ class TaskModel(BaseModel):
     group_id: Optional[str] = None
     percentage: Optional[float] = None
     input: Optional[Union[URLModel, DocumentModel, TextModel, MergeModel]] = None
-    output: Optional[Union[ResultModel, SummaryModel]] = None
+    output: Optional[Union[SummaryModel, ResultModel]] = None
     parameters: Optional[Union[SummaryParameters, ClassificationParameters]] = SummaryParameters()
     position: Optional[int] = None
 
@@ -34,7 +34,7 @@ class TaskForm(BaseModel):
     percentage: Optional[float] = None
     position: Optional[int] = None
     input: Optional[Union[URLModel, DocumentModel, TextModel, MergeModel]] = None
-    output: Optional[Union[ResultModel, SummaryModel]] = None
+    output: Optional[Union[SummaryModel, ResultModel]] = None
     parameters: Optional[Union[SummaryParameters, ClassificationParameters]] = None
     updated_at: Optional[int] = None
     extras: Optional[Dict[str, Any]] = None
@@ -47,7 +47,7 @@ class TaskUpdateForm(BaseModel):
     percentage: Optional[float] = None
     position: Optional[int] = None
     input: Optional[Union[URLModel, DocumentModel, TextModel, MergeModel]] = None
-    output: Optional[Union[ResultModel, SummaryModel]] = None
+    output: Optional[Union[SummaryModel, ResultModel]] = None
     parameters: Optional[Union[SummaryParameters, ClassificationParameters]] = None
     updated_at: Optional[int] = None
     extras: Optional[Dict[str, Any]] = None

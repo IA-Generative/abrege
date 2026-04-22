@@ -12,7 +12,7 @@ import pytest
 @pytest.fixture(scope="module")
 def dummy_task() -> TaskModel:
     task = task_table.insert_new_task(
-        user_id="1",
+        user_id="api_key_user",
         form_data=TaskForm(
             type="summary",
             status=TaskStatus.CREATED.value,
@@ -34,7 +34,7 @@ def dummy_task() -> TaskModel:
 @pytest.fixture(scope="module")
 def dummy_task_microsoft() -> TaskModel:
     task = task_table.insert_new_task(
-        user_id="1",
+        user_id="api_key_user",
         form_data=TaskForm(
             type="summary",
             status=TaskStatus.CREATED.value,
@@ -56,7 +56,7 @@ def dummy_task_microsoft() -> TaskModel:
 @pytest.fixture(scope="module")
 def dummy_task_libreoffice_odt() -> TaskModel:
     task = task_table.insert_new_task(
-        user_id="1",
+        user_id="api_key_user",
         form_data=TaskForm(
             type="summary",
             status=TaskStatus.CREATED.value,
@@ -78,7 +78,7 @@ def dummy_task_libreoffice_odt() -> TaskModel:
 @pytest.fixture(scope="module")
 def dummy_task_doc() -> TaskModel:
     task = task_table.insert_new_task(
-        user_id="1",
+        user_id="api_key_user",
         form_data=TaskForm(
             type="summary",
             status=TaskStatus.CREATED.value,
