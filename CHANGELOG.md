@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [1.8.0](https://github.com/IA-Generative/abrege/compare/v1.7.0...v1.8.0) (2026-04-22)
+
+
+### Features
+
+* Implement task search and update functionality ([f7d20ca](https://github.com/IA-Generative/abrege/commit/f7d20ca2a21a8c67bf1de257396c8dced74a0b1b))
+
 ## [1.7.0](https://github.com/IA-Generative/abrege/compare/v1.6.1...v1.7.0) (2026-04-22)
 
 
