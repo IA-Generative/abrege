@@ -11,7 +11,6 @@ import uuid
 
 
 class ChunkRepository:
-
     # ------------------------------------------------------------------
     # Write
     # ------------------------------------------------------------------
@@ -37,9 +36,7 @@ class ChunkRepository:
         await db.refresh(row)
         return ChunkModel.model_validate(row)
 
-    async def upsert_bulk(
-        self, db: AsyncSession, chunks: list[ChunkBase]
-    ) -> list[ChunkModel]:
+    async def upsert_bulk(self, db: AsyncSession, chunks: list[ChunkBase]) -> list[ChunkModel]:
         """Insert or replace chunks.
 
         A chunk is identified by (content_hash, page_nums, bbox_indices JSON).
@@ -75,9 +72,7 @@ class ChunkRepository:
         await db.commit()
         return results
 
-    async def delete_by_content_hash(
-        self, db: AsyncSession, content_hash: str, user_id: str
-    ) -> None:
+    async def delete_by_content_hash(self, db: AsyncSession, content_hash: str, user_id: str) -> None:
         await db.execute(
             delete(ChunkTable).where(
                 ChunkTable.content_hash == content_hash,
@@ -90,9 +85,7 @@ class ChunkRepository:
     # Read
     # ------------------------------------------------------------------
 
-    async def get_by_content_hash(
-        self, db: AsyncSession, content_hash: str, user_id: str
-    ) -> list[ChunkModel]:
+    async def get_by_content_hash(self, db: AsyncSession, content_hash: str, user_id: str) -> list[ChunkModel]:
         stmt = select(ChunkTable).where(
             ChunkTable.content_hash == content_hash,
             ChunkTable.user_id == user_id,

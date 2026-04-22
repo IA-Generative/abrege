@@ -7,9 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 SQLALCHEMY_DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./example.db")
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
-SessionLocal = sessionmaker(
-    autocommit=False, autoflush=False, bind=engine, expire_on_commit=False
-)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, expire_on_commit=False)
 Base = declarative_base()
 Session = scoped_session(SessionLocal)
 
@@ -26,23 +24,28 @@ get_db = contextmanager(get_session)
 
 
 # Configuration asynchrone
-SQLALCHEMY_ASYNC_DATABASE_URL = os.environ.get(
-    "DATABASE_ASYNC_URL", "sqlite+aiosqlite:///./example.db"
-)
+SQLALCHEMY_ASYNC_DATABASE_URL = os.environ.get("DATABASE_ASYNC_URL", "sqlite+aiosqlite:///./example.db")
 async_engine = create_async_engine(
     SQLALCHEMY_ASYNC_DATABASE_URL,
     echo=False,
     future=True,
     connect_args={"timeout": 30},
 )
-AsyncSessionLocal = async_sessionmaker(
-    async_engine, class_=AsyncSession, expire_on_commit=False
-)
+AsyncSessionLocal = async_sessionmaker(async_engine, class_=AsyncSession, expire_on_commit=False)
 
 
 @asynccontextmanager
 async def get_async_session():
     """Async context manager pour les sessions asynchrones"""
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        finally:
+            await session.close()
+
+
+async def get_async_session_dep() -> AsyncSession:
+    """FastAPI dependency — yields a raw AsyncSession."""
     async with AsyncSessionLocal() as session:
         try:
             yield session

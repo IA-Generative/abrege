@@ -111,9 +111,7 @@ class AbregeTask(Task):
             )
             task = merge_task_service.get_by_related_task_id(task_id=task_id)
             if task and merge_task_service.is_merge_completed(merge_id=task.merge_id):
-                logger_abrege.info(
-                    f"All tasks for merge {task.merge_id} are completed. Marking merge as completed."
-                )
+                logger_abrege.info(f"All tasks for merge {task.merge_id} are completed. Marking merge as completed.")
                 merge_task_model = task_table.get_task_by_id(task_id=task.merge_id)
                 if merge_task_model is None:
                     logger_abrege.error(f"Merge TaskModel {task.merge_id} not found")
@@ -147,16 +145,12 @@ def launch(self: AbregeTask, task: str):
 
             elif isinstance(task.input, DocumentModel):
                 logger_abrege.debug(f"Processing Document task: {task.id}")
-                file_path = file_connector.get_by_task_id(
-                    user_id=task.user_id, task_id=task.id
-                )
+                file_path = file_connector.get_by_task_id(user_id=task.user_id, task_id=task.id)
                 task.input.file_path = file_path
                 task.content_hash = hash_file(file_path)
                 for service in services:
                     if service.is_available(task):
-                        logger_abrege.info(
-                            f"Using service: {service.__class__.__name__}"
-                        )
+                        logger_abrege.info(f"Using service: {service.__class__.__name__}")
                         task = service.process_task(task=task)
                         break
 
@@ -198,7 +192,5 @@ def launch(self: AbregeTask, task: str):
                     extras={"error": f"{e} - {traceback.format_exc()}"},
                 ),
             )
-            logger_abrege.error(
-                f"Task {task.id} failed: {e} - {traceback.format_exc()}"
-            )
+            logger_abrege.error(f"Task {task.id} failed: {e} - {traceback.format_exc()}")
             raise e
