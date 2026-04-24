@@ -87,7 +87,7 @@ services:
     environment:
       DEV_MODE: "true"
       CELERY_APP_NAME: default
-      DATABASE_URL: postgresql://postgres:secret@postgres:5432/example_db
+      DATABASE_URL: postgresql://postgres:secret@db:5432/example_db
       DATABASE_ASYNC_URL: postgresql+asyncpg://postgres:secret@db:5432/example_db
       API_KEYS: test-api-key
       EMBEDDING_MODEL: bge-multilingual-gemma2

@@ -11,7 +11,7 @@ from abrege_service.modules.base import BaseService
 from abrege_service.config.openai import OpenAISettings
 
 from src.models.task import TaskModel, TaskStatus, TaskUpdateForm, TaskName
-from src.schemas.content import URLModel, DocumentModel
+from src.schemas.content import DocumentModel
 from src.clients import celery_app, file_connector
 from celery import Task
 from src.utils.logger import logger_abrege
@@ -21,6 +21,7 @@ from .merge import launch_merge
 from abrege_service.clients.server import ServerClient
 from .chunk_task import launch_chunking
 from .update_task import updating_task
+from abrege_service.schemas import IMAGE_CONTENT_TYPES, PDF_CONTENT_TYPES
 from .tools import (
     cache_service,
     audio_service,
@@ -29,8 +30,6 @@ from .tools import (
     microsoft_service_older,
     libre_office_service,
     flat_text_service,
-    ocr_service,
-    url_service,
     summary_service,
 )
 
@@ -44,7 +43,6 @@ services: List[BaseService] = [
     microsoft_service_older,
     microsof_service,
     flat_text_service,
-    ocr_service,
     libre_office_service,
 ]
 
@@ -93,8 +91,8 @@ class AbregeTask(Task):
                 )
 
 
-@celery_app.task(name=TaskName.ABREGE.value, bind=True, base=AbregeTask)
-def launch(self: AbregeTask, task: str):
+@celery_app.task(name=TaskName.ABREGE_DOCUMENT.value, bind=True, base=AbregeTask)
+def process_non_pdf_images(self: AbregeTask, task: str):
     task: TaskModel = TaskModel.model_validate(json.loads(task))
     task.extras = task.extras or {}
     extra_log = {"user_id": task.user_id, "task_id": task.id, "action": "launch"}
@@ -112,17 +110,18 @@ def launch(self: AbregeTask, task: str):
             logger_abrege.info("Task started processing")
             logger_abrege.info(f"Task input: {task.input}")
             t = time.time()
-            if isinstance(task.input, URLModel):
-                logger_abrege.debug(f"Processing URL task: {task.id}")
-                task = url_service.process_task(task=task)
 
-            elif isinstance(task.input, DocumentModel):
+            if isinstance(task.input, DocumentModel):
                 logger_abrege.debug(f"Processing Document task: {task.id}")
                 file_path = file_connector.get_by_task_id(
                     user_id=task.user_id, task_id=task.id
                 )
                 task.input.file_path = file_path
                 task.content_hash = hash_file(file_path)
+                if task.input.content_type in IMAGE_CONTENT_TYPES + PDF_CONTENT_TYPES:
+                    raise NotImplementedError(
+                        f"Content type {task.input.content_type} should be processed in abrege_pdf_image task"
+                    )
                 for service in services:
                     if service.is_available(task):
                         logger_abrege.info(

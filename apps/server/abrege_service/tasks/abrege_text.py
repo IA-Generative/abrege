@@ -93,6 +93,15 @@ def text_summary_process(self, task: str) -> dict:
             logger_abrege.info(
                 f"Summary Task {task.id} processed in {time.time() - t} seconds",
             )
+            updating_task.apply_async(
+                args=[
+                    task.id,
+                    TaskUpdateForm(
+                        status=TaskStatus.COMPLETED.value, percentage=1
+                    ).model_dump(exclude_none=True),
+                ],
+                task_id=f"{task.id}-update-completed",
+            )
             return task.model_dump()
 
         except Exception as e:
