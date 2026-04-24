@@ -1,4 +1,5 @@
 PYTHONPATH=$(PWD)
+export PATH := $(HOME)/.local/bin:$(PATH)
 
 .PHONY: install-uv install-local linter test-bakend \
         up down build \

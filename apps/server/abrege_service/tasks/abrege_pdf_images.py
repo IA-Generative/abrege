@@ -7,7 +7,6 @@ from celery import chord
 from PIL import Image
 
 from abrege_service.modules.ocr import OCRMIService
-from abrege_service.modules.cache import CacheService
 from abrege_service.schemas import IMAGE_CONTENT_TYPES, PDF_CONTENT_TYPES
 from abrege_service.utils.lazy_pdf import LazyPdfImageList
 from abrege_service.clients.server import ServerClient
@@ -21,10 +20,10 @@ from src.utils.logger import logger_abrege
 
 from .update_task import updating_task
 from .errors import OCRError, RetryableOCRError
+from .tools import summary_service, cache_service
 
 server_client = ServerClient()
 ocr_client = OCRClient(url=os.environ["OCR_BACKEND_URL"])
-cache_service = CacheService()
 ocr_service = OCRMIService(url_ocr=os.environ["OCR_BACKEND_URL"])
 
 _BATCH_SIZE = 5
@@ -290,6 +289,7 @@ def _finalize_task(task: TaskModel, page_text: dict[int, str]) -> dict:
     task.output.percentage = 1.0
     task.output.updated_at = int(time.time())
 
+    task = summary_service.process_task(task)
     result = updating_task.apply_async(
         args=[
             task.id,
@@ -301,4 +301,5 @@ def _finalize_task(task: TaskModel, page_text: dict[int, str]) -> dict:
         ],
         task_id=f"{task.id}-update-completed",
     ).get()
-    return TaskModel.model_validate(result).model_dump()
+
+    return result

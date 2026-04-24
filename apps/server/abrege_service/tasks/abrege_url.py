@@ -84,17 +84,14 @@ class AbregeTask(Task):
                 )
                 merge_task_model = server_client.get_task(task_id=task.merge_id)
                 merge_task_model = TaskModel.model_validate(merge_task_model)
-                if merge_task_model is None:
-                    logger_abrege.error(f"Merge TaskModel {task.merge_id} not found")
-                    return
                 launch_merge.apply_async(
                     args=[json.dumps(merge_task_model.model_dump())],
                     task_id=task.merge_id,
                 )
 
 
-@celery_app.task(name=TaskName.ABREGE.value, bind=True, base=AbregeTask)
-def launch(self: AbregeTask, task: str):
+@celery_app.task(name=TaskName.ABREGE_URL.value, bind=True, base=AbregeTask)
+def process_url(self: AbregeTask, task: str):
     task: TaskModel = TaskModel.model_validate(json.loads(task))
     task.extras = task.extras or {}
     extra_log = {"user_id": task.user_id, "task_id": task.id, "action": "launch"}
@@ -115,24 +112,6 @@ def launch(self: AbregeTask, task: str):
             if isinstance(task.input, URLModel):
                 logger_abrege.debug(f"Processing URL task: {task.id}")
                 task = url_service.process_task(task=task)
-
-            elif isinstance(task.input, DocumentModel):
-                logger_abrege.debug(f"Processing Document task: {task.id}")
-                file_path = file_connector.get_by_task_id(
-                    user_id=task.user_id, task_id=task.id
-                )
-                task.input.file_path = file_path
-                task.content_hash = hash_file(file_path)
-                for service in services:
-                    if service.is_available(task):
-                        logger_abrege.info(
-                            f"Using service: {service.__class__.__name__}"
-                        )
-                        task = service.process_task(task=task)
-                        break
-
-                if os.path.exists(file_path):
-                    os.remove(file_path)
 
             else:
                 raise NotImplementedError("Content type not supported")

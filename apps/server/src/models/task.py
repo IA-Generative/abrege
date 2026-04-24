@@ -94,6 +94,7 @@ class TaskName(StrEnum):
     ABREGE = "worker.tasks.abrege"
     ABREGE_TEXT = "worker.tasks.abrege_text"
     ABREGE_DOCUMENT = "worker.tasks.abrege_document"
+    ABREGE_URL = "worker.tasks.abrege_url"
     ABREGE_PDF_IMAGE = "worker.tasks.abrege_pdf_image"
     OCR_SENDING_IMAGE = "worker.tasks.ocr_sending_image"
     CLASSIFICATION = "worker.tasks.classification"
