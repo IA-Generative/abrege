@@ -88,6 +88,7 @@ class TaskStats(BaseModel):
 class TaskName(StrEnum):
     MERGE = "worker.tasks.merge-abrege"
     ABREGE = "worker.tasks.abrege"
+    ABREGE_TEXT = "worker.tasks.abrege_text"
     CLASSIFICATION = "worker.tasks.classification"
     CHUNKING = "worker.tasks.chunking"
     UPDATE_TASK = "worker.tasks.update_task"
