@@ -40,6 +40,7 @@ from .merge import launch_merge
 from abrege_service.clients.server import ServerClient
 from .chunk_task import launch_chunking
 from .update_task import updating_task
+from .abrege_text import text_summary_process
 
 openai_settings = OpenAISettings()
 server_client = ServerClient()
@@ -177,6 +178,10 @@ def launch(self: AbregeTask, task: str):
                     percentage=1,
                     texts_found=[task.input.text],
                 )
+                return text_summary_process.apply_async(
+                    args=[json.dumps(task.model_dump())],
+                    task_id=f"{task.id}-abrege-text",
+                ).get()
 
             else:
                 raise NotImplementedError("Content type not supported")

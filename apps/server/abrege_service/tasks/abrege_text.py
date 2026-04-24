@@ -90,10 +90,15 @@ class AbregeTask(Task):
 
 
 @celery_app.task(name=TaskName.ABREGE_TEXT.value, bind=True, base=AbregeTask)
-def text_summary(self: AbregeTask, task: str) -> dict:
+def text_summary_process(self: AbregeTask, task: str) -> dict:
     task: TaskModel = TaskModel.model_validate(json.loads(task))
     task.extras = task.extras or {}
-    extra_log = {"user_id": task.user_id, "task_id": task.id, "action": "launch"}
+    extra_log = {
+        "user_id": task.user_id,
+        "task_id": task.id,
+        "action": TaskName.ABREGE_TEXT.value,
+        "current_task_id": task.id,
+    }
     with logger_abrege.contextualize(**extra_log):  # ty:ignore[unresolved-attribute]
         try:
             updating_task.apply_async(
