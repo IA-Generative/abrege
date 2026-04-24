@@ -22,7 +22,7 @@ class LazyPdfImageList(Sequence):
             self._total_pages = info["Pages"]
         return self._total_pages
 
-    def __getitem__(self, index) -> List[Image.Image]:
+    def __getitem__(self, index) -> List[Image.Image] | Image.Image:
         if isinstance(index, slice):
             return [self[i] for i in range(*index.indices(len(self)))]
         if not isinstance(index, int):

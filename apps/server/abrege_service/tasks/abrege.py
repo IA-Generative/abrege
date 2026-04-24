@@ -120,7 +120,9 @@ class AbregeTask(Task):
             )
             task = merge_task_service.get_by_related_task_id(task_id=task_id)
             if task and merge_task_service.is_merge_completed(merge_id=task.merge_id):
-                logger_abrege.info(f"All tasks for merge {task.merge_id} are completed. Marking merge as completed.")
+                logger_abrege.info(
+                    f"All tasks for merge {task.merge_id} are completed. Marking merge as completed."
+                )
                 merge_task_model = server_client.get_task(task_id=task.merge_id)
                 merge_task_model = TaskModel.model_validate(merge_task_model)
                 if merge_task_model is None:
@@ -142,7 +144,9 @@ def launch(self: AbregeTask, task: str):
             updating_task.apply_async(
                 args=[
                     task.id,
-                    TaskUpdateForm(status=TaskStatus.IN_PROGRESS.value).model_dump(exclude_none=True),
+                    TaskUpdateForm(status=TaskStatus.IN_PROGRESS.value).model_dump(
+                        exclude_none=True
+                    ),
                 ],
                 task_id=f"{task.id}-update-in-progress",
             )
@@ -155,33 +159,21 @@ def launch(self: AbregeTask, task: str):
 
             elif isinstance(task.input, DocumentModel):
                 logger_abrege.debug(f"Processing Document task: {task.id}")
-                file_path = file_connector.get_by_task_id(user_id=task.user_id, task_id=task.id)
+                file_path = file_connector.get_by_task_id(
+                    user_id=task.user_id, task_id=task.id
+                )
                 task.input.file_path = file_path
                 task.content_hash = hash_file(file_path)
                 for service in services:
                     if service.is_available(task):
-                        logger_abrege.info(f"Using service: {service.__class__.__name__}")
+                        logger_abrege.info(
+                            f"Using service: {service.__class__.__name__}"
+                        )
                         task = service.process_task(task=task)
                         break
 
                 if os.path.exists(file_path):
                     os.remove(file_path)
-
-            elif isinstance(task.input, TextModel):
-                logger_abrege.debug(f"Processing Text task: {task.id}")
-                task.content_hash = hash_string(task.input.text)
-                task.output = ResultModel(
-                    type="flat",
-                    created_at=task.input.created_at,
-                    model_name="flat",
-                    model_version=__version__,
-                    percentage=1,
-                    texts_found=[task.input.text],
-                )
-                return text_summary_process.apply_async(
-                    args=[json.dumps(task.model_dump())],
-                    task_id=f"{task.id}-abrege-text",
-                ).get()
 
             else:
                 raise NotImplementedError("Content type not supported")
@@ -209,5 +201,7 @@ def launch(self: AbregeTask, task: str):
                 ],
                 task_id=f"{task.id}-update-failed",
             )
-            logger_abrege.error(f"Task {task.id} failed: {e} - {traceback.format_exc()}")
+            logger_abrege.error(
+                f"Task {task.id} failed: {e} - {traceback.format_exc()}"
+            )
             raise e

@@ -18,7 +18,9 @@ class TaskModel(BaseModel):
     percentage: Optional[float] = None
     input: Optional[Union[URLModel, DocumentModel, TextModel, MergeModel]] = None
     output: Optional[Union[SummaryModel, ResultModel]] = None
-    parameters: Optional[Union[SummaryParameters, ClassificationParameters]] = SummaryParameters()
+    parameters: Optional[Union[SummaryParameters, ClassificationParameters]] = (
+        SummaryParameters()
+    )
     position: Optional[int] = None
 
     created_at: int
@@ -82,13 +84,20 @@ class TaskStats(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     global_stats: TaskStatsGlobal
     user_stats: TaskStatsUser
-    all_users_stats: Pagination[TaskStatsUser] = Field(None, description="Statistiques paginées pour tous les utilisateurs")
+    all_users_stats: Pagination[TaskStatsUser] = Field(
+        None, description="Statistiques paginées pour tous les utilisateurs"
+    )
 
 
 class TaskName(StrEnum):
     MERGE = "worker.tasks.merge-abrege"
     ABREGE = "worker.tasks.abrege"
     ABREGE_TEXT = "worker.tasks.abrege_text"
+    ABREGE_DOCUMENT = "worker.tasks.abrege_document"
+    ABREGE_PDF_IMAGE = "worker.tasks.abrege_pdf_image"
+    OCR_SENDING_IMAGE = "worker.tasks.ocr_sending_image"
     CLASSIFICATION = "worker.tasks.classification"
+    COLLECT_OCR_RESULTS = "worker.tasks.collect_ocr_results"
+    OCR = "worker.tasks.ocr"
     CHUNKING = "worker.tasks.chunking"
     UPDATE_TASK = "worker.tasks.update_task"
