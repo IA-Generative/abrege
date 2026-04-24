@@ -11,6 +11,20 @@ from src.schemas.task import TaskModel, TaskStatus
 from src.schemas.result import ResultModel
 from src.utils.logger import logger_abrege
 from abrege_service.config.openai import OpenAISettings
+import uuid
+import redis
+from src.config.redis import RedisSettings
+from src.config.celery import CelerySettings
+from abrege_service.clients.ocr_client import OCRResult, Page, Bbox
+
+
+celery_config = CelerySettings()
+redis_settings = RedisSettings()
+
+redis_client = redis.Redis(
+    host=redis_settings.REDIS_HOST,
+    port=redis_settings.REDIS_PORT,
+)
 
 openai_settings = OpenAISettings()
 
@@ -78,6 +92,48 @@ class ImageFromVLM(BaseService):
         )
         logger_abrege.debug(f"{time.time() - t:.2f}s to get result from llm")
         return response.choices[0].message.content
+
+    def send(self, group_id: str, file_path: str) -> dict:
+        _id = str(uuid.uuid4())
+
+        text = self.process_image_sync(Image.open(file_path))
+        redis_client.set(_id, text)
+        return {"id": _id}
+
+    def get_tasks(self, task_id: str) -> dict:
+        text = redis_client.get(task_id)
+        if text is None:
+            return {"status": "processing"}
+        ocr_result = OCRResult(
+            type="text",
+            created_at=int(time.time()),
+            model_name=self.model_name,
+            version=openai.__version__,
+            updated_at=int(time.time()),
+            extras={},
+            pages=[
+                Page(
+                    page=0,
+                    page_url=None,
+                    boxes=[
+                        Bbox(
+                            x=0,
+                            y=0,
+                            height=0,
+                            width=0,
+                            text=text.decode("utf-8"),
+                            confidence=1.0,
+                        )
+                    ],
+                )
+            ],
+            total_pages=1,
+        )
+        return {
+            "output": ocr_result.model_dump(),
+            "status": "completed",
+            "percentage": 1,
+        }
 
     async def process_image(self, image: Image.Image) -> str:
         t = time.time()

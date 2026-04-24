@@ -6,7 +6,6 @@ import time
 from celery import chord
 from PIL import Image
 
-from abrege_service.modules.ocr import OCRMIService
 from abrege_service.schemas import IMAGE_CONTENT_TYPES, PDF_CONTENT_TYPES
 from abrege_service.utils.lazy_pdf import LazyPdfImageList
 from abrege_service.clients.server import ServerClient
@@ -21,10 +20,16 @@ from src.utils.logger import logger_abrege
 from .update_task import updating_task
 from .errors import OCRError, RetryableOCRError
 from .tools import summary_service, cache_service
+from .base_task import AbregeTask
+from abrege_service.modules.image import ImageFromVLM
 
 server_client = ServerClient()
-ocr_client = OCRClient(url=os.environ["OCR_BACKEND_URL"])
-ocr_service = OCRMIService(url_ocr=os.environ["OCR_BACKEND_URL"])
+try:
+    ocr_client = OCRClient(url=os.environ["OCR_BACKEND_URL"])
+    ocr_client.get_health()
+except Exception:
+    ocr_client = ImageFromVLM()
+
 
 _BATCH_SIZE = 5
 _BATCH_COUNTDOWN = 10  # secondes entre chaque batch
@@ -80,9 +85,7 @@ def doc_ocr_task(self, task: str) -> str:
         if task.input.content_type in PDF_CONTENT_TYPES:
             return _dispatch_pdf(file_path, task_json, task)
 
-        raise NotImplementedError(
-            f"Unsupported content_type: {task.input.content_type}"
-        )
+        raise NotImplementedError(f"Unsupported content_type: {task.input.content_type}")
 
 
 def _dispatch_image(file_path: str, task_json: str, user_id: str) -> str:
@@ -110,9 +113,7 @@ def _dispatch_pdf(file_path: str, task_json: str, task: TaskModel) -> str:
             )
 
     send_tasks = [
-        send_pdf_page_to_ocr_task.s(i, f"{task.id}-page_{i}", task.user_id).set(
-            countdown=(i // _BATCH_SIZE) * _BATCH_COUNTDOWN
-        )
+        send_pdf_page_to_ocr_task.s(i, f"{task.id}-page_{i}", task.user_id).set(countdown=(i // _BATCH_SIZE) * _BATCH_COUNTDOWN)
         for i in range(n_pages)
     ]
     return chord(send_tasks)(collect_ocr_results_task.s(task_json)).id
@@ -144,9 +145,13 @@ def send_pdf_page_to_ocr_task(
 # ---------------------------------------------------------------------------
 
 
-@celery_app.task(name=TaskName.COLLECT_OCR_RESULTS.value, bind=True)
+@celery_app.task(
+    name=TaskName.COLLECT_OCR_RESULTS.value,
+    bind=True,
+    base=AbregeTask,
+)
 def collect_ocr_results_task(
-    self,
+    self: AbregeTask,
     ocr_task_ids: list[tuple[int, str]],
     task_json: str,
 ) -> dict:
@@ -155,6 +160,7 @@ def collect_ocr_results_task(
     Met à jour le statut de la task applicative et retourne le TaskModel final.
     """
     task = TaskModel.model_validate(json.loads(task_json))
+    task_id = task.id
     # Initialisation uniquement au premier passage
     if self.request.retries == 0:
         task.output = ResultModel(
@@ -167,7 +173,7 @@ def collect_ocr_results_task(
             extras={},
         )
         _update_task(
-            task.id,
+            task_id,
             TaskUpdateForm(
                 percentage=0,
                 status=TaskStatus.IN_PROGRESS.value,
@@ -182,7 +188,7 @@ def collect_ocr_results_task(
         task.output.percentage = 0.5
         task.output.texts_found = task_found.output.texts_found
         _update_task(
-            task.id,
+            task_id,
             TaskUpdateForm(
                 percentage=0.5,
                 status=TaskStatus.IN_PROGRESS.value,
@@ -203,9 +209,7 @@ def collect_ocr_results_task(
 
             if pending_ids:
                 n_done = len(ocr_task_ids) - len(pending_ids)
-                logger_abrege.debug(
-                    f"{len(pending_ids)}/{len(ocr_task_ids)} OCR tasks still pending, retrying in 10s"
-                )
+                logger_abrege.debug(f"{len(pending_ids)}/{len(ocr_task_ids)} OCR tasks still pending, retrying in 10s")
                 _update_task(
                     task.id,
                     TaskUpdateForm(
@@ -218,9 +222,7 @@ def collect_ocr_results_task(
                     countdown=10,
                     max_retries=60,
                     args=[pending_ids, task_json],
-                    exc=RetryableOCRError(
-                        f"{len(pending_ids)} OCR tasks not completed yet"
-                    ),
+                    exc=RetryableOCRError(f"{len(pending_ids)} OCR tasks not completed yet"),
                 )
 
             page_text = _extract_texts(page_result)
@@ -265,9 +267,7 @@ def _extract_texts(page_result: dict[int, dict]) -> dict[int, str]:
 
         result = OCRResult(**task_ocr["output"])
         if len(result.pages) != 1:
-            raise OCRError(
-                f"OCR task {task_ocr.get('id')} returned {len(result.pages)} pages, expected 1"
-            )
+            raise OCRError(f"OCR task {task_ocr.get('id')} returned {len(result.pages)} pages, expected 1")
         page_text[page_index] = sort_reader(page=result.pages[0])
 
     return page_text
@@ -290,7 +290,7 @@ def _finalize_task(task: TaskModel, page_text: dict[int, str]) -> dict:
     task.output.updated_at = int(time.time())
 
     task = summary_service.process_task(task)
-    result = updating_task.apply_async(
+    updating_task.apply_async(
         args=[
             task.id,
             TaskUpdateForm(
@@ -300,6 +300,6 @@ def _finalize_task(task: TaskModel, page_text: dict[int, str]) -> dict:
             ).model_dump(exclude_none=True),
         ],
         task_id=f"{task.id}-update-completed",
-    ).get()
+    )
 
-    return result
+    return task.model_dump()

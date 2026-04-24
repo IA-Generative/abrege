@@ -1,26 +1,20 @@
-import os
 from typing import List
 import time
 import json
 import traceback
 
-from abrege_service.utils.file import hash_file
 from abrege_service.modules.base import BaseService
 
 
 from abrege_service.config.openai import OpenAISettings
 
 from src.models.task import TaskModel, TaskStatus, TaskUpdateForm, TaskName
-from src.schemas.content import URLModel, DocumentModel
-from src.clients import celery_app, file_connector
-from celery import Task
+from src.schemas.content import URLModel
+from src.clients import celery_app
 from src.utils.logger import logger_abrege
-from src.services.merge_task_service import merge_task_service
-from src.models.merge_task import MergeTaskUpdateForm
-from .merge import launch_merge
 from abrege_service.clients.server import ServerClient
-from .chunk_task import launch_chunking
 from .update_task import updating_task
+from .base_task import AbregeTask
 from .tools import (
     cache_service,
     audio_service,
@@ -49,47 +43,6 @@ services: List[BaseService] = [
 ]
 
 
-class AbregeTask(Task):
-    def on_failure(self, exc, task_id, args, kwargs, einfo):
-        logger_abrege.error(f"Task {task_id} failed: {exc} - {traceback.format_exc()}")
-        task = merge_task_service.get_by_related_task_id(task_id=task_id)
-        if task:
-            merge_task_service.update_merge_task(
-                task_id=task.id,
-                merge_task_update=MergeTaskUpdateForm(
-                    status=TaskStatus.FAILED.value,
-                ),
-            )
-
-    def on_success(self, retval, task_id, args, kwargs):
-        logger_abrege.info(f"Task {task_id} completed successfully")
-        current_task = server_client.get_task(task_id=task_id)
-        launch_chunking.apply_async(
-            args=[json.dumps(current_task)],
-            task_id=f"{task_id}-chunking",
-        )
-        task = merge_task_service.get_by_related_task_id(task_id=task_id)
-        if task:
-            merge_task_service.update_merge_task(
-                task_id=task.id,
-                merge_task_update=MergeTaskUpdateForm(
-                    status=TaskStatus.COMPLETED.value,
-                    percentage=1,
-                ),
-            )
-            task = merge_task_service.get_by_related_task_id(task_id=task_id)
-            if task and merge_task_service.is_merge_completed(merge_id=task.merge_id):
-                logger_abrege.info(
-                    f"All tasks for merge {task.merge_id} are completed. Marking merge as completed."
-                )
-                merge_task_model = server_client.get_task(task_id=task.merge_id)
-                merge_task_model = TaskModel.model_validate(merge_task_model)
-                launch_merge.apply_async(
-                    args=[json.dumps(merge_task_model.model_dump())],
-                    task_id=task.merge_id,
-                )
-
-
 @celery_app.task(name=TaskName.ABREGE_URL.value, bind=True, base=AbregeTask)
 def process_url(self: AbregeTask, task: str):
     task: TaskModel = TaskModel.model_validate(json.loads(task))
@@ -100,9 +53,7 @@ def process_url(self: AbregeTask, task: str):
             updating_task.apply_async(
                 args=[
                     task.id,
-                    TaskUpdateForm(status=TaskStatus.IN_PROGRESS.value).model_dump(
-                        exclude_none=True
-                    ),
+                    TaskUpdateForm(status=TaskStatus.IN_PROGRESS.value).model_dump(exclude_none=True),
                 ],
                 task_id=f"{task.id}-update-in-progress",
             )
@@ -128,9 +79,7 @@ def process_url(self: AbregeTask, task: str):
             updating_task.apply_async(
                 args=[
                     task.id,
-                    TaskUpdateForm(
-                        status=TaskStatus.COMPLETED.value, percentage=1
-                    ).model_dump(exclude_none=True),
+                    TaskUpdateForm(status=TaskStatus.COMPLETED.value, percentage=1).model_dump(exclude_none=True),
                 ],
                 task_id=f"{task.id}-update-completed",
             )
@@ -148,7 +97,5 @@ def process_url(self: AbregeTask, task: str):
                 ],
                 task_id=f"{task.id}-update-failed",
             )
-            logger_abrege.error(
-                f"Task {task.id} failed: {e} - {traceback.format_exc()}"
-            )
+            logger_abrege.error(f"Task {task.id} failed: {e} - {traceback.format_exc()}")
             raise e

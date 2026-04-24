@@ -21,6 +21,7 @@ from src.utils.logger import logger_abrege
 
 from abrege_service.clients.server import ServerClient
 from .update_task import updating_task
+from .base_task import AbregeTask
 
 openai_settings = OpenAISettings()
 server_client = ServerClient()
@@ -45,8 +46,8 @@ summary_service = LangChainAsyncMapReduceService(
 )
 
 
-@celery_app.task(name=TaskName.ABREGE_TEXT.value, bind=True)
-def text_summary_process(self, task: str) -> dict:
+@celery_app.task(name=TaskName.ABREGE_TEXT.value, bind=True, base=AbregeTask)
+def text_summary_process(self: AbregeTask, task: str) -> dict:
     task: TaskModel = TaskModel.model_validate(json.loads(task))
     task.extras = task.extras or {}
     extra_log = {
@@ -60,9 +61,7 @@ def text_summary_process(self, task: str) -> dict:
             updating_task.apply_async(
                 args=[
                     task.id,
-                    TaskUpdateForm(status=TaskStatus.IN_PROGRESS.value).model_dump(
-                        exclude_none=True
-                    ),
+                    TaskUpdateForm(status=TaskStatus.IN_PROGRESS.value).model_dump(exclude_none=True),
                 ],
                 task_id=f"{task.id}-update-in-progress",
             )
@@ -82,9 +81,7 @@ def text_summary_process(self, task: str) -> dict:
                     texts_found=[task.input.text],
                 )
             else:
-                raise NotImplementedError(
-                    f"Content type {type(task.input).__name__} not supported in text_summary task"
-                )
+                raise NotImplementedError(f"Content type {type(task.input).__name__} not supported in text_summary task")
 
             logger_abrege.debug(f"Task processed in {time.time() - t} seconds")
 
@@ -96,9 +93,7 @@ def text_summary_process(self, task: str) -> dict:
             updating_task.apply_async(
                 args=[
                     task.id,
-                    TaskUpdateForm(
-                        status=TaskStatus.COMPLETED.value, percentage=1
-                    ).model_dump(exclude_none=True),
+                    TaskUpdateForm(status=TaskStatus.COMPLETED.value, percentage=1).model_dump(exclude_none=True),
                 ],
                 task_id=f"{task.id}-update-completed",
             )
@@ -116,7 +111,5 @@ def text_summary_process(self, task: str) -> dict:
                 ],
                 task_id=f"{task.id}-update-failed",
             )
-            logger_abrege.error(
-                f"Task {task.id} failed: {e} - {traceback.format_exc()}"
-            )
+            logger_abrege.error(f"Task {task.id} failed: {e} - {traceback.format_exc()}")
             raise e
