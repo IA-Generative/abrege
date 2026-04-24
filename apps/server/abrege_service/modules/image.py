@@ -69,9 +69,7 @@ class ImageFromVLM(BaseService):
                         {"type": "text", "text": self.prompt},
                         {
                             "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/jpeg;base64,{base64_image}"
-                            },
+                            "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
                         },
                     ],
                 }
@@ -104,9 +102,7 @@ class ImageFromVLM(BaseService):
                                 {"type": "text", "text": self.prompt},
                                 {
                                     "type": "image_url",
-                                    "image_url": {
-                                        "url": f"data:image/jpeg;base64,{base64_image}"
-                                    },
+                                    "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
                                 },
                             ],
                         }
@@ -185,9 +181,7 @@ class ImageFromVLM(BaseService):
             task.output.percentage = len(results) / len(images)
             process_pages = len(results)
             task.output.texts_found.extend(results)
-            task = self.update_task(
-                task=task, status=TaskStatus.IN_PROGRESS, result=task.output
-            )
+            task = self.update_task(task=task, status=TaskStatus.IN_PROGRESS, result=task.output)
             logger_abrege.debug(
                 f"Status {process_pages} / {len(images)} - time process : {time.time() - t:.2f}s",
             )

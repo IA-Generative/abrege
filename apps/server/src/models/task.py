@@ -90,3 +90,4 @@ class TaskName(StrEnum):
     ABREGE = "worker.tasks.abrege"
     CLASSIFICATION = "worker.tasks.classification"
     CHUNKING = "worker.tasks.chunking"
+    UPDATE_TASK = "worker.tasks.update_task"
