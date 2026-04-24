@@ -91,11 +91,7 @@ class OCRMIService(BaseService):
             logger.debug(
                 "Image file 1 image",
             )
-            images = [
-                self.ocr_mi_client.send(
-                    user_id=task.user_id, file_path=task.input.file_path
-                )
-            ]
+            images = [self.ocr_mi_client.send(user_id=task.user_id, file_path=task.input.file_path)]
         elif task.input.content_type in PDF_CONTENT_TYPES:
             images = LazyPdfImageList(pdf_path=task.input.file_path)
             logger.debug(
@@ -105,9 +101,7 @@ class OCRMIService(BaseService):
         else:
             raise NotImplementedError("")
 
-        task = self.update_task(
-            task=task, status=TaskStatus.IN_PROGRESS.value, result=task.output
-        )
+        task = self.update_task(task=task, status=TaskStatus.IN_PROGRESS.value, result=task.output)
 
         task_status_finish = [
             TaskStatus.COMPLETED.value,
@@ -140,9 +134,7 @@ class OCRMIService(BaseService):
                 file_path=task.input.file_path,
                 batch=batch,
             )
-            task.output.extras["task_ocr_id"] = list(
-                set(task_ids) & set(task.output.extras["task_ocr_id"])
-            )
+            task.output.extras["task_ocr_id"] = list(set(task_ids) & set(task.output.extras["task_ocr_id"]))
             logger.debug(
                 f"batch size {len(batch)} get {task_ids} as ocr id",
             )
@@ -165,9 +157,7 @@ class OCRMIService(BaseService):
                                 f"{task_id_tmp} is on error - {status}",
                             )
                             is_batch_processed = True
-                            task = self.update_task(
-                                task=task, status=status, result=task.output
-                            )
+                            task = self.update_task(task=task, status=status, result=task.output)
                             return task
                         if status in task_status_finish:
                             text = ""
@@ -199,9 +189,7 @@ class OCRMIService(BaseService):
                     text_found[j] = page_ocr_index[j]
 
                 task.output.texts_found = text_found
-                task = self.update_task(
-                    task=task, status=TaskStatus.IN_PROGRESS.value, result=task.output
-                )
+                task = self.update_task(task=task, status=TaskStatus.IN_PROGRESS.value, result=task.output)
                 logger.debug(
                     f"current status for ocr {status} - percentage {100 * percentage}%",
                 )

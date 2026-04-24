@@ -39,6 +39,7 @@ from src.models.merge_task import MergeTaskUpdateForm
 from .merge import launch_merge
 from abrege_service.clients.server import ServerClient
 from .chunk_task import launch_chunking
+from .update_task import updating_task
 
 openai_settings = OpenAISettings()
 server_client = ServerClient()
@@ -137,12 +138,12 @@ def launch(self: AbregeTask, task: str):
     extra_log = {"user_id": task.user_id, "task_id": task.id, "action": "launch"}
     with logger_abrege.contextualize(**extra_log):  # ty:ignore[unresolved-attribute]
         try:
-            server_client.update_task(
-                task_id=task.id,
-                data=TaskUpdateForm(
-                    status=TaskStatus.IN_PROGRESS.value,
-                    updated_at=int(time.time()),
-                ).model_dump(exclude_none=True),
+            updating_task.apply_async(
+                args=[
+                    task.id,
+                    TaskUpdateForm(status=TaskStatus.IN_PROGRESS.value).model_dump(exclude_none=True),
+                ],
+                task_id=f"{task.id}-update-in-progress",
             )
             logger_abrege.info("Task started processing")
             logger_abrege.info(f"Task input: {task.input}")
@@ -192,13 +193,16 @@ def launch(self: AbregeTask, task: str):
             return task.model_dump()
 
         except Exception as e:
-            server_client.update_task(
-                task_id=task.id,
-                data=TaskUpdateForm(
-                    status=TaskStatus.FAILED.value,
-                    updated_at=int(time.time()),
-                    extras={"error": f"{e} - {traceback.format_exc()}"},
-                ).model_dump(exclude_none=True),
+            updating_task.apply_async(
+                args=[
+                    task.id,
+                    TaskUpdateForm(
+                        status=TaskStatus.FAILED.value,
+                        updated_at=int(time.time()),
+                        extras={"error": f"{e} - {traceback.format_exc()}"},
+                    ).model_dump(exclude_none=True),
+                ],
+                task_id=f"{task.id}-update-failed",
             )
             logger_abrege.error(f"Task {task.id} failed: {e} - {traceback.format_exc()}")
             raise e
