@@ -43,6 +43,13 @@ TokenDep = Annotated[RequestContext, Depends(TokenVerifier)]
 DbDep = Annotated[AsyncSession, Depends(get_async_session_dep)]
 TaskServiceDep = Annotated[TaskService, Depends(TaskService)]
 
+PDF_CONTENT_TYPES = [
+    "application/pdf",
+    "application/x-pdf",
+    "application/x-bzpdf",
+    "application/x-gzpdf",
+]
+
 
 async def summarize_doc(
     db: DbDep,
@@ -122,6 +129,9 @@ async def summarize_doc(
             size=file.size,
             extras=content.extras if content else {},
         )
+        task_name = TaskName.ABREGE_DOCUMENT.value
+        if document_content.content_type in PDF_CONTENT_TYPES or document_content.content_type.startswith("image/"):
+            task_name = TaskName.ABREGE_PDF_IMAGE.value
 
         task_data = await service.update_task(
             db=db,
@@ -141,7 +151,7 @@ async def summarize_doc(
         os.remove(temp_file_path)
 
         celery_app.send_task(
-            name=TaskName.ABREGE.value,
+            name=task_name,
             args=[json.dumps(task_data.model_dump())],
             task_id=task_data.id,
             retries=2,

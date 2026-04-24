@@ -77,9 +77,7 @@ class AbregeTask(Task):
             )
             task = merge_task_service.get_by_related_task_id(task_id=task_id)
             if task and merge_task_service.is_merge_completed(merge_id=task.merge_id):
-                logger_abrege.info(
-                    f"All tasks for merge {task.merge_id} are completed. Marking merge as completed."
-                )
+                logger_abrege.info(f"All tasks for merge {task.merge_id} are completed. Marking merge as completed.")
                 merge_task_model = server_client.get_task(task_id=task.merge_id)
                 merge_task_model = TaskModel.model_validate(merge_task_model)
                 if merge_task_model is None:
@@ -95,15 +93,17 @@ class AbregeTask(Task):
 def process_non_pdf_images(self: AbregeTask, task: str):
     task: TaskModel = TaskModel.model_validate(json.loads(task))
     task.extras = task.extras or {}
-    extra_log = {"user_id": task.user_id, "task_id": task.id, "action": "launch"}
+    extra_log = {
+        "user_id": task.user_id,
+        "task_id": task.id,
+        "action": TaskName.ABREGE_DOCUMENT.value,
+    }
     with logger_abrege.contextualize(**extra_log):  # ty:ignore[unresolved-attribute]
         try:
             updating_task.apply_async(
                 args=[
                     task.id,
-                    TaskUpdateForm(status=TaskStatus.IN_PROGRESS.value).model_dump(
-                        exclude_none=True
-                    ),
+                    TaskUpdateForm(status=TaskStatus.IN_PROGRESS.value).model_dump(exclude_none=True),
                 ],
                 task_id=f"{task.id}-update-in-progress",
             )
@@ -113,20 +113,14 @@ def process_non_pdf_images(self: AbregeTask, task: str):
 
             if isinstance(task.input, DocumentModel):
                 logger_abrege.debug(f"Processing Document task: {task.id}")
-                file_path = file_connector.get_by_task_id(
-                    user_id=task.user_id, task_id=task.id
-                )
+                file_path = file_connector.get_by_task_id(user_id=task.user_id, task_id=task.id)
                 task.input.file_path = file_path
                 task.content_hash = hash_file(file_path)
                 if task.input.content_type in IMAGE_CONTENT_TYPES + PDF_CONTENT_TYPES:
-                    raise NotImplementedError(
-                        f"Content type {task.input.content_type} should be processed in abrege_pdf_image task"
-                    )
+                    raise NotImplementedError(f"Content type {task.input.content_type} should be processed in abrege_pdf_image task")
                 for service in services:
                     if service.is_available(task):
-                        logger_abrege.info(
-                            f"Using service: {service.__class__.__name__}"
-                        )
+                        logger_abrege.info(f"Using service: {service.__class__.__name__}")
                         task = service.process_task(task=task)
                         break
 
@@ -148,9 +142,7 @@ def process_non_pdf_images(self: AbregeTask, task: str):
             updating_task.apply_async(
                 args=[
                     task.id,
-                    TaskUpdateForm(
-                        status=TaskStatus.COMPLETED.value, percentage=1
-                    ).model_dump(exclude_none=True),
+                    TaskUpdateForm(status=TaskStatus.COMPLETED.value, percentage=1).model_dump(exclude_none=True),
                 ],
                 task_id=f"{task.id}-update-completed",
             )
@@ -168,7 +160,5 @@ def process_non_pdf_images(self: AbregeTask, task: str):
                 ],
                 task_id=f"{task.id}-update-failed",
             )
-            logger_abrege.error(
-                f"Task {task.id} failed: {e} - {traceback.format_exc()}"
-            )
+            logger_abrege.error(f"Task {task.id} failed: {e} - {traceback.format_exc()}")
             raise e
