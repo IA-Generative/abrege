@@ -210,6 +210,18 @@
 - clean code
 - clean code
 
+## [1.11.0](https://github.com/IA-Generative/abrege/compare/v1.10.0...v1.11.0) (2026-04-24)
+
+
+### Features
+
+* add new task implementations for URL and document processing, and refactor existing task handling ([4f0ea09](https://github.com/IA-Generative/abrege/commit/4f0ea09ddd23d9d964e5406dc9c49d14dfd25fef))
+* enhance task processing by adding new task modules and refactoring existing logic ([0017685](https://github.com/IA-Generative/abrege/commit/0017685d8f238d969a8617045eb5b4c59430326c))
+* **ocr:** implement OCR task handling with caching and error management ([9a67038](https://github.com/IA-Generative/abrege/commit/9a6703856a52528eb697e0973d6a82550ce5113b))
+* **task:** add Abrege text summary task implementation ([e5e3fda](https://github.com/IA-Generative/abrege/commit/e5e3fda24e44a52ab58b55e8527b5bf4fafe94c6))
+* **task:** implement updating task functionality with Celery integration ([b03f3e6](https://github.com/IA-Generative/abrege/commit/b03f3e6e436202d947910ce288bcaedd5355fcf4))
+* **task:** integrate text summary process into Abrege task workflow ([9c804a6](https://github.com/IA-Generative/abrege/commit/9c804a693c52f9058faf73bed35b8a4f53349308))
+
 ## [1.10.0](https://github.com/IA-Generative/abrege/compare/v1.9.1...v1.10.0) (2026-04-22)
 
 
