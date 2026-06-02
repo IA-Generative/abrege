@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [1.12.0](https://github.com/IA-Generative/abrege/compare/v1.11.0...v1.12.0) (2026-06-02)
+
+
+### Features
+
+* **mcp:** add mcp server ([1abdd8e](https://github.com/IA-Generative/abrege/commit/1abdd8e35d2c837214c57cad928e3b96d6eaa0b2))
+
 ## [1.11.0](https://github.com/IA-Generative/abrege/compare/v1.10.0...v1.11.0) (2026-04-24)
 
 
