@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [1.4.0](https://github.com/IA-Generative/abrege/compare/v1.3.0...v1.4.0) (2026-06-04)
+
+
+### Features
+
+* add NoCacheMiddleware to prevent caching of responses ([73a3a0f](https://github.com/IA-Generative/abrege/commit/73a3a0f59bc9f2df2da0088112e590ad43757d06))
+
 ## [1.3.0](https://github.com/IA-Generative/abrege/compare/v1.2.0...v1.3.0) (2026-02-26)
 
 
