@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/vue'
 import { createPinia } from 'pinia'
 import { createApp } from 'vue'
 
@@ -5,7 +6,7 @@ import { createApp } from 'vue'
 import VueMatomo from 'vue-matomo'
 import App from './App.vue'
 import router from './router/index'
-import { MATOMO_SITE_ID, MATOMO_SITE_URL } from './utils/constants'
+import { ENVIRONMENT, MATOMO_SITE_ID, MATOMO_SITE_URL, SENTRY_FRONTEND_DSN } from './utils/constants'
 import { keycloakInit } from './utils/keycloak'
 
 import '@gouvfr/dsfr/dist/core/core.main.min.css'
@@ -29,7 +30,23 @@ async function initializeApp () {
     await keycloakInit()
   }
 
-  createApp(App)
+  const app = createApp(App)
+
+  if (SENTRY_FRONTEND_DSN) {
+    try {
+      Sentry.init({
+        app,
+        dsn: SENTRY_FRONTEND_DSN,
+        environment: ENVIRONMENT,
+        sendDefaultPii: false,
+      })
+    }
+    catch (e) {
+      console.error('Sentry initialization failed, continuing without it:', e)
+    }
+  }
+
+  app
     .use(createPinia())
     .use(router)
     .use(VueMatomo, {

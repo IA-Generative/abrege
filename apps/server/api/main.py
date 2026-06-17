@@ -8,6 +8,24 @@ from src import __version__, __name__ as name
 from prometheus_fastapi_instrumentator import Instrumentator
 from starlette.middleware.base import BaseHTTPMiddleware
 
+import os
+
+import sentry_sdk
+from src.config.sentry import SentrySettings
+from src.utils.logger import logger_abrege
+
+_environment = os.getenv("ENVIRONMENT", "development")
+_sentry_settings = SentrySettings()
+if _sentry_settings.SENTRY_API_DSN and _environment != "testing":
+    try:
+        sentry_sdk.init(
+            dsn=_sentry_settings.SENTRY_API_DSN,
+            send_default_pii=_sentry_settings.SEND_DEFAULT_PII,
+            environment=_environment,
+        )
+    except Exception as e:
+        logger_abrege.warning(f"Sentry initialization failed, continuing without it: {e}")
+
 app = FastAPI(
     title=name,
     description="",
@@ -31,9 +49,7 @@ app.add_middleware(
 class NoCacheMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         response = await call_next(request)
-        response.headers["Cache-Control"] = (
-            "no-store, no-cache, must-revalidate, max-age=0, private"
-        )
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0, private"
         response.headers["Pragma"] = "no-cache"
         response.headers["Expires"] = "0"
         response.headers["Surrogate-Control"] = "no-store"

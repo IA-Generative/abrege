@@ -34,6 +34,23 @@ from src.clients import celery_app, file_connector
 from src import __version__
 from src.utils.logger import logger_abrege
 
+import sentry_sdk
+from sentry_sdk.integrations.celery import CeleryIntegration
+
+from src.config.sentry import SentrySettings
+
+_sentry_settings = SentrySettings()
+if _sentry_settings.SENTRY_WORKER_DSN:
+    try:
+        sentry_sdk.init(
+            dsn=_sentry_settings.SENTRY_WORKER_DSN,
+            send_default_pii=_sentry_settings.SEND_DEFAULT_PII,
+            environment=os.getenv("ENVIRONMENT", "development"),
+            integrations=[CeleryIntegration()],
+        )
+    except Exception as e:
+        logger_abrege.warning(f"Sentry initialization failed, continuing without it: {e}")
+
 openai_settings = OpenAISettings()
 cache_service = CacheService()
 audio_service = AudioVoskTranscriptionService(service_ratio_representaion=0.5)
@@ -89,6 +106,8 @@ os.makedirs(tmp_folder, exist_ok=True)
 def launch(self, task: str):
     task: TaskModel = TaskModel.model_validate(json.loads(task))
     task.extras = task.extras or {}
+    sentry_sdk.set_tag("task.id", task.id)
+    sentry_sdk.set_user({"id": task.user_id})
     extra_log = {"user_id": task.user_id, "task_id": task.id, "action": "launch"}
     try:
         task_table.update_task(
