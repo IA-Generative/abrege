@@ -82,3 +82,5 @@ async def delete_task(
         f"[Deleted task id : {task.id}][user id: {task.user_id}]",
         extra={"task_id": task.id, "user_id": task.user_id},
     )
+
+    return task

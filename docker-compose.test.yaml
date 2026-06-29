@@ -1,7 +1,6 @@
 services:
   db:
     image: postgres:15
-    container_name: abrege_postgres_test
     restart: always
     environment:
       POSTGRES_USER: postgres
@@ -19,14 +18,12 @@ services:
 
   redis:
     image: redis:latest
-    container_name: redis_test
     ports:
       - "6380:6379"
     restart: unless-stopped
 
   minio:
     image: minio/minio:latest
-    container_name: minio_test
     ports:
       - "9002:9000"
       - "9003:9001"
@@ -47,7 +44,6 @@ services:
       - alembic
       - upgrade
       - head
-    container_name: abrege_migration_test
     volumes:
       - ./apps/server/src/:/app/src/
       - ./apps/server/migration/:/app/migration

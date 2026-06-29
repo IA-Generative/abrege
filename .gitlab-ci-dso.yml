@@ -25,38 +25,70 @@ read_secret:
 docker-build-api:
   variables:
     WORKING_DIR: .
-    IMAGE_NAMES:  abrege-api:${CI_COMMIT_REF_SLUG} abrege-api:${CI_COMMIT_SHORT_SHA} # abrege-api:${CI_COMMIT_TAG}
+    IMAGE_NAMES: abrege-api:${TAG} abrege-api:${CI_COMMIT_SHORT_SHA}
     DOCKERFILE: "apps/server/api/Dockerfile"
     EXTRA_BUILD_ARGS: ""
   stage: docker-build
   extends:
     - .kaniko:build-push
+  rules:
+    - if: '$CI_COMMIT_TAG'
+      variables:
+        IMAGE_NAMES: abrege-api:${TAG} abrege-api:${CI_COMMIT_SHORT_SHA} abrege-api:${CI_COMMIT_TAG}
+    - if: '$CI_COMMIT_REF_NAME == "main"'
+      variables:
+        IMAGE_NAMES: abrege-api:${TAG} abrege-api:${CI_COMMIT_SHORT_SHA} abrege-api:latest
+    - when: on_success
 
 docker-build-service:
   variables:
     WORKING_DIR: .
-    IMAGE_NAMES:  abrege-service:${CI_COMMIT_REF_SLUG} abrege-service:${CI_COMMIT_SHORT_SHA} # abrege-service:${CI_COMMIT_TAG}
+    IMAGE_NAMES: abrege-service:${TAG} abrege-service:${CI_COMMIT_SHORT_SHA}
     DOCKERFILE: "apps/server/abrege_service/Dockerfile"
     EXTRA_BUILD_ARGS: ""
   stage: docker-build
   extends:
     - .kaniko:build-push
+  rules:
+    - if: '$CI_COMMIT_TAG'
+      variables:
+        IMAGE_NAMES: abrege-service:${TAG} abrege-service:${CI_COMMIT_SHORT_SHA} abrege-service:${CI_COMMIT_TAG}
+    - if: '$CI_COMMIT_REF_NAME == "main"'
+      variables:
+        IMAGE_NAMES: abrege-service:${TAG} abrege-service:${CI_COMMIT_SHORT_SHA} abrege-service:latest
+    - when: on_success
 
 docker-build-migration:
   variables:
     WORKING_DIR: .
-    IMAGE_NAMES:  abrege-migration:${CI_COMMIT_REF_SLUG} abrege-migration:${CI_COMMIT_SHORT_SHA} # abrege-migration:${CI_COMMIT_TAG}
+    IMAGE_NAMES: abrege-migration:${TAG} abrege-migration:${CI_COMMIT_SHORT_SHA}
     DOCKERFILE: "apps/server/migration/Dockerfile"
     EXTRA_BUILD_ARGS: ""
   stage: docker-build
   extends:
     - .kaniko:build-push
+  rules:
+    - if: '$CI_COMMIT_TAG'
+      variables:
+        IMAGE_NAMES: abrege-migration:${TAG} abrege-migration:${CI_COMMIT_SHORT_SHA} abrege-migration:${CI_COMMIT_TAG}
+    - if: '$CI_COMMIT_REF_NAME == "main"'
+      variables:
+        IMAGE_NAMES: abrege-migration:${TAG} abrege-migration:${CI_COMMIT_SHORT_SHA} abrege-migration:latest
+    - when: on_success
 
 docker-build-abrege-frontend:
   variables:
-    IMAGE_NAMES: abrege-frontend:${CI_COMMIT_REF_SLUG} abrege-frontend:${CI_COMMIT_SHORT_SHA} # abrege-frontend:${CI_COMMIT_TAG}
+    IMAGE_NAMES: abrege-frontend:${TAG} abrege-frontend:${CI_COMMIT_SHORT_SHA}
     DOCKERFILE: "./apps/client/Dockerfile"
     WORKING_DIR: "./apps/client"
   stage: docker-build
   extends:
     - .kaniko:build-push
+  rules:
+    - if: '$CI_COMMIT_TAG'
+      variables:
+        IMAGE_NAMES: abrege-frontend:${TAG} abrege-frontend:${CI_COMMIT_SHORT_SHA} abrege-frontend:${CI_COMMIT_TAG}
+    - if: '$CI_COMMIT_REF_NAME == "main"'
+      variables:
+        IMAGE_NAMES: abrege-frontend:${TAG} abrege-frontend:${CI_COMMIT_SHORT_SHA} abrege-frontend:latest
+    - when: on_success

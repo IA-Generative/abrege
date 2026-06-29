@@ -1,7 +1,6 @@
 services:
   minio:
     image: minio/minio:latest
-    container_name: minio_dev
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -15,7 +14,6 @@ services:
 
   redis:
     image: redis:latest
-    container_name: redis_dev
     ports:
       - "6379:6379"
     restart: unless-stopped
@@ -78,7 +76,6 @@ services:
       - ./apps/server/api/:/app/api/
       - ./apps/server/src/:/app/src/
       - ./apps/server/tests/:/app/tests/
-    container_name: abrege-api
     environment:
       DEV_MODE: "true"
       CELERY_APP_NAME: default
@@ -91,7 +88,6 @@ services:
       - .env
   db:
     image: postgres:15
-    container_name: abrege_postgres
     restart: always
     environment:
       POSTGRES_USER: postgres
@@ -110,7 +106,6 @@ services:
       - alembic
       - upgrade
       - head
-    container_name: abrege-migration
     volumes:
       - ./apps/server/src/:/app/src/
       - ./apps/server/migration/:/app/migration
@@ -120,7 +115,6 @@ services:
       - db
 
   abrege_frontend:
-    container_name: abrege_frontend
     restart: always
     working_dir: /app
     build:
