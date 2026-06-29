@@ -34,7 +34,7 @@ const http = createHttpClient(ABREGE_API_URL)
 
 const { addErrorMessage, addSuccessMessage } = useToaster()
 
-const VALID_MIME_TYPES = [
+const VALID_MIME_TYPES = new Set([
   'application/pdf',
   'image/jpeg',
   'image/png',
@@ -42,14 +42,9 @@ const VALID_MIME_TYPES = [
   'application/vnd.oasis.opendocument.presentation',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  // Ajout pour .doc et .txt :
   'application/msword',
   'text/plain',
-  // Other formats :
-  // 'audio/mpeg',
-  // 'video/mp4',
-  // 'audio/wav',
-]
+])
 
 export const useAbregeStore = defineStore('abrege', () => {
   const textToResume = ref('')
@@ -180,7 +175,7 @@ export const useAbregeStore = defineStore('abrege', () => {
    */
   function validateFile (file: File): { valid: boolean, message?: string } {
     // Vérification du type MIME
-    if (!VALID_MIME_TYPES.includes(file.type)) {
+    if (!VALID_MIME_TYPES.has(file.type)) {
       return {
         valid: false,
         message: `Type de fichier non supporté: ${file.type}. Utilisez PDF, JPEG ou PNG.`,
@@ -229,7 +224,7 @@ export const useAbregeStore = defineStore('abrege', () => {
         body,
       )
 
-      if (!task || !task.id) {
+      if (!task?.id) {
         throw new Error('Réponse API invalide: ID de tâche manquant')
       }
 
@@ -245,7 +240,7 @@ export const useAbregeStore = defineStore('abrege', () => {
   async function sendDocumentAndPoll () {
     if (!fileUpload.value) {
       error.value = 'Aucun fichier sélectionné'
-      return Promise.reject(error.value)
+      throw new Error(error.value)
     }
 
     const validation = validateFile(fileUpload.value)
@@ -278,17 +273,15 @@ export const useAbregeStore = defineStore('abrege', () => {
         },
       )
 
-      if (!task || !task.id) {
+      if (!task?.id) {
         throw new Error('Réponse API invalide: ID de tâche manquant')
       }
 
       await pollTask(task.id)
     }
     catch (err: any) {
-      // Extraire le message d'erreur le plus pertinent
       let errorMessage = 'Erreur lors de l\'envoi du fichier.'
       if (err.response) {
-        // Erreur de l'API avec réponse
         const status = err.response.status
         if (status === 413) {
           errorMessage = 'Fichier trop volumineux pour le serveur'
@@ -296,7 +289,7 @@ export const useAbregeStore = defineStore('abrege', () => {
         else if (status === 415) {
           errorMessage = 'Type de fichier non supporté'
         }
-        else if (err.response.data && err.response.data.message) {
+        else if (err.response.data?.message) {
           errorMessage = err.response.data.message
         }
       }
@@ -328,52 +321,80 @@ export const useAbregeStore = defineStore('abrege', () => {
     }
   }
 
-  // ----- POLLING FOR USER TASKS -----
+  // ----- USER TASKS LIST -----
   const userTasksPaginated = ref({
     total: 0,
     page: 1,
-    page_size: 10,
+    page_size: 100,
     items: [] as TaskModel[],
   })
 
-  let _stopUserTasksPolling = false
+  const SSO_BYPASS = import.meta.env.VITE_SSO_BYPASS === 'true'
 
-  async function _pollUserTasksLoop (page = 1, page_size = 10, intervalMs = 100000) {
-    _stopUserTasksPolling = false
-    while (!_stopUserTasksPolling) {
-      try {
-        const { data } = await http.get(`/task/user/`, { params: { offset: page, limit: page_size } })        
-        userTasksPaginated.value.total = data.total ?? 0
-        userTasksPaginated.value.page = data.page ?? page
-        userTasksPaginated.value.page_size = data.page_size ?? page_size
-        userTasksPaginated.value.items = data.items ?? []
-        
-      }
-      catch (err: any) {
-        
-      }
-      // wait before next poll
-      // stop early if requested
-      const wait = new Promise(resolve => setTimeout(resolve, intervalMs))
-      await wait
+  const MOCK_TASKS: TaskModel[] = [
+    {
+      id: 'mock-1', user_id: 'dev', type: 'text-url', status: 'completed', percentage: 1,
+      created_at: Date.now() / 1000 - 3600, updated_at: Date.now() / 1000 - 3500,
+      input: { url: 'https://example.com/article' } as any,
+      output: { type: 'summary', summary: 'Ceci est un résumé généré automatiquement pour tester l\'affichage de la modale.', word_count: 12, created_at: 0, model_name: 'mock', model_version: '1', texts_found: [], percentage: 1, nb_llm_calls: 1, partial_summaries: [] },
+      parameters: null,
+    },
+    {
+      id: 'mock-2', user_id: 'dev', type: 'document', status: 'completed', percentage: 1,
+      created_at: Date.now() / 1000 - 7200, updated_at: Date.now() / 1000 - 7100,
+      input: { raw_filename: 'rapport_annuel.pdf' } as any,
+      output: { type: 'summary', summary: 'Résumé du rapport annuel : les indicateurs sont en hausse de 12% sur l\'année.', word_count: 15, created_at: 0, model_name: 'mock', model_version: '1', texts_found: [], percentage: 1, nb_llm_calls: 2, partial_summaries: [] },
+      parameters: null,
+    },
+    {
+      id: 'mock-3', user_id: 'dev', type: 'text-url', status: 'in_progress', percentage: 0.6,
+      created_at: Date.now() / 1000 - 120, updated_at: Date.now() / 1000 - 60,
+      input: { text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.' } as any,
+      output: null,
+      parameters: null,
+    },
+    {
+      id: 'mock-4', user_id: 'dev', type: 'text-url', status: 'failed', percentage: 0,
+      created_at: Date.now() / 1000 - 86400, updated_at: Date.now() / 1000 - 86300,
+      input: { url: 'https://example.com/broken' } as any,
+      output: null,
+      parameters: null,
+    },
+  ]
+
+  async function fetchUserTasks (page = 1, page_size = 100) {
+    if (SSO_BYPASS) {
+      userTasksPaginated.value.total = MOCK_TASKS.length
+      userTasksPaginated.value.page = page
+      userTasksPaginated.value.page_size = page_size
+      userTasksPaginated.value.items = MOCK_TASKS
+      return
+    }
+    try {
+      const { data } = await http.get(`/task/user/`, { params: { offset: page, limit: page_size } })
+      userTasksPaginated.value.total = data.total ?? 0
+      userTasksPaginated.value.page = data.page ?? page
+      userTasksPaginated.value.page_size = data.page_size ?? page_size
+      userTasksPaginated.value.items = data.items ?? []
+    }
+    catch (err: any) {
+      addErrorMessage({ title: 'Erreur', description: `Impossible de récupérer les tâches: ${err?.message ?? err}` })
     }
   }
 
-  function startPollingUserTasks (page = 1, page_size = 10, intervalMs = 3000) {
-    // stop any existing poll
-    stopPollingUserTasks()
-    // load immediately and then continue polling
-    _pollUserTasksLoop(page, page_size, intervalMs)
+  // kept for backward compatibility (no-op stoppers)
+  function startPollingUserTasks (page = 1, page_size = 100) {
+    fetchUserTasks(page, page_size)
   }
 
-  function stopPollingUserTasks () {
-    _stopUserTasksPolling = true
-  }
+  function stopPollingUserTasks () { /* no-op: polling removed */ }
 
-  // ----- DELETE TASK (wrapped here so UI can use store for actions) -----
+  // ----- DELETE TASK -----
   async function deleteTask (taskId: string) {
     try {
       await http.delete(`/task/${taskId}`)
+      userTasksPaginated.value.items = userTasksPaginated.value.items.filter(t => t.id !== taskId)
+      userTasksPaginated.value.total = Math.max(0, userTasksPaginated.value.total - 1)
       addSuccessMessage({ title: 'Tâche supprimée', description: 'La tâche a été supprimée avec succès.' })
     }
     catch (err: any) {
@@ -383,9 +404,9 @@ export const useAbregeStore = defineStore('abrege', () => {
   }
 
   const formattedPercentage = computed(() =>
-    taskData.value && taskData.value.percentage != null
-      ? Math.round(taskData.value.percentage * 100)
-      : 0,
+    taskData.value?.percentage == null
+      ? 0
+      : Math.round(taskData.value.percentage * 100),
   )
 
   return {
@@ -407,8 +428,9 @@ export const useAbregeStore = defineStore('abrege', () => {
     sendContentAndPoll,
     sendDocumentAndPoll,
     downloadContentSummary,
-    // polling & management
+    // task list management
     userTasksPaginated,
+    fetchUserTasks,
     startPollingUserTasks,
     stopPollingUserTasks,
     deleteTask,

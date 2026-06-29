@@ -1,8 +1,0 @@
-{
-    "packages": {
-      ".": {
-        "package-name": "abrege",
-        "include-component-in-tag": false
-      }
-    }
-  }
