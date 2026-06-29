@@ -67,8 +67,8 @@ setup-frontend: clean-front ## Prépare le frontend pour le développement
 		pnpm install && \
 		pnpm update
 
-up-frontend: setup-frontend ## Lance l'environnement de développement en conteneurs pour le frontend
-	docker compose -f docker-compose.frontend.yml up -d
+up-frontend: ## Lance le frontend en conteneur
+	docker compose up -d abrege_frontend
 
 down: ## Eteint l'environnement de développement en conteneurs
 	docker compose down || true
@@ -82,10 +82,10 @@ clean: ## Nettoyage du dépôt
 	rm *.db
 
 clean-front: ## Nettoyage du frontend
-	docker compose -f docker-compose.frontend.yml down || true
+	docker compose stop abrege_frontend || true
 	rm -rf node_modules
 	cd apps/client && \
- 		rm -rf node_modules && \
+		rm -rf node_modules && \
 		rm -rf dist
 
 
@@ -126,9 +126,9 @@ test-abrege-api: init-db
 	docker compose exec abrege_api uv run pytest -s --cov=./api --cov-report=term-missing tests/api/ -ra -v --maxfail=0
 	make down-services
 
-test-abrege-service: init-db
-	docker compose run --rm test_runner
-	make down-services
+test-abrege-service: ## Lance les tests du service abrege dans un environnement isolé
+	docker compose -f docker-compose.test.yaml run --rm test_runner
+	docker compose -f docker-compose.test.yaml down -v
 
 
 test-sdk-python:

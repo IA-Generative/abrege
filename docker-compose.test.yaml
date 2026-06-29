@@ -1,0 +1,101 @@
+services:
+  db:
+    image: postgres:15
+    container_name: abrege_postgres_test
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: example_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:latest
+    container_name: redis_test
+    ports:
+      - "6380:6379"
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio_test
+    ports:
+      - "9002:9000"
+      - "9003:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_test_data:/data
+    command: server /data
+    restart: unless-stopped
+
+  migration:
+    image: abrege-migration
+    build:
+      context: .
+      dockerfile: apps/server/migration/Dockerfile
+    command:
+      - alembic
+      - upgrade
+      - head
+    container_name: abrege_migration_test
+    volumes:
+      - ./apps/server/src/:/app/src/
+      - ./apps/server/migration/:/app/migration
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+
+  test_runner:
+    image: abrege-service
+    build:
+      target: test
+      context: .
+      dockerfile: apps/server/abrege_service/Dockerfile
+    command:
+      - uv
+      - run
+      - pytest
+      - -s
+      - --cov=./abrege_service/
+      - --cov-report=term-missing
+      - tests/abrege_service/
+      - -ra
+      - -v
+      - --maxfail=1
+    volumes:
+      - ./apps/server/abrege_service/:/app/abrege_service/
+      - ./apps/server/src/:/app/src/
+      - ./apps/server/tests/:/app/tests/
+    depends_on:
+      migration:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+      minio:
+        condition: service_started
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_API_BASE: ${OPENAI_API_BASE}
+      OPENAI_API_MODEL: ${OPENAI_API_MODEL}
+      MAX_MODEL_TOKEN: 16300
+    env_file:
+      - .env
+    mem_limit: 1g
+
+volumes:
+  postgres_test_data:
+    driver: local
+  minio_test_data:
+    driver: local

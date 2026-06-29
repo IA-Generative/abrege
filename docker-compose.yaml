@@ -23,13 +23,23 @@ services:
   abrege_service:
     deploy:
       replicas: 1
-    command: ["celery", "-A", "abrege_service.main", "worker","--loglevel=info", "--pool=prefork","--concurrency=1", "-E"]
+    command:
+      [
+        "celery",
+        "-A",
+        "abrege_service.main",
+        "worker",
+        "--loglevel=info",
+        "--pool=prefork",
+        "--concurrency=1",
+        "-E",
+      ]
     image: abrege-service
     mem_limit: 1g
     volumes:
-    - ./apps/server/abrege_service/:/app/abrege_service/
-    - ./apps/server/src/:/app/src/
-    - ./apps/server/tests/:/app/tests/
+      - ./apps/server/abrege_service/:/app/abrege_service/
+      - ./apps/server/src/:/app/src/
+      - ./apps/server/tests/:/app/tests/
     build:
       target: test
       context: .
@@ -41,14 +51,21 @@ services:
     env_file:
       - .env
 
-  flower_abrege:
-    image: abrege-service
-    ports:
-      - "5555:5555"
-    command: ["celery", "-A", "abrege_service.main", "flower", "--address=0.0.0.0", "--port=5555"]
-    env_file:
-      - .env
-
+  # flower_abrege:
+  #   image: abrege-service
+  #   ports:
+  #     - "5555:5555"
+  #   command:
+  #     [
+  #       "celery",
+  #       "-A",
+  #       "abrege_service.main",
+  #       "flower",
+  #       "--address=0.0.0.0",
+  #       "--port=5555",
+  #     ]
+  #   env_file:
+  #     - .env
 
   abrege_api:
     image: abrege-api
@@ -56,15 +73,16 @@ services:
       context: .
       dockerfile: apps/server/api/Dockerfile
     ports:
-    - 5000:5000
+      - 5000:5000
     volumes:
-    - ./apps/server/api/:/app/api/
-    - ./apps/server/src/:/app/src/
-    - ./apps/server/tests/:/app/tests/
+      - ./apps/server/api/:/app/api/
+      - ./apps/server/src/:/app/src/
+      - ./apps/server/tests/:/app/tests/
     container_name: abrege-api
     environment:
       DEV_MODE: "true"
       CELERY_APP_NAME: default
+      VERIFY_TOKEN_MODEL: full-access
     depends_on:
       - redis
       - minio
@@ -73,7 +91,7 @@ services:
       - .env
   db:
     image: postgres:15
-    container_name: postgres
+    container_name: abrege_postgres
     restart: always
     environment:
       POSTGRES_USER: postgres
@@ -89,61 +107,43 @@ services:
       context: .
       dockerfile: apps/server/migration/Dockerfile
     command:
-    - alembic
-    - upgrade
-    - head
+      - alembic
+      - upgrade
+      - head
     container_name: abrege-migration
     volumes:
-    - ./apps/server/src/:/app/src/
-    - ./apps/server/migration/:/app/migration
-    env_file:
-      - .env
-    depends_on:
-      - db
-
-  test_runner:
-    image: abrege-service
-    build:
-      target: test
-      context: .
-      dockerfile: apps/server/abrege_service/Dockerfile
-    command:
-     - uv
-     - run
-     - pytest
-     - -s
-     - --cov=./abrege_service/
-     - --cov-report=term-missing
-     - tests/abrege_service/
-     - -ra
-     - -v
-     - --maxfail=1
-    volumes:
-      - ./apps/server/abrege_service/:/app/abrege_service/
       - ./apps/server/src/:/app/src/
-      - ./apps/server/tests/:/app/tests/
-    depends_on:
-      - db
-      - redis
-      - minio
-    environment:
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-      OPENAI_API_BASE: ${OPENAI_API_BASE}
-      OPENAI_API_MODEL: ${OPENAI_API_MODEL}
-      MAX_MODEL_TOKEN: 16300
+      - ./apps/server/migration/:/app/migration
     env_file:
       - .env
-    mem_limit: 1g
-  llm_guard_api:
-    image: laiyer/llm-guard-api:latest
-    ports:
-      - "8000:8000"
-    environment:
-      - AUTH_TOKEN=llm_guard
-      - LOG_LEVEL=DEBUG
-    volumes:
-      - ./apps/server/llm-guard/config/scanners.yml:/home/user/app/config/scanners.yml
+    depends_on:
+      - db
 
+  abrege_frontend:
+    container_name: abrege_frontend
+    restart: always
+    working_dir: /app
+    build:
+      context: ./apps/client
+      dockerfile: Dockerfile
+      target: dev
+    env_file:
+      - .env
+    ports:
+      - 8082:3000
+    volumes:
+      - ./apps/client:/app
+      - /app/node_modules
+
+  # llm_guard_api:
+  #   image: laiyer/llm-guard-api:latest
+  #   ports:
+  #     - "8000:8000"
+  #   environment:
+  #     - AUTH_TOKEN=llm_guard
+  #     - LOG_LEVEL=DEBUG
+  #   volumes:
+  #     - ./apps/server/llm-guard/config/scanners.yml:/home/user/app/config/scanners.yml
 
 volumes:
   minio_data:
