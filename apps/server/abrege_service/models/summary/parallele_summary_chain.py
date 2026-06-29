@@ -5,8 +5,8 @@ import traceback
 import asyncio
 import hashlib
 
-from langchain.chains.summarize import load_summarize_chain
 from langchain_core.documents import Document
+from langchain_core.output_parsers import StrOutputParser
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import PromptTemplate
 from langfuse import Langfuse, get_client
@@ -49,6 +49,24 @@ COMBINE_PROMPT = PromptTemplate(
 )
 
 
+class StuffSummarizeChain:
+    """Reimplementation of the legacy `load_summarize_chain(chain_type="stuff")`
+    removed in LangChain 1.x: stuffs every input document's content into the
+    prompt's "text" variable and runs it through the LLM."""
+
+    def __init__(self, llm: ChatOpenAI, prompt: PromptTemplate):
+        self._runnable = prompt | llm | StrOutputParser()
+
+    async def ainvoke(self, inputs: dict, config: dict | None = None) -> dict:
+        input_documents: list[Document] = inputs["input_documents"]
+        chain_inputs = {
+            **{key: value for key, value in inputs.items() if key != "input_documents"},
+            "text": "\n\n".join(doc.page_content for doc in input_documents),
+        }
+        output_text = await self._runnable.ainvoke(chain_inputs, config=config or {})
+        return {"input_documents": input_documents, "output_text": output_text}
+
+
 Langfuse(
     public_key=os.environ.get("LANGFUSE_PUBLIC_KEY", "your-public-key"),
     secret_key=os.environ.get("LANGFUSE_SECRET_KEY", "your-secret-key"),
@@ -73,9 +91,9 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
         super().__init__()
         self.llm = llm
         self.max_concurrency = max_concurrency
-        self.llm_chain_map = load_summarize_chain(llm, chain_type="stuff", prompt=MAP_PROMPT)
-        self.combine_document_chain = load_summarize_chain(llm, chain_type="stuff", prompt=COMBINE_PROMPT)
-        self.collapse_document_chain = load_summarize_chain(llm, chain_type="stuff", prompt=COMBINE_PROMPT)
+        self.llm_chain_map = StuffSummarizeChain(llm, MAP_PROMPT)
+        self.combine_document_chain = StuffSummarizeChain(llm, COMBINE_PROMPT)
+        self.collapse_document_chain = StuffSummarizeChain(llm, COMBINE_PROMPT)
         if isinstance(max_token, str):
             max_token = int(max_token)
         self.max_token = max_token

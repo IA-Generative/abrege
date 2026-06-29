@@ -1,11 +1,13 @@
 import pytest
 import os
+import random
+import openai
+from pathlib import Path
 from langchain_openai import ChatOpenAI
 from langchain_core.documents import Document
 from src.schemas.task import TaskModel, TaskForm, task_table, TaskStatus
 from src.schemas.result import ResultModel
 from src.schemas.parameters import SummaryParameters
-from datasets import load_dataset
 from abrege_service.utils.text import (
     split_texts_by_token_limit,
     split_texts_by_word_limit,
@@ -17,7 +19,21 @@ from abrege_service.models.summary.parallele_summary_chain import (
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 OPENAI_API_BASE = os.environ.get("OPENAI_API_BASE")
-is_openai_is_set = all([OPENAI_API_BASE, OPENAI_API_KEY])
+OPENAI_API_MODEL = os.environ.get("OPENAI_API_MODEL")
+
+
+def _check_openai_model_access() -> bool:
+    if not (OPENAI_API_KEY and OPENAI_API_BASE and OPENAI_API_MODEL):
+        return False
+    try:
+        openai.OpenAI(api_key=OPENAI_API_KEY, base_url=OPENAI_API_BASE).models.retrieve(OPENAI_API_MODEL)
+        return True
+    except Exception as e:
+        logger_abrege.warning(f"OpenAI model '{OPENAI_API_MODEL}' not available for tests: {e}")
+        return False
+
+
+is_openai_is_set = _check_openai_model_access()
 
 
 @pytest.fixture(scope="module")
@@ -33,20 +49,16 @@ def mock_llm() -> ChatOpenAI:
     )
 
 
+def _load_local_documents(n: int = 20) -> list[str]:
+    text = Path("tests/data/2106.11520v2-markitdown.md").read_text(encoding="utf-8")
+    paragraphs = [p.strip() for p in text.split("\n\n") if len(p.strip()) > 200]
+    rng = random.Random(42)
+    rng.shuffle(paragraphs)
+    return [paragraphs[i % len(paragraphs)] for i in range(n)]
+
+
 def dummy_task_large() -> TaskModel:
-    dataset_stream = load_dataset(
-        "csebuetnlp/xlsum",
-        "french",
-        cache_dir="tests/data/text",
-        streaming=True,
-        trust_remote_code=True,
-    )
-    dataset = dataset_stream["train"].shuffle(seed=42).take(20)
-    text_found = []
-    for data in dataset:
-        assert "text" in data
-        assert "summary" in data
-        text_found.append(data["text"])
+    text_found = _load_local_documents(20)
 
     task = task_table.insert_new_task(
         user_id="1",
