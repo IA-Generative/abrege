@@ -2,6 +2,8 @@ import os
 import re
 import requests
 
+from scrapling.fetchers import Fetcher
+
 
 def is_valid_url(url: str) -> bool:
     regex = re.compile(
@@ -41,18 +43,30 @@ def get_content_type(url: str) -> str:
         print(f"Erreur lors de la requête : {e}")
 
 
-def download_file(url: str, filename=None, folder_dest: str = None):
+def download_file(url: str, folder_dest: str | None = None):
     if folder_dest and not os.path.exists(folder_dest):
         os.makedirs(folder_dest, exist_ok=True)
+    dest_name = url.split("/")[-1] or "downloaded_file"
+    dest_path = os.path.join(folder_dest, dest_name) if folder_dest else dest_name
+
+    content_type = get_content_type(url) or ""
+    if "text/html" in content_type:
+        try:
+            page = Fetcher.get(url)
+            with open(dest_path, "wb") as f:
+                f.write(page.body)
+            return dest_path
+        except Exception as e:
+            print(f"Erreur lors de la récupération de la page : {e}")
+            return
+
     try:
         with requests.get(url, stream=True) as response:
             response.raise_for_status()
-            filename = url.split("/")[-1] or "downloaded_file"
-            filename = os.path.join(folder_dest, filename) if folder_dest else filename
-            with open(filename, "wb") as f:
+            with open(dest_path, "wb") as f:
                 for chunk in response.iter_content(chunk_size=8192):
                     if chunk:  # filtrer les keep-alive
                         f.write(chunk)
-        return filename
+        return dest_path
     except requests.RequestException as e:
         print(f"Erreur lors du téléchargement : {e}")
