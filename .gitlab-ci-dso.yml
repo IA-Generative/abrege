@@ -23,72 +23,106 @@ read_secret:
     - .vault:read_secret
 
 docker-build-api:
-  variables:
-    WORKING_DIR: .
-    IMAGE_NAMES: abrege-api:${TAG} abrege-api:${CI_COMMIT_SHORT_SHA}
-    DOCKERFILE: "apps/server/api/Dockerfile"
-    EXTRA_BUILD_ARGS: ""
   stage: docker-build
   extends:
     - .kaniko:build-push
+  variables:
+    DOCKERFILE: "apps/server/api/Dockerfile"
+    IMAGE_NAMES: ""  # Overridden in before_script
   rules:
-    - if: '$CI_COMMIT_TAG'
-      variables:
-        IMAGE_NAMES: abrege-api:${TAG} abrege-api:${CI_COMMIT_SHORT_SHA} abrege-api:${CI_COMMIT_TAG}
-    - if: '$CI_COMMIT_REF_NAME == "main"'
-      variables:
-        IMAGE_NAMES: abrege-api:${TAG} abrege-api:${CI_COMMIT_SHORT_SHA} abrege-api:latest
-    - when: on_success
+    - when: always
+  before_script:
+    - |
+      SHORT_SHA=$(echo $CI_COMMIT_SHA | cut -c1-7)
+      TAGS="abrege-api:$SHORT_SHA"
+      TAGS="$TAGS abrege-api:$CI_COMMIT_REF_SLUG"
+      if [ -n "$CI_COMMIT_TAG" ]; then
+        TAG_WITHOUT_V=${CI_COMMIT_TAG#v}
+        TAGS="$TAGS abrege-api:$TAG_WITHOUT_V"
+        if echo "$CI_COMMIT_TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+          TAGS="$TAGS abrege-api:latest"
+        fi
+      elif [ "$CI_COMMIT_BRANCH" = "main" ]; then
+        TAGS="$TAGS abrege-api:latest"
+      fi
+      export IMAGE_NAMES="$TAGS"
+      echo "Building with tags: $IMAGE_NAMES"
 
 docker-build-service:
-  variables:
-    WORKING_DIR: .
-    IMAGE_NAMES: abrege-service:${TAG} abrege-service:${CI_COMMIT_SHORT_SHA}
-    DOCKERFILE: "apps/server/abrege_service/Dockerfile"
-    EXTRA_BUILD_ARGS: ""
   stage: docker-build
   extends:
     - .kaniko:build-push
+  variables:
+    DOCKERFILE: "apps/server/abrege_service/Dockerfile"
+    IMAGE_NAMES: ""  # Overridden in before_script
   rules:
-    - if: '$CI_COMMIT_TAG'
-      variables:
-        IMAGE_NAMES: abrege-service:${TAG} abrege-service:${CI_COMMIT_SHORT_SHA} abrege-service:${CI_COMMIT_TAG}
-    - if: '$CI_COMMIT_REF_NAME == "main"'
-      variables:
-        IMAGE_NAMES: abrege-service:${TAG} abrege-service:${CI_COMMIT_SHORT_SHA} abrege-service:latest
-    - when: on_success
+    - when: always
+  before_script:
+    - |
+      SHORT_SHA=$(echo $CI_COMMIT_SHA | cut -c1-7)
+      TAGS="abrege-service:$SHORT_SHA"
+      TAGS="$TAGS abrege-service:$CI_COMMIT_REF_SLUG"
+      if [ -n "$CI_COMMIT_TAG" ]; then
+        TAG_WITHOUT_V=${CI_COMMIT_TAG#v}
+        TAGS="$TAGS abrege-service:$TAG_WITHOUT_V"
+        if echo "$CI_COMMIT_TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+          TAGS="$TAGS abrege-service:latest"
+        fi
+      elif [ "$CI_COMMIT_BRANCH" = "main" ]; then
+        TAGS="$TAGS abrege-service:latest"
+      fi
+      export IMAGE_NAMES="$TAGS"
+      echo "Building with tags: $IMAGE_NAMES"
 
 docker-build-migration:
-  variables:
-    WORKING_DIR: .
-    IMAGE_NAMES: abrege-migration:${TAG} abrege-migration:${CI_COMMIT_SHORT_SHA}
-    DOCKERFILE: "apps/server/migration/Dockerfile"
-    EXTRA_BUILD_ARGS: ""
   stage: docker-build
   extends:
     - .kaniko:build-push
+  variables:
+    DOCKERFILE: "apps/server/migration/Dockerfile"
+    IMAGE_NAMES: ""  # Overridden in before_script
   rules:
-    - if: '$CI_COMMIT_TAG'
-      variables:
-        IMAGE_NAMES: abrege-migration:${TAG} abrege-migration:${CI_COMMIT_SHORT_SHA} abrege-migration:${CI_COMMIT_TAG}
-    - if: '$CI_COMMIT_REF_NAME == "main"'
-      variables:
-        IMAGE_NAMES: abrege-migration:${TAG} abrege-migration:${CI_COMMIT_SHORT_SHA} abrege-migration:latest
-    - when: on_success
+    - when: always
+  before_script:
+    - |
+      SHORT_SHA=$(echo $CI_COMMIT_SHA | cut -c1-7)
+      TAGS="abrege-migration:$SHORT_SHA"
+      TAGS="$TAGS abrege-migration:$CI_COMMIT_REF_SLUG"
+      if [ -n "$CI_COMMIT_TAG" ]; then
+        TAG_WITHOUT_V=${CI_COMMIT_TAG#v}
+        TAGS="$TAGS abrege-migration:$TAG_WITHOUT_V"
+        if echo "$CI_COMMIT_TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+          TAGS="$TAGS abrege-migration:latest"
+        fi
+      elif [ "$CI_COMMIT_BRANCH" = "main" ]; then
+        TAGS="$TAGS abrege-migration:latest"
+      fi
+      export IMAGE_NAMES="$TAGS"
+      echo "Building with tags: $IMAGE_NAMES"
 
 docker-build-abrege-frontend:
-  variables:
-    IMAGE_NAMES: abrege-frontend:${TAG} abrege-frontend:${CI_COMMIT_SHORT_SHA}
-    DOCKERFILE: "./apps/client/Dockerfile"
-    WORKING_DIR: "./apps/client"
   stage: docker-build
   extends:
     - .kaniko:build-push
+  variables:
+    DOCKERFILE: "./apps/client/Dockerfile"
+    WORKING_DIR: "./apps/client"
+    IMAGE_NAMES: ""  # Overridden in before_script
   rules:
-    - if: '$CI_COMMIT_TAG'
-      variables:
-        IMAGE_NAMES: abrege-frontend:${TAG} abrege-frontend:${CI_COMMIT_SHORT_SHA} abrege-frontend:${CI_COMMIT_TAG}
-    - if: '$CI_COMMIT_REF_NAME == "main"'
-      variables:
-        IMAGE_NAMES: abrege-frontend:${TAG} abrege-frontend:${CI_COMMIT_SHORT_SHA} abrege-frontend:latest
-    - when: on_success
+    - when: always
+  before_script:
+    - |
+      SHORT_SHA=$(echo $CI_COMMIT_SHA | cut -c1-7)
+      TAGS="abrege-frontend:$SHORT_SHA"
+      TAGS="$TAGS abrege-frontend:$CI_COMMIT_REF_SLUG"
+      if [ -n "$CI_COMMIT_TAG" ]; then
+        TAG_WITHOUT_V=${CI_COMMIT_TAG#v}
+        TAGS="$TAGS abrege-frontend:$TAG_WITHOUT_V"
+        if echo "$CI_COMMIT_TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+          TAGS="$TAGS abrege-frontend:latest"
+        fi
+      elif [ "$CI_COMMIT_BRANCH" = "main" ]; then
+        TAGS="$TAGS abrege-frontend:latest"
+      fi
+      export IMAGE_NAMES="$TAGS"
+      echo "Building with tags: $IMAGE_NAMES"
