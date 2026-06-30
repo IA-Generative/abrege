@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [2.1.0](https://github.com/IA-Generative/abrege/compare/v2.0.2...v2.1.0) (2026-06-30)
+
+
+### Features
+
+* **scrap:** scrap web content ([8f95fab](https://github.com/IA-Generative/abrege/commit/8f95fabc1e4bb19ea29d192fdae396da489ecc19))
+
 ## [2.0.2](https://github.com/IA-Generative/abrege/compare/v2.0.1...v2.0.2) (2026-06-30)
 
 
