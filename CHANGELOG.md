@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [2.0.1](https://github.com/IA-Generative/abrege/compare/v2.0.0...v2.0.1) (2026-06-30)
+
+
+### Bug Fixes
+
+* **security:** fix security ([2122bbb](https://github.com/IA-Generative/abrege/commit/2122bbb889cae76eb3180ee1d27960e1e4fdc6dd))
+
 ## [2.0.0](https://github.com/IA-Generative/abrege/compare/v1.3.0...v2.0.0) (2026-06-30)
 
 
