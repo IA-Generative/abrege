@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [2.1.1](https://github.com/IA-Generative/abrege/compare/v2.1.0...v2.1.1) (2026-07-01)
+
+
+### Bug Fixes
+
+* **dso:** cifor release ([1739b03](https://github.com/IA-Generative/abrege/commit/1739b0334222c739fad8e3ed90b66d8e4d0e1139))
+
 ## [2.1.0](https://github.com/IA-Generative/abrege/compare/v2.0.2...v2.1.0) (2026-06-30)
 
 
