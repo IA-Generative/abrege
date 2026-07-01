@@ -3,7 +3,9 @@ name: Trigger dso sync
 on:
   push:
     branches:
-    - '**'
+      - "**"
+    tags:
+      - "**"
   workflow_dispatch:
 
 jobs:
