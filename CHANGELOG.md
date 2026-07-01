@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [2.1.2](https://github.com/IA-Generative/abrege/compare/v2.1.1...v2.1.2) (2026-07-01)
+
+
+### Bug Fixes
+
+* **tests:** scrappiling import ([6aed9f5](https://github.com/IA-Generative/abrege/commit/6aed9f5bb69fe19b1d076b162ca2e07c0db0f516))
+
 ## [2.1.1](https://github.com/IA-Generative/abrege/compare/v2.1.0...v2.1.1) (2026-07-01)
 
 
