@@ -22,13 +22,14 @@ read_secret:
   extends:
     - .vault:read_secret
 
-docker-build-api:
+docker-build-abrege-api:
   stage: docker-build
   extends:
     - .kaniko:build-push
   variables:
     DOCKERFILE: "apps/server/api/Dockerfile"
     IMAGE_NAMES: ""  # Overridden in before_script
+    EXTRA_BUILD_ARGS: "--build-arg DOCKERHUB_MIRROR_URL=${DOCKERHUB_MIRROR_URL}"
   rules:
     - when: always
   before_script:
@@ -48,13 +49,14 @@ docker-build-api:
       export IMAGE_NAMES="$TAGS"
       echo "Building with tags: $IMAGE_NAMES"
 
-docker-build-service:
+docker-build-abrege-service:
   stage: docker-build
   extends:
     - .kaniko:build-push
   variables:
     DOCKERFILE: "apps/server/abrege_service/Dockerfile"
     IMAGE_NAMES: ""  # Overridden in before_script
+    EXTRA_BUILD_ARGS: "--build-arg DOCKERHUB_MIRROR_URL=${DOCKERHUB_MIRROR_URL}"
   rules:
     - when: always
   before_script:
@@ -74,13 +76,14 @@ docker-build-service:
       export IMAGE_NAMES="$TAGS"
       echo "Building with tags: $IMAGE_NAMES"
 
-docker-build-migration:
+docker-build-abrege-migration:
   stage: docker-build
   extends:
     - .kaniko:build-push
   variables:
     DOCKERFILE: "apps/server/migration/Dockerfile"
     IMAGE_NAMES: ""  # Overridden in before_script
+    EXTRA_BUILD_ARGS: "--build-arg DOCKERHUB_MIRROR_URL=${DOCKERHUB_MIRROR_URL}"
   rules:
     - when: always
   before_script:
@@ -108,6 +111,7 @@ docker-build-abrege-frontend:
     DOCKERFILE: "./apps/client/Dockerfile"
     WORKING_DIR: "./apps/client"
     IMAGE_NAMES: ""  # Overridden in before_script
+    EXTRA_BUILD_ARGS: "--build-arg DOCKERHUB_MIRROR_URL=${DOCKERHUB_MIRROR_URL}"
   rules:
     - when: always
   before_script:
