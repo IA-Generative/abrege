@@ -1,5 +1,9 @@
-from typing import Dict, Optional, Any, List, Union
+from typing import Dict, Optional, Any, List, Union, Literal
 from pydantic import BaseModel, ConfigDict
+
+EntityType = Literal[
+    "PERSON", "DATE", "ORGANIZATION", "LOCATION", "AMOUNT", "EVENT", "OTHER"
+]
 
 
 class Text(BaseModel):
@@ -11,6 +15,20 @@ class Text(BaseModel):
 class PartialSummary(Text):
     text1: Text
     text2: Text
+
+
+class EntityModel(BaseModel):
+    type: EntityType
+    text: str
+    contexts: List[str] = []
+    pages: List[int] = []
+
+
+class RelationshipModel(BaseModel):
+    source_index: int
+    target_index: int
+    relationship_type: str
+    description: str
 
 
 class ResultModel(BaseModel):
@@ -31,3 +49,5 @@ class SummaryModel(ResultModel):
     word_count: int
     nb_llm_calls: Optional[int] = 0
     type: str = "summary"
+    entities: List[EntityModel] = []
+    relationships: List[RelationshipModel] = []

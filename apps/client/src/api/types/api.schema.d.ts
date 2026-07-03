@@ -335,6 +335,34 @@ export interface components {
       content: components['schemas']['UrlContent'] | components['schemas']['TextContent'] | components['schemas']['Content'] | null
       parameters?: components['schemas']['SummaryParameters'] | null
     }
+    /** EntityModel */
+    EntityModel: {
+      /** Type */
+      type: 'PERSON' | 'DATE' | 'ORGANIZATION' | 'LOCATION' | 'AMOUNT' | 'EVENT' | 'OTHER'
+      /** Text */
+      text: string
+      /**
+       * Contexts
+       * @default []
+       */
+      contexts: string[]
+      /**
+       * Pages
+       * @default []
+       */
+      pages: number[]
+    }
+    /** RelationshipModel */
+    RelationshipModel: {
+      /** Source Index */
+      source_index: number
+      /** Target Index */
+      target_index: number
+      /** Relationship Type */
+      relationship_type: string
+      /** Description */
+      description: string
+    }
     /** PartialSummary */
     PartialSummary: {
       /** Id */
@@ -416,6 +444,16 @@ export interface components {
        * @default []
        */
       partial_summaries: (components['schemas']['PartialSummary'] | components['schemas']['Text'])[] | null
+      /**
+       * Entities
+       * @default []
+       */
+      entities: components['schemas']['EntityModel'][]
+      /**
+       * Relationships
+       * @default []
+       */
+      relationships: components['schemas']['RelationshipModel'][]
     }
     /** SummaryParameters */
     SummaryParameters: {
