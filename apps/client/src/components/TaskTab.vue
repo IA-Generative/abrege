@@ -11,6 +11,7 @@
             <th @click="sortBy('created_at')">Créé le ⬍</th>
             <th @click="sortBy('updated_at')">Mis à jour le ⬍</th>
             <th>Voir résultat</th>
+            <th>Détail</th>
             <th>Supprimer</th>
           </tr>
         </thead>
@@ -50,6 +51,18 @@
             <td>
               <DsfrButton
                 size="sm"
+                priority="secondary"
+                icon="ri-eye-line"
+                icon-only
+                label="Voir le détail"
+                :disabled="task.status !== 'completed'"
+                @click="router.push({ name: 'task-detail', params: { task_id: task.id } })"
+              />
+            </td>
+
+            <td>
+              <DsfrButton
+                size="sm"
                 priority="tertiary"
                 :disabled="task.status !== 'completed' && (task.percentage ?? 0) < 100"
                 @click="removeTask(task.id)"
@@ -66,7 +79,10 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAbregeStore } from '@/stores/abrege'
+
+const router = useRouter()
 
 const abrege = useAbregeStore()
 

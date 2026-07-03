@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, watch } from 'vue'
 
 interface TabData {
   label: string
@@ -8,10 +8,19 @@ interface TabData {
 
 const props = defineProps<{
   tabsData: TabData[]
+  modelValue?: number
 }>()
 
+const emit = defineEmits<{
+  (e: 'update:modelValue', value: number): void
+}>()
+
+const activeTab = computed({
+  get: () => props.modelValue ?? 0,
+  set: (v) => emit('update:modelValue', v),
+})
+
 const tabListId = 'dynamic-tabs'
-const activeTab = ref(0)
 
 // Générer les onglets à partir de la prop tabsData
 const tabs = computed(() =>
@@ -19,7 +28,7 @@ const tabs = computed(() =>
     id: `tab-${index}`,
     panelId: `panel-${index}`,
     label: tab.label,
-    slot: tab.slot || `tab-${index}-content`, // Utiliser un slot par défaut si non spécifié
+    slot: tab.slot || `tab-${index}-content`,
   })),
 )
 
