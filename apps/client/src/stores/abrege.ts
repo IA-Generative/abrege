@@ -427,6 +427,7 @@ export const useAbregeStore = defineStore('abrege', () => {
     reset,
     sendContentAndPoll,
     sendDocumentAndPoll,
+    getTask,
     downloadContentSummary,
     // task list management
     userTasksPaginated,

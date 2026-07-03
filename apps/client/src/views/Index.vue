@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import DocumentDownload from '@gouvfr/dsfr/dist/artwork/pictograms/document/document-download.svg'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import ComminitySVG from '@/assets/pictograms/community.svg'
 import DocumentSearch from '@/assets/pictograms/document-search.svg'
 import ResumeCard from '@/assets/resume-card.png'
@@ -10,10 +11,11 @@ import ResumeInfoBulle from '@/components/ResumeInfoBulle.vue'
 import UploadDocumentTab from '@/components/UploadDocumentTab.vue'
 import UrlTab from '@/components/UrlTab.vue'
 import TaskTab from '@/components/TaskTab.vue'
-// FIXME : Decomment for authentication
-// import { getKeycloak } from '@/utils/keycloak/keycloak'
-// const keycloak = getKeycloak()
-// const isLoggedIn = ref<boolean | undefined>(keycloak.authenticated)
+
+const TAB_ROUTES = ['text', 'url', 'document', 'tasks'] as const
+
+const route = useRoute()
+const router = useRouter()
 
 const screenWidth = ref(window.innerWidth)
 const isMobile = ref(screenWidth.value < 768)
@@ -25,6 +27,16 @@ const tabs = ref([
   { label: 'd\'un document téléchargé', slot: 'tab-2-content' },
   { label: 'des tâches', slot: 'tab-3-content' },
 ])
+
+const activeTab = computed({
+  get: () => {
+    const idx = TAB_ROUTES.indexOf(route.params.tab as any)
+    return idx >= 0 ? idx : 0
+  },
+  set: (idx: number) => {
+    router.replace({ name: 'resume-tab', params: { tab: TAB_ROUTES[idx] } })
+  },
+})
 
 const myOtherTools = ref([
   {
@@ -61,7 +73,7 @@ const myOtherTools = ref([
         </h1>
       </div>
       <div>
-        <CustomTabs :tabs-data="tabs">
+        <CustomTabs v-model="activeTab" :tabs-data="tabs">
           <template #tab-0-content>
             <ResumeInfoBulle />
             <CopiedTextTab />

@@ -5,6 +5,7 @@ import { useUserStore } from '@/stores/user'
 import { KEYCLOAK_CLIENT_ID, KEYCLOAK_REALM, KEYCLOAK_REDIRECT_URI, KEYCLOAK_URL } from '@/utils/constants'
 import { getKeycloak } from '@/utils/keycloak'
 import ResumeView from '@/views/Index.vue'
+import TaskDetailView from '@/views/TaskDetail.vue'
 
 function redirectToSSO () {
   const loginUrl = `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/auth?client_id=${encodeURIComponent(KEYCLOAK_CLIENT_ID)}&redirect_uri=${encodeURIComponent(KEYCLOAK_REDIRECT_URI)}&response_type=code`
@@ -39,9 +40,19 @@ function authGuard (_path: string) {
 const routes = [
   {
     path: '/',
-    name: 'resume',
+    redirect: '/text',
+  },
+  {
+    path: '/:tab(text|url|document|tasks)',
+    name: 'resume-tab',
     component: ResumeView,
     beforeEnter: authGuard('/'),
+  },
+  {
+    path: '/task/:task_id',
+    name: 'task-detail',
+    component: TaskDetailView,
+    beforeEnter: authGuard('/task/:task_id'),
   },
   {
     path: '/login',

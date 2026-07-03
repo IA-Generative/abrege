@@ -18,8 +18,6 @@ from abrege_service.models.summary.parallele_summary_chain import (
     LangChainAsyncMapReduceService,
     StuffSummarizeChain,
     SummaryOutput,
-    MapOutput,
-    MapEntityOutput,
     EntityOutput,
     RelationshipOutput,
     MAP_PROMPT,
@@ -34,18 +32,14 @@ def _check_openai_model_access() -> bool:
     if not (OPENAI_API_KEY and OPENAI_API_BASE and OPENAI_API_MODEL):
         return False
     try:
-        openai.OpenAI(
-            api_key=OPENAI_API_KEY, base_url=OPENAI_API_BASE
-        ).chat.completions.create(
+        openai.OpenAI(api_key=OPENAI_API_KEY, base_url=OPENAI_API_BASE).chat.completions.create(
             model=OPENAI_API_MODEL,
             messages=[{"role": "user", "content": "hi"}],
             max_tokens=1,
         )
         return True
     except Exception as e:
-        logger_abrege.warning(
-            f"OpenAI model '{OPENAI_API_MODEL}' not available for tests: {e}"
-        )
+        logger_abrege.warning(f"OpenAI model '{OPENAI_API_MODEL}' not available for tests: {e}")
         return False
 
 
@@ -84,9 +78,7 @@ def dummy_task_large() -> TaskModel:
             status=TaskStatus.CREATED.value,
             updated_at=0,
             percentage=0.5,
-            parameters=SummaryParameters(
-                size=4000, custom_prompt="Ecris le au style de Victor Hugo"
-            ),
+            parameters=SummaryParameters(size=4000, custom_prompt="Ecris le au style de Victor Hugo"),
             output=ResultModel(
                 type="ocr",
                 created_at=0,
@@ -136,9 +128,7 @@ async def test_map_documents(mock_llm: ChatOpenAI, dummy_task_large1: TaskModel)
         )
     except Exception as e:
         logger_abrege.warning(str(e))
-        expected_text = split_texts_by_word_limit(
-            texts=dummy_task_large1.output.texts_found, max_words=int(max_token * 0.75)
-        )
+        expected_text = split_texts_by_word_limit(texts=dummy_task_large1.output.texts_found, max_words=int(max_token * 0.75))
     assert len(result) == len(expected_text)
     updated_task = task_table.get_task_by_id(task_id=dummy_task_large1.id)
     assert updated_task.percentage == 0.75
@@ -147,9 +137,7 @@ async def test_map_documents(mock_llm: ChatOpenAI, dummy_task_large1: TaskModel)
 # TODO: need to refactor here the name of function
 @pytest.mark.skipif(condition=not is_openai_is_set, reason="Openai not set")
 @pytest.mark.asyncio
-async def test_collapse_summary_chain(
-    mock_llm: ChatOpenAI, dummy_task_large2: TaskModel
-):
+async def test_collapse_summary_chain(mock_llm: ChatOpenAI, dummy_task_large2: TaskModel):
     max_token = 10000
     try:
         expected_text = split_texts_by_token_limit(
@@ -159,15 +147,11 @@ async def test_collapse_summary_chain(
         )
     except Exception as e:
         logger_abrege.warning(str(e))
-        expected_text = split_texts_by_word_limit(
-            texts=dummy_task_large2.output.texts_found, max_words=int(max_token * 0.75)
-        )
+        expected_text = split_texts_by_word_limit(texts=dummy_task_large2.output.texts_found, max_words=int(max_token * 0.75))
 
     docs = [Document(page_content=text) for text in expected_text]
     service = LangChainAsyncMapReduceService(llm=mock_llm, max_token=100)
-    result = await service.collapse_summary_chain(
-        task=dummy_task_large2, docs=docs, language="french"
-    )
+    result = await service.collapse_summary_chain(task=dummy_task_large2, docs=docs, language="french")
 
     assert len(result) <= len(expected_text)
     updated_task = task_table.get_task_by_id(task_id=dummy_task_large2.id)
@@ -179,9 +163,7 @@ async def test_collapse_summary_chain(
     reason="No TOKENIZER_MODEL_NAME are defined",
 )
 @pytest.mark.asyncio
-async def test_async_existing_token_summary(
-    mock_llm: ChatOpenAI, dummy_task_large3: TaskModel
-):
+async def test_async_existing_token_summary(mock_llm: ChatOpenAI, dummy_task_large3: TaskModel):
     service = LangChainAsyncMapReduceService(llm=mock_llm, max_token=10_000)
     result = await service.map_documents(task=dummy_task_large3, language="french")
     max_token = mock_llm.max_tokens if mock_llm.max_tokens else 10_000
@@ -263,18 +245,14 @@ async def test_stuff_chain_entities_types_are_valid():
     fake_output = SummaryOutput(
         summary="Résumé.",
         entities=[
-            EntityOutput(
-                type="PERSON", text="Marie Curie", contexts=["Prix Nobel"], pages=[3]
-            ),
+            EntityOutput(type="PERSON", text="Marie Curie", contexts=["Prix Nobel"], pages=[3]),
             EntityOutput(
                 type="ORGANIZATION",
                 text="Académie des Sciences",
                 contexts=["membre de"],
                 pages=[3],
             ),
-            EntityOutput(
-                type="DATE", text="1903-12-10", contexts=["remise du prix"], pages=[4]
-            ),
+            EntityOutput(type="DATE", text="1903-12-10", contexts=["remise du prix"], pages=[4]),
         ],
     )
 
@@ -312,11 +290,7 @@ async def test_stuff_chain_entity_contexts_preserved():
     runnable_mock.ainvoke = AsyncMock(return_value=fake_output)
     chain._runnable = runnable_mock
 
-    docs = [
-        Document(
-            page_content="Jean Dupont signe le contrat. Jean Dupont rencontre le PDG."
-        )
-    ]
+    docs = [Document(page_content="Jean Dupont signe le contrat. Jean Dupont rencontre le PDG.")]
     result = await chain.ainvoke({"input_documents": docs, "language": "French"})
 
     entity = result["output"].entities[0]
@@ -336,9 +310,7 @@ def dummy_task_entities() -> TaskModel:
 
 @pytest.mark.skipif(condition=not is_openai_is_set, reason="Openai not set")
 @pytest.mark.asyncio
-async def test_acall_returns_entities(
-    mock_llm: ChatOpenAI, dummy_task_entities: TaskModel
-):
+async def test_acall_returns_entities(mock_llm: ChatOpenAI, dummy_task_entities: TaskModel):
     """acall must return a SummaryOutput with at least one entity."""
     service = LangChainAsyncMapReduceService(llm=mock_llm, max_token=10_000)
     result = await service.acall(task=dummy_task_entities)
@@ -351,9 +323,7 @@ async def test_acall_returns_entities(
 
 @pytest.mark.skipif(condition=not is_openai_is_set, reason="Openai not set")
 @pytest.mark.asyncio
-async def test_acall_entity_structure(
-    mock_llm: ChatOpenAI, dummy_task_entities: TaskModel
-):
+async def test_acall_entity_structure(mock_llm: ChatOpenAI, dummy_task_entities: TaskModel):
     """Every entity in the final output must have a non-empty type and text."""
     service = LangChainAsyncMapReduceService(llm=mock_llm, max_token=10_000)
     result = await service.acall(task=dummy_task_entities)
@@ -413,34 +383,22 @@ async def test_stuff_chain_relationships_reference_valid_entity_indices():
     runnable_mock.ainvoke = AsyncMock(return_value=fake_output)
     chain._runnable = runnable_mock
 
-    docs = [
-        Document(
-            page_content="Jean Dupont a signé un contrat avec Acme le 12 janvier 2024."
-        )
-    ]
+    docs = [Document(page_content="Jean Dupont a signé un contrat avec Acme le 12 janvier 2024.")]
     result = await chain.ainvoke({"input_documents": docs, "language": "French"})
 
     output: SummaryOutput = result["output"]
     nb_entities = len(output.entities)
     for rel in output.relationships:
-        assert (
-            0 <= rel.source_index < nb_entities
-        ), f"source_index={rel.source_index} out of range"
-        assert (
-            0 <= rel.target_index < nb_entities
-        ), f"target_index={rel.target_index} out of range"
-        assert (
-            rel.source_index != rel.target_index
-        ), "A relationship must link two different entities"
+        assert 0 <= rel.source_index < nb_entities, f"source_index={rel.source_index} out of range"
+        assert 0 <= rel.target_index < nb_entities, f"target_index={rel.target_index} out of range"
+        assert rel.source_index != rel.target_index, "A relationship must link two different entities"
         assert rel.relationship_type, "relationship_type must not be empty"
         assert rel.description, "description must not be empty"
 
 
 @pytest.mark.skipif(condition=not is_openai_is_set, reason="Openai not set")
 @pytest.mark.asyncio
-async def test_acall_returns_relationships(
-    mock_llm: ChatOpenAI, dummy_task_entities: TaskModel
-):
+async def test_acall_returns_relationships(mock_llm: ChatOpenAI, dummy_task_entities: TaskModel):
     """acall must return a SummaryOutput with relationships whose indices are valid."""
     service = LangChainAsyncMapReduceService(llm=mock_llm, max_token=10_000)
     result = await service.acall(task=dummy_task_entities)
