@@ -389,6 +389,21 @@ export const useAbregeStore = defineStore('abrege', () => {
 
   function stopPollingUserTasks () { /* no-op: polling removed */ }
 
+  // ----- CANCEL TASK -----
+  async function cancelTask (taskId: string) {
+    try {
+      const { data } = await http.post<TaskModel>(`/task/${taskId}/cancel`)
+      const idx = userTasksPaginated.value.items.findIndex(t => t.id === taskId)
+      if (idx !== -1) userTasksPaginated.value.items[idx] = data
+      addSuccessMessage({ title: 'Tâche annulée', description: 'La tâche a été annulée avec succès.' })
+      return data
+    }
+    catch (err: any) {
+      addErrorMessage({ title: 'Annulation impossible', description: `Erreur lors de l'annulation: ${err?.message ?? err}` })
+      throw err
+    }
+  }
+
   // ----- DELETE TASK -----
   async function deleteTask (taskId: string) {
     try {
@@ -434,6 +449,7 @@ export const useAbregeStore = defineStore('abrege', () => {
     fetchUserTasks,
     startPollingUserTasks,
     stopPollingUserTasks,
+    cancelTask,
     deleteTask,
   }
 })

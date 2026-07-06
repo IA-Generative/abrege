@@ -6,12 +6,11 @@ from fastapi.responses import JSONResponse
 from api.core.security.token import RequestContext
 from api.core.security.factory import TokenVerifier
 
-from src.schemas.task import task_table, TaskModel
+from src.schemas.task import task_table, TaskModel, TaskUpdateForm, TaskStatus
 from src.schemas.pagination import Pagination
 from src.schemas.code_error import TASK_STATUS_TO_HTTP
-from src.clients import file_connector
+from src.clients import file_connector, celery_app
 from src.utils.logger import logger_abrege
-
 
 router = APIRouter(tags=["Tasks"])
 
@@ -62,21 +61,63 @@ async def get_tasks_read_user(
     return Pagination[TaskModel](total=total, page=offset, page_size=limit, items=tasks)
 
 
+@router.post("/task/{id}/cancel", response_model=TaskModel)
+async def cancel_task(
+    id: str,
+    ctx: RequestContext = Depends(TokenVerifier),
+):
+    task = task_table.get_task_by_id(task_id=id)
+    if task is None or task.user_id != ctx.user_id:
+        raise HTTPException(404, detail=f"{id} not found")
+    if task.status not in [
+        TaskStatus.CREATED,
+        TaskStatus.QUEUED,
+        TaskStatus.STARTED,
+        TaskStatus.IN_PROGRESS,
+    ]:
+        raise HTTPException(400, detail=f"{id} cannot be canceled (status: {task.status})")
+
+    celery_app.control.revoke(id, terminate=True)
+
+    updated = task_table.update_task(
+        task_id=id,
+        form_data=TaskUpdateForm(status=TaskStatus.CANCELED.value),
+    )
+    logger_abrege.info(
+        f"[Canceled task id : {id}][user id: {ctx.user_id}]",
+        extra={"task_id": id, "user_id": ctx.user_id},
+    )
+    return updated
+
+
 @router.delete("/task/{id}", response_model=TaskModel)
 async def delete_task(
     id: str,
     ctx: RequestContext = Depends(TokenVerifier),
 ):
-    task = task_table.delete_task_by_id(task_id=id)
+    task = task_table.get_task_by_id(task_id=id)
     if task is None or task.user_id != ctx.user_id:
         raise HTTPException(404, detail=f"{id} not found")
-    if task.status in ["queued", "started", "in_progress"]:
-        raise HTTPException(400, detail=f"{id} is queued and cannot be deleted")
+    if task.status in [
+        TaskStatus.QUEUED,
+        TaskStatus.STARTED,
+        TaskStatus.IN_PROGRESS,
+        TaskStatus.CREATED,
+    ]:
+        raise HTTPException(400, detail=f"{id} is active and cannot be deleted. Cancel it first.")
 
-    try:
-        file_connector.delete_by_task_id(user_id=task.user_id, task_id=task.id)
-    except Exception as e:
-        logger_abrege.exception(e, extra={"task_id": task.id, "user_id": task.user_id})
+    task_table.delete_task_by_id(task_id=id)
+
+    if task.type == "document":
+        try:
+            file_connector.delete_by_task_id(user_id=task.user_id, task_id=task.id)
+        except FileNotFoundError:
+            logger_abrege.warning(
+                f"[File not found for task id : {task.id}]",
+                extra={"task_id": task.id, "user_id": task.user_id},
+            )
+        except Exception as e:
+            logger_abrege.exception(e, extra={"task_id": task.id, "user_id": task.user_id})
 
     logger_abrege.debug(
         f"[Deleted task id : {task.id}][user id: {task.user_id}]",
