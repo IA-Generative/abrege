@@ -1,6 +1,6 @@
 <template>
   <div class="task-container fr-container">
-    <h2 class="fr-h2">Liste des tâches</h2>
+    <h2 class="fr-h2">Mes tâches</h2>
 
     <div class="table-responsive">
       <table class="fr-table task-table">
