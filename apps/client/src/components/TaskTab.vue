@@ -12,7 +12,7 @@
             <th @click="sortBy('updated_at')">Mis à jour le ⬍</th>
             <th>Voir résultat</th>
             <th>Détail</th>
-            <th>Supprimer</th>
+            <th>Actions</th>
           </tr>
         </thead>
 
@@ -62,9 +62,20 @@
 
             <td>
               <DsfrButton
+                v-if="['queued', 'started', 'in_progress', 'created'].includes(task.status)"
+                size="sm"
+                priority="secondary"
+                icon="ri-stop-circle-line"
+                @click="cancelTask(task.id)"
+              >
+                Annuler
+              </DsfrButton>
+              <DsfrButton
+                v-else
                 size="sm"
                 priority="tertiary"
-                :disabled="task.status !== 'completed' && (task.percentage ?? 0) < 100"
+                icon="ri-delete-bin-line"
+                :disabled="!['completed', 'failed', 'canceled', 'timeout'].includes(task.status)"
                 @click="removeTask(task.id)"
               >
                 Supprimer
@@ -127,6 +138,10 @@ const loadAll = async () => {
 
 const removeTask = async (taskId) => {
   await abrege.deleteTask(taskId)
+}
+
+const cancelTask = async (taskId) => {
+  await abrege.cancelTask(taskId)
 }
 
 // ----- TÉLÉCHARGEMENT -----
