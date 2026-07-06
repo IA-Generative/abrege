@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [2.3.0](https://github.com/IA-Generative/abrege/compare/v2.2.0...v2.3.0) (2026-07-06)
+
+
+### Features
+
+* **task:** add cancel task functionality and update UI actions ([51cb85f](https://github.com/IA-Generative/abrege/commit/51cb85ffbeb3a083da4d33d7ef498f5c84866ca7))
+
 ## [2.2.0](https://github.com/IA-Generative/abrege/compare/v2.1.1...v2.2.0) (2026-07-06)
 
 
