@@ -1,7 +1,9 @@
 from typing import Dict, Optional, Any, List, Union, Literal
 from pydantic import BaseModel, ConfigDict
 
-EntityType = Literal["PERSON", "DATE", "ORGANIZATION", "LOCATION", "AMOUNT", "EVENT", "OTHER"]
+EntityType = Literal[
+    "PERSON", "DATE", "ORGANIZATION", "LOCATION", "AMOUNT", "EVENT", "OTHER"
+]
 
 
 class Text(BaseModel):
@@ -29,6 +31,46 @@ class RelationshipModel(BaseModel):
     description: str
 
 
+class OcrBbox(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    x: float
+    y: float
+    width: float
+    height: float
+    confidence: float
+    text: str
+    orientation: Optional[int] = None
+
+
+class OcrCheckbox(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    x: float
+    y: float
+    width: float
+    height: float
+    confidence: float
+    is_checked: bool
+
+
+class OcrLayout(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    cls_id: int
+    label: str
+    score: float
+    coordinate: List[float]
+    content: Optional[Any] = None
+
+
+class OcrPage(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    page: int
+    page_url: Optional[str] = None
+    boxes: List[OcrBbox] = []
+    checkboxes: List[OcrCheckbox] = []
+    layouts: List[OcrLayout] = []
+    page_markdown: Optional[str] = None
+
+
 class ResultModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     type: str
@@ -37,6 +79,7 @@ class ResultModel(BaseModel):
     model_version: str
     updated_at: Optional[int] = None
     texts_found: Optional[List[str]] = []
+    ocr_pages: Optional[List[OcrPage]] = []
     percentage: float = 0.0
     extras: Optional[Dict[str, Any]] = None
     partial_summaries: Optional[List[Union[PartialSummary, Text]]] = []
