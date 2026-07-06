@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [2.3.1](https://github.com/IA-Generative/abrege/compare/v2.3.0...v2.3.1) (2026-07-06)
+
+
+### Bug Fixes
+
+* **task:** update task header to "Mes tâches" ([d5c66e9](https://github.com/IA-Generative/abrege/commit/d5c66e906ea02a25235978e08f3ef213b20b6995))
+
 ## [2.3.0](https://github.com/IA-Generative/abrege/compare/v2.2.0...v2.3.0) (2026-07-06)
 
 
