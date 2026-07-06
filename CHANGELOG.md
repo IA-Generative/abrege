@@ -210,6 +210,19 @@
 - clean code
 - clean code
 
+## [2.2.0](https://github.com/IA-Generative/abrege/compare/v2.1.1...v2.2.0) (2026-07-06)
+
+
+### Features
+
+* **backend:** entity ([6103b1e](https://github.com/IA-Generative/abrege/commit/6103b1e96d14089d3d358d7352dabbaa98612b0d))
+* **task:** add task detail view and routing ([74cb9c9](https://github.com/IA-Generative/abrege/commit/74cb9c91e0aae2d2ae017095c2f3d9547cffb920))
+
+
+### Bug Fixes
+
+* **tests:** scrappiling import ([59962e3](https://github.com/IA-Generative/abrege/commit/59962e3c5466e4181bd637b95a30d1ff7b7de3cd))
+
 ## [2.1.1](https://github.com/IA-Generative/abrege/compare/v2.1.0...v2.1.1) (2026-07-01)
 
 
