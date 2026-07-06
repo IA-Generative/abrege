@@ -25,7 +25,7 @@ const tabs = ref([
   { label: firstTabTitle, slot: 'tab-0-content' },
   { label: 'd\'une URL', slot: 'tab-1-content' },
   { label: 'd\'un document téléchargé', slot: 'tab-2-content' },
-  { label: 'des tâches', slot: 'tab-3-content' },
+  { label: 'Mes tâches', slot: 'tab-3-content' },
 ])
 
 const activeTab = computed({
