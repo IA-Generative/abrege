@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [3.1.1](https://github.com/IA-Generative/abrege/compare/v3.1.0...v3.1.1) (2026-07-09)
+
+
+### Bug Fixes
+
+* **env:** update variable names from S3_BUCKET_NAME to AWS_BUCKET_NAME across configurations and documentation ([9ae1aee](https://github.com/IA-Generative/abrege/commit/9ae1aeec3567b65c9e9722ff50f4ab3ce3f5328c))
+
 ## [3.1.0](https://github.com/IA-Generative/abrege/compare/v3.0.0...v3.1.0) (2026-07-09)
 
 
