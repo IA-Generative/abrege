@@ -210,6 +210,14 @@
 - clean code
 - clean code
 
+## [3.2.0](https://github.com/IA-Generative/abrege/compare/v3.1.2...v3.2.0) (2026-07-09)
+
+
+### Features
+
+* **frontend:** add qa ([29961b5](https://github.com/IA-Generative/abrege/commit/29961b5d639db945cab79dc2c971e378b38c6679))
+* **qa:** add qa generation ([ae76430](https://github.com/IA-Generative/abrege/commit/ae7643039f4c4c4ac4e15b1f51960703d99ed078))
+
 ## [3.1.2](https://github.com/IA-Generative/abrege/compare/v3.1.1...v3.1.2) (2026-07-09)
 
 
