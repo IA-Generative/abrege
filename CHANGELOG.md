@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [3.1.2](https://github.com/IA-Generative/abrege/compare/v3.1.1...v3.1.2) (2026-07-09)
+
+
+### Bug Fixes
+
+* **langfuse:** update Langfuse configuration and documentation for optional integration ([d978a8d](https://github.com/IA-Generative/abrege/commit/d978a8d674eea82e4fba6ce46c721cffd8edfab8))
+
 ## [3.1.1](https://github.com/IA-Generative/abrege/compare/v3.1.0...v3.1.1) (2026-07-09)
 
 
