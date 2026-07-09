@@ -108,10 +108,10 @@ Les variables marquées **obligatoires** doivent être définies. Les autres ont
 | `SENTRY_API_DSN` | | DSN Sentry pour l'API FastAPI | — |
 | `SENTRY_WORKER_DSN` | | DSN Sentry pour le worker Celery | — |
 | `SEND_DEFAULT_PII` | | Envoyer les PII à Sentry | `false` |
-| `LANGFUSE_HOST` | | URL de l'instance Langfuse | `https://cloud.langfuse.com` |
-| `LANGFUSE_PUBLIC_KEY` | | Clé publique Langfuse | `pk-lf-xxx` |
-| `LANGFUSE_SECRET_KEY` | | Clé secrète Langfuse | `sk-lf-xxxxxxx` |
-| `LANGFUSE_ENVIRONMENT` | | Environnement de tracing Langfuse | `prod` |
+| `LANGFUSE_PUBLIC_KEY` | | Clé publique Langfuse — **si absent, Langfuse est désactivé** | — |
+| `LANGFUSE_SECRET_KEY` | si `LANGFUSE_PUBLIC_KEY` défini | Clé secrète Langfuse | — |
+| `LANGFUSE_HOST` | si `LANGFUSE_PUBLIC_KEY` défini | URL de l'instance Langfuse | `https://cloud.langfuse.com` |
+| `LANGFUSE_ENVIRONMENT` | si `LANGFUSE_PUBLIC_KEY` défini | Environnement de tracing Langfuse | `local` |
 
 ---
 
