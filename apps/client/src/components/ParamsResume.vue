@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { DsfrToggleSwitch } from '@gouvminint/vue-dsfr'
 import { computed, ref } from 'vue'
 import { useAbregeStore } from '@/stores/abrege'
 
@@ -37,6 +38,15 @@ const selectOptionSelected = computed({
     paramsValue.selectOptionText = selectOptions.find(option => option.value === value)?.text || ''
   },
 })
+
+const extractQaLabel = 'Générer aussi des questions/réponses'
+const extractQaHint = 'En plus du résumé, extrait des questions/réponses à partir du document'
+const extractQaValue = computed({
+  get: () => paramsValue.extractQa,
+  set: (value) => {
+    paramsValue.extractQa = value
+  },
+})
 </script>
 
 <template>
@@ -73,6 +83,13 @@ const selectOptionSelected = computed({
             :is-textarea="true"
             :label="customPromptLabel"
             :hint="customPromptHint"
+          />
+        </div>
+        <div class="input-bloc">
+          <DsfrToggleSwitch
+            v-model="extractQaValue"
+            :label="extractQaLabel"
+            :hint="extractQaHint"
           />
         </div>
       </div>

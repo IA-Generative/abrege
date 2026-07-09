@@ -338,7 +338,7 @@ export interface components {
     /** EntityModel */
     EntityModel: {
       /** Type */
-      type: 'PERSON' | 'DATE' | 'ORGANIZATION' | 'LOCATION' | 'AMOUNT' | 'EVENT' | 'OTHER'
+      type: string
       /** Text */
       text: string
       /**
@@ -362,6 +362,17 @@ export interface components {
       relationship_type: string
       /** Description */
       description: string
+    }
+    /** QAItem */
+    QAItem: {
+      /** Page */
+      page?: number | null
+      /** Source Text */
+      source_text: string
+      /** Question */
+      question: string
+      /** Answer */
+      answer: string
     }
     /** PartialSummary */
     PartialSummary: {
@@ -454,6 +465,11 @@ export interface components {
        * @default []
        */
       relationships: components['schemas']['RelationshipModel'][]
+      /**
+       * Qa Items
+       * @default []
+       */
+      qa_items: components['schemas']['QAItem'][] | null
     }
     /** SummaryParameters */
     SummaryParameters: {
@@ -492,6 +508,18 @@ export interface components {
        * @description Custom prompt you want after the sumup
        */
       custom_prompt?: string | null
+      /**
+       * Extract Qa
+       * @description Also generate question/answer pairs per chunk while summarizing
+       * @default false
+       */
+      extract_qa: boolean
+      /**
+       * Qa Per Chunk
+       * @description Max number of question/answer pairs to generate per chunk when extract_qa is enabled
+       * @default 3
+       */
+      qa_per_chunk: number
     }
     /** Pagination TaskModel */
     PaginationTaskModel: {

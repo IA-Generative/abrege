@@ -10,6 +10,7 @@ type TaskModel = components['schemas']['TaskModel']
 type SummaryModel = components['schemas']['SummaryModel']
 type EntityModel = components['schemas']['EntityModel']
 type RelationshipModel = components['schemas']['RelationshipModel']
+type QAItem = components['schemas']['QAItem']
 
 const ENTITY_TYPE_LABELS: Record<EntityModel['type'], string> = {
   PERSON: 'Personne',
@@ -51,6 +52,7 @@ const summaryOutput = computed<SummaryModel | null>(() =>
 )
 const showDetails = ref(false)
 const expandedContextId = ref<string | undefined>(undefined)
+const expandedQaSourceId = ref<string | undefined>(undefined)
 const activeTab = ref(0)
 const searchQuery = ref('')
 const entityTypeFilter = ref<EntityModel['type'] | null>(null)
@@ -59,10 +61,12 @@ const relationTypeFilter = ref<string | null>(null)
 const PAGE_SIZE = 6
 const entityPage = ref(1)
 const relationPage = ref(1)
+const qaPage = ref(1)
 
 const entities = computed<EntityModel[]>(() => summaryOutput.value?.entities ?? [])
 const relationships = computed<RelationshipModel[]>(() => summaryOutput.value?.relationships ?? [])
-const hasDetails = computed(() => entities.value.length > 0 || relationships.value.length > 0)
+const qaItems = computed<QAItem[]>(() => summaryOutput.value?.qa_items ?? [])
+const hasDetails = computed(() => entities.value.length > 0 || relationships.value.length > 0 || qaItems.value.length > 0)
 
 const q = computed(() => searchQuery.value.toLowerCase().trim())
 
@@ -90,6 +94,15 @@ const filteredRelations = computed(() => {
   })
 })
 
+const filteredQaItems = computed(() => {
+  return qaItems.value.filter(qa => {
+    return !q.value ||
+      qa.question.toLowerCase().includes(q.value) ||
+      qa.answer.toLowerCase().includes(q.value) ||
+      qa.source_text.toLowerCase().includes(q.value)
+  })
+})
+
 const availableEntityTypes = computed(() => {
   const types = [...new Set(entities.value.map(e => e.type))]
   return types.sort()
@@ -103,6 +116,7 @@ const availableRelationTypes = computed(() => {
 watch([searchQuery, entityTypeFilter, relationTypeFilter], () => {
   entityPage.value = 1
   relationPage.value = 1
+  qaPage.value = 1
 })
 
 const tabTitles = computed(() => [
@@ -122,10 +136,19 @@ const tabTitles = computed(() => [
       : relationships.value.length ? ' (' + relationships.value.length + ')' : ''),
     icon: 'ri-link-m',
   },
+  {
+    tabId: 'tab-qa',
+    panelId: 'panel-qa',
+    title: 'Q&A' + (filteredQaItems.value.length !== qaItems.value.length
+      ? ' (' + filteredQaItems.value.length + '/' + qaItems.value.length + ')'
+      : qaItems.value.length ? ' (' + qaItems.value.length + ')' : ''),
+    icon: 'ri-question-answer-line',
+  },
 ])
 
 const entityPageCount = computed(() => Math.ceil(filteredEntities.value.length / PAGE_SIZE))
 const relationPageCount = computed(() => Math.ceil(filteredRelations.value.length / PAGE_SIZE))
+const qaPageCount = computed(() => Math.ceil(filteredQaItems.value.length / PAGE_SIZE))
 
 const pagedEntities = computed(() => {
   const start = (entityPage.value - 1) * PAGE_SIZE
@@ -137,8 +160,17 @@ const pagedRelations = computed(() => {
   return filteredRelations.value.slice(start, start + PAGE_SIZE)
 })
 
+const pagedQaItems = computed(() => {
+  const start = (qaPage.value - 1) * PAGE_SIZE
+  return filteredQaItems.value.slice(start, start + PAGE_SIZE)
+})
+
 function entityPageOffset(i: number): number {
   return (entityPage.value - 1) * PAGE_SIZE + i
+}
+
+function qaPageOffset(i: number): number {
+  return (qaPage.value - 1) * PAGE_SIZE + i
 }
 
 function highlight(text: string): string {
@@ -176,8 +208,10 @@ function entityName(index: number): string {
 function countLabel(): string {
   const e = entities.value.length
   const r = relationships.value.length
+  const qa = qaItems.value.length
   let s = e + ' entité' + (e > 1 ? 's' : '')
   if (r > 0) s += ' · ' + r + ' relation' + (r > 1 ? 's' : '')
+  if (qa > 0) s += ' · ' + qa + ' Q&A'
   return s
 }
 
@@ -313,7 +347,7 @@ onMounted(() => {
                       :style="{ backgroundColor: entityColor(entity.type), color: '#333', border: 'none' }"
                     />
                     <span class="entity-text" v-html="highlight(entity.text)"></span>
-                    <span v-if="entity.pages.length > 0" class="entity-pages">p. {{ entity.pages.join(', ') }}</span>
+                    <span v-if="entity.pages.length > 0" class="entity-pages">p. {{ entity.pages.join(', ') }}</span>
                   </div>
                   <DsfrAccordionsGroup v-if="entity.contexts.length > 0" v-model="expandedContextId">
                     <DsfrAccordion
@@ -410,6 +444,55 @@ onMounted(() => {
             <p v-else class="fr-text--sm empty-state">
               <template v-if="searchQuery">Aucune relation ne correspond à « {{ searchQuery }} ».</template>
               <template v-else>Aucune relation détectée.</template>
+            </p>
+          </DsfrTabContent>
+
+          <DsfrTabContent panel-id="panel-qa" tab-id="tab-qa">
+            <div v-if="qaItems.length > 0" class="tab-content">
+              <div class="cards-list">
+                <div v-for="(qa, i) in pagedQaItems" :key="qaPageOffset(i)" class="qa-card">
+                  <div class="qa-card-header">
+                    <span class="qa-question" v-html="highlight(qa.question)"></span>
+                    <span v-if="qa.page" class="entity-pages">p. {{ qa.page }}</span>
+                  </div>
+                  <p class="qa-answer" v-html="highlight(qa.answer)"></p>
+                  <DsfrAccordionsGroup v-model="expandedQaSourceId">
+                    <DsfrAccordion
+                      :id="'qa-src-' + qaPageOffset(i)"
+                      title="Texte source"
+                      :expanded-id="expandedQaSourceId"
+                      @expand="expandedQaSourceId = $event"
+                    >
+                      <p class="qa-source-text" v-html="highlight(qa.source_text)"></p>
+                    </DsfrAccordion>
+                  </DsfrAccordionsGroup>
+                </div>
+              </div>
+              <div v-if="qaPageCount > 1" class="pagination">
+                <span class="pagination-info">{{ qaPage }} / {{ qaPageCount }}</span>
+                <DsfrButton
+                  label="Précédent"
+                  :disabled="qaPage === 1"
+                  size="sm"
+                  secondary
+                  icon="ri-arrow-left-line"
+                  icon-only
+                  @click="qaPage--"
+                />
+                <DsfrButton
+                  label="Suivant"
+                  :disabled="qaPage === qaPageCount"
+                  size="sm"
+                  secondary
+                  icon="ri-arrow-right-line"
+                  icon-only
+                  @click="qaPage++"
+                />
+              </div>
+            </div>
+            <p v-else class="fr-text--sm empty-state">
+              <template v-if="searchQuery">Aucune question/réponse ne correspond à « {{ searchQuery }} ».</template>
+              <template v-else>Aucune question/réponse générée.</template>
             </p>
           </DsfrTabContent>
         </DsfrTabs>
@@ -682,5 +765,45 @@ onMounted(() => {
   color: var(--text-mention-grey);
   font-size: 0.75rem;
   font-style: italic;
+}
+/* Cards Q&A */
+.qa-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--background-default-grey);
+  border-left: 3px solid var(--border-plain-blue-france);
+  padding: 0.625rem 0.875rem;
+  gap: 0.25rem;
+}
+.qa-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.qa-question {
+  font-size: 0.875rem;
+  font-weight: 600;
+  flex: 1;
+}
+.qa-answer {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--text-default-grey);
+}
+.qa-source-text {
+  margin: 0.25rem 0 0;
+  font-size: 0.75rem;
+  color: var(--text-mention-grey);
+  font-style: italic;
+}
+.qa-card :deep(.fr-accordion__btn) {
+  font-size: 0.75rem;
+  padding: 0.25rem 0;
+  min-height: unset;
+  background: none;
+}
+.qa-card :deep(.fr-accordion) {
+  border-top: none;
 }
 </style>
