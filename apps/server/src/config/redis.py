@@ -15,6 +15,4 @@ class RedisSettings(BaseSettings):
     # When set, REDIS_HOST/REDIS_PORT are ignored for the broker URL
     REDIS_SENTINEL_HOSTS: Optional[str] = None
     REDIS_SENTINEL_SERVICE_NAME: str = "mymaster"
-    model_config = SettingsConfigDict(
-        from_attributes=True, case_sensitive=True, env_file=".env", extra="allow"
-    )
+    model_config = SettingsConfigDict(from_attributes=True, case_sensitive=True, env_file=".env", extra="allow")
