@@ -8,19 +8,20 @@ import hashlib
 from langchain_core.documents import Document
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import PromptTemplate
-from typing import Literal, Type, Union
+from typing import Type, Union
 from pydantic import BaseModel, Field
 from langfuse import Langfuse, get_client
 from langfuse.langchain import CallbackHandler
 
 
-from src.schemas.result import SummaryModel, Text, EntityModel, RelationshipModel
+from src.schemas.result import SummaryModel, Text, EntityModel, RelationshipModel, QAItem
 from src.schemas.parameters import SummaryParameters
 from src.schemas.task import TaskModel, TaskStatus
 from src.utils.logger import logger_abrege
 
 
 from abrege_service.models.base import BaseSummaryService
+from abrege_service.models.summary.qa_chain import build_qa_runnable, extract_leading_page_number
 from abrege_service.utils.text import (
     split_texts_by_token_limit,
     split_texts_by_word_limit,
@@ -34,7 +35,7 @@ map_template = """The following is a set of documents:
 Based on this list of docs:
 1. Summarize concisely and clearly in paragraph form. Highlight the main ideas and recurring themes.
 2. Extract the most important named entities (max 10): people, dates, organizations, locations, amounts. For each, provide only type and text.
-Respond ONLY with a valid JSON object matching this schema: {{"summary": "...", "entities": [{{"type": "PERSON|DATE|ORGANIZATION|LOCATION|AMOUNT|EVENT|OTHER", "text": "..."}}]}}
+Respond ONLY with a valid JSON object matching this schema: {{"summary": "...", "entities": [{{"type": "<the category you deem most appropriate, e.g. PERSON, DATE, ORGANIZATION, LOCATION, AMOUNT, EVENT, or any other relevant category>", "text": "..."}}]}}
 Helpful Answer in {language}:"""
 
 # Prompt pour l'étape de "reduce"
@@ -44,7 +45,7 @@ Take these and:
 1. Consolidate them into a clear and well-organized final summary. Highlight recurring ideas, themes, and insights. {prompt_size}.{custom_prompt}
 2. Collect all named entities. For entities referring to the same real-world object, group them into a single entry and merge their pages and contexts — do NOT drop any occurrence.
 3. Based on the entities and their contexts, infer relationships between pairs of entities (0-based indices). Only include relationships clearly supported by the text.
-Respond ONLY with a valid JSON object matching this schema: {{"summary": "...", "entities": [{{"type": "PERSON|DATE|ORGANIZATION|LOCATION|AMOUNT|EVENT|OTHER", "text": "...", "contexts": ["..."], "pages": [1]}}], "relationships": [{{"source_index": 0, "target_index": 1, "relationship_type": "...", "description": "..."}}]}}
+Respond ONLY with a valid JSON object matching this schema: {{"summary": "...", "entities": [{{"type": "<the category you deem most appropriate, e.g. PERSON, DATE, ORGANIZATION, LOCATION, AMOUNT, EVENT, or any other relevant category>", "text": "...", "contexts": ["..."], "pages": [1]}}], "relationships": [{{"source_index": 0, "target_index": 1, "relationship_type": "...", "description": "..."}}]}}
 Helpful Answer in {language}:"""
 
 # Prompt pour l'étape de "collapse" (intermédiaire) — sans relations
@@ -53,24 +54,13 @@ collapse_template = """The following is a set of summaries:
 Take these and:
 1. Consolidate them into a clear and well-organized intermediate summary. {prompt_size}.{custom_prompt}
 2. Extract the most important named entities (max 10): people, dates, organizations, locations, amounts.
-Respond ONLY with a valid JSON object matching this schema: {{"summary": "...", "entities": [{{"type": "PERSON|DATE|ORGANIZATION|LOCATION|AMOUNT|EVENT|OTHER", "text": "..."}}]}}
+Respond ONLY with a valid JSON object matching this schema: {{"summary": "...", "entities": [{{"type": "<the category you deem most appropriate, e.g. PERSON, DATE, ORGANIZATION, LOCATION, AMOUNT, EVENT, or any other relevant category>", "text": "..."}}]}}
 Helpful Answer in {language}:"""
 
 
-EntityType = Literal[
-    "PERSON",
-    "DATE",
-    "ORGANIZATION",
-    "LOCATION",
-    "AMOUNT",
-    "EVENT",
-    "OTHER",
-]
-
-
 class EntityOutput(BaseModel):
-    type: EntityType = Field(
-        description="The type of the entity: PERSON (name, firstname), DATE (birth date, event date, deadline), ORGANIZATION, LOCATION, AMOUNT (monetary or numeric value), EVENT, OTHER"
+    type: str = Field(
+        description="The category of the entity, freely chosen to best describe it (e.g. PERSON, DATE, ORGANIZATION, LOCATION, AMOUNT, EVENT, or any other relevant category)"
     )
     text: str = Field(
         description="The normalized text value of the entity (e.g. full name, ISO date, etc.)"
@@ -103,8 +93,8 @@ class RelationshipOutput(BaseModel):
 class MapEntityOutput(BaseModel):
     """Minimal entity for the map step \u2014 no contexts or pages to keep output short."""
 
-    type: EntityType = Field(
-        description="The type of the entity: PERSON, DATE, ORGANIZATION, LOCATION, AMOUNT, EVENT, OTHER"
+    type: str = Field(
+        description="The category of the entity, freely chosen to best describe it (e.g. PERSON, DATE, ORGANIZATION, LOCATION, AMOUNT, EVENT, or any other relevant category)"
     )
     text: str = Field(
         description="The normalized text value of the entity (e.g. full name, ISO date)"
@@ -215,6 +205,7 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
         self.collapse_document_chain = StuffSummarizeChain(
             llm, COLLAPSE_PROMPT, output_schema=MapOutput
         )
+        self.qa_runnable = build_qa_runnable(llm)
         if isinstance(max_token, str):
             max_token = int(max_token)
         self.max_token = max_token
@@ -225,6 +216,8 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
         language: str,
         prompt_size: str = "",
         custom_prompt: str = "",
+        extract_qa: bool = False,
+        qa_per_chunk: int = 3,
     ) -> list[Document]:
         extra_log = {"task.id": task.id, "user_id": task.user_id}
         semaphore = asyncio.Semaphore(self.max_concurrency)
@@ -300,9 +293,30 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
                             "langfuse_tags": ["map_one_document"],
                         }  # ty:ignore[invalid-assignment]
 
-                    summary = await self.llm_chain_map.ainvoke(
-                        inputs, config=tmp_copy_config
-                    )
+                    if extract_qa and qa_per_chunk > 0:
+                        qa_config = config.copy()
+                        if qa_config:
+                            qa_config["metadata"] = {
+                                "langfuse_user_id": task.user_id,
+                                "langfuse_session_id": task.id,
+                                "langfuse_tags": ["map_one_document_qa"],
+                            }  # ty:ignore[invalid-assignment]
+                        summary, qa_output = await asyncio.gather(
+                            self.llm_chain_map.ainvoke(inputs, config=tmp_copy_config),
+                            self.qa_runnable.ainvoke(
+                                {
+                                    "text": doc.page_content,
+                                    "language": language,
+                                    "qa_per_chunk": qa_per_chunk,
+                                },
+                                config=qa_config,
+                            ),
+                        )
+                    else:
+                        summary = await self.llm_chain_map.ainvoke(
+                            inputs, config=tmp_copy_config
+                        )
+                        qa_output = None
                     copy_log = extra_log.copy()
                     copy_log["process_name"] = "llm_chain_map.ainvoke"
                     copy_log["process_time"] = (
@@ -330,6 +344,21 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
                             task.output.partial_summaries = []
 
                         task.output.partial_summaries.append(partial_sum)
+
+                        if qa_output is not None and qa_output.items:
+                            page = extract_leading_page_number(doc.page_content)
+                            if task.output.qa_items is None:
+                                task.output.qa_items = []
+                            task.output.qa_items.extend(
+                                QAItem(
+                                    page=page,
+                                    source_text=doc.page_content,
+                                    question=item.question,
+                                    answer=item.answer,
+                                )
+                                for item in qa_output.items
+                            )
+
                         task = self.update_result_task(
                             task=task,
                             result=task.output,
@@ -470,6 +499,8 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
             language=language,
             prompt_size=prompt_size,
             custom_prompt=custom_prompt,
+            extract_qa=params.extract_qa,
+            qa_per_chunk=params.qa_per_chunk,
         )
         texts = [doc.page_content for doc in mapped_docs]
         total_words = sum_words(texts=texts)
@@ -511,6 +542,7 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
             status=TaskStatus.IN_PROGRESS.value,
             texts_found=task.output.texts_found,
             partial_summaries=[],
+            qa_items=[],
             extras={},
         )
 

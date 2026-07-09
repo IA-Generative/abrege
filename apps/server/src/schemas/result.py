@@ -1,7 +1,5 @@
-from typing import Dict, Optional, Any, List, Union, Literal
+from typing import Dict, Optional, Any, List, Union
 from pydantic import BaseModel, ConfigDict
-
-EntityType = Literal["PERSON", "DATE", "ORGANIZATION", "LOCATION", "AMOUNT", "EVENT", "OTHER"]
 
 
 class Text(BaseModel):
@@ -16,7 +14,7 @@ class PartialSummary(Text):
 
 
 class EntityModel(BaseModel):
-    type: EntityType
+    type: str
     text: str
     contexts: List[str] = []
     pages: List[int] = []
@@ -27,6 +25,13 @@ class RelationshipModel(BaseModel):
     target_index: int
     relationship_type: str
     description: str
+
+
+class QAItem(BaseModel):
+    page: Optional[int] = None
+    source_text: str
+    question: str
+    answer: str
 
 
 class OcrBbox(BaseModel):
@@ -81,6 +86,7 @@ class ResultModel(BaseModel):
     percentage: float = 0.0
     extras: Optional[Dict[str, Any]] = None
     partial_summaries: Optional[List[Union[PartialSummary, Text]]] = []
+    qa_items: Optional[List[QAItem]] = []
 
 
 class SummaryModel(ResultModel):
