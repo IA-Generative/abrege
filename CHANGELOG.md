@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [3.1.0](https://github.com/IA-Generative/abrege/compare/v3.0.0...v3.1.0) (2026-07-09)
+
+
+### Features
+
+* **env:** update environment variables and configurations for Redis, MinIO, and OpenAI integration ([4f0b7fd](https://github.com/IA-Generative/abrege/commit/4f0b7fd34ffc59c16d4931e514d42deb2fc32a7e))
+
 ## [3.0.0](https://github.com/IA-Generative/abrege/compare/v2.3.1...v3.0.0) (2026-07-06)
 
 
