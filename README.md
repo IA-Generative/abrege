@@ -152,6 +152,8 @@ make help
 
 For a detailed sequence diagram of the document processing flow, see [docs/diagram.md](docs/diagram.md).
 
+For the full list of environment variables and Docker volumes, see [docs/variables.md](docs/variables.md).
+
 ### Components
 
 * **API**: Accepts inputs and initiates the processing pipeline.
