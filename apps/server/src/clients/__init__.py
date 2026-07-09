@@ -40,7 +40,7 @@ try:
         "s3",
     )
 
-    bucket_name = settings.S3_BUCKET_NAME
+    bucket_name = settings.AWS_BUCKET_NAME
     file_connector = S3Connector(s3_client, bucket_name)
 except Exception:
     raise

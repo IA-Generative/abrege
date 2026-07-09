@@ -6,7 +6,6 @@ from src.connector.s3_connector import S3Connector
 from src.config.s3 import S3Settings
 from src.config.connector import ConnectorSettings
 
-
 connector_settings = ConnectorSettings()
 settings = S3Settings()
 
@@ -18,7 +17,7 @@ def s3_client():
 
 @pytest.fixture(scope="module")
 def s3_connector(s3_client):
-    bucket_name = settings.S3_BUCKET_NAME
+    bucket_name = settings.AWS_BUCKET_NAME
     connector = S3Connector(s3_client, bucket_name)
     return connector
 

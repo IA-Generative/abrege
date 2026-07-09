@@ -57,7 +57,7 @@ Les variables marquées **obligatoires** doivent être définies. Les autres ont
 | `MINIO_END_POINT` | | Adresse de l'instance MinIO | `localhost:9000` |
 | `MINIO_ACCESS_KEY` | | Clé d'accès MinIO | `minioadmin` |
 | `MINIO_SECRET_KEY` | | Clé secrète MinIO | `minioadmin` |
-| `S3_BUCKET_NAME` | | Nom du bucket S3 | `test` |
+| `AWS_BUCKET_NAME` | | Nom du bucket S3 | `test` |
 
 ---
 
