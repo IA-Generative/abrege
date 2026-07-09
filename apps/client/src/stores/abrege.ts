@@ -64,6 +64,7 @@ export const useAbregeStore = defineStore('abrege', () => {
     selectOptionSelected: 'French',
     selectOptionText: 'Français (par défaut)',
     customPrompt: null,
+    extractQa: true,
   }
   const paramsValue = ref(paramsInitialValue)
 
@@ -215,6 +216,7 @@ export const useAbregeStore = defineStore('abrege', () => {
         language: paramsValue.value.selectOptionSelected,
         size: Number(paramsValue.value.inputValue),
         custom_prompt: paramsValue.value.customPrompt,
+        extract_qa: paramsValue.value.extractQa,
       },
     }
 
@@ -261,6 +263,7 @@ export const useAbregeStore = defineStore('abrege', () => {
         language: paramsValue.value.selectOptionSelected,
         size: Number(paramsValue.value.inputValue),
         custom_prompt: paramsValue.value.customPrompt,
+        extract_qa: paramsValue.value.extractQa,
       }))
 
       const { data: task } = await http.post<TaskModel>(
