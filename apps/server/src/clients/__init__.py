@@ -7,12 +7,30 @@ from src.config.redis import RedisSettings
 from src.config.celery import CelerySettings
 
 
+def _build_broker_url(settings: RedisSettings) -> str:
+    scheme = "rediss" if settings.REDIS_TLS else "redis"
+    auth = f":{settings.REDIS_PASSWORD}@" if settings.REDIS_PASSWORD else ""
+
+    if settings.REDIS_SENTINEL_HOSTS:
+        hosts = [h.strip() for h in settings.REDIS_SENTINEL_HOSTS.split(",")]
+        parts = [f"sentinel://{auth}{host}//" for host in hosts]
+        return ";".join(parts)
+
+    return f"{scheme}://{auth}{settings.REDIS_HOST}:{settings.REDIS_PORT}//"
+
+
 celery_config = CelerySettings()
 redis_settings = RedisSettings()
+
 celery_app = Celery(
     celery_config.CELERY_APP_NAME,
-    broker=f"redis://{redis_settings.REDIS_HOST}:{redis_settings.REDIS_PORT}//",
+    broker=_build_broker_url(redis_settings),
 )
+
+if redis_settings.REDIS_SENTINEL_HOSTS:
+    celery_app.conf.broker_transport_options = {
+        "master_name": redis_settings.REDIS_SENTINEL_SERVICE_NAME,
+    }
 
 connector_settings = ConnectorSettings()
 
