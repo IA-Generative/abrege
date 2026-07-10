@@ -210,6 +210,18 @@
 - clean code
 - clean code
 
+## [3.3.0](https://github.com/IA-Generative/abrege/compare/v3.2.0...v3.3.0) (2026-07-10)
+
+
+### Features
+
+* **owui:** owui-integration ([99b4d01](https://github.com/IA-Generative/abrege/commit/99b4d018938332f628ac22a82d6fbe10e0dc7a36))
+
+
+### Bug Fixes
+
+* default value qa ([ca2b122](https://github.com/IA-Generative/abrege/commit/ca2b12235b8c397fba63e6a8d264aa49e19473a2))
+
 ## [3.2.0](https://github.com/IA-Generative/abrege/compare/v3.1.2...v3.2.0) (2026-07-09)
 
 
