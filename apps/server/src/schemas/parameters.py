@@ -18,5 +18,5 @@ class BaseParameters(BaseModel):
 class SummaryParameters(BaseParameters):
     method: MethodType | None = "map_reduce"
     custom_prompt: str | None = Field(None, description="Custom prompt you want after the sumup")
-    extract_qa: bool = Field(False, description="Also generate question/answer pairs per chunk while summarizing")
+    extract_qa: bool = Field(True, description="Also generate question/answer pairs per chunk while summarizing")
     qa_per_chunk: int = Field(3, ge=0, le=10, description="Max number of question/answer pairs to generate per chunk when extract_qa is enabled")

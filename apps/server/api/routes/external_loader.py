@@ -43,38 +43,44 @@ def _build_documents(task: TaskModel) -> list[dict]:
 
     summary = getattr(output, "summary", None)
     if summary:
-        documents.append({
-            "page_content": summary,
-            "metadata": {
-                "type": "summary",
-                "task_id": task.id,
-                "word_count": getattr(output, "word_count", None),
-            },
-        })
+        documents.append(
+            {
+                "page_content": summary,
+                "metadata": {
+                    "type": "summary",
+                    "task_id": task.id,
+                    "word_count": getattr(output, "word_count", None),
+                },
+            }
+        )
 
     for qa in getattr(output, "qa_items", None) or []:
-        documents.append({
-            "page_content": f"Q: {qa.question}\nA: {qa.answer}",
-            "metadata": {
-                "type": "qa",
-                "task_id": task.id,
-                "page": qa.page,
-                "question": qa.question,
-                "answer": qa.answer,
-            },
-        })
+        documents.append(
+            {
+                "page_content": f"Q: {qa.question}\nA: {qa.answer}",
+                "metadata": {
+                    "type": "qa",
+                    "task_id": task.id,
+                    "page": qa.page,
+                    "question": qa.question,
+                    "answer": qa.answer,
+                },
+            }
+        )
 
     for i, page_text in enumerate(output.texts_found or []):
         if not page_text:
             continue
-        documents.append({
-            "page_content": page_text,
-            "metadata": {
-                "type": "ocr_page",
-                "task_id": task.id,
-                "page": i + 1,
-            },
-        })
+        documents.append(
+            {
+                "page_content": page_text,
+                "metadata": {
+                    "type": "ocr_page",
+                    "task_id": task.id,
+                    "page": i + 1,
+                },
+            }
+        )
 
     return documents
 

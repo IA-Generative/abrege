@@ -511,7 +511,7 @@ export interface components {
       /**
        * Extract Qa
        * @description Also generate question/answer pairs per chunk while summarizing
-       * @default false
+       * @default true
        */
       extract_qa: boolean
       /**
