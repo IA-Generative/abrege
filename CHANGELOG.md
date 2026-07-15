@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [3.3.1](https://github.com/IA-Generative/abrege/compare/v3.3.0...v3.3.1) (2026-07-15)
+
+
+### Bug Fixes
+
+* cascade delete with ocr ([506ebe5](https://github.com/IA-Generative/abrege/commit/506ebe55b75cd2e7209acbfe26c7994fd8d14603))
+
 ## [3.3.0](https://github.com/IA-Generative/abrege/compare/v3.2.0...v3.3.0) (2026-07-10)
 
 
