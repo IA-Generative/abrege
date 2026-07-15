@@ -1,3 +1,4 @@
+import os
 from typing import List
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import JSONResponse
@@ -10,7 +11,15 @@ from src.schemas.task import task_table, TaskModel, TaskUpdateForm, TaskStatus
 from src.schemas.pagination import Pagination
 from src.schemas.code_error import TASK_STATUS_TO_HTTP
 from src.clients import file_connector, celery_app
+from src.clients.ocr_client import OCRClient
 from src.utils.logger import logger_abrege
+
+ocr_client = OCRClient(
+    url=os.getenv(
+        "OCR_BACKEND_URL",
+        "https://mirai-ocr-staging.sdid-app.cpin.numerique-interieur.com/1",
+    )
+)
 
 router = APIRouter(tags=["Tasks"])
 
@@ -118,6 +127,16 @@ async def delete_task(
             )
         except Exception as e:
             logger_abrege.exception(e, extra={"task_id": task.id, "user_id": task.user_id})
+
+    ocr_task_ids = (task.output.extras or {}).get("task_ocr_id", []) if task.output is not None else []
+    for ocr_task_id in ocr_task_ids:
+        try:
+            ocr_client.delete_task(task_id=ocr_task_id)
+        except Exception as e:
+            logger_abrege.exception(
+                e,
+                extra={"task_id": task.id, "user_id": task.user_id, "ocr_task_id": ocr_task_id},
+            )
 
     logger_abrege.debug(
         f"[Deleted task id : {task.id}][user id: {task.user_id}]",

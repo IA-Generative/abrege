@@ -1,6 +1,6 @@
 import pytest
 import os
-from abrege_service.clients.ocr_client import OCRClient
+from src.clients.ocr_client import OCRClient
 from src.schemas.task import TaskStatus
 
 

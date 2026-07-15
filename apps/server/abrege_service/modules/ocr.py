@@ -4,7 +4,7 @@ from contextlib import contextmanager
 import tempfile
 from PIL import Image
 
-from abrege_service.clients.ocr_client import OCRClient, sort_reader, OCRResult
+from src.clients.ocr_client import OCRClient, sort_reader, OCRResult
 from abrege_service.schemas import IMAGE_CONTENT_TYPES, PDF_CONTENT_TYPES
 from abrege_service.modules.base import BaseService
 from abrege_service.utils.lazy_pdf import LazyPdfImageList
@@ -135,7 +135,7 @@ class OCRMIService(BaseService):
                 file_path=task.input.file_path,
                 batch=batch,
             )
-            task.output.extras["task_ocr_id"] = list(set(task_ids) & set(task.output.extras["task_ocr_id"]))
+            task.output.extras["task_ocr_id"] = list(set(task_ids) | set(task.output.extras["task_ocr_id"]))
             logger.debug(f"batch size {len(batch)} get {task_ids} as ocr id", extra=extra_log)
 
             is_batch_processed = False

@@ -142,6 +142,13 @@ class OCRClient(BaseBackend):
         data = response.json()
         return data
 
+    def delete_task(self, task_id: str):
+        headers = {}
+        headers["Authorization"] = f"Bearer {self.token_manager.get_token()}"
+        response = requests.delete(f"{self.url}/tasks/{task_id}", headers=headers)
+        if response.status_code not in (200, 204, 404):
+            raise Exception(f"Error: {response.status_code} - {response.text}")
+
     def get_health(self):
         response = requests.get(f"{self.url}/health")
         if response.status_code != 200:

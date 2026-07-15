@@ -11,7 +11,7 @@ def test_get_content_type():
     )
     assert get_content_type("https://github.com/intel-iot-devkit/sample-videos/raw/master/bolt-detection.mp4") == "application/octet-stream"
     assert get_content_type("https://www.google.com/robots.txt") == "text/plain"
-    assert get_content_type("https://fr.getsamplefiles.com/download/wav/sample-3.wav") == "audio/x-wav"
+    assert get_content_type("https://samplelib.com/wav/sample-3s.wav") == "audio/x-wav"
 
 
 def test_download_type():
@@ -46,7 +46,7 @@ def test_download_type():
     # os.remove("ppt_philosophie_et_ecologie.pptx")
 
     # test audio
-    url_audio = "https://fr.getsamplefiles.com/download/wav/sample-3.wav"
+    url_audio = "https://samplelib.com/wav/sample-3s.wav"
     download_file(url=url_audio)
-    assert os.path.exists("sample-3.wav")
-    os.remove("sample-3.wav")
+    assert os.path.exists("sample-3s.wav")
+    os.remove("sample-3s.wav")
