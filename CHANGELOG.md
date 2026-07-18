@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [3.3.2](https://github.com/IA-Generative/abrege/compare/v3.3.1...v3.3.2) (2026-07-18)
+
+
+### Bug Fixes
+
+* redis sentinel password ([3a6b13a](https://github.com/IA-Generative/abrege/commit/3a6b13a371926c7e9757e86b0b1104f812338b06))
+
 ## [3.3.1](https://github.com/IA-Generative/abrege/compare/v3.3.0...v3.3.1) (2026-07-15)
 
 
