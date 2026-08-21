@@ -4,7 +4,7 @@ import datetime
 
 from src.utils.logger import logger_abrege
 from src.schemas.health import Health, HealtStatus
-from src.clients import redis_connector
+from src.clients import redis_connector, broker_connector
 from src import __version__, __name__
 
 
@@ -23,6 +23,14 @@ async def healthcheck():
     redis_health = redis_connector.get_health()
     dependencies.append(redis_health)
     if redis_health.status == HealtStatus.UNHEALTHY.value:
+        status = HealtStatus.UNHEALTHY.value
+        status_code = 503
+
+    # Le broker est un chemin distinct du client Redis simple ci-dessus : il a sa
+    # propre URL et ses propres identifiants, et c'est lui qu'utilise send_task.
+    broker_health = broker_connector.get_health()
+    dependencies.append(broker_health)
+    if broker_health.status == HealtStatus.UNHEALTHY.value:
         status = HealtStatus.UNHEALTHY.value
         status_code = 503
 

@@ -4,10 +4,13 @@ import redis
 from redis.sentinel import Sentinel
 from src.connector.s3_connector import S3Connector
 from src.connector.redis_connector import RedisConnector
+from src.connector.broker_connector import BrokerConnector
 from src.config.s3 import S3Settings
 from src.config.connector import ConnectorSettings
 from src.config.redis import RedisSettings
 from src.config.celery import CelerySettings
+from src.utils.logger import logger_abrege
+from src.utils.url import sanitize_broker_url
 
 
 def _redis_scheme(settings: RedisSettings) -> str:
@@ -77,8 +80,22 @@ if broker_transport_options:
     celery_app.conf.broker_transport_options = broker_transport_options
     celery_app.conf.result_backend_transport_options = broker_transport_options
 
+# Trace de demarrage : sans elle, une absence de mot de passe est indetectable
+# autrement qu'en lisant les erreurs de publication une a une.
+broker_has_auth = "@" in broker_url
+logger_abrege.info(
+    f"Celery broker: {sanitize_broker_url(broker_url)} "
+    f"| auth={'yes' if broker_has_auth else 'no'} "
+    f"| sentinel={bool(redis_settings.REDIS_SENTINEL_HOSTS)}"
+)
+if not broker_has_auth:
+    logger_abrege.warning(
+        "Broker Celery configure SANS authentification : tout Redis exigeant un mot de passe rejettera les publications avec NOAUTH"
+    )
+
 redis_client = _build_redis_client(redis_settings)
 redis_connector = RedisConnector(redis_client=redis_client)
+broker_connector = BrokerConnector(celery_app=celery_app)
 
 connector_settings = ConnectorSettings()
 
