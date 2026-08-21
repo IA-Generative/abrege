@@ -26,3 +26,9 @@ def test_healthcheck():
     assert data["status"] == "healthy"
     assert isinstance(data["dependencies"], list)
     assert isinstance(data["extras"], dict)
+
+    # Le broker doit etre sonde en plus du client Redis simple : ce sont deux
+    # chemins de connexion distincts, et seul le broker sert a publier.
+    dependency_names = [dependency["name"] for dependency in data["dependencies"]]
+    assert "redis" in dependency_names
+    assert "broker" in dependency_names
