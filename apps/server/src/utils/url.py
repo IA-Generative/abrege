@@ -65,3 +65,12 @@ def download_file(url: str, folder_dest: str | None = None, use_scrapling: bool 
         return dest_path
     except requests.RequestException as e:
         print(f"Erreur lors du téléchargement : {e}")
+
+
+def sanitize_broker_url(url: str) -> str:
+    """Masque le mot de passe d'une URL de broker pour la rendre loggable.
+
+    Gere les formes "scheme://:pwd@host", "scheme://user:pwd@host" et les URL
+    multiples separees par ";" (Sentinel).
+    """
+    return re.sub(r"://([^:@/]*):[^@/]*@", r"://\1:***@", url)
