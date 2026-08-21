@@ -9,13 +9,12 @@ from src import __version__, __name__ as name
 from prometheus_fastapi_instrumentator import Instrumentator
 from starlette.middleware.base import BaseHTTPMiddleware
 
-import os
-
 import sentry_sdk
 from src.config.sentry import SentrySettings
 from src.utils.logger import logger_abrege
+from src.utils.environment import resolve_environment
 
-_environment = os.getenv("ENVIRONMENT", "development")
+_environment = resolve_environment()
 _sentry_settings = SentrySettings()
 if _sentry_settings.SENTRY_API_DSN and _environment != "testing":
     try:
