@@ -23,6 +23,58 @@ export const keycloakConfig: KeycloakConfig = {
 
 let keycloak: Keycloak
 
+// Depuis Keycloak 26.6.5/26.7.0, une redirect_uri dont la query string contient un paramètre
+// de réponse OIDC est rejetée (protection HTTP Parameter Pollution), avant même la comparaison
+// avec les valid redirect URIs du client - un wildcard ne rattrape donc pas le coup.
+const OIDC_RESPONSE_PARAMS = [
+  'code',
+  'state',
+  'session_state',
+  'iss',
+  'error',
+  'error_description',
+  'id_token',
+  'access_token',
+  'token_type',
+  'expires_in',
+  'response',
+  'kc_action',
+  'kc_action_status',
+]
+
+function stripOidcParams (url: URL): boolean {
+  return OIDC_RESPONSE_PARAMS.reduce((mutated, param) => {
+    if (!url.searchParams.has(param)) {
+      return mutated
+    }
+    url.searchParams.delete(param)
+    return true
+  }, false)
+}
+
+function buildUri (url: URL, withHash = false): string {
+  const query = url.searchParams.toString()
+  return `${url.origin}${url.pathname}${query ? `?${query}` : ''}${withHash ? url.hash : ''}`
+}
+
+// redirect_uri sûre : l'URL courante débarrassée des paramètres de réponse OIDC.
+function currentRedirectUri (): string {
+  const url = new URL(window.location.href)
+  stripOidcParams(url)
+  return buildUri(url)
+}
+
+// Nettoie la barre d'adresse. `redirectToSSO` (router) n'envoie pas de response_mode, donc
+// Keycloak répond en `query` et laisse code/session_state/iss dans l'URL : keycloak-js, qui
+// lit le fragment, ne les consomme jamais et ils repartiraient dans la redirect_uri suivante.
+function cleanAuthParamsFromUrl () {
+  const url = new URL(window.location.href)
+  if (!stripOidcParams(url)) {
+    return
+  }
+  window.history.replaceState({}, document.title, buildUri(url, true))
+}
+
 function isRefreshTokenValid (keycloak: Keycloak): boolean {
   const refreshExp = keycloak.refreshTokenParsed?.exp
   const now = Date.now() / 1000
@@ -78,8 +130,8 @@ export function getUserProfile (): IUser {
 }
 
 export async function keycloakInit () {
-  const currentUrl = new URL(window.location.href)
-  const redirectUri = `${window.location.origin}${currentUrl.pathname}${currentUrl.search}`
+  cleanAuthParamsFromUrl()
+  const redirectUri = currentRedirectUri()
   try {
     const { onLoad, flow } = keycloakInitOptions
     const keycloak = getKeycloak()
@@ -100,8 +152,7 @@ export async function keycloakInit () {
 export async function keycloakLogin () {
   try {
     const keycloak = getKeycloak()
-    const currentUrl = new URL(window.location.href)
-    const redirectUri = `${window.location.origin}${currentUrl.pathname}${currentUrl.search}`
+    const redirectUri = currentRedirectUri()
     await keycloak.login({ redirectUri })
   }
   catch (error) {
@@ -115,8 +166,7 @@ export async function keycloakLogin () {
 export async function keycloakRegister () {
   try {
     const keycloak = getKeycloak()
-    const currentUrl = new URL(window.location.href)
-    const redirectUri = `${window.location.origin}${currentUrl.pathname}${currentUrl.search}`
+    const redirectUri = currentRedirectUri()
     await keycloak.register({ redirectUri })
   }
   catch (error) {
