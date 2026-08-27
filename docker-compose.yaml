@@ -71,7 +71,7 @@ services:
       context: .
       dockerfile: apps/server/api/Dockerfile
     ports:
-      - 5000:5000
+      - "${API_PORT:-5000}:5000"
     volumes:
       - ./apps/server/api/:/app/api/
       - ./apps/server/src/:/app/src/
@@ -129,6 +129,11 @@ services:
       target: dev
     env_file:
       - .env
+    environment:
+      # Le frontend tourne dans le navigateur, hors du réseau Docker : il ne
+      # joint l'API que par le port publié sur la machine. L'URL est dérivée
+      # d'API_PORT pour que le port ne soit déclaré qu'à un seul endroit.
+      VITE_ABREGE_API_URL: http://localhost:${API_PORT:-5000}/api
     ports:
       - 8082:3000
     volumes:

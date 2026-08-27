@@ -1,7 +1,7 @@
 PYTHONPATH=$(PWD)
 
 .PHONY: install-uv install-local linter test-bakend \
-        up down build \
+        setup up down build \
         upgrade-db upgrade-revision help
 
 .DEFAULT_GOAL := help
@@ -11,6 +11,16 @@ help:
 	@echo ""
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-25s\033[0m %s\n", $$1, $$2}'
+
+.env:
+	@cp .env.sample .env
+	@echo ""
+	@echo "  .env créé depuis .env.sample."
+	@echo "  Renseigne OPENAI_API_KEY et OPENAI_API_BASE avant 'make up'."
+	@echo "  Si le port 5000 est déjà pris (AirPlay Receiver sur macOS), ajoute API_PORT=<autre port>."
+	@echo ""
+
+setup: install install-local .env ## Installation complète sur un poste neuf
 
 install: install-uv ## Installation de l'environnement pour du développement local (gestionnaire de dépendances)
 	@if [ ! -d "apps/server/.venv" ]; then \
@@ -35,13 +45,13 @@ install-mac:
 	brew install poppler ffmpeg
 
 install-local: ## Installation des dépendances systèmes
-	ifeq ($(shell uname), Linux)
-		@$(MAKE) install-linux
-	else ifeq ($(shell uname), Darwin)
-		@$(MAKE) install-mac
-	else
-		@echo "Installation automatique non supportée sur cette plateforme"
-	endif
+	@if [ "$$(uname)" = "Linux" ]; then \
+		$(MAKE) install-linux; \
+	elif [ "$$(uname)" = "Darwin" ]; then \
+		$(MAKE) install-mac; \
+	else \
+		echo "Installation automatique non supportée sur cette plateforme"; \
+	fi
 
 lint: ## Lint le code du dépôt
 	cd apps/server && \
@@ -58,7 +68,7 @@ lint-fix: ## Lint et correction automatique du code backend
 		uv run ruff check --exclude '**/*.ipynb' . --fix && \
 		uv run ruff format .
 
-up: ## Lance l'environnement de développement en conteneurs
+up: .env ## Lance l'environnement de développement en conteneurs
 	docker compose up -d
 
 setup-frontend: clean-front ## Prépare le frontend pour le développement
@@ -67,7 +77,7 @@ setup-frontend: clean-front ## Prépare le frontend pour le développement
 		pnpm install && \
 		pnpm update
 
-up-frontend: ## Lance le frontend en conteneur
+up-frontend: .env ## Lance le frontend en conteneur
 	docker compose up -d abrege_frontend
 
 down: ## Eteint l'environnement de développement en conteneurs
@@ -91,10 +101,10 @@ clean-front: ## Nettoyage du frontend
 
 ########################### DOCKER BUILD ###########################
 
-build-abrege-api:
+build-abrege-api: .env
 	docker compose build abrege_api
 
-build-abrege-service:
+build-abrege-service: .env
 	docker compose build abrege_service
 
 
@@ -106,7 +116,7 @@ build: build-abrege-api build-abrege-service ## Lance la construction de toutes 
 down-services:
 	docker compose down --remove-orphans || true
 
-init-db:
+init-db: .env
 	docker compose up -d redis db minio migration
 	sleep 2
 	docker compose run migration uv run alembic upgrade head
@@ -126,7 +136,7 @@ test-abrege-api: init-db
 	docker compose exec abrege_api uv run pytest -s --cov=./api --cov-report=term-missing tests/api/ -ra -v --maxfail=0
 	make down-services
 
-test-abrege-service: ## Lance les tests du service abrege dans un environnement isolé
+test-abrege-service: .env ## Lance les tests du service abrege dans un environnement isolé
 	docker compose -f docker-compose.test.yaml run --rm test_runner
 	docker compose -f docker-compose.test.yaml down -v
 

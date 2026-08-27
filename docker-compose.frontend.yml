@@ -9,6 +9,9 @@ services:
       target: dev
     env_file:
       - .env
+    environment:
+      # Dérivée d'API_PORT : cf. docker-compose.yaml
+      VITE_ABREGE_API_URL: http://localhost:${API_PORT:-5000}/api
     ports:
     - 8082:3000
     volumes:

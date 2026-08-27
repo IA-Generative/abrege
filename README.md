@@ -53,15 +53,41 @@ Abrege breaks down the summarization process into three key phases:
 
 ### Prerequisites
 
-Install system dependencies:
+Install dependencies and create your local configuration:
 
 ```bash
-# For development environment
-make install
-
-# For system dependencies (Linux/macOS)
-make install-local
+# Everything at once on a fresh machine
+make setup
 ```
+
+`make setup` runs `make install` (Python environment), `make install-local`
+(system dependencies), and creates `.env` from `.env.sample`.
+Each step can also be run on its own.
+
+### ⚙️ Configuration
+
+`.env.sample` is the **only** environment file tracked in git. It holds every
+variable the application reads, with working defaults for the Docker Compose
+stack — never a secret.
+
+Your own `.env` is **not** tracked: copy the sample, then fill in the values
+marked `À RENSEIGNER` (ask the team for the LLM hub key):
+
+```bash
+cp .env.sample .env
+```
+
+> **macOS: port 5000 is taken.** AirPlay Receiver listens on it by default,
+> so the API container cannot bind it. Set `API_PORT` in your own `.env` —
+> the frontend's API URL is derived from it, so this is the only line to
+> change. No tracked file needs to be edited.
+>
+> ```bash
+> echo "API_PORT=5001" >> .env
+> ```
+>
+> The alternative is to turn AirPlay Receiver off in
+> *System Settings → General → AirDrop & Handoff*.
 
 ### 🐳 Run Locally (Docker Compose)
 

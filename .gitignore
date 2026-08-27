@@ -16,5 +16,8 @@ tests/data/nltk
 tests/data/text
 .env.prod
 .DS_Store
-*.env
+# Configuration locale : jamais versionnée. Seul .env.sample l'est.
+.env
+.env.*
+!.env.sample
 node_modules/
