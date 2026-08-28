@@ -95,6 +95,32 @@ export function getUserProfile (): IUser {
   }
 }
 
+const AUTH_CALLBACK_PARAMS = ['code', 'state', 'session_state', 'iss']
+
+function withoutAuthParams (search: string): string | null {
+  const params = new URLSearchParams(search)
+  if (!AUTH_CALLBACK_PARAMS.some(param => params.has(param))) {
+    return null
+  }
+  AUTH_CALLBACK_PARAMS.forEach(param => params.delete(param))
+  return params.toString()
+}
+
+function stripAuthCallbackParams () {
+  const url = new URL(window.location.href)
+  const cleanedQuery = withoutAuthParams(url.search)
+  const cleanedHash = withoutAuthParams(url.hash.replace(/^#/, ''))
+
+  if (cleanedQuery === null && cleanedHash === null) {
+    return
+  }
+
+  const query = cleanedQuery ?? url.search.replace(/^\?/, '')
+  const hash = cleanedHash ?? url.hash.replace(/^#/, '')
+  const clean = url.origin + url.pathname + (query ? `?${query}` : '') + (hash ? `#${hash}` : '')
+  window.history.replaceState({}, document.title, clean)
+}
+
 export async function keycloakInit () {
   const currentUrl = new URL(window.location.href)
   const redirectUri = `${window.location.origin}${currentUrl.pathname}${currentUrl.search}`
@@ -106,6 +132,7 @@ export async function keycloakInit () {
       flow,
       redirectUri,
     })
+    stripAuthCallbackParams()
   }
   catch (error) {
     if (error instanceof Error) {

@@ -7,6 +7,7 @@ const keycloakInstance = {
   timeSkew: 0,
   updateToken: vi.fn(),
   login: vi.fn(),
+  init: vi.fn(),
 }
 
 vi.mock('keycloak-js', () => ({
@@ -30,6 +31,7 @@ describe('getValidToken', () => {
     keycloakInstance.timeSkew = 0
     keycloakInstance.refreshTokenParsed = { exp: secondsFromNow(3600) }
     keycloakInstance.updateToken.mockResolvedValue(true)
+    keycloakInstance.init.mockResolvedValue(true)
   })
 
   it('refreshes the token and returns it while the session is alive', async () => {
@@ -72,5 +74,49 @@ describe('getValidToken', () => {
 
     await expect(getValidToken()).rejects.toBeInstanceOf(SessionExpiredError)
     expect(keycloakInstance.login).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('keycloakInit', () => {
+  const AUTH_CALLBACK_URL
+    = 'http://localhost:3000/document#state=abc&session_state=def&iss=https%3A%2F%2Fsso.test&code=secret-code'
+
+  function currentUrl () {
+    return window.location.href
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    keycloakInstance.init.mockResolvedValue(true)
+  })
+
+  it('strips the authorization code from the url fragment once the token is acquired', async () => {
+    window.history.replaceState({}, '', AUTH_CALLBACK_URL)
+    const { keycloakInit } = await loadKeycloakUtils()
+
+    await keycloakInit()
+
+    expect(currentUrl()).not.toContain('code=')
+    expect(currentUrl()).not.toContain('session_state=')
+    expect(currentUrl()).not.toContain('state=')
+  })
+
+  it('strips the authorization code from the query string too', async () => {
+    window.history.replaceState({}, '', 'http://localhost:3000/document?code=secret-code&keep=1')
+    const { keycloakInit } = await loadKeycloakUtils()
+
+    await keycloakInit()
+
+    expect(currentUrl()).not.toContain('code=')
+    expect(currentUrl()).toContain('keep=1')
+  })
+
+  it('leaves a fragment that carries no auth parameter untouched', async () => {
+    window.history.replaceState({}, '', 'http://localhost:3000/document#resultats')
+    const { keycloakInit } = await loadKeycloakUtils()
+
+    await keycloakInit()
+
+    expect(currentUrl()).toBe('http://localhost:3000/document#resultats')
   })
 })
