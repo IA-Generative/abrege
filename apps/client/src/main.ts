@@ -6,7 +6,7 @@ import { createApp } from 'vue'
 import VueMatomo from 'vue-matomo'
 import App from './App.vue'
 import router from './router/index'
-import { ENVIRONMENT, MATOMO_SITE_ID, MATOMO_SITE_URL, SENTRY_FRONTEND_DSN } from './utils/constants'
+import { ENVIRONMENT, MATOMO_SITE_ID, MATOMO_SITE_URL, SENTRY_FRONTEND_DSN, SENTRY_RELEASE } from './utils/constants'
 import { keycloakInit } from './utils/keycloak'
 
 import '@gouvfr/dsfr/dist/core/core.main.min.css'
@@ -38,6 +38,7 @@ async function initializeApp () {
         app,
         dsn: SENTRY_FRONTEND_DSN,
         environment: ENVIRONMENT,
+        release: SENTRY_RELEASE,
         sendDefaultPii: false,
       })
     }

@@ -19,3 +19,4 @@ export const OAUTH2_PROXY_URL = (window as any).OAUTH2_PROXY_URL ?? import.meta.
 
 export const SENTRY_FRONTEND_DSN = (window as any).VITE_SENTRY_FRONTEND_DSN ?? import.meta.env.VITE_SENTRY_FRONTEND_DSN
 export const ENVIRONMENT = (window as any).VITE_ENVIRONMENT ?? import.meta.env.VITE_ENVIRONMENT
+export const SENTRY_RELEASE = import.meta.env.VITE_SENTRY_RELEASE

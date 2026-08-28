@@ -129,4 +129,5 @@ docker-build-abrege-frontend:
         TAGS="$TAGS abrege-frontend:latest"
       fi
       export IMAGE_NAMES="$TAGS"
+      export EXTRA_BUILD_ARGS="${EXTRA_BUILD_ARGS} --build-arg VITE_SENTRY_RELEASE=${SHORT_SHA}"
       echo "Building with tags: $IMAGE_NAMES"

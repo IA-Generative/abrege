@@ -12,6 +12,10 @@ CMD ["pnpm", "run", "dev"]
 # build
 FROM dev AS build
 
+ARG VITE_SENTRY_RELEASE
+
+ENV VITE_SENTRY_RELEASE=$VITE_SENTRY_RELEASE
+
 RUN pnpm run build
 
 
