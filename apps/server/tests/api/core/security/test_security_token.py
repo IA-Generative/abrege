@@ -71,3 +71,17 @@ def test_invalid_token_raises():
         verifier(request)
     assert exc.value.status_code == status.HTTP_401_UNAUTHORIZED
     assert "UNAUTHORIZED" in exc.value.detail
+
+
+def test_missing_bearer_token_is_rejected_without_calling_keycloak(monkeypatch):
+    from unittest.mock import Mock
+
+    from api.core.security import factory
+
+    monkeypatch.setattr(factory.KeycloakToken, "__init__", lambda self: None)
+    verifier = factory.KeycloakToken()
+    introspect = Mock()
+    verifier.keycloak_openid = Mock(introspect=introspect)
+
+    assert verifier.verify(RequestContext(token=None)) is False
+    introspect.assert_not_called()

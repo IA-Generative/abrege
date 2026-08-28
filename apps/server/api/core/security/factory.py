@@ -49,6 +49,10 @@ class KeycloakToken(BaseVerifyToken):
 
     def verify(self, ctx: RequestContext) -> bool:
         """Vérifie le token JWT avec Keycloak et remplit ctx avec les infos utilisateur"""
+        if not ctx.token:
+            logging.info("No bearer token provided, rejecting the request")
+            return False
+
         try:
             user_info = self.keycloak_openid.introspect(ctx.token)
             logging.debug(f"Token info: {user_info.keys()}")

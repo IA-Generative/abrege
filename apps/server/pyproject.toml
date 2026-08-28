@@ -94,6 +94,7 @@ migration = [
 [tool.pytest.ini_options]
 env_override_existing_values = 1
 env_files = ["tests/.env.testing"]
+pythonpath = ["."]
 
 [tool.ruff]
 line-length = 150
