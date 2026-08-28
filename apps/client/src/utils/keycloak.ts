@@ -23,38 +23,56 @@ export const keycloakConfig: KeycloakConfig = {
 
 let keycloak: Keycloak
 
-function isRefreshTokenValid (keycloak: Keycloak): boolean {
-  const refreshExp = keycloak.refreshTokenParsed?.exp
-  const now = Date.now() / 1000
-  return typeof refreshExp === 'number' && refreshExp > now
+export class SessionExpiredError extends Error {
+  constructor () {
+    super('Session expired: refresh token is no longer valid')
+    this.name = 'SessionExpiredError'
+  }
 }
 
-function getTokenExpiration (keycloak: Keycloak): number | null {
-  const tokenExp = keycloak.tokenParsed?.exp
-  return typeof tokenExp === 'number' ? tokenExp : null
+const REFRESH_TOKEN_BUFFER_SECONDS = 30
+let loginRedirectAlreadyInProgress = false
+
+function isRefreshTokenValid (keycloak: Keycloak): boolean {
+  const refreshTokenExpirationDate = keycloak.refreshTokenParsed?.exp
+  if (refreshTokenExpirationDate === undefined) {
+    return false
+  }
+
+  const nowInSeconds = Math.floor(Date.now() / 1000)
+  const skew = keycloak.timeSkew ?? 0
+  return nowInSeconds - skew < refreshTokenExpirationDate - REFRESH_TOKEN_BUFFER_SECONDS
 }
 
 export function getKeycloak () {
   if (!keycloak) {
     keycloak = new Keycloak(keycloakConfig)
-    keycloak.onAuthSuccess = () => {
-      if (isRefreshTokenValid(keycloak)) {
-        return
-      }
-      console.warn('Keycloak misconfiguration: refreshToken should not expire before token')
-      const tokenExp = getTokenExpiration(keycloak)
-      if (tokenExp) {
-        const refreshTokenDelay = (tokenExp * 1000 - Date.now()) / 2
-        setTimeout(() => {
-          keycloak.updateToken()
-        }, refreshTokenDelay)
-      }
-    }
-    keycloak.onTokenExpired = () => {
-      keycloak.updateToken(30)
-    }
   }
   return keycloak
+}
+
+export async function getValidToken (): Promise<string> {
+  const keycloak = getKeycloak()
+
+  if (!keycloak.authenticated || !isRefreshTokenValid(keycloak)) {
+    return handleDeadSession(keycloak)
+  }
+
+  try {
+    await keycloak.updateToken(REFRESH_TOKEN_BUFFER_SECONDS)
+  }
+  catch {
+    return handleDeadSession(keycloak)
+  }
+  return keycloak.token!
+}
+
+function handleDeadSession (keycloak: Keycloak): never {
+  if (!loginRedirectAlreadyInProgress) {
+    loginRedirectAlreadyInProgress = true
+    keycloak.login()
+  }
+  throw new SessionExpiredError()
 }
 
 export function getUserProfile (): IUser {
