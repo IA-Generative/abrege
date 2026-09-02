@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [3.3.3](https://github.com/IA-Generative/abrege/compare/v3.3.2...v3.3.3) (2026-09-02)
+
+
+### Bug Fixes
+
+* **release:** resync dev prerelease manifest with main ([698144c](https://github.com/IA-Generative/abrege/commit/698144c55d847f8868c83c54905be6b63ff114d9))
+
 ## [3.3.2](https://github.com/IA-Generative/abrege/compare/v3.3.1...v3.3.2) (2026-07-18)
 
 
