@@ -1,9 +1,12 @@
 include:
   - project: $CATALOG_PATH
-    file: vault-ci.yml
-    ref: main
-  - project: $CATALOG_PATH
-    file: kaniko-ci.yml
+    file:
+      - vault-ci.yml
+      - kaniko-ci.yml
+      # Temporarily unused: `helm-package-push` below inlines a fixed copy of
+      # `.helm:build-push` while the fix is validated here before being proposed
+      # upstream. Restore the `extends` once the catalogue carries it.
+      - helm-ci.yml
     ref: main
 
 default:
@@ -12,10 +15,16 @@ default:
 variables:
   TAG: "${CI_COMMIT_REF_SLUG}"
   REGISTRY_URL: "${REGISTRY_HOST}/${PROJECT_PATH}"
+  # The chart lives at the repository root (helm/Chart.yaml), not nested under a
+  # charts/ parent - so CHARTS_DIR is "." (one level up from the chart itself),
+  # same convention as CHARTS_DIR: ./charts pointing at charts/<name>/Chart.yaml
+  # elsewhere.
+  CHARTS_DIR: .
 
 stages:
   - read-secret
   - docker-build
+  - helm-package
 
 read_secret:
   stage: read-secret
@@ -130,3 +139,83 @@ docker-build-abrege-frontend:
       fi
       export IMAGE_NAMES="$TAGS"
       echo "Building with tags: $IMAGE_NAMES"
+
+# Inlined copy of the catalogue's `.helm:build-push` (helm-ci.yml) with its chart
+# detection fixed, so the fix can be exercised here before it is proposed upstream.
+# Two bugs, both in the incremental branch:
+#   - the grep hardcoded `^charts/` instead of honouring CHARTS_DIR, so it never
+#     matched this repository's `helm/` chart;
+#   - a commit touching no chart left that grep exiting 1, which `set -eo pipefail`
+#     turned into a failed job instead of the intended clean skip.
+helm-package-push:
+  stage: helm-package
+  only:
+    - tags
+    - main
+    - dev
+  image: alpine/helm:4.1.3
+  script:
+    # Install git for detecting changed charts
+    - apk add --no-cache git
+    # Detect changed charts based on git diff
+    - |
+      CHARTS_PREFIX=$(echo "${CHARTS_DIR}" | sed 's|^\./||; s|/$||')
+      if [ -z "$CI_COMMIT_BEFORE_SHA" ] || [ "$CI_COMMIT_BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
+        echo "No previous commit found, packaging all charts"
+        CHANGED_CHARTS=$(find ${CHARTS_DIR} -maxdepth 1 -type d ! -path ${CHARTS_DIR} -exec basename {} \;)
+      else
+        echo "Detecting changed charts between $CI_COMMIT_BEFORE_SHA and $CI_COMMIT_SHA"
+        CHANGED_FILES=$(git diff --name-only ${CI_COMMIT_BEFORE_SHA} ${CI_COMMIT_SHA})
+        echo "Changed files: $CHANGED_FILES"
+        if [ "$CHARTS_PREFIX" = "." ] || [ -z "$CHARTS_PREFIX" ]; then
+          # Charts sit at the repository root, so the chart directory is the first
+          # path segment - same set the `find` branch above would return.
+          CHANGED_CHARTS=$(echo "$CHANGED_FILES" | cut -d'/' -f1 | sort -u)
+        else
+          CHANGED_CHARTS=$(echo "$CHANGED_FILES" | grep "^${CHARTS_PREFIX}/" | cut -d'/' -f2 | sort -u || true)
+        fi
+      fi
+      echo "Changed charts: $CHANGED_CHARTS"
+    - |
+      if [ -z "$CHANGED_CHARTS" ]; then
+        echo "No charts changed, skipping..."
+        exit 0
+      fi
+    # Setup Docker auth for Helm (same credentials as kaniko)
+    - mkdir -p /root/.docker
+    - echo "$DOCKER_AUTH" > /root/.docker/config.json
+    # Package and push each changed chart
+    - |
+      for CHART in $CHANGED_CHARTS; do
+        CHART_PATH="${CHARTS_DIR}/${CHART}"
+        if [ ! -f "${CHART_PATH}/Chart.yaml" ]; then
+          echo "Skipping ${CHART} - not a valid chart"
+          continue
+        fi
+
+        # Extract version from Chart.yaml
+        CHART_VERSION=$(grep '^version:' ${CHART_PATH}/Chart.yaml | awk '{print $2}')
+        CHART_NAME=$(grep '^name:' ${CHART_PATH}/Chart.yaml | awk '{print $2}')
+
+        # Validate extracted values
+        if [ -z "$CHART_VERSION" ] || [ -z "$CHART_NAME" ]; then
+          echo "Error: Could not extract chart name or version from ${CHART_PATH}/Chart.yaml"
+          exit 1
+        fi
+
+        echo "Packaging ${CHART_NAME} version ${CHART_VERSION}"
+
+        # Update dependencies if Chart.lock exists or dependencies are defined
+        if [ -f "${CHART_PATH}/Chart.lock" ] || grep -q "^dependencies:" "${CHART_PATH}/Chart.yaml"; then
+          echo "Updating chart dependencies..."
+          helm dependency update ${CHART_PATH}
+        fi
+
+        # Package the chart
+        helm package ${CHART_PATH}
+
+        # Push to Harbor as OCI artifact
+        helm push ${CHART_NAME}-${CHART_VERSION}.tgz oci://${IMAGE_REPOSITORY}
+
+        echo "Successfully pushed ${CHART_NAME}:${CHART_VERSION} to ${IMAGE_REPOSITORY}"
+      done

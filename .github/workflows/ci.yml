@@ -13,6 +13,16 @@ on:
 
 env:
   PYTHON_VERSION: 3.x
+  BUILD_AMD64: true
+  BUILD_ARM64: false
+  LATEST_TAG: false
+  USE_QEMU: false
+  # A pull request's IMAGE_TAG (pr-<N>) stays constant across every push, so a
+  # commit that leaves this image's content unchanged reuses the previous
+  # digest - the short-sha tag would then just pile another tag onto that same
+  # still-live version instead of marking anything new.
+  TAG_SHORT_SHA: false
+  CT_CONF_PATH: ci/configs/ct.yaml
 
 jobs:
   detect-changes:
@@ -23,7 +33,10 @@ jobs:
     outputs:
       frontend: ${{ steps.filter.outputs.frontend }}
       backend: ${{ steps.filter.outputs.backend }}
-      sdk: ${{ steps.filter.outputs.sdk }}        
+      sdk: ${{ steps.filter.outputs.sdk }}
+      helm: ${{ steps.filter.outputs.helm }}
+      ci: ${{ steps.filter.outputs.ci }}
+      services: ${{ steps.services.outputs.services }}
     steps:
       - uses: actions/checkout@v4
 
@@ -39,17 +52,77 @@ jobs:
               - 'apps/server/uv.lock'
             sdk:
               - 'sdk/**'
+            helm:
+              - 'helm/**'
+              - 'ci/configs/ct.yaml'
+            ci:
+              - '.github/workflows/**'
+
+      - name: Select images to build
+        id: services
+        # Matrix computed from the paths that actually feed each image rather
+        # than a fixed list gated by one shared `if`, so a frontend-only pull
+        # request does not pay for rebuilding the Python images (and vice
+        # versa). A workflow change rebuilds everything.
+        env:
+          BACKEND: ${{ steps.filter.outputs.backend }}
+          FRONTEND: ${{ steps.filter.outputs.frontend }}
+          CI: ${{ steps.filter.outputs.ci }}
+        run: |
+          set -euo pipefail
+
+          SERVICES='[]'
+          add() { SERVICES=$(jq -c --argjson s "$1" '. + [$s]' <<<"$SERVICES"); }
+
+          if [ "$BACKEND" = "true" ] || [ "$CI" = "true" ]; then
+            add '{"name":"abrege-api","context":".","dockerfile":"apps/server/api/Dockerfile","target":"base"}'
+            add '{"name":"abrege-service","context":".","dockerfile":"apps/server/abrege_service/Dockerfile","target":"builder"}'
+            add '{"name":"abrege-migration","context":".","dockerfile":"apps/server/migration/Dockerfile","target":""}'
+          fi
+          if [ "$FRONTEND" = "true" ] || [ "$CI" = "true" ]; then
+            add '{"name":"abrege-frontend","context":"apps/client","dockerfile":"apps/client/Dockerfile","target":"prod"}'
+          fi
+
+          echo "Images to build: $SERVICES"
+          echo "services=$SERVICES" >> "$GITHUB_OUTPUT"
+
   expose-vars:
     runs-on: ubuntu-24.04
     if: ${{ !github.event.pull_request.draft }}
     outputs:
       PYTHON_VERSION: ${{ env.PYTHON_VERSION }}
+      BUILD_AMD64: ${{ env.BUILD_AMD64 }}
+      BUILD_ARM64: ${{ env.BUILD_ARM64 }}
+      LATEST_TAG: ${{ env.LATEST_TAG }}
+      USE_QEMU: ${{ env.USE_QEMU }}
+      TAG_SHORT_SHA: ${{ env.TAG_SHORT_SHA }}
+      CT_CONF_PATH: ${{ env.CT_CONF_PATH }}
+      IMAGE_BASE: ${{ steps.image.outputs.IMAGE_BASE }}
+      IMAGE_TAG: ${{ steps.image.outputs.IMAGE_TAG }}
     steps:
     - name: Exposing env vars
       run: echo "Exposing env vars"
 
+    - name: Compute image base and tag
+      id: image
+      shell: bash
+      env:
+        PR_NUMBER: ${{ github.event.pull_request.number || github.event.number || '' }}
+      run: |
+        set -euo pipefail
+
+        # `IA-Generative` is mixed case and OCI registries reject uppercase references.
+        echo "IMAGE_BASE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+
+        if [ -n "$PR_NUMBER" ]; then
+          IMAGE_TAG="pr-$PR_NUMBER"
+        else
+          IMAGE_TAG=$(printf '%s' "${GITHUB_REF_NAME,,}" | tr -c 'a-z0-9._-' '-')
+        fi
+        echo "Image tag: $IMAGE_TAG"
+        echo "IMAGE_TAG=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+
   lint:
-    
     uses: ./.github/workflows/lint.yml
     needs:
       - expose-vars
@@ -57,6 +130,7 @@ jobs:
     with:
       PYTHON_VERSION: ${{ needs.expose-vars.outputs.PYTHON_VERSION }}
       run-backend: ${{ needs.detect-changes.outputs.backend == 'true' }}
+      run-sdk: ${{ needs.detect-changes.outputs.sdk == 'true' }}
 
   unit-tests:
     uses: ./.github/workflows/unit-tests.yml
@@ -65,15 +139,135 @@ jobs:
     with:
       PYTHON_VERSION: ${{ needs.expose-vars.outputs.PYTHON_VERSION }}
 
+  scan-gitleaks:
+    uses: dnum-mi/fabnum-cicd/.github/workflows/scan-gitleaks.yml@v0
+    if: ${{ !github.event.pull_request.draft }}
+    permissions:
+      contents: read
+      security-events: write
+      pull-requests: write
+    with:
+      PR_NUMBER: ${{ github.event.pull_request.number || github.event.number || '' }}
+      GITHUB_SECURITY_TAB: true
+
+  scan-trivy-conf:
+    uses: dnum-mi/fabnum-cicd/.github/workflows/scan-trivy.yml@v0
+    needs:
+    - expose-vars
+    if: ${{ !github.event.pull_request.draft }}
+    permissions:
+      contents: read
+      security-events: write
+      pull-requests: write
+      packages: read
+    with:
+      PATH: ./
+      PR_NUMBER: ${{ github.event.pull_request.number || github.event.number || '' }}
+      FORMAT: sarif
+      GITHUB_SECURITY_TAB: true
+      CATEGORY: trivy-config
+
+  build-docker:
+    uses: dnum-mi/fabnum-cicd/.github/workflows/build-docker.yml@v0
+    needs:
+    - detect-changes
+    - expose-vars
+    if: ${{ needs.detect-changes.outputs.services != '[]' }}
+    permissions:
+      packages: write
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(needs.detect-changes.outputs.services) }}
+    with:
+      IMAGE_NAME: ${{ needs.expose-vars.outputs.IMAGE_BASE }}/${{ matrix.service.name }}
+      IMAGE_TAG: ${{ needs.expose-vars.outputs.IMAGE_TAG }}
+      IMAGE_CONTEXT: ${{ matrix.service.context }}
+      IMAGE_DOCKERFILE: ${{ matrix.service.dockerfile }}
+      IMAGE_TARGET: ${{ matrix.service.target }}
+      BUILD_AMD64: ${{ needs.expose-vars.outputs.BUILD_AMD64 == 'true' }}
+      BUILD_ARM64: ${{ needs.expose-vars.outputs.BUILD_ARM64 == 'true' }}
+      LATEST_TAG: ${{ needs.expose-vars.outputs.LATEST_TAG == 'true' }}
+      USE_QEMU: ${{ needs.expose-vars.outputs.USE_QEMU == 'true' }}
+      TAG_SHORT_SHA: ${{ needs.expose-vars.outputs.TAG_SHORT_SHA == 'true' }}
+      CACHE: true
+      CACHE_MODE: min
+
+  scan-trivy-images:
+    uses: dnum-mi/fabnum-cicd/.github/workflows/scan-trivy.yml@v0
+    needs:
+    - detect-changes
+    - expose-vars
+    - build-docker
+    if: ${{ needs.detect-changes.outputs.services != '[]' }}
+    permissions:
+      contents: read
+      security-events: write
+      pull-requests: write
+      packages: read
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(needs.detect-changes.outputs.services) }}
+    with:
+      IMAGE: ${{ needs.expose-vars.outputs.IMAGE_BASE }}/${{ matrix.service.name }}:${{ needs.expose-vars.outputs.IMAGE_TAG }}
+      PR_NUMBER: ${{ github.event.pull_request.number || github.event.number || '' }}
+      FORMAT: sarif
+      GITHUB_SECURITY_TAB: true
+      CATEGORY: trivy-image-${{ matrix.service.name }}
+      TIMEOUT: 20m
+
+  lint-helm-docs:
+    uses: dnum-mi/fabnum-cicd/.github/workflows/lint-helm.yml@v0
+    needs:
+    - detect-changes
+    - expose-vars
+    if: ${{ needs.detect-changes.outputs.helm == 'true' || needs.detect-changes.outputs.ci == 'true' }}
+    permissions:
+      contents: read
+    with:
+      HELM_DOCS_VERSION: v1.14.2
+      CT_CONF_PATH: ${{ needs.expose-vars.outputs.CT_CONF_PATH }}
+      CHARTS_DIR: helm
+      LINT_CHARTS: false
+      LINT_DOCS: true
+
+  lint-helm-charts:
+    uses: dnum-mi/fabnum-cicd/.github/workflows/lint-helm.yml@v0
+    needs:
+    - detect-changes
+    - expose-vars
+    if: ${{ needs.detect-changes.outputs.helm == 'true' || needs.detect-changes.outputs.ci == 'true' }}
+    permissions:
+      contents: read
+    with:
+      HELM_DOCS_VERSION: v1.14.2
+      CT_CONF_PATH: ${{ needs.expose-vars.outputs.CT_CONF_PATH }}
+      CHARTS_DIR: helm
+      LINT_CHARTS: true
+      LINT_DOCS: false
+
+  # No `test-helm` job on purpose: `ct install` renders the chart with its
+  # default values, which point at ghcr.io images tagged with the chart's
+  # appVersion - on a pull request that tag does not exist yet.
+
   # Workaround for required status check in protection branches (see. https://github.com/orgs/community/discussions/13690)
   all-jobs-passed:
     name: Check jobs status
     runs-on: ubuntu-24.04
     if: ${{ always() }}
     needs:
+    - detect-changes
     - expose-vars
     - lint
     - unit-tests
+    - scan-gitleaks
+    - scan-trivy-conf
+    - build-docker
+    - scan-trivy-images
+    - lint-helm-docs
+    - lint-helm-charts
     steps:
     - name: Check status of all required jobs
       run: |-
