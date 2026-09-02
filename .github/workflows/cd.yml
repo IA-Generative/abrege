@@ -7,9 +7,34 @@ on:
     - main
   workflow_dispatch:
 
+# Releases must never overlap: two pushes landing close together would run two
+# release jobs against the same branch, and the loser fails on the tag the
+# winner already created ("Duplicate release tag").
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PRERELEASE_BRANCH: dev
+  RELEASE_BRANCH: main
+  # The chart lives at the repository root as `helm/`; CHART_NAME is the
+  # directory under CHARTS_DIR, while the published OCI artifact is named from
+  # Chart.yaml (`abrege`) - so it stays ghcr.io/<repo>/abrege regardless.
+  CHARTS_DIR: ./
+  CHART_NAME: helm
+  # Only the plain-HTTP dependency needs declaring; the cloudpirates charts are
+  # pulled straight from their OCI registry.
+  HELM_REPOS: cnpg=https://cloudnative-pg.github.io/charts
+
 jobs:
   expose-vars:
     runs-on: ubuntu-24.04
+    outputs:
+      PRERELEASE_BRANCH: ${{ env.PRERELEASE_BRANCH }}
+      RELEASE_BRANCH: ${{ env.RELEASE_BRANCH }}
+      CHARTS_DIR: ${{ env.CHARTS_DIR }}
+      CHART_NAME: ${{ env.CHART_NAME }}
+      HELM_REPOS: ${{ env.HELM_REPOS }}
     steps:
     - name: Exposing env vars
       run: echo "Exposing env vars"
@@ -20,3 +45,88 @@ jobs:
       contents: write
       pull-requests: write
       packages: write
+
+  bump-chart:
+    uses: dnum-mi/fabnum-cicd/.github/workflows/update-helm-chart.yml@v0
+    needs:
+    - expose-vars
+    - release
+    if: ${{ needs.release.outputs.release-created == 'true' }}
+    permissions:
+      contents: write
+      pull-requests: write
+    with:
+      # Monorepo: the chart ships with the code, so the bump is committed
+      # straight onto the branch instead of arriving as a pull request.
+      RUN_MODE: local
+      CHART_DIR: ${{ needs.expose-vars.outputs.CHARTS_DIR }}
+      CHART_NAME: ${{ needs.expose-vars.outputs.CHART_NAME }}
+      # UPGRADE_TYPE defaults to 'auto': level from the appVersion delta, rc
+      # cycle vs release selected by the shape of APP_VERSION. The chart keeps
+      # its own version line - a 3.3.2 app can ship as chart 0.1.1.
+      APP_VERSION: ${{ needs.release.outputs.version }}
+    # dev/main's branch rulesets both require a pull request for every push,
+    # with no exception for GITHUB_TOKEN - only a GitHub App can be named in a
+    # bypass list. Supplying these secrets switches this push (and only this
+    # push) from GITHUB_TOKEN to the App token, which is what lets it clear
+    # that rule on both.
+    secrets:
+      APP_CLIENT_ID: ${{ secrets.APP_CLIENT_ID }}
+      APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
+
+  release-chart:
+    uses: dnum-mi/fabnum-cicd/.github/workflows/release-helm-local.yml@v0
+    needs:
+    - expose-vars
+    - release
+    - bump-chart
+    if: ${{ needs.release.outputs.release-created == 'true' }}
+    permissions:
+      contents: read
+      packages: write
+    with:
+      # Monorepo: the chart shares the app's tag namespace, so chart-releaser's
+      # tag-based change detection is unreliable - package the exact commit
+      # bump-chart just pushed instead.
+      CHARTS_DIR: ${{ needs.expose-vars.outputs.CHARTS_DIR }}
+      CHART_NAME: ${{ needs.expose-vars.outputs.CHART_NAME }}
+      CHECKOUT_REF: ${{ needs.bump-chart.outputs.commit-sha }}
+      HELM_REPOS: ${{ needs.expose-vars.outputs.HELM_REPOS }}
+
+  sync-cpin:
+    name: Sync CPiN after release
+    uses: dnum-mi/fabnum-cicd/.github/workflows/sync-cpin.yml@v0
+    needs:
+    - release
+    - bump-chart
+    if: ${{ needs.release.outputs.release-created == 'true' }}
+    # The only automatic CPiN sync left: dso-auto-sync.yaml is manual-only
+    # precisely because this job already covers every push that matters - and
+    # only fires once bump-chart has actually landed the version bump.
+    permissions: {}
+    with:
+      GITLAB_URL: ${{ vars.GITLAB_URL }}
+      GIT_MIRROR_PROJECT_ID: ${{ vars.GITLAB_MIRROR_ID }}
+      REPOSITORY_NAME: ${{ vars.GILTAB_PROJECT_NAME }}
+      BRANCH_TO_SYNC: ${{ github.ref_name }}
+      SYNC_ALL: false
+    secrets:
+      GIT_MIRROR_TOKEN: ${{ secrets.GITLAB_TRIGGER_TOKEN }}
+
+  # Last on purpose. A release lands commits on main that dev does not have -
+  # release-please's release commit, and bump-chart's chart bump - and dev
+  # edits those same files on its own rc cycle. Left unsynchronised it computes
+  # its next versions from a pre-release state and conflicts with main on the
+  # following promotion.
+  sync-prerelease-branch:
+    uses: dnum-mi/fabnum-cicd/.github/workflows/sync-prerelease-branch.yml@v0
+    needs:
+    - expose-vars
+    - release
+    - bump-chart
+    if: ${{ github.ref_name == needs.expose-vars.outputs.RELEASE_BRANCH && needs.release.outputs.release-created == 'true' }}
+    permissions:
+      contents: write
+    with:
+      RELEASE_BRANCH: ${{ needs.expose-vars.outputs.RELEASE_BRANCH }}
+      PRERELEASE_BRANCH: ${{ needs.expose-vars.outputs.PRERELEASE_BRANCH }}
