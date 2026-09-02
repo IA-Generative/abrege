@@ -62,7 +62,9 @@ jobs:
         if: steps.release.outputs.release_created == 'true'
         id: registry
         shell: bash
-        run: echo "prefix=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+        # Repo-scoped (not org-scoped): a flat ghcr.io/<owner>/<component> name
+        # would collide with any other repo building a same-named component.
+        run: echo "prefix=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         if: steps.release.outputs.release_created == 'true'
@@ -85,11 +87,11 @@ jobs:
           target: base
           push: true
           tags: |
-            ${{ steps.registry.outputs.prefix }}/abrege-api:${{ steps.release.outputs.version }}
-            ${{ steps.registry.outputs.prefix }}/abrege-api:${{ steps.release.outputs.tag_name }}
-            ${{ steps.registry.outputs.prefix }}/abrege-api:latest
+            ${{ steps.registry.outputs.prefix }}/api:${{ steps.release.outputs.version }}
+            ${{ steps.registry.outputs.prefix }}/api:${{ steps.release.outputs.tag_name }}
+            ${{ steps.registry.outputs.prefix }}/api:latest
 
-      - name: Build and push service image
+      - name: Build and push worker image
         if: steps.release.outputs.release_created == 'true'
         uses: docker/build-push-action@v6
         with:
@@ -98,9 +100,9 @@ jobs:
           target: builder
           push: true
           tags: |
-            ${{ steps.registry.outputs.prefix }}/abrege-service:${{ steps.release.outputs.version }}
-            ${{ steps.registry.outputs.prefix }}/abrege-service:${{ steps.release.outputs.tag_name }}
-            ${{ steps.registry.outputs.prefix }}/abrege-service:latest
+            ${{ steps.registry.outputs.prefix }}/worker:${{ steps.release.outputs.version }}
+            ${{ steps.registry.outputs.prefix }}/worker:${{ steps.release.outputs.tag_name }}
+            ${{ steps.registry.outputs.prefix }}/worker:latest
 
       - name: Build and push client image
         if: steps.release.outputs.release_created == 'true'
@@ -111,9 +113,9 @@ jobs:
           target: prod
           push: true
           tags: |
-            ${{ steps.registry.outputs.prefix }}/abrege-frontend:${{ steps.release.outputs.version }}
-            ${{ steps.registry.outputs.prefix }}/abrege-frontend:${{ steps.release.outputs.tag_name }}
-            ${{ steps.registry.outputs.prefix }}/abrege-frontend:latest
+            ${{ steps.registry.outputs.prefix }}/frontend:${{ steps.release.outputs.version }}
+            ${{ steps.registry.outputs.prefix }}/frontend:${{ steps.release.outputs.tag_name }}
+            ${{ steps.registry.outputs.prefix }}/frontend:latest
 
       - name: Build and push migration image
         if: steps.release.outputs.release_created == 'true'
@@ -123,6 +125,6 @@ jobs:
           file: apps/server/migration/Dockerfile
           push: true
           tags: |
-            ${{ steps.registry.outputs.prefix }}/abrege-migration:${{ steps.release.outputs.version }}
-            ${{ steps.registry.outputs.prefix }}/abrege-migration:${{ steps.release.outputs.tag_name }}
-            ${{ steps.registry.outputs.prefix }}/abrege-migration:latest
+            ${{ steps.registry.outputs.prefix }}/migration:${{ steps.release.outputs.version }}
+            ${{ steps.registry.outputs.prefix }}/migration:${{ steps.release.outputs.tag_name }}
+            ${{ steps.registry.outputs.prefix }}/migration:latest
