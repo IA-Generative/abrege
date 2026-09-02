@@ -75,12 +75,12 @@ jobs:
           add() { SERVICES=$(jq -c --argjson s "$1" '. + [$s]' <<<"$SERVICES"); }
 
           if [ "$BACKEND" = "true" ] || [ "$CI" = "true" ]; then
-            add '{"name":"abrege-api","context":".","dockerfile":"apps/server/api/Dockerfile","target":"base"}'
-            add '{"name":"abrege-service","context":".","dockerfile":"apps/server/abrege_service/Dockerfile","target":"builder"}'
-            add '{"name":"abrege-migration","context":".","dockerfile":"apps/server/migration/Dockerfile","target":""}'
+            add '{"name":"api","context":".","dockerfile":"apps/server/api/Dockerfile","target":"base"}'
+            add '{"name":"worker","context":".","dockerfile":"apps/server/abrege_service/Dockerfile","target":"builder"}'
+            add '{"name":"migration","context":".","dockerfile":"apps/server/migration/Dockerfile","target":""}'
           fi
           if [ "$FRONTEND" = "true" ] || [ "$CI" = "true" ]; then
-            add '{"name":"abrege-frontend","context":"apps/client","dockerfile":"apps/client/Dockerfile","target":"prod"}'
+            add '{"name":"frontend","context":"apps/client","dockerfile":"apps/client/Dockerfile","target":"prod"}'
           fi
 
           echo "Images to build: $SERVICES"
@@ -111,8 +111,10 @@ jobs:
       run: |
         set -euo pipefail
 
+        # Repo-scoped (not org-scoped): a flat ghcr.io/<owner>/<component> name
+        # would collide with any other repo building a same-named component.
         # `IA-Generative` is mixed case and OCI registries reject uppercase references.
-        echo "IMAGE_BASE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+        echo "IMAGE_BASE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
 
         if [ -n "$PR_NUMBER" ]; then
           IMAGE_TAG="pr-$PR_NUMBER"
