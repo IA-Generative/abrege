@@ -1,0 +1,12 @@
+{{- if .Values.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-%s" (include "helper.fullname" .) "worker-celery" }}
+  labels: {{- (include "helper.labels" (dict "root" . "componentName" "worker-celery")) | nindent 4 }}
+data:
+  celeryconfig.py: |
+    {{- if .Values.worker.celeryConfig }}
+    {{- .Values.worker.celeryConfig | nindent 4 }}
+    {{- end }}
+{{- end }}

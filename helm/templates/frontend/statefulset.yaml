@@ -1,0 +1,21 @@
+{{- if .Values.enabled }}
+{{- if eq .Values.frontend.deploymentType "StatefulSet" }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ printf "%s-%s" (include "helper.fullname" .) "frontend" | trunc 63 | trimSuffix "-" }}
+  labels: {{- include "helper.labels" (dict "root" . "componentName" "frontend") | nindent 4 }}
+spec:
+  {{- if not .Values.frontend.autoscaling.enabled }}
+  replicas: {{ .Values.frontend.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels: {{- include "helper.selectorLabels" (dict "root" . "componentName" "frontend") | nindent 6 }}
+  serviceName: {{ printf "%s-%s" (include "helper.fullname" .) "frontend" | trunc 63 | trimSuffix "-" }}
+  template:
+    {{- include "helper.component.podTemplate" (dict "root" . "name" "frontend" "component" .Values.frontend) | nindent 4 }}
+  {{- if or .Values.frontend.volumeClaims .Values.frontend.extraVolumeClaims }}
+  volumeClaimTemplates: {{- toYaml (concat (default (list) .Values.frontend.volumeClaims) (default (list) .Values.frontend.extraVolumeClaims)) | nindent 2 }}
+  {{- end }}
+{{- end }}
+{{- end }}

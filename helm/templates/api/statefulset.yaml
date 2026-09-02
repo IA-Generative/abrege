@@ -1,0 +1,21 @@
+{{- if .Values.enabled }}
+{{- if eq .Values.api.deploymentType "StatefulSet" }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ printf "%s-%s" (include "helper.fullname" .) "api" | trunc 63 | trimSuffix "-" }}
+  labels: {{- include "helper.labels" (dict "root" . "componentName" "api") | nindent 4 }}
+spec:
+  {{- if not .Values.api.autoscaling.enabled }}
+  replicas: {{ .Values.api.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels: {{- include "helper.selectorLabels" (dict "root" . "componentName" "api") | nindent 6 }}
+  serviceName: {{ printf "%s-%s" (include "helper.fullname" .) "api" | trunc 63 | trimSuffix "-" }}
+  template:
+    {{- include "helper.component.podTemplate" (dict "root" . "name" "api" "component" .Values.api) | nindent 4 }}
+  {{- if or .Values.api.volumeClaims .Values.api.extraVolumeClaims }}
+  volumeClaimTemplates: {{- toYaml (concat (default (list) .Values.api.volumeClaims) (default (list) .Values.api.extraVolumeClaims)) | nindent 2 }}
+  {{- end }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,23 @@
+{{- if .Values.enabled }}
+{{- if and .Values.worker.service.enabled (or (eq .Values.worker.deploymentType "Deployment") (eq .Values.worker.deploymentType "StatefulSet")) }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ printf "%s-%s" (include "helper.fullname" .) "worker" }}
+  labels: {{- (include "helper.labels" (dict "root" . "componentName" "worker")) | nindent 4 }}
+spec:
+  type: {{ .Values.worker.service.type | default "ClusterIP" }}
+  ports:
+  - port: {{ .Values.worker.service.port | default 80 }}
+    targetPort: {{ .Values.worker.containerPortName | default .Values.worker.containerPort | default 8080 }}
+    protocol: {{ .Values.worker.service.protocol | default "TCP" }}
+    {{- if eq .Values.worker.service.type "NodePort" }}
+    nodePort: {{ .Values.worker.service.nodePort }}
+    {{- end }}
+    name: {{ .Values.worker.service.portName | default "http" }}
+  {{- if .Values.worker.service.extraPorts -}}
+  {{- toYaml .Values.worker.service.extraPorts | nindent 2 -}}
+  {{- end }}
+  selector: {{- include "helper.selectorLabels" (dict "root" . "componentName" "worker") | nindent 4 }}
+{{- end }}
+{{- end }}
