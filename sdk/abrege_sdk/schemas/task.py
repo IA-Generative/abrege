@@ -7,8 +7,6 @@ from abrege_sdk.schemas.result import ResultModel, SummaryModel
 from abrege_sdk.schemas.parameters import SummaryParameters
 
 
-
-
 class TaskModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: str

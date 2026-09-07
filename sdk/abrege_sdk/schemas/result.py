@@ -1,9 +1,7 @@
 from typing import Dict, Optional, Any, List, Union, Literal
 from pydantic import BaseModel, ConfigDict
 
-EntityType = Literal[
-    "PERSON", "DATE", "ORGANIZATION", "LOCATION", "AMOUNT", "EVENT", "OTHER"
-]
+EntityType = Literal["PERSON", "DATE", "ORGANIZATION", "LOCATION", "AMOUNT", "EVENT", "OTHER"]
 
 
 class Text(BaseModel):

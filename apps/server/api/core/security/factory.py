@@ -48,7 +48,14 @@ class KeycloakToken(BaseVerifyToken):
         self.keycloak_openid = keycloak_client.keycloak_openid
 
     def verify(self, ctx: RequestContext) -> bool:
-        """Vérifie un token Keycloak (Bearer) via introspection et remplit ctx."""
+        """Vérifie un token Keycloak (Bearer) via introspection et remplit ctx.
+
+        Returns immediately without a network call when there is no bearer token: this is
+        also the browser/cookie-session path (see `__call__`), which must not pay a round
+        trip to Keycloak's introspection endpoint on every single request.
+        """
+        if not ctx.token:
+            return False
         try:
             user_info = self.keycloak_openid.introspect(ctx.token)
             logging.debug(f"Token info: {user_info.keys()}")
@@ -70,10 +77,11 @@ class KeycloakToken(BaseVerifyToken):
     def __call__(self, request: Request) -> RequestContext:
         ctx = parse_header_context(request, is_fastapi=self.is_fastapi)
 
-        if ctx.token:
-            if self.verify(ctx):
-                return ctx
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="UNAUTHORIZED")
+        # `self.verify` is called unconditionally (not only when a bearer token is present)
+        # so that overriding it - as the test suite does via `TokenVerifier.verify = ...` -
+        # fully controls the outcome, same as the inherited `BaseVerifyToken.__call__`.
+        if self.verify(ctx):
+            return ctx
 
         sid = request.cookies.get(keycloak_client.keycloak_settings.SESSION_COOKIE_NAME)
         session = keycloak_client.session_store.get(sid) if sid else None

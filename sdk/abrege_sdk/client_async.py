@@ -53,9 +53,7 @@ class AsyncAbregeClient:
     def _ensure_client(self):
         """Ensure client is initialized."""
         if self._client is None:
-            raise RuntimeError(
-                "Client not initialized. Use 'async with AsyncOCRClient(...) as client:'"
-            )
+            raise RuntimeError("Client not initialized. Use 'async with AsyncOCRClient(...) as client:'")
 
     async def _request(
         self,
@@ -148,14 +146,8 @@ class AsyncAbregeClient:
             if task.status == TaskStatus.COMPLETED.value:
                 return task
             elif task.status == TaskStatus.FAILED.value:
-                error = (
-                    task.extras.get("error", "Unknown error")
-                    if task.extras
-                    else "Unknown error"
-                )
+                error = task.extras.get("error", "Unknown error") if task.extras else "Unknown error"
                 raise AbregeAPIError(500, f"Task failed: {error}")
             await asyncio.sleep(poll_interval)
             elapsed += poll_interval
-        raise AbregeTimeoutError(
-            f"Task {task_id} did not complete within {max_wait_time}s"
-        )
+        raise AbregeTimeoutError(f"Task {task_id} did not complete within {max_wait_time}s")
