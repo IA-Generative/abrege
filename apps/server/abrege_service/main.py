@@ -62,7 +62,7 @@ flat_text_service = FlatTextService()
 
 async_client = openai.AsyncOpenAI(
     api_key=openai_settings.OPENAI_API_KEY,
-    base_url=openai_settings.OPENAI_API_BASE,
+    base_url=openai_settings.OPENAI_API_BASE_URL,
 )
 if os.environ.get("OCR_SERVICE_LLM") == "LLM":
     ocr_service = ImageFromVLM(client=async_client, model_name=openai_settings.OPENAI_VLM_MODEL_NAME)
@@ -83,7 +83,7 @@ url_service = URLService(services=services)
 
 client = openai.OpenAI(
     api_key=openai_settings.OPENAI_API_KEY,
-    base_url=openai_settings.OPENAI_API_BASE,
+    base_url=openai_settings.OPENAI_API_BASE_URL,
 )
 
 
@@ -91,7 +91,7 @@ llm = ChatOpenAI(
     model=openai_settings.OPENAI_API_MODEL,
     temperature=0.0,
     api_key=openai_settings.OPENAI_API_KEY,
-    base_url=openai_settings.OPENAI_API_BASE,
+    base_url=openai_settings.OPENAI_API_BASE_URL,
 )
 summary_service = LangChainAsyncMapReduceService(
     llm=llm,
