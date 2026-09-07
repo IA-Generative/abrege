@@ -14,12 +14,20 @@ from src.clients import file_connector, celery_app
 from src.clients.ocr_client import OCRClient
 from src.utils.logger import logger_abrege
 
-ocr_client = OCRClient(
-    url=os.getenv(
-        "OCR_BACKEND_URL",
-        "https://mirai-ocr-staging.sdid-app.cpin.numerique-interieur.com/1",
+# Optional: only used to propagate task cancellation to the OCR service (below). Building
+# it can now raise (see src.clients.ocr_client.build_token_manager, abrege#354) when OCR
+# delegation has no usable auth configured - that must not block the whole API from
+# booting over what only the cancellation path needs.
+try:
+    ocr_client = OCRClient(
+        url=os.getenv(
+            "OCR_BACKEND_URL",
+            "https://mirai-ocr-staging.sdid-app.cpin.numerique-interieur.com/1",
+        )
     )
-)
+except RuntimeError as e:
+    logger_abrege.warning(f"OCR client not configured, task cancellation will not propagate to it: {e}")
+    ocr_client = None
 
 router = APIRouter(tags=["Tasks"])
 
@@ -129,7 +137,7 @@ async def delete_task(
             logger_abrege.exception(e, extra={"task_id": task.id, "user_id": task.user_id})
 
     ocr_task_ids = (task.output.extras or {}).get("task_ocr_id", []) if task.output is not None else []
-    for ocr_task_id in ocr_task_ids:
+    for ocr_task_id in ocr_task_ids if ocr_client is not None else []:
         try:
             ocr_client.delete_task(task_id=ocr_task_id)
         except Exception as e:

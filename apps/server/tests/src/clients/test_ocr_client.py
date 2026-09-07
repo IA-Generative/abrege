@@ -5,10 +5,13 @@ from src.schemas.task import TaskStatus
 
 
 url = os.getenv("OCR_BACKEND_URL", "https://localhost:80/")
-client = OCRClient(url=url)
 
+# Building the client now raises if neither OCR_API_KEY nor a complete Keycloak config is
+# set (see abrege#354) - a state this integration test should skip on, same as an
+# unreachable OCR service, rather than fail collection for the whole test session.
 is_ocr_available = True
 try:
+    client = OCRClient(url=url)
     client.get_health()
 except Exception:
     is_ocr_available = False

@@ -96,10 +96,18 @@ par introspection Keycloak. Voir [docs/security/readme.md](security/readme.md) p
 
 ### OCR
 
+Quand l'API OCR externe est utilisée (`OCR_SERVICE_LLM` ≠ `LLM`), le worker doit s'authentifier
+auprès d'elle (`src/clients/ocr_client.py`). Une config incomplète échoue **au démarrage du
+worker** avec un message explicite, plutôt qu'à la première tâche déléguée à l'OCR (voir issue
+#354).
+
 | Variable | Obligatoire | Description | Valeur par défaut |
 |---|---|---|---|
 | `OCR_SERVICE_LLM` | | Mettre `LLM` pour utiliser le VLM local au lieu de l'API OCR externe | — |
 | `OCR_BACKEND_URL` | si `OCR_SERVICE_LLM` ≠ `LLM` | URL de l'API OCR externe | — |
+| `OCR_API_KEY` | si `OCR_SERVICE_LLM` ≠ `LLM` (voie recommandée) | Clé statique envoyée en `Authorization: Bearer` — aucune dépendance à Keycloak. Provisionnée côté ocr comme une clé `API_KEYS` par consommateur | — |
+| `OCR_KEYCLOAK_USERNAME` / `OCR_KEYCLOAK_PASSWORD` | repli, avec `KEYCLOAK_URL`/`CLIENT_ID`/`REALM` | Alternative à `OCR_API_KEY` : authentification Keycloak par mot de passe (Resource Owner Password Credentials), pour un compte de service provisionné comme utilisateur Keycloak classique | — |
+| `KEYCLOAK_URL`/`KEYCLOAK_CLIENT_ID`/`KEYCLOAK_REALM`/`KEYCLOAK_CLIENT_SECRET` | repli si ni `OCR_API_KEY` ni `OCR_KEYCLOAK_USERNAME`/`PASSWORD` | Dernier repli : client-credentials Keycloak (même client que celui de la section Sécurité API) | — |
 
 ---
 
