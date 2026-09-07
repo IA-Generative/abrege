@@ -8,14 +8,5 @@ export const PORTAIL_URL = (window as any).VITE_PORTAIL_URL ?? import.meta.env.V
 export const MATOMO_SITE_URL = (window as any).VITE_MATOMO_SITE_URL ?? import.meta.env.VITE_MATOMO_SITE_URL
 export const MATOMO_SITE_ID = (window as any).VITE_MATOMO_SITE_ID ?? import.meta.env.VITE_MATOMO_SITE_ID
 
-// KEYCLOAK
-export const KEYCLOAK_URL = (window as any).VITE_KEYCLOAK_URL ?? import.meta.env.VITE_KEYCLOAK_URL
-export const KEYCLOAK_CLIENT_ID = (window as any).VITE_KEYCLOAK_CLIENT_ID ?? import.meta.env.VITE_KEYCLOAK_CLIENT_ID
-export const KEYCLOAK_REALM = (window as any).VITE_KEYCLOAK_REALM ?? import.meta.env.VITE_KEYCLOAK_REALM
-export const KEYCLOAK_REDIRECT_URI = (window as any).VITE_REDIRECT_URI ?? import.meta.env.VITE_REDIRECT_URI
-
-// AUTH
-export const OAUTH2_PROXY_URL = (window as any).OAUTH2_PROXY_URL ?? import.meta.env.OAUTH2_PROXY_URL
-
 export const SENTRY_FRONTEND_DSN = (window as any).VITE_SENTRY_FRONTEND_DSN ?? import.meta.env.VITE_SENTRY_FRONTEND_DSN
 export const ENVIRONMENT = (window as any).VITE_ENVIRONMENT ?? import.meta.env.VITE_ENVIRONMENT
