@@ -2,7 +2,7 @@ import time
 import json
 import os
 
-from vosk import Model, KaldiRecognizer
+from vosk import Model, KaldiRecognizer, SetLogLevel
 from pydub import AudioSegment
 import wave
 
@@ -11,6 +11,10 @@ from abrege_service.modules.base import BaseService
 from src.schemas.task import TaskModel, TaskStatus
 from src.schemas.result import ResultModel
 from src.utils.logger import logger_abrege
+
+# Vosk's native (C++) logger writes straight to stderr, bypassing Python logging
+# entirely - every "LOG (VoskAPI:...)" line breaks JSON log pipelines. -1 disables it.
+SetLogLevel(-1)
 
 folder_dest = os.environ.get("CACHE_FOLDER")
 
