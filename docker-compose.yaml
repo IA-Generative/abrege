@@ -31,6 +31,10 @@ services:
         "--pool=prefork",
         "--concurrency=1",
         "-E",
+        # Suppresses celery's plain-text startup banner (actual task/worker logs are
+        # unaffected) - it's the one line of non-JSON noise this doesn't route through
+        # the JSON logger, since celery prints it before logging is even configured.
+        "--quiet",
       ]
     image: abrege-service
     mem_limit: 1g
