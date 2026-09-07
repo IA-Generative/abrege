@@ -7,7 +7,6 @@ import VueMatomo from 'vue-matomo'
 import App from './App.vue'
 import router from './router/index'
 import { ENVIRONMENT, MATOMO_SITE_ID, MATOMO_SITE_URL, SENTRY_FRONTEND_DSN } from './utils/constants'
-import { keycloakInit } from './utils/keycloak'
 
 import '@gouvfr/dsfr/dist/core/core.main.min.css'
 import '@gouvfr/dsfr/dist/component/component.main.min.css'
@@ -24,12 +23,7 @@ declare global {
   }
 }
 
-async function initializeApp () {
-  const ssoBypass = (import.meta.env && import.meta.env.DEV) || import.meta.env.VITE_SSO_BYPASS === 'true' || (window as any).VITE_SSO_BYPASS === 'true'
-  if (!ssoBypass) {
-    await keycloakInit()
-  }
-
+function initializeApp () {
   const app = createApp(App)
 
   if (SENTRY_FRONTEND_DSN) {

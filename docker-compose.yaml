@@ -83,13 +83,48 @@ services:
     environment:
       DEV_MODE: "true"
       CELERY_APP_NAME: default
-      VERIFY_TOKEN_MODEL: full-access
+      VERIFY_TOKEN_MODEL: keycloak
     depends_on:
       - redis
       - minio
       - db
+      - keycloak
     env_file:
       - .env
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.2
+    # Auto-provisions the "mirai" realm/client/test user below on every start, so local
+    # login works out of the box without any manual admin-console setup.
+    command: start-dev --import-realm
+    environment:
+      - KC_BOOTSTRAP_ADMIN_USERNAME=admin
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=admin
+      - KC_HEALTH_ENABLED=true
+      # Without a fixed hostname, Keycloak derives the token `iss` from whichever Host
+      # header reached it - the browser hits it as `localhost:8080`, but `abrege_api`
+      # hits it as `keycloak:8080`. That mismatch makes Keycloak itself reject any
+      # backend call carrying a token minted during the browser's `/auth` request
+      # (token exchange, refresh, logout: "Invalid token issuer"). Pinning the hostname
+      # makes Keycloak report the same issuer everywhere, regardless of which internal
+      # path reached it - the backend still physically connects via `keycloak:8080`.
+      - KC_HOSTNAME=localhost
+      - KC_HOSTNAME_PORT=8080
+      - KC_HOSTNAME_STRICT=false
+    volumes:
+      - ./docker/keycloak/realm-mirai.json:/opt/keycloak/data/import/realm-mirai.json:ro
+    ports:
+      - "8080:8080"
+    healthcheck:
+      # KC_HEALTH_ENABLED serves /health on the management port (9000), not 8080.
+      test:
+        - "CMD-SHELL"
+        - "exec 3<>/dev/tcp/localhost/9000 && echo -e 'GET /health/ready HTTP/1.1\\r\\nhost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '\"status\": \"UP\"'"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
   db:
     image: postgres:15
     restart: always
