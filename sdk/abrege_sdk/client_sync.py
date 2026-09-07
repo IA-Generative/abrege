@@ -42,9 +42,7 @@ class SyncAbregeClient:
 
     def _ensure_client(self):
         if self._client is None:
-            raise RuntimeError(
-                "Client not initialized. Use 'with SyncAbregeClient(...) as client:'"
-            )
+            raise RuntimeError("Client not initialized. Use 'with SyncAbregeClient(...) as client:'")
 
     def _request(self, method: str, endpoint: str, **kwargs) -> httpx.Response:
         self._ensure_client()
@@ -125,20 +123,15 @@ class SyncAbregeClient:
         max_wait_time: float = 300.0,
     ) -> TaskModel:
         import time
+
         elapsed = 0.0
         while elapsed < max_wait_time:
             task = self.get_task(task_id)
             if task.status == TaskStatus.COMPLETED.value:
                 return task
             elif task.status == TaskStatus.FAILED.value:
-                error = (
-                    task.extras.get("error", "Unknown error")
-                    if task.extras
-                    else "Unknown error"
-                )
+                error = task.extras.get("error", "Unknown error") if task.extras else "Unknown error"
                 raise AbregeAPIError(500, f"Task failed: {error}")
             time.sleep(poll_interval)
             elapsed += poll_interval
-        raise AbregeTimeoutError(
-            f"Task {task_id} did not complete within {max_wait_time}s"
-        )
+        raise AbregeTimeoutError(f"Task {task_id} did not complete within {max_wait_time}s")
