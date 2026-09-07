@@ -1,0 +1,42 @@
+version: 1
+disable_existing_loggers: false
+
+formatters:
+  json:
+    class: pythonjsonlogger.json.JsonFormatter
+    format: "%(asctime)s %(levelname)s %(name)s %(pathname)s %(lineno)d %(funcName)s %(message)s"
+    rename_fields:
+      asctime: "@timestamp"
+      levelname: "level"
+      pathname: "file_path"
+      lineno: "line"
+      funcName: "function"
+      message: "message"
+
+handlers:
+  console_json:
+    class: logging.StreamHandler
+    level: DEBUG
+    formatter: json
+    stream: ext://sys.stdout
+
+# Only uvicorn's own loggers: uvicorn.run()/the CLI applies its own default log config
+# (colored, plain-text) *after* the app module has already been imported, overwriting
+# whatever config/logging.yaml set up. Passed to uvicorn via --log-config so its
+# access/error logs go through the same JSON formatter as the rest of the app instead.
+# Deliberately doesn't list abrege/abrege_api/abrege_worker here: dictConfig only touches
+# the loggers it's given, so those already configured by config/logging.yaml (with the
+# right per-environment level) are left untouched.
+loggers:
+  uvicorn:
+    handlers: [console_json]
+    level: INFO
+    propagate: false
+  uvicorn.error:
+    handlers: [console_json]
+    level: INFO
+    propagate: false
+  uvicorn.access:
+    handlers: [console_json]
+    level: INFO
+    propagate: false

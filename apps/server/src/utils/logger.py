@@ -148,6 +148,10 @@ def setup_logger(name: str = "abrege", config_path: str = "../../config/logging.
     # Détermine l'environnement depuis les variables d'environnement
     environment = os.getenv("ENVIRONMENT", "development")
 
+    # Routes warnings.warn(...) (e.g. deprecation notices from third-party libs) through
+    # logging instead of straight to stderr as plain text, so they land in the JSON stream.
+    logging.captureWarnings(True)
+
     try:
         # Charge et applique la configuration
         config = load_logging_config(config_path, environment)

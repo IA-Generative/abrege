@@ -37,4 +37,4 @@ FROM base AS dev
 WORKDIR /app
 RUN uv sync --no-cache --group test --group abrege-api --group migration
 COPY apps/server/tests tests
-CMD [ "uv", "run", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "5000", "--reload"]
+CMD [ "uv", "run", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "5000", "--reload", "--log-config", "config/uvicorn_logging.yaml"]
