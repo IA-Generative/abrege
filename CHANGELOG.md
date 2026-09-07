@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [3.3.3-rc.2](https://github.com/IA-Generative/abrege/compare/v3.3.3-rc.1...v3.3.3-rc.2) (2026-09-07)
+
+
+### Bug Fixes
+
+* update LLMGuard initialization to only create client when LLM_GUARD_URL is set ([e3e0292](https://github.com/IA-Generative/abrege/commit/e3e0292950cf04fdceaec5dd9ebbae122a9a203b))
+
 ## [3.3.3-rc.1](https://github.com/IA-Generative/abrege/compare/v3.3.3-rc...v3.3.3-rc.1) (2026-09-07)
 
 
