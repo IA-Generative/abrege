@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [3.4.0-rc.2](https://github.com/IA-Generative/abrege/compare/v3.3.3-rc.2...v3.4.0-rc.2) (2026-09-07)
+
+
+### Features
+
+* render the task list as tiles instead of a table ([aa985db](https://github.com/IA-Generative/abrege/commit/aa985db2bd346aa9a6746a059ef2ade5e8f4d66a)), closes [#377](https://github.com/IA-Generative/abrege/issues/377)
+
 ## [3.3.3-rc.2](https://github.com/IA-Generative/abrege/compare/v3.3.3-rc.1...v3.3.3-rc.2) (2026-09-07)
 
 
