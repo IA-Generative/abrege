@@ -25,7 +25,7 @@ from src.schemas.parameters import SummaryParameters
 
 
 api_key = (os.environ["OPENAI_API_KEY"],)
-base_url = (os.environ["OPENAI_API_BASE"],)
+base_url = (os.environ["OPENAI_API_BASE_URL"],)
 
 
 async def do_map_reduce(list_str: list[str], params: SummaryParameters, recursion_limit: int = 20, num_tokens_limit: int = 1226 * 300) -> dict:

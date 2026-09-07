@@ -15,7 +15,7 @@ rouge_metric = load("rouge")
 
 client = openai.OpenAI(
     api_key=os.environ["OPENAI_API_KEY"],
-    base_url=os.environ["OPENAI_API_BASE"],
+    base_url=os.environ["OPENAI_API_BASE_URL"],
 )
 models_availables = [model.id for model in client.models.list()]
 model_name = os.environ["OPENAI_API_MODEL"]

@@ -9,15 +9,20 @@ Les variables marquées **obligatoires** doivent être définies. Les autres ont
 
 ### LLM / API OpenAI-compatible
 
+Noms harmonisés avec ocr-api (voir issue #356) : les anciens noms restent acceptés via un
+alias déprécié (`_DEPRECATED_ENV_ALIASES` dans `abrege_service/config/openai.py`), qui logue un
+avertissement et retombe sur la nouvelle variable — la migration côté déploiement n'a donc pas
+besoin d'être en lockstep avec la release.
+
 | Variable | Obligatoire | Description | Valeur par défaut |
 |---|---|---|---|
 | `OPENAI_API_KEY` | ✅ | Clé d'API (compatible OpenAI) | `sk-XXXXXXXXXXXXXXXX` |
-| `OPENAI_API_BASE` | ✅ | URL de base de l'API | `https://api.openai.com/v1` |
-| `OPENAI_API_MODEL` | | Modèle LLM texte | `gemma3` |
-| `OPENAI_VLM_MODEL_NAME` | | Modèle VLM (utilisé quand `OCR_SERVICE_LLM=LLM`) | `mistral-small-3.1-24b-instruct-2503` |
+| `OPENAI_API_BASE_URL` | ✅ | URL de base du hub LLM. Aucun repli sur l'API publique OpenAI : absente → échec explicite au démarrage. Ancien nom déprécié : `OPENAI_API_BASE` | — |
+| `OPENAI_API_MODEL` | | Modèle LLM texte. Repli sur l'alias générique du hub (`chat`), jamais un nom de moteur concret, sauf en parlant directement à un provider (ex. Ollama local) | `chat` |
+| `OPENAI_VLM_MODEL_NAME` | | Modèle VLM (utilisé quand `OCR_SERVICE_LLM=LLM`). Même logique d'alias générique | `chat` |
 | `MAX_CONTEXT_SIZE` | | Taille max du contexte en tokens | `128000` |
 | `TOKENIZER_MODEL_NAME` | | Modèle HuggingFace pour le comptage de tokens | `gpt-4` |
-| `HF_TOKEN` | | Token HuggingFace pour télécharger le tokenizer | — |
+| `HF_TOKEN` | | Token HuggingFace, lu implicitement par `huggingface_hub` quand `TOKENIZER_MODEL_NAME` pointe vers un repo gated (ex. `mistralai/*`) — sans quoi le téléchargement du tokenizer échoue silencieusement à la première tâche | — |
 
 ---
 
@@ -38,8 +43,9 @@ Les variables marquées **obligatoires** doivent être définies. Les autres ont
 | `REDIS_QUEUE_NAME` | | Nom de la file Redis | `redis-queue` |
 | `REDIS_PASSWORD` | | Mot de passe Redis | — |
 | `REDIS_TLS` | | Activer TLS (`rediss://`) | `false` |
-| `REDIS_SENTINEL_HOSTS` | | Hôtes Sentinel, séparés par des virgules (`host1:26379,host2:26379`). Quand défini, `REDIS_HOST`/`REDIS_PORT` sont ignorés | — |
-| `REDIS_SENTINEL_SERVICE_NAME` | | Nom du service Sentinel (master) | `mymaster` |
+| `REDIS_SENTINEL_ENABLED` | | Active la résolution du master via Redis Sentinel. Si non défini, déduit de la présence de `REDIS_SENTINEL_HOSTS` | `false` |
+| `REDIS_SENTINEL_HOSTS` | | Hôtes Sentinel, séparés par des virgules (`host1:26379,host2:26379`). Quand Sentinel est actif, `REDIS_HOST`/`REDIS_PORT` sont ignorés | — |
+| `REDIS_SENTINEL_MASTER_NAME` | | Nom du master surveillé par les sentinels. Ancien nom déprécié : `REDIS_SENTINEL_SERVICE_NAME` | `mymaster` |
 
 ---
 

@@ -24,7 +24,7 @@ from abrege_service.models.summary.parallele_summary_chain import (
 )
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-OPENAI_API_BASE = os.environ.get("OPENAI_API_BASE")
+OPENAI_API_BASE = os.environ.get("OPENAI_API_BASE_URL")
 OPENAI_API_MODEL = os.environ.get("OPENAI_API_MODEL")
 
 
@@ -56,7 +56,7 @@ def mock_llm() -> ChatOpenAI:
         temperature=0.0,
         max_tokens=8192,
         api_key=os.environ.get("OPENAI_API_KEY"),
-        base_url=os.environ.get("OPENAI_API_BASE"),
+        base_url=os.environ.get("OPENAI_API_BASE_URL"),
     )
 
 
