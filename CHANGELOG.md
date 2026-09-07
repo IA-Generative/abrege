@@ -210,6 +210,17 @@
 - clean code
 - clean code
 
+## [3.3.3-rc](https://github.com/IA-Generative/abrege/compare/v3.3.2...v3.3.3-rc) (2026-09-07)
+
+
+### Bug Fixes
+
+* harmonize environment variable names for OpenAI API and Redis Sentinel ([6523be3](https://github.com/IA-Generative/abrege/commit/6523be326a4fcce98572f0d8b81b1c3d17cba354))
+* **release:** resync dev prerelease manifest with main ([698144c](https://github.com/IA-Generative/abrege/commit/698144c55d847f8868c83c54905be6b63ff114d9))
+* **release:** use the prerelease versioning strategy on dev ([c2222bb](https://github.com/IA-Generative/abrege/commit/c2222bbc6956c66896224b83434c0f641157bcaf))
+* silence non-JSON log noise from transformers and Vosk, and configure Uvicorn logging ([10a1b92](https://github.com/IA-Generative/abrege/commit/10a1b9292a4b934e10560568ecf9af92240e9c2a))
+* update .gitignore to include additional model directories ([7f4f205](https://github.com/IA-Generative/abrege/commit/7f4f205fbbb07f8bc64b64e6890575fe6109998d))
+
 ## [3.3.2](https://github.com/IA-Generative/abrege/compare/v3.3.1...v3.3.2) (2026-07-18)
 
 
