@@ -3,8 +3,8 @@ import os
 import requests
 from src.utils.logger import logger_abrege
 
-LLM_GUARD_API_KEY = os.environ.get("LLM_GUARD_API_KEY", "llm_guard")
-LLM_GUARD_BASE_URL = os.environ.get("LLM_GUARD_URL", "http://0.0.0.0:8000")
+LLM_GUARD_API_KEY = os.environ.get("LLM_GUARD_API_KEY")
+LLM_GUARD_BASE_URL = os.environ.get("LLM_GUARD_URL")
 
 
 class LLMGuardMaliciousPromptException(Exception):
@@ -25,7 +25,7 @@ class LLMGuardRequestException(Exception):
 
 
 class LLMGuard:
-    def __init__(self, llm_guard_base_url: str, llm_guard_api_key: str):
+    def __init__(self, llm_guard_base_url: str, llm_guard_api_key: str | None):
         self.llm_guard_base_url = llm_guard_base_url
         self.llm_guard_api_key = llm_guard_api_key
         logger_abrege.debug(self.llm_guard_base_url)
@@ -72,11 +72,15 @@ class LLMGuard:
         return response_json
 
 
-llm_guard = LLMGuard(llm_guard_api_key=LLM_GUARD_API_KEY, llm_guard_base_url=LLM_GUARD_BASE_URL)
-
-try:
-    llm_guard.get_health()
-except Exception as e:
-    logger_abrege.warning(str(e))
-    llm_guard = None
-logger_abrege.debug(llm_guard)
+# Opt-in: only construct the client when LLM_GUARD_URL is explicitly set, so the
+# `if llm_guard is not None` checks in api/routes/{summarize,document_summary}.py are a real
+# "is a guard configured" check, instead of a client wired to an unreachable localhost
+# default that's always truthy. No import-time health check either — a network call at
+# module scope, on every pod boot, against a service that may not even be deployed, is
+# startup noise and a wasted timeout; a real failure to reach the guard now surfaces
+# directly from request_llm_guard_prompt() when it's actually used.
+llm_guard: LLMGuard | None = None
+if LLM_GUARD_BASE_URL:
+    llm_guard = LLMGuard(llm_guard_api_key=LLM_GUARD_API_KEY, llm_guard_base_url=LLM_GUARD_BASE_URL)
+else:
+    logger_abrege.info("LLM_GUARD_URL is not set: prompt guarding is disabled")
