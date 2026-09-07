@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [3.3.3-rc.1](https://github.com/IA-Generative/abrege/compare/v3.3.3-rc...v3.3.3-rc.1) (2026-09-07)
+
+
+### Bug Fixes
+
+* remove dead code and configuration related to external document loader and connector settings ([b553326](https://github.com/IA-Generative/abrege/commit/b553326005bdb0ea617661e9392d96c0e139849a))
+
 ## [3.3.3-rc](https://github.com/IA-Generative/abrege/compare/v3.3.2...v3.3.3-rc) (2026-09-07)
 
 
