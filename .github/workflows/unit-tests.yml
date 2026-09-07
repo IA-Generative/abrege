@@ -133,6 +133,7 @@ jobs:
           TOKENIZER_MODEL_NAME=gpt-4
           LLM_GUARD_API_KEY=${{ secrets.LLM_GUARD_API_KEY }}
           LLM_GUARD_URL=http://llm_guard_api:8000
+          OCR_API_KEY=${{ secrets.OCR_API_KEY || 'ocr-test-placeholder' }}
           MAX_CONCURRENCY_LLM_CALL=5
           MAX_MODEL_TOKEN=16384
           PYPANDOC_PANDOC_FOLDER=/app/pandoc
