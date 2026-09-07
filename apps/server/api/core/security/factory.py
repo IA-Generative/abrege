@@ -1,8 +1,9 @@
 import logging
 import os
 import warnings
-from api.core.security.token import BaseVerifyToken, RequestContext
-from keycloak import KeycloakOpenID
+from api.core.security import keycloak_client
+from api.core.security.token import BaseVerifyToken, RequestContext, parse_header_context
+from fastapi import HTTPException, Request, status
 
 
 class AllowAllAccess(BaseVerifyToken):
@@ -33,46 +34,62 @@ class DevToken(BaseVerifyToken):
 
 
 class KeycloakToken(BaseVerifyToken):
+    """Authenticates a request either via a service `Authorization: Bearer <Keycloak token>`
+    header (service-to-service, e.g. the SDK using a client-credentials token), or via the
+    BFF session cookie set by `/api/auth/callback`.
+
+    The browser never holds a Keycloak token: the frontend only ever sends the opaque
+    session cookie, and the actual access/refresh tokens stay server-side in Redis
+    (see `api.core.security.session.SessionStore`).
+    """
+
     def __init__(self):
         super().__init__(verify_token=True, is_fastapi=True)
-
-        # Configuration Keycloak depuis les variables d'environnement
-        self.keycloak_url = os.environ.get("KEYCLOAK_URL", "http://localhost:8080")
-        self.realm_name = os.environ.get("KEYCLOAK_REALM", "master")
-        self.client_id = os.environ.get("KEYCLOAK_CLIENT_ID", "your-client-id")
-        self.keycloak_openid = KeycloakOpenID(
-            server_url=self.keycloak_url,
-            client_id=self.client_id,
-            realm_name=self.realm_name,
-            client_secret_key=os.environ.get("KEYCLOAK_CLIENT_SECRET", "secret"),
-        )
+        self.keycloak_openid = keycloak_client.keycloak_openid
 
     def verify(self, ctx: RequestContext) -> bool:
-        """Vérifie le token JWT avec Keycloak et remplit ctx avec les infos utilisateur"""
+        """Vérifie un token Keycloak (Bearer) via introspection et remplit ctx."""
         try:
             user_info = self.keycloak_openid.introspect(ctx.token)
             logging.debug(f"Token info: {user_info.keys()}")
             if user_info.get("active") is False:
                 return False
 
-            # Remplir le contexte avec les informations récupérées
-            ctx.user_id = user_info.get("sub", "")  # Subject = user ID
+            ctx.user_id = user_info.get("sub", "")
             ctx.email = user_info.get("email", "")
             ctx.groups = user_info.get("groups", [])
-
-            # Récupérer les rôles (peut varier selon la config Keycloak)
             ctx.roles = user_info.get("realm_access", {}).get("roles", [])
-            # Ou si les rôles sont dans realm_access :
-            # ctx.roles = user_info.get("realm_access", {}).get("roles", [])
-
-            # Déterminer si l'utilisateur est admin
             ctx.is_admin = "admin" in ctx.roles or "realm-admin" in ctx.roles
 
             return True
 
-        except Exception as e:
-            logging.error(f"Erreur lors de la vérification du token: {e}")
+        except Exception:
+            logging.exception("Erreur lors de la vérification du token")
             return False
+
+    def __call__(self, request: Request) -> RequestContext:
+        ctx = parse_header_context(request, is_fastapi=self.is_fastapi)
+
+        if ctx.token:
+            if self.verify(ctx):
+                return ctx
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="UNAUTHORIZED")
+
+        sid = request.cookies.get(keycloak_client.keycloak_settings.SESSION_COOKIE_NAME)
+        session = keycloak_client.session_store.get(sid) if sid else None
+        if session:
+            session = keycloak_client.session_store.ensure_fresh(sid, session)
+
+        if not session:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="UNAUTHORIZED")
+
+        ctx.user_id = session.user_id
+        ctx.email = session.email
+        ctx.roles = session.roles
+        ctx.groups = session.groups
+        ctx.is_admin = session.is_admin
+        ctx.token = session.access_token
+        return ctx
 
 
 SECURITY_FACTORY: dict[str, BaseVerifyToken] = {

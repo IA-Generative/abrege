@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import type { DsfrHeaderProps } from '@gouvminint/vue-dsfr'
 import { computed } from 'vue'
-import { getKeycloak } from '@/utils/keycloak'
+import { useUserStore } from '@/stores/user'
 
-const keycloak = getKeycloak()
-const isLoggedIn = computed(() => keycloak.authenticated)
+const userStore = useUserStore()
+const isLoggedIn = computed(() => userStore.isLoggedIn)
 
 const whenLoggedLinks: DsfrHeaderProps['quickLinks'] = [
   {

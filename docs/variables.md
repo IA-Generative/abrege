@@ -40,12 +40,14 @@ besoin d'être en lockstep avec la release.
 |---|---|---|---|
 | `REDIS_HOST` | ✅ | Hôte Redis | `localhost` |
 | `REDIS_PORT` | | Port Redis | `6379` |
+| `REDIS_DB` | | Numéro de la base Redis | `0` |
 | `REDIS_QUEUE_NAME` | | Nom de la file Redis | `redis-queue` |
-| `REDIS_PASSWORD` | | Mot de passe Redis | — |
+| `REDIS_PASSWORD` | | Mot de passe Redis (authentifie le master résolu) | — |
 | `REDIS_TLS` | | Activer TLS (`rediss://`) | `false` |
 | `REDIS_SENTINEL_ENABLED` | | Active la résolution du master via Redis Sentinel. Si non défini, déduit de la présence de `REDIS_SENTINEL_HOSTS` | `false` |
 | `REDIS_SENTINEL_HOSTS` | | Hôtes Sentinel, séparés par des virgules (`host1:26379,host2:26379`). Quand Sentinel est actif, `REDIS_HOST`/`REDIS_PORT` sont ignorés | — |
 | `REDIS_SENTINEL_MASTER_NAME` | | Nom du master surveillé par les sentinels. Ancien nom déprécié : `REDIS_SENTINEL_SERVICE_NAME` | `mymaster` |
+| `REDIS_SENTINEL_PASSWORD` | | Mot de passe pour authentifier les nœuds Sentinel eux-mêmes (peut différer de `REDIS_PASSWORD`). Retombe sur `REDIS_PASSWORD` si non défini | — |
 
 ---
 
@@ -67,13 +69,28 @@ même chose.
 
 ### Sécurité API
 
+Le mode `keycloak` suit un modèle **Backend-for-Frontend (BFF)** : le navigateur ne parle
+jamais directement à Keycloak et ne détient aucun jeton. C'est le backend qui possède tout le
+flow OAuth2 Authorization Code + PKCE, via `/api/auth/{login,callback,logout,me}`. Le
+navigateur ne reçoit qu'un cookie de session opaque (`httpOnly`, `Secure` en production) ; les
+jetons Keycloak (access/refresh) restent côté backend, dans Redis. Un `Authorization: Bearer
+<token>` reste accepté en parallèle pour les appels de service à service (ex. le SDK), vérifié
+par introspection Keycloak. Voir [docs/security/readme.md](security/readme.md) pour le détail.
+
 | Variable | Obligatoire | Description | Valeur par défaut |
 |---|---|---|---|
 | `VERIFY_TOKEN_MODEL` | ✅ en production | Mode de vérification des tokens : `keycloak` \| `full-access` (pas d'auth, dev) \| `dev` (tokens statiques) | `keycloak` |
-| `KEYCLOAK_URL` | si `VERIFY_TOKEN_MODEL=keycloak` | URL du serveur Keycloak | `http://localhost:8080` |
+| `KEYCLOAK_URL` | si `VERIFY_TOKEN_MODEL=keycloak` | URL du serveur Keycloak, jointe par le backend | `http://localhost:8080` |
+| `KEYCLOAK_PUBLIC_URL` | | URL de Keycloak vue par le navigateur lors de la redirection de login. Retombe sur `KEYCLOAK_URL` si absente ; utile seulement quand backend et navigateur ne résolvent pas Keycloak de la même façon (ex. dev local en docker compose) | — |
 | `KEYCLOAK_REALM` | si `VERIFY_TOKEN_MODEL=keycloak` | Nom du realm Keycloak | `master` |
-| `KEYCLOAK_CLIENT_ID` | si `VERIFY_TOKEN_MODEL=keycloak` | Client ID Keycloak | `your-client-id` |
-| `KEYCLOAK_CLIENT_SECRET` | si `VERIFY_TOKEN_MODEL=keycloak` | Secret du client Keycloak | `secret` |
+| `KEYCLOAK_CLIENT_ID` | si `VERIFY_TOKEN_MODEL=keycloak` | Client ID Keycloak — doit être un client confidentiel (`publicClient: false`) | `your-client-id` |
+| `KEYCLOAK_CLIENT_SECRET` | si `VERIFY_TOKEN_MODEL=keycloak` | Secret du client confidentiel | `secret` |
+| `BACKEND_PUBLIC_URL` | si `VERIFY_TOKEN_MODEL=keycloak` | URL publique de cette API, sert à construire le `redirect_uri` fixe envoyé à Keycloak (`{BACKEND_PUBLIC_URL}/api/auth/callback`) — doit correspondre exactement à une redirect URI enregistrée sur le client Keycloak | `http://localhost:5000` |
+| `FRONTEND_URL` | si `VERIFY_TOKEN_MODEL=keycloak` | URL publique du frontend — origine CORS autorisée (obligatoire dès lors que le cookie de session est envoyé avec les requêtes), cible de redirection après login/logout — doit aussi être enregistrée comme redirect URI post-logout sur le client Keycloak | `http://localhost:8082` |
+| `SESSION_COOKIE_NAME` | | Nom du cookie de session posé sur le navigateur | `abrege_session` |
+| `SESSION_COOKIE_SECURE` | | Cookie limité à HTTPS — ne jamais désactiver en production | `true` |
+| `SESSION_COOKIE_SAMESITE` | | `lax` \| `strict` \| `none` | `lax` |
+| `SESSION_TTL_SECONDS` | | Plafond de durée de session côté Redis, borné en pratique par l'expiration du refresh token Keycloak | `604800` (7 jours) |
 
 ---
 
@@ -83,6 +100,20 @@ même chose.
 |---|---|---|---|
 | `OCR_SERVICE_LLM` | | Mettre `LLM` pour utiliser le VLM local au lieu de l'API OCR externe | — |
 | `OCR_BACKEND_URL` | si `OCR_SERVICE_LLM` ≠ `LLM` | URL de l'API OCR externe | — |
+
+---
+
+### External Document Loader (OpenWebUI)
+
+Expose `PUT /api/process` : reçoit un fichier en bytes bruts, lance le pipeline de résumé, attend la fin (polling interne) et répond directement avec le résultat au format `[{page_content, metadata}, ...]` compatible avec l'`ExternalDocumentLoader` d'OpenWebUI. Un seul appel HTTP synchrone, sans polling côté client.
+
+| Variable | Obligatoire | Description | Valeur par défaut |
+|---|---|---|---|
+| `EXTERNAL_DOCUMENT_LOADER_API_KEY` | recommandé en production | Clé attendue dans `Authorization: Bearer <clé>`. Si vide, `/process` reste **non authentifié** | — |
+| `EXTERNAL_LOADER_POLL_INTERVAL_SECONDS` | | Intervalle (s) entre deux vérifications du statut de la tâche | `2` |
+| `EXTERNAL_LOADER_MAX_WAIT_SECONDS` | | Délai max (s) avant de répondre `504` si la tâche n'est pas terminée | `600` |
+
+Configuration côté OpenWebUI : `EXTERNAL_DOCUMENT_LOADER_URL=<URL de base de cette API>/api` et `EXTERNAL_DOCUMENT_LOADER_API_KEY=<valeur ci-dessus>`.
 
 ---
 
