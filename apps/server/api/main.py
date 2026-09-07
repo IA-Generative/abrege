@@ -4,7 +4,6 @@ from api.routes.health import router as health_router
 from api.routes.summarize import router as summarize_router
 from api.routes.document_summary import doc_router
 from api.routes.task import router as task_router
-from api.routes.external_loader import router as external_loader_router
 from src import __version__, __name__ as name
 from prometheus_fastapi_instrumentator import Instrumentator
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -63,4 +62,3 @@ app.include_router(health_router, prefix="/api")
 app.include_router(summarize_router, prefix="/api")
 app.include_router(task_router, prefix="/api")
 app.include_router(doc_router, prefix="/api")
-app.include_router(external_loader_router, prefix="/api")

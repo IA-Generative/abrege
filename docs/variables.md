@@ -49,21 +49,19 @@ besoin d'être en lockstep avec la release.
 
 ---
 
-### Stockage objet (MinIO / S3)
+### Stockage objet (S3-compatible, ex. MinIO)
+
+Le client S3 (`boto3`) est construit inconditionnellement — il n'y a pas de bascule
+MinIO/S3 séparée : pointer `AWS_ENDPOINT_URL` vers une instance MinIO fait exactement la
+même chose.
 
 | Variable | Obligatoire | Description | Valeur par défaut |
 |---|---|---|---|
-| `AWS_ACCESS_KEY_ID` | ✅ | Clé d'accès AWS/MinIO | `minioadmin` |
-| `AWS_SECRET_ACCESS_KEY` | ✅ | Clé secrète AWS/MinIO | `minioadmin` |
+| `AWS_ACCESS_KEY_ID` | ✅ | Clé d'accès | `minioadmin` |
+| `AWS_SECRET_ACCESS_KEY` | ✅ | Clé secrète | `minioadmin` |
 | `AWS_ENDPOINT_URL` | | URL du endpoint S3/MinIO | `http://localhost:9000` |
 | `AWS_DEFAULT_REGION` | | Région AWS | `us-east-1` |
-| `S3_AVAILABLE` | | Activer le connecteur S3 | `False` |
-| `MINIO_AVAILABLE` | | Activer le connecteur MinIO | `True` |
-| `MINIO_BUCKET_NAME` | | Nom du bucket MinIO | `test` |
-| `MINIO_END_POINT` | | Adresse de l'instance MinIO | `localhost:9000` |
-| `MINIO_ACCESS_KEY` | | Clé d'accès MinIO | `minioadmin` |
-| `MINIO_SECRET_KEY` | | Clé secrète MinIO | `minioadmin` |
-| `AWS_BUCKET_NAME` | | Nom du bucket S3 | `test` |
+| `AWS_BUCKET_NAME` | | Nom du bucket | `test` |
 
 ---
 

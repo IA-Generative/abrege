@@ -5,7 +5,6 @@ from redis.sentinel import Sentinel
 from src.connector.s3_connector import S3Connector
 from src.connector.redis_connector import RedisConnector
 from src.config.s3 import S3Settings
-from src.config.connector import ConnectorSettings
 from src.config.redis import RedisSettings
 from src.config.celery import CelerySettings
 
@@ -79,8 +78,6 @@ if broker_transport_options:
 
 redis_client = _build_redis_client(redis_settings)
 redis_connector = RedisConnector(redis_client=redis_client)
-
-connector_settings = ConnectorSettings()
 
 try:
     settings = S3Settings()
