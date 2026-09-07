@@ -323,67 +323,7 @@ export const useAbregeStore = defineStore('abrege', () => {
     items: [] as TaskModel[],
   })
 
-  const SSO_BYPASS = import.meta.env.VITE_SSO_BYPASS === 'true'
-
-  const MOCK_TASKS: TaskModel[] = [
-    {
-      id: 'mock-1',
-      user_id: 'dev',
-      type: 'text-url',
-      status: 'completed',
-      percentage: 1,
-      created_at: Date.now() / 1000 - 3600,
-      updated_at: Date.now() / 1000 - 3500,
-      input: { url: 'https://example.com/article' } as any,
-      output: { type: 'summary', summary: 'Ceci est un résumé généré automatiquement pour tester l\'affichage de la modale.', word_count: 12, created_at: 0, model_name: 'mock', model_version: '1', texts_found: [], percentage: 1, nb_llm_calls: 1, partial_summaries: [] },
-      parameters: null,
-    },
-    {
-      id: 'mock-2',
-      user_id: 'dev',
-      type: 'document',
-      status: 'completed',
-      percentage: 1,
-      created_at: Date.now() / 1000 - 7200,
-      updated_at: Date.now() / 1000 - 7100,
-      input: { raw_filename: 'rapport_annuel.pdf' } as any,
-      output: { type: 'summary', summary: 'Résumé du rapport annuel : les indicateurs sont en hausse de 12% sur l\'année.', word_count: 15, created_at: 0, model_name: 'mock', model_version: '1', texts_found: [], percentage: 1, nb_llm_calls: 2, partial_summaries: [] },
-      parameters: null,
-    },
-    {
-      id: 'mock-3',
-      user_id: 'dev',
-      type: 'text-url',
-      status: 'in_progress',
-      percentage: 0.6,
-      created_at: Date.now() / 1000 - 120,
-      updated_at: Date.now() / 1000 - 60,
-      input: { text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.' } as any,
-      output: null,
-      parameters: null,
-    },
-    {
-      id: 'mock-4',
-      user_id: 'dev',
-      type: 'text-url',
-      status: 'failed',
-      percentage: 0,
-      created_at: Date.now() / 1000 - 86400,
-      updated_at: Date.now() / 1000 - 86300,
-      input: { url: 'https://example.com/broken' } as any,
-      output: null,
-      parameters: null,
-    },
-  ]
-
   async function fetchUserTasks (page = 1, page_size = 100) {
-    if (SSO_BYPASS) {
-      userTasksPaginated.value.total = MOCK_TASKS.length
-      userTasksPaginated.value.page = page
-      userTasksPaginated.value.page_size = page_size
-      userTasksPaginated.value.items = MOCK_TASKS
-      return
-    }
     try {
       const { data } = await http.get(`/task/user/`, { params: { offset: page, limit: page_size } })
       userTasksPaginated.value.total = data.total ?? 0

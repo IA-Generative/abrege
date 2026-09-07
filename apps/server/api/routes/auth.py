@@ -66,10 +66,7 @@ def _end_session_url(id_token: str | None) -> str:
     if id_token:
         # Lets Keycloak end the session without an intermediate confirmation prompt.
         params["id_token_hint"] = id_token
-    return (
-        f"{_keycloak_settings.public_url}/realms/{_keycloak_settings.KEYCLOAK_REALM}"
-        f"/protocol/openid-connect/logout?{urlencode(params)}"
-    )
+    return f"{_keycloak_settings.public_url}/realms/{_keycloak_settings.KEYCLOAK_REALM}/protocol/openid-connect/logout?{urlencode(params)}"
 
 
 def _set_session_cookie(response: Response, sid: str) -> None:
@@ -124,10 +121,7 @@ async def login(request: Request, redirect: str | None = Query(default=None)):
         "code_challenge": code_challenge,
         "code_challenge_method": "S256",
     }
-    auth_url = (
-        f"{_keycloak_settings.public_url}/realms/{_keycloak_settings.KEYCLOAK_REALM}"
-        f"/protocol/openid-connect/auth?{urlencode(params)}"
-    )
+    auth_url = f"{_keycloak_settings.public_url}/realms/{_keycloak_settings.KEYCLOAK_REALM}/protocol/openid-connect/auth?{urlencode(params)}"
     return RedirectResponse(auth_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
 
 
