@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [3.4.0-rc.4](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.3...v3.4.0-rc.4) (2026-09-08)
+
+
+### Bug Fixes
+
+* **ci:** tag Harbor images with the chart appVersion ([de2b940](https://github.com/IA-Generative/abrege/commit/de2b9403fc75c7feedefd0fa3dda18ef7f7c50bd))
+
 ## [3.4.0-rc.3](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.2...v3.4.0-rc.3) (2026-09-08)
 
 
