@@ -244,11 +244,11 @@ api:
     # @section -- Api
     labels: {}
     hosts:
-    - # -- Name of the host record.
+    -  # -- Name of the host record.
       # @section -- Api
       name: "domain.local"
       paths:
-      - # -- Path of the host record to manage routing.
+      -  # -- Path of the host record to manage routing.
         # @section -- Api
         path: "/"
         # -- Path type of the host record.
@@ -974,11 +974,11 @@ frontend:
     # @section -- Frontend
     labels: {}
     hosts:
-    - # -- Name of the host record.
+    -  # -- Name of the host record.
       # @section -- Frontend
       name: "domain.local"
       paths:
-      - # -- Path of the host record to manage routing.
+      -  # -- Path of the host record to manage routing.
         # @section -- Frontend
         path: "/"
         # -- Path type of the host record.
@@ -1143,7 +1143,7 @@ frontend:
     runAsNonRoot: true
     seccompProfile:
       type: "RuntimeDefault"
-    readOnlyRootFilesystem: false # true
+    readOnlyRootFilesystem: false  # true
   # -- Frontend runtime config, rendered as `window.KEY = value` assignments into the
   # `templates/frontend/vite-config.yaml` ConfigMap (mounted as `config.js` - see
   # `volumes`/`volumeMounts` on this component). Since the built frontend bundle is static (Vite
@@ -1680,11 +1680,11 @@ worker:
     # @section -- Worker
     labels: {}
     hosts:
-    - # -- Name of the host record.
+    -  # -- Name of the host record.
       # @section -- Worker
       name: "domain.local"
       paths:
-      - # -- Path of the host record to manage routing.
+      -  # -- Path of the host record to manage routing.
         # @section -- Worker
         path: "/"
         # -- Path type of the host record.
@@ -1911,10 +1911,10 @@ worker:
       password: ""
       # -- Redis authentication secret name.
       # @section -- Worker
-      secretRef: "" # "{{ .Values.redis.fullnameOverride }}"
+      secretRef: ""  # "{{ .Values.redis.fullnameOverride }}"
       # -- Redis authentication secret key.
       # @section -- Worker
-      secretKey: "" # "redis-password"
+      secretKey: ""  # "redis-password"
   # -- Worker container env variables loaded from configmap or secret reference. List or map
   # (merged with `global.envFrom` above, global entries first); see `global.envFrom` for both forms.
   # @section -- Worker
@@ -2571,7 +2571,7 @@ jobs:
         type: "RuntimeDefault"
       readOnlyRootFilesystem: true
     initContainers:
-    - # -- Init container to wait for the bundled `postgres` (default database backend) to accept connections. Update/remove this (e.g. to target CNPG's own service instead) when switching `cnpg.enabled: true` for production.
+    -  # -- Init container to wait for the bundled `postgres` (default database backend) to accept connections. Update/remove this (e.g. to target CNPG's own service instead) when switching `cnpg.enabled: true` for production.
       # @section -- Jobs
       name: wait-for-postgres
       # -- Init container image to use for the wait-for-postgres init container.
