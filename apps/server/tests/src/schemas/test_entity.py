@@ -20,6 +20,7 @@ def test_save_chunk_entities_persists_entities_and_resolves_relationship_indices
             EntityModel(type="ORGANIZATION", text="Acme", contexts=["Alice travaille chez Acme"], pages=[1]),
         ],
         relationships=[RelationshipModel(source_index=0, target_index=1, relationship_type="WORKS_AT", description="Alice travaille chez Acme")],
+        model_name="gpt-4",
     )
 
     entities = table.get_entities_by_task(task_id)
@@ -27,6 +28,8 @@ def test_save_chunk_entities_persists_entities_and_resolves_relationship_indices
 
     assert len(entities) == 2
     assert len(relationships) == 1
+    assert all(e.model_name == "gpt-4" for e in entities)
+    assert relationships[0].model_name == "gpt-4"
 
     alice = next(e for e in entities if e.text == "Alice")
     acme = next(e for e in entities if e.text == "Acme")
@@ -151,3 +154,51 @@ def test_get_entities_by_task_returns_empty_list_when_none():
     table = EntityTable()
     assert table.get_entities_by_task(_task_id()) == []
     assert table.get_relationships_by_task(_task_id()) == []
+
+
+def test_get_entities_by_task_paginated_slices_and_counts():
+    table = EntityTable()
+    task_id = _task_id()
+    for i in range(5):
+        table.save_chunk_entities(
+            task_id=task_id, chunk_index=i, entities=[EntityModel(type="PERSON", text=f"E{i}", contexts=[], pages=[i])], relationships=[]
+        )
+
+    assert table.count_entities_by_task(task_id) == 5
+
+    page_1 = table.get_entities_by_task_paginated(task_id, page=1, page_size=2)
+    page_2 = table.get_entities_by_task_paginated(task_id, page=2, page_size=2)
+    page_3 = table.get_entities_by_task_paginated(task_id, page=3, page_size=2)
+
+    assert [r.text for r in page_1] == ["E0", "E1"]
+    assert [r.text for r in page_2] == ["E2", "E3"]
+    assert [r.text for r in page_3] == ["E4"]
+
+
+def test_get_relationships_by_task_paginated_slices_and_counts():
+    table = EntityTable()
+    task_id = _task_id()
+    table.save_chunk_entities(
+        task_id=task_id,
+        chunk_index=0,
+        entities=[EntityModel(type="PERSON", text="A", contexts=[], pages=[1]), EntityModel(type="PERSON", text="B", contexts=[], pages=[1])],
+        relationships=[],
+    )
+    entities = table.get_entities_by_task(task_id)
+    table.save_global_relationships(
+        task_id=task_id,
+        entity_ids_in_order=[e.id for e in entities],
+        relationships=[
+            RelationshipModel(source_index=0, target_index=1, relationship_type="R1", description="d1"),
+        ],
+    )
+
+    assert table.count_relationships_by_task(task_id) == 1
+    page_1 = table.get_relationships_by_task_paginated(task_id, page=1, page_size=10)
+    assert len(page_1) == 1
+
+
+def test_count_entities_and_relationships_by_task_return_zero_when_none():
+    table = EntityTable()
+    assert table.count_entities_by_task(_task_id()) == 0
+    assert table.count_relationships_by_task(_task_id()) == 0

@@ -164,6 +164,9 @@ For the full list of environment variables and Docker volumes, see [docs/variabl
 
 For a summary of the API routes, see [docs/routes.md](docs/routes.md) — the interactive Swagger docs are served by the running API itself at `/api/docs`.
 
+For Q&A, entities/relationships, topic classification and semantic chunking — extracted
+alongside the summary without slowing it down — see [docs/document-insights.md](docs/document-insights.md).
+
 ### Components
 
 * **API**: Accepts inputs and initiates the processing pipeline.

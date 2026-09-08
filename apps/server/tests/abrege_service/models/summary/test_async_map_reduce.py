@@ -281,3 +281,18 @@ def test_dispatch_all_chunks_sets_redis_counter_and_dispatches_each_chunk(monkey
 
     assert redis_calls == {"chunk_pending:task-xyz": 3}
     assert sent == ["task-xyz:chunk:0", "task-xyz:chunk:1", "task-xyz:chunk:2"]
+
+
+def test_dispatch_topic_classification_sends_one_celery_task(monkeypatch: pytest.MonkeyPatch):
+    sent = []
+    monkeypatch.setattr(celery_app, "send_task", lambda name, args, task_id=None: sent.append((name, args, task_id)))
+
+    service = LangChainAsyncMapReduceService(llm=MagicMock(), max_token=3_000)
+    service.dispatch_topic_classification(task_id="task-abc", summary="Un résumé.", language="French")
+
+    assert len(sent) == 1
+    name, args, task_id = sent[0]
+    assert name == "worker.tasks.classify_topics"
+    assert task_id == "task-abc:topics"
+    payload = json.loads(args[0])
+    assert payload == {"task_id": "task-abc", "summary": "Un résumé.", "language": "French"}

@@ -14,7 +14,9 @@ from src.schemas.pagination import Pagination
 from src.schemas.code_error import TASK_STATUS_TO_HTTP
 from src.schemas.qa_item import qa_item_table, QAItemRowModel
 from src.schemas.entity import entity_table, EntityRowModel, RelationshipRowModel
-from src.schemas.result import EntityModel, QAItem, RelationshipModel
+from src.schemas.topic import topic_table, TopicRowModel
+from src.schemas.chunk import chunk_table, ChunkRowModel
+from src.schemas.result import EntityModel, QAItem, RelationshipModel, TopicModel
 from src.clients import file_connector, celery_app
 from src.clients.ocr_client import OCRClient
 from src.utils.logger import logger_abrege
@@ -181,16 +183,22 @@ def _get_task_or_404(task_id: str) -> TaskModel:
 class QAItemsChunkCreate(BaseModel):
     chunk_index: int
     qa_items: List[QAItem]
+    model_name: Optional[str] = None
 
 
-@router.get("/task/{id}/qa", response_model=List[QAItemRowModel])
+@router.get("/task/{id}/qa", response_model=Pagination[QAItemRowModel])
 async def get_task_qa_items(
     id: str,
+    offset: int = 1,
+    limit: int = 20,
     ctx: RequestContext = Depends(TokenVerifier),
-) -> List[QAItemRowModel]:
+) -> Pagination[QAItemRowModel]:
     _get_owned_task(task_id=id, ctx=ctx)
-    rows = qa_item_table.get_qa_items_by_task(task_id=id)
-    return [QAItemRowModel.model_validate(row) for row in rows]
+    rows = qa_item_table.get_qa_items_by_task_paginated(task_id=id, page=offset, page_size=limit)
+    total = qa_item_table.count_qa_items_by_task(task_id=id)
+    return Pagination[QAItemRowModel](
+        total=total, page=offset, page_size=limit, items=[QAItemRowModel.model_validate(row) for row in rows]
+    )
 
 
 @router.get("/task/{id}/qa/{qa_item_id}", response_model=QAItemRowModel)
@@ -210,7 +218,9 @@ async def get_task_qa_item(
 async def create_task_qa_items(id: str, body: QAItemsChunkCreate):
     """Replace a chunk's Q&A items. Internal-only: called by the extraction worker, not end users."""
     _get_task_or_404(task_id=id)
-    qa_item_table.save_chunk_qa_items(task_id=id, chunk_index=body.chunk_index, qa_items=body.qa_items)
+    qa_item_table.save_chunk_qa_items(
+        task_id=id, chunk_index=body.chunk_index, qa_items=body.qa_items, model_name=body.model_name
+    )
     return {"task_id": id, "chunk_index": body.chunk_index, "status": "saved"}
 
 
@@ -236,16 +246,22 @@ class EntitiesChunkCreate(BaseModel):
     chunk_index: int
     entities: List[EntityModel]
     relationships: List[RelationshipModel] = []
+    model_name: Optional[str] = None
 
 
-@router.get("/task/{id}/entities", response_model=List[EntityRowModel])
+@router.get("/task/{id}/entities", response_model=Pagination[EntityRowModel])
 async def get_task_entities(
     id: str,
+    offset: int = 1,
+    limit: int = 20,
     ctx: RequestContext = Depends(TokenVerifier),
-) -> List[EntityRowModel]:
+) -> Pagination[EntityRowModel]:
     _get_owned_task(task_id=id, ctx=ctx)
-    rows = entity_table.get_entities_by_task(task_id=id)
-    return [EntityRowModel.model_validate(row) for row in rows]
+    rows = entity_table.get_entities_by_task_paginated(task_id=id, page=offset, page_size=limit)
+    total = entity_table.count_entities_by_task(task_id=id)
+    return Pagination[EntityRowModel](
+        total=total, page=offset, page_size=limit, items=[EntityRowModel.model_validate(row) for row in rows]
+    )
 
 
 @router.get("/task/{id}/entities/{entity_id}", response_model=EntityRowModel)
@@ -271,6 +287,7 @@ async def create_task_entities(id: str, body: EntitiesChunkCreate):
         chunk_index=body.chunk_index,
         entities=body.entities,
         relationships=body.relationships,
+        model_name=body.model_name,
     )
     return {"task_id": id, "chunk_index": body.chunk_index, "status": "saved"}
 
@@ -296,16 +313,22 @@ async def delete_task_entity(
 class GlobalRelationshipsCreate(BaseModel):
     entity_ids_in_order: List[str]
     relationships: List[RelationshipModel]
+    model_name: Optional[str] = None
 
 
-@router.get("/task/{id}/relationships", response_model=List[RelationshipRowModel])
+@router.get("/task/{id}/relationships", response_model=Pagination[RelationshipRowModel])
 async def get_task_relationships(
     id: str,
+    offset: int = 1,
+    limit: int = 20,
     ctx: RequestContext = Depends(TokenVerifier),
-) -> List[RelationshipRowModel]:
+) -> Pagination[RelationshipRowModel]:
     _get_owned_task(task_id=id, ctx=ctx)
-    rows = entity_table.get_relationships_by_task(task_id=id)
-    return [RelationshipRowModel.model_validate(row) for row in rows]
+    rows = entity_table.get_relationships_by_task_paginated(task_id=id, page=offset, page_size=limit)
+    total = entity_table.count_relationships_by_task(task_id=id)
+    return Pagination[RelationshipRowModel](
+        total=total, page=offset, page_size=limit, items=[RelationshipRowModel.model_validate(row) for row in rows]
+    )
 
 
 @router.get("/task/{id}/relationships/{relationship_id}", response_model=RelationshipRowModel)
@@ -330,6 +353,7 @@ async def create_task_global_relationships(id: str, body: GlobalRelationshipsCre
         task_id=id,
         entity_ids_in_order=body.entity_ids_in_order,
         relationships=body.relationships,
+        model_name=body.model_name,
     )
     return {"task_id": id, "status": "saved"}
 
@@ -345,6 +369,116 @@ async def delete_task_relationship(
     if not deleted:
         raise HTTPException(404, detail=f"{relationship_id} not found")
     return {"id": relationship_id, "status": "deleted"}
+
+
+# ---------------------------------------------------------------------------
+# Topics (free-form classification of the final summary)
+# ---------------------------------------------------------------------------
+
+
+class TopicsCreate(BaseModel):
+    topics: List[TopicModel]
+    model_name: Optional[str] = None
+
+
+@router.get("/task/{id}/topics", response_model=Pagination[TopicRowModel])
+async def get_task_topics(
+    id: str,
+    offset: int = 1,
+    limit: int = 20,
+    ctx: RequestContext = Depends(TokenVerifier),
+) -> Pagination[TopicRowModel]:
+    _get_owned_task(task_id=id, ctx=ctx)
+    rows = topic_table.get_topics_by_task_paginated(task_id=id, page=offset, page_size=limit)
+    total = topic_table.count_topics_by_task(task_id=id)
+    return Pagination[TopicRowModel](
+        total=total, page=offset, page_size=limit, items=[TopicRowModel.model_validate(row) for row in rows]
+    )
+
+
+@router.post("/task/{id}/topics", status_code=201, dependencies=[Depends(verify_internal_service)])
+async def create_task_topics(id: str, body: TopicsCreate):
+    """Replace every topic for the task. Internal-only: called by the classification worker."""
+    _get_task_or_404(task_id=id)
+    topic_table.save_topics(task_id=id, topics=body.topics, model_name=body.model_name)
+    return {"task_id": id, "status": "saved"}
+
+
+@router.delete("/task/{id}/topics/{topic_id}")
+async def delete_task_topic(
+    id: str,
+    topic_id: str,
+    ctx: RequestContext = Depends(TokenVerifier),
+):
+    _get_owned_task(task_id=id, ctx=ctx)
+    deleted = topic_table.delete_topic_by_id(task_id=id, topic_id=topic_id)
+    if not deleted:
+        raise HTTPException(404, detail=f"{topic_id} not found")
+    return {"id": topic_id, "status": "deleted"}
+
+
+# ---------------------------------------------------------------------------
+# Chunks (semantic chunking of the source text, done LLM-side at map time)
+# ---------------------------------------------------------------------------
+
+
+class ChunksCreate(BaseModel):
+    chunk_index: int
+    page: Optional[int] = None
+    chunks: List[str]
+    model_name: Optional[str] = None
+
+
+@router.get("/task/{id}/chunks", response_model=Pagination[ChunkRowModel])
+async def get_task_chunks(
+    id: str,
+    offset: int = 1,
+    limit: int = 20,
+    ctx: RequestContext = Depends(TokenVerifier),
+) -> Pagination[ChunkRowModel]:
+    _get_owned_task(task_id=id, ctx=ctx)
+    rows = chunk_table.get_chunks_by_task_paginated(task_id=id, page=offset, page_size=limit)
+    total = chunk_table.count_chunks_by_task(task_id=id)
+    return Pagination[ChunkRowModel](
+        total=total, page=offset, page_size=limit, items=[ChunkRowModel.model_validate(row) for row in rows]
+    )
+
+
+@router.get("/task/{id}/chunks/{chunk_id}", response_model=ChunkRowModel)
+async def get_task_chunk(
+    id: str,
+    chunk_id: str,
+    ctx: RequestContext = Depends(TokenVerifier),
+) -> ChunkRowModel:
+    _get_owned_task(task_id=id, ctx=ctx)
+    row = chunk_table.get_chunk_by_id(task_id=id, chunk_id=chunk_id)
+    if row is None:
+        raise HTTPException(404, detail=f"{chunk_id} not found")
+    return ChunkRowModel.model_validate(row)
+
+
+@router.post("/task/{id}/chunks", status_code=201, dependencies=[Depends(verify_internal_service)])
+async def create_task_chunks(id: str, body: ChunksCreate):
+    """Replace the semantic sub-chunks for one map-step window. Internal-only: called by the
+    extraction worker right as it sends that window's text to the chunking model."""
+    _get_task_or_404(task_id=id)
+    chunk_table.save_chunk_group(
+        task_id=id, chunk_index=body.chunk_index, page=body.page, chunks=body.chunks, model_name=body.model_name
+    )
+    return {"task_id": id, "chunk_index": body.chunk_index, "status": "saved"}
+
+
+@router.delete("/task/{id}/chunks/{chunk_id}")
+async def delete_task_chunk(
+    id: str,
+    chunk_id: str,
+    ctx: RequestContext = Depends(TokenVerifier),
+):
+    _get_owned_task(task_id=id, ctx=ctx)
+    deleted = chunk_table.delete_chunk_by_id(task_id=id, chunk_id=chunk_id)
+    if not deleted:
+        raise HTTPException(404, detail=f"{chunk_id} not found")
+    return {"id": chunk_id, "status": "deleted"}
 
 
 # ---------------------------------------------------------------------------
