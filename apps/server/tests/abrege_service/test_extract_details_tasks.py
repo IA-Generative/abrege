@@ -1,5 +1,4 @@
 import json
-import uuid
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
@@ -25,7 +24,8 @@ from src.schemas.task import TaskForm, TaskStatus, task_table
 
 
 def _task_id() -> str:
-    return f"task-{uuid.uuid4()}"
+    task = task_table.insert_new_task(user_id="test", form_data=TaskForm(type="summary", status=TaskStatus.COMPLETED.value))
+    return task.id
 
 
 def _mock_extraction_runnables(monkeypatch: pytest.MonkeyPatch, qa_items=None, entities=None, relationships=None, chunks=None):
@@ -238,13 +238,8 @@ def test_extract_task_details_noop_when_task_has_no_source_text():
 # ---------------------------------------------------------------------------
 
 
-def _make_task() -> str:
-    task = task_table.insert_new_task(user_id="test", form_data=TaskForm(type="summary", status=TaskStatus.COMPLETED.value))
-    return task.id
-
-
 def test_extract_chunk_details_marks_qa_entities_completed_and_relationships_pending_on_last_chunk(monkeypatch: pytest.MonkeyPatch):
-    task_id = _make_task()
+    task_id = _task_id()
     _mock_extraction_runnables(monkeypatch)
     monkeypatch.setattr(internal_api_client, "save_chunk_qa_items", MagicMock())
     monkeypatch.setattr(internal_api_client, "save_chunk_entities", MagicMock())
@@ -262,7 +257,7 @@ def test_extract_chunk_details_marks_qa_entities_completed_and_relationships_pen
 
 
 def test_extract_chunk_details_leaves_qa_entities_in_progress_when_not_last_chunk(monkeypatch: pytest.MonkeyPatch):
-    task_id = _make_task()
+    task_id = _task_id()
     _mock_extraction_runnables(monkeypatch)
     monkeypatch.setattr(internal_api_client, "save_chunk_qa_items", MagicMock())
     monkeypatch.setattr(internal_api_client, "save_chunk_entities", MagicMock())
@@ -278,7 +273,7 @@ def test_extract_chunk_details_leaves_qa_entities_in_progress_when_not_last_chun
 
 
 def test_extract_chunk_details_marks_qa_entities_failed_on_error(monkeypatch: pytest.MonkeyPatch):
-    task_id = _make_task()
+    task_id = _task_id()
     _mock_extraction_runnables(monkeypatch)
     monkeypatch.setattr(internal_api_client, "save_chunk_qa_items", MagicMock(side_effect=RuntimeError("api down")))
 
@@ -291,7 +286,7 @@ def test_extract_chunk_details_marks_qa_entities_failed_on_error(monkeypatch: py
 
 
 def test_compute_global_relationships_marks_relationships_completed(monkeypatch: pytest.MonkeyPatch):
-    task_id = _make_task()
+    task_id = _task_id()
     entity_table.save_chunk_entities(
         task_id=task_id,
         chunk_index=0,
@@ -309,7 +304,7 @@ def test_compute_global_relationships_marks_relationships_completed(monkeypatch:
 
 
 def test_compute_global_relationships_marks_relationships_completed_when_skipped(monkeypatch: pytest.MonkeyPatch):
-    task_id = _make_task()  # no entities saved: fewer than two -> early return
+    task_id = _task_id()  # no entities saved: fewer than two -> early return
 
     compute_global_relationships.apply(args=[json.dumps({"task_id": task_id})]).get()
 
@@ -317,7 +312,7 @@ def test_compute_global_relationships_marks_relationships_completed_when_skipped
 
 
 def test_compute_global_relationships_marks_relationships_failed_on_error(monkeypatch: pytest.MonkeyPatch):
-    task_id = _make_task()
+    task_id = _task_id()
     entity_table.save_chunk_entities(
         task_id=task_id,
         chunk_index=0,
