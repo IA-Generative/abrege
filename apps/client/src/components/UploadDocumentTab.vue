@@ -42,11 +42,9 @@ async function onSubmit () {
 
     if (taskData.value && taskData.value.id) {
       resumeResult.value = await abregeStore.downloadContentSummary(taskData.value.id)
-    }
-    else if (storeError.value) {
+    } else if (storeError.value) {
       throw new Error(storeError.value)
-    }
-    else if (!taskData.value?.id) {
+    } else if (!taskData.value?.id) {
       throw new Error('Aucune tâche valide trouvée pour le résumé.')
     }
 
@@ -55,14 +53,12 @@ async function onSubmit () {
     if (status.value === 'completed') {
       abregeStore.reset()
     }
-  }
-  catch (error) {
+  } catch (error) {
     addErrorMessage({
       title: 'Erreur lors de la génération de résumé :',
       description: `${error}`,
     })
-  }
-  finally {
+  } finally {
     isLoading.value = false
   }
 }

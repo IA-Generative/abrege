@@ -12,6 +12,16 @@ type EntityModel = components['schemas']['EntityModel']
 type RelationshipModel = components['schemas']['RelationshipModel']
 type QAItem = components['schemas']['QAItem']
 
+const props = defineProps({
+  resumeResult: {
+    name: 'resumeResult',
+    type: Object as () => TaskModel,
+    required: true,
+  },
+})
+
+const emit = defineEmits(['inFocus', 'reGenerate'])
+
 const ENTITY_TYPE_LABELS: Record<EntityModel['type'], string> = {
   PERSON: 'Personne',
   DATE: 'Date',
@@ -32,18 +42,9 @@ const ENTITY_TYPE_COLORS: Record<EntityModel['type'], string> = {
   OTHER: '#f3f4f6',
 }
 
-const props = defineProps({
-  resumeResult: {
-    name: 'resumeResult',
-    type: Object as () => TaskModel,
-    required: true,
-  },
-})
-
-const emit = defineEmits(['inFocus', 'reGenerate'])
 const { addErrorMessage } = useToaster()
 
-function hasSummary(output: TaskModel['output']): output is SummaryModel {
+function hasSummary (output: TaskModel['output']): output is SummaryModel {
   return !!(output as SummaryModel)?.summary?.length
 }
 
@@ -71,35 +72,35 @@ const hasDetails = computed(() => entities.value.length > 0 || relationships.val
 const q = computed(() => searchQuery.value.toLowerCase().trim())
 
 const filteredEntities = computed(() => {
-  return entities.value.filter(e => {
+  return entities.value.filter((e) => {
     const matchType = !entityTypeFilter.value || e.type === entityTypeFilter.value
-    const matchQuery = !q.value ||
-      e.text.toLowerCase().includes(q.value) ||
-      e.type.toLowerCase().includes(q.value) ||
-      ENTITY_TYPE_LABELS[e.type]?.toLowerCase().includes(q.value) ||
-      e.contexts.some(c => c.toLowerCase().includes(q.value))
+    const matchQuery = !q.value
+      || e.text.toLowerCase().includes(q.value)
+      || e.type.toLowerCase().includes(q.value)
+      || ENTITY_TYPE_LABELS[e.type]?.toLowerCase().includes(q.value)
+      || e.contexts.some(c => c.toLowerCase().includes(q.value))
     return matchType && matchQuery
   })
 })
 
 const filteredRelations = computed(() => {
-  return relationships.value.filter(r => {
+  return relationships.value.filter((r) => {
     const matchType = !relationTypeFilter.value || r.relationship_type === relationTypeFilter.value
-    const matchQuery = !q.value ||
-      r.relationship_type.toLowerCase().includes(q.value) ||
-      r.description.toLowerCase().includes(q.value) ||
-      entityName(r.source_index).toLowerCase().includes(q.value) ||
-      entityName(r.target_index).toLowerCase().includes(q.value)
+    const matchQuery = !q.value
+      || r.relationship_type.toLowerCase().includes(q.value)
+      || r.description.toLowerCase().includes(q.value)
+      || entityName(r.source_index).toLowerCase().includes(q.value)
+      || entityName(r.target_index).toLowerCase().includes(q.value)
     return matchType && matchQuery
   })
 })
 
 const filteredQaItems = computed(() => {
-  return qaItems.value.filter(qa => {
-    return !q.value ||
-      qa.question.toLowerCase().includes(q.value) ||
-      qa.answer.toLowerCase().includes(q.value) ||
-      qa.source_text.toLowerCase().includes(q.value)
+  return qaItems.value.filter((qa) => {
+    return !q.value
+      || qa.question.toLowerCase().includes(q.value)
+      || qa.answer.toLowerCase().includes(q.value)
+      || qa.source_text.toLowerCase().includes(q.value)
   })
 })
 
@@ -123,25 +124,25 @@ const tabTitles = computed(() => [
   {
     tabId: 'tab-entities',
     panelId: 'panel-entities',
-    title: 'Entités' + (filteredEntities.value.length !== entities.value.length
-      ? ' (' + filteredEntities.value.length + '/' + entities.value.length + ')'
-      : entities.value.length ? ' (' + entities.value.length + ')' : ''),
+    title: `Entités${filteredEntities.value.length !== entities.value.length
+      ? ` (${filteredEntities.value.length}/${entities.value.length})`
+      : entities.value.length ? ` (${entities.value.length})` : ''}`,
     icon: 'ri-user-line',
   },
   {
     tabId: 'tab-relations',
     panelId: 'panel-relations',
-    title: 'Relations' + (filteredRelations.value.length !== relationships.value.length
-      ? ' (' + filteredRelations.value.length + '/' + relationships.value.length + ')'
-      : relationships.value.length ? ' (' + relationships.value.length + ')' : ''),
+    title: `Relations${filteredRelations.value.length !== relationships.value.length
+      ? ` (${filteredRelations.value.length}/${relationships.value.length})`
+      : relationships.value.length ? ` (${relationships.value.length})` : ''}`,
     icon: 'ri-link-m',
   },
   {
     tabId: 'tab-qa',
     panelId: 'panel-qa',
-    title: 'Q&A' + (filteredQaItems.value.length !== qaItems.value.length
-      ? ' (' + filteredQaItems.value.length + '/' + qaItems.value.length + ')'
-      : qaItems.value.length ? ' (' + qaItems.value.length + ')' : ''),
+    title: `Q&A${filteredQaItems.value.length !== qaItems.value.length
+      ? ` (${filteredQaItems.value.length}/${qaItems.value.length})`
+      : qaItems.value.length ? ` (${qaItems.value.length})` : ''}`,
     icon: 'ri-question-answer-line',
   },
 ])
@@ -165,18 +166,20 @@ const pagedQaItems = computed(() => {
   return filteredQaItems.value.slice(start, start + PAGE_SIZE)
 })
 
-function entityPageOffset(i: number): number {
+function entityPageOffset (i: number): number {
   return (entityPage.value - 1) * PAGE_SIZE + i
 }
 
-function qaPageOffset(i: number): number {
+function qaPageOffset (i: number): number {
   return (qaPage.value - 1) * PAGE_SIZE + i
 }
 
-function highlight(text: string): string {
-  if (!q.value) return text
+function highlight (text: string): string {
+  if (!q.value) {
+    return text
+  }
   const escaped = q.value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  return text.replace(new RegExp('(' + escaped + ')', 'gi'), '<mark>$1</mark>')
+  return text.replace(new RegExp(`(${escaped})`, 'gi'), '<mark>$1</mark>')
 }
 
 const tags = ref<string[]>([
@@ -193,29 +196,33 @@ const isSpeaking = ref<boolean>(false)
 const textQueue = ref<string[]>([])
 const currentIndex = ref<number>(0)
 
-function entityLabel(type: EntityModel['type']) {
+function entityLabel (type: EntityModel['type']) {
   return ENTITY_TYPE_LABELS[type] ?? type
 }
 
-function entityColor(type: EntityModel['type']) {
+function entityColor (type: EntityModel['type']) {
   return ENTITY_TYPE_COLORS[type] ?? '#f3f4f6'
 }
 
-function entityName(index: number): string {
-  return entities.value[index]?.text ?? ('#' + index)
+function entityName (index: number): string {
+  return entities.value[index]?.text ?? (`#${index}`)
 }
 
-function countLabel(): string {
+function countLabel (): string {
   const e = entities.value.length
   const r = relationships.value.length
   const qa = qaItems.value.length
-  let s = e + ' entité' + (e > 1 ? 's' : '')
-  if (r > 0) s += ' · ' + r + ' relation' + (r > 1 ? 's' : '')
-  if (qa > 0) s += ' · ' + qa + ' Q&A'
+  let s = `${e} entité${e > 1 ? 's' : ''}`
+  if (r > 0) {
+    s += ` · ${r} relation${r > 1 ? 's' : ''}`
+  }
+  if (qa > 0) {
+    s += ` · ${qa} Q&A`
+  }
   return s
 }
 
-function speakMultipleTexts(texts: string[]) {
+function speakMultipleTexts (texts: string[]) {
   if (!texts.length) {
     addErrorMessage({ title: 'Erreur', description: 'Aucun texte à lire.' })
     return
@@ -226,7 +233,7 @@ function speakMultipleTexts(texts: string[]) {
   speakNextText()
 }
 
-function speakNextText() {
+function speakNextText () {
   if (speech.value && currentIndex.value < textQueue.value.length) {
     speech.value.text = textQueue.value[currentIndex.value]
     window.speechSynthesis.speak(speech.value)
@@ -234,17 +241,17 @@ function speakNextText() {
   }
 }
 
-function stopSpeech() {
+function stopSpeech () {
   window.speechSynthesis.cancel()
   isSpeaking.value = false
 }
 
-function reGenerate() {
+function reGenerate () {
   stopSpeech()
   emit('reGenerate')
 }
 
-function copyOnClipboard() {
+function copyOnClipboard () {
   stopSpeech()
   if (hasSummary(props.resumeResult.output)) {
     navigator.clipboard.writeText(props.resumeResult.output.summary)
@@ -253,7 +260,7 @@ function copyOnClipboard() {
   }
 }
 
-function renderMarkdown(markdownText: string) {
+function renderMarkdown (markdownText: string) {
   const html = marked.parse(markdownText) as string
   return DOMPurify.sanitize(html)
 }
@@ -280,241 +287,385 @@ onMounted(() => {
 <template>
   <div class="resume-container">
     <div class="resume-content">
-
       <div class="resume-content-header">
         <div class="resume-content-tag">
-          <div v-for="(tag, index) in tags" :key="index" class="tag">{{ tag }}</div>
+          <div
+            v-for="(tag, index) in tags"
+            :key="index"
+            class="tag"
+          >
+            {{ tag }}
+          </div>
         </div>
         <span class="resume-content-words">
           {{ summaryOutput?.word_count || 0 }} mots générés
         </span>
       </div>
 
-      <div class="resume-content-result" v-html="renderMarkdown(summaryOutput?.summary ?? '')"></div>
+      <div
+        class="resume-content-result"
+        v-html="renderMarkdown(summaryOutput?.summary ?? '')"
+      />
 
-      <div v-if="hasDetails" class="details-wrapper">
-        <button class="details-toggle" @click="showDetails = !showDetails">
+      <div
+        v-if="hasDetails"
+        class="details-wrapper"
+      >
+        <button
+          class="details-toggle"
+          @click="showDetails = !showDetails"
+        >
           {{ showDetails ? '▲ Masquer les détails' : '▼ Analyse du document' }}
-          <span v-if="!showDetails" class="details-count">{{ countLabel() }}</span>
+          <span
+            v-if="!showDetails"
+            class="details-count"
+          >{{ countLabel() }}</span>
         </button>
 
-        <div v-if="showDetails" class="details-body">
+        <div
+          v-if="showDetails"
+          class="details-body"
+        >
           <div class="search-bar">
-            <span class="fr-icon-search-line search-icon" aria-hidden="true"></span>
+            <span
+              class="fr-icon-search-line search-icon"
+              aria-hidden="true"
+            />
             <input
               v-model="searchQuery"
               type="search"
               class="search-input"
               placeholder="Rechercher dans les entités et relations…"
               aria-label="Rechercher dans les entités et relations"
-            />
+            >
             <button
               v-if="searchQuery"
               class="search-clear"
               aria-label="Effacer la recherche"
               @click="searchQuery = ''"
-            >✕</button>
+            >
+              ✕
+            </button>
           </div>
-          <DsfrTabs v-model="activeTab" :tab-titles="tabTitles" tab-list-name="analyse">
-          <DsfrTabContent panel-id="panel-entities" tab-id="tab-entities">
-            <div v-if="entities.length > 0" class="tab-content">
-              <div v-if="availableEntityTypes.length > 1" class="type-filters">
-                <button
-                  class="type-chip"
-                  :class="{ active: entityTypeFilter === null }"
-                  @click="entityTypeFilter = null"
-                >Tous</button>
-                <button
-                  v-for="type in availableEntityTypes"
-                  :key="type"
-                  class="type-chip"
-                  :class="{ active: entityTypeFilter === type }"
-                  :style="entityTypeFilter === type ? { backgroundColor: entityColor(type), borderColor: entityColor(type) } : {}"
-                  @click="entityTypeFilter = entityTypeFilter === type ? null : type"
-                >{{ entityLabel(type) }}</button>
-              </div>
-              <div class="cards-list">
+          <DsfrTabs
+            v-model="activeTab"
+            :tab-titles="tabTitles"
+            tab-list-name="analyse"
+          >
+            <DsfrTabContent
+              panel-id="panel-entities"
+              tab-id="tab-entities"
+            >
+              <div
+                v-if="entities.length > 0"
+                class="tab-content"
+              >
                 <div
-                  v-for="(entity, i) in pagedEntities"
-                  :key="entityPageOffset(i)"
-                  class="entity-card"
-                  :style="{ borderLeftColor: entityColor(entity.type) }"
+                  v-if="availableEntityTypes.length > 1"
+                  class="type-filters"
                 >
-                  <div class="entity-card-header">
-                    <DsfrTag
-                      :label="entityLabel(entity.type)"
-                      small
-                      :style="{ backgroundColor: entityColor(entity.type), color: '#333', border: 'none' }"
+                  <button
+                    class="type-chip"
+                    :class="{ active: entityTypeFilter === null }"
+                    @click="entityTypeFilter = null"
+                  >
+                    Tous
+                  </button>
+                  <button
+                    v-for="type in availableEntityTypes"
+                    :key="type"
+                    class="type-chip"
+                    :class="{ active: entityTypeFilter === type }"
+                    :style="entityTypeFilter === type ? { backgroundColor: entityColor(type), borderColor: entityColor(type) } : {}"
+                    @click="entityTypeFilter = entityTypeFilter === type ? null : type"
+                  >
+                    {{ entityLabel(type) }}
+                  </button>
+                </div>
+                <div class="cards-list">
+                  <div
+                    v-for="(entity, i) in pagedEntities"
+                    :key="entityPageOffset(i)"
+                    class="entity-card"
+                    :style="{ borderLeftColor: entityColor(entity.type) }"
+                  >
+                    <div class="entity-card-header">
+                      <DsfrTag
+                        :label="entityLabel(entity.type)"
+                        small
+                        :style="{ backgroundColor: entityColor(entity.type), color: '#333', border: 'none' }"
+                      />
+                      <span
+                        class="entity-text"
+                        v-html="highlight(entity.text)"
+                      />
+                      <span
+                        v-if="entity.pages.length > 0"
+                        class="entity-pages"
+                      >p. {{ entity.pages.join(', ') }}</span>
+                    </div>
+                    <DsfrAccordionsGroup
+                      v-if="entity.contexts.length > 0"
+                      v-model="expandedContextId"
+                    >
+                      <DsfrAccordion
+                        :id="`ctx-${entityPageOffset(i)}`"
+                        :title="`${entity.contexts.length} contexte${entity.contexts.length > 1 ? 's' : ''}`"
+                        :expanded-id="expandedContextId"
+                        @expand="expandedContextId = $event"
+                      >
+                        <ul class="entity-contexts-list">
+                          <li
+                            v-for="(ctx, ci) in entity.contexts"
+                            :key="ci"
+                            v-html="highlight(ctx)"
+                          />
+                        </ul>
+                      </DsfrAccordion>
+                    </DsfrAccordionsGroup>
+                  </div>
+                </div>
+                <div
+                  v-if="entityPageCount > 1"
+                  class="pagination"
+                >
+                  <span class="pagination-info">{{ entityPage }} / {{ entityPageCount }}</span>
+                  <DsfrButton
+                    label="Précédent"
+                    :disabled="entityPage === 1"
+                    size="sm"
+                    secondary
+                    icon="ri-arrow-left-line"
+                    icon-only
+                    @click="entityPage--"
+                  />
+                  <DsfrButton
+                    label="Suivant"
+                    :disabled="entityPage === entityPageCount"
+                    size="sm"
+                    secondary
+                    icon="ri-arrow-right-line"
+                    icon-only
+                    @click="entityPage++"
+                  />
+                </div>
+              </div>
+              <p
+                v-else
+                class="fr-text--sm empty-state"
+              >
+                <template v-if="searchQuery">
+                  Aucune entité ne correspond à « {{ searchQuery }} ».
+                </template>
+                <template v-else>
+                  Aucune entité extraite.
+                </template>
+              </p>
+            </DsfrTabContent>
+
+            <DsfrTabContent
+              panel-id="panel-relations"
+              tab-id="tab-relations"
+            >
+              <div
+                v-if="relationships.length > 0"
+                class="tab-content"
+              >
+                <div
+                  v-if="availableRelationTypes.length > 1"
+                  class="type-filters"
+                >
+                  <button
+                    class="type-chip"
+                    :class="{ active: relationTypeFilter === null }"
+                    @click="relationTypeFilter = null"
+                  >
+                    Tous
+                  </button>
+                  <button
+                    v-for="type in availableRelationTypes"
+                    :key="type"
+                    class="type-chip"
+                    :class="{ active: relationTypeFilter === type }"
+                    @click="relationTypeFilter = relationTypeFilter === type ? null : type"
+                  >
+                    {{ type }}
+                  </button>
+                </div>
+                <div class="cards-list">
+                  <div
+                    v-for="(rel, i) in pagedRelations"
+                    :key="i"
+                    class="relation-card"
+                  >
+                    <div class="relation-header">
+                      <DsfrTag
+                        :label="entityName(rel.source_index)"
+                        small
+                        class="relation-entity-tag"
+                      />
+                      <span class="relation-arrow">→</span>
+                      <DsfrTag
+                        :label="rel.relationship_type"
+                        small
+                        class="relation-type-tag"
+                      />
+                      <span class="relation-arrow">→</span>
+                      <DsfrTag
+                        :label="entityName(rel.target_index)"
+                        small
+                        class="relation-entity-tag"
+                      />
+                    </div>
+                    <p
+                      class="relation-desc"
+                      v-html="highlight(rel.description)"
                     />
-                    <span class="entity-text" v-html="highlight(entity.text)"></span>
-                    <span v-if="entity.pages.length > 0" class="entity-pages">p. {{ entity.pages.join(', ') }}</span>
                   </div>
-                  <DsfrAccordionsGroup v-if="entity.contexts.length > 0" v-model="expandedContextId">
-                    <DsfrAccordion
-                      :id="'ctx-' + entityPageOffset(i)"
-                      :title="entity.contexts.length + ' contexte' + (entity.contexts.length > 1 ? 's' : '')"
-                      :expanded-id="expandedContextId"
-                      @expand="expandedContextId = $event"
-                    >
-                      <ul class="entity-contexts-list">
-                        <li v-for="(ctx, ci) in entity.contexts" :key="ci" v-html="highlight(ctx)"></li>
-                      </ul>
-                    </DsfrAccordion>
-                  </DsfrAccordionsGroup>
+                </div>
+                <div
+                  v-if="relationPageCount > 1"
+                  class="pagination"
+                >
+                  <span class="pagination-info">{{ relationPage }} / {{ relationPageCount }}</span>
+                  <DsfrButton
+                    label="Précédent"
+                    :disabled="relationPage === 1"
+                    size="sm"
+                    secondary
+                    icon="ri-arrow-left-line"
+                    icon-only
+                    @click="relationPage--"
+                  />
+                  <DsfrButton
+                    label="Suivant"
+                    :disabled="relationPage === relationPageCount"
+                    size="sm"
+                    secondary
+                    icon="ri-arrow-right-line"
+                    icon-only
+                    @click="relationPage++"
+                  />
                 </div>
               </div>
-              <div v-if="entityPageCount > 1" class="pagination">
-                <span class="pagination-info">{{ entityPage }} / {{ entityPageCount }}</span>
-                <DsfrButton
-                  label="Précédent"
-                  :disabled="entityPage === 1"
-                  size="sm"
-                  secondary
-                  icon="ri-arrow-left-line"
-                  icon-only
-                  @click="entityPage--"
-                />
-                <DsfrButton
-                  label="Suivant"
-                  :disabled="entityPage === entityPageCount"
-                  size="sm"
-                  secondary
-                  icon="ri-arrow-right-line"
-                  icon-only
-                  @click="entityPage++"
-                />
-              </div>
-            </div>
-            <p v-else class="fr-text--sm empty-state">
-              <template v-if="searchQuery">Aucune entité ne correspond à « {{ searchQuery }} ».</template>
-              <template v-else>Aucune entité extraite.</template>
-            </p>
-          </DsfrTabContent>
+              <p
+                v-else
+                class="fr-text--sm empty-state"
+              >
+                <template v-if="searchQuery">
+                  Aucune relation ne correspond à « {{ searchQuery }} ».
+                </template>
+                <template v-else>
+                  Aucune relation détectée.
+                </template>
+              </p>
+            </DsfrTabContent>
 
-          <DsfrTabContent panel-id="panel-relations" tab-id="tab-relations">
-            <div v-if="relationships.length > 0" class="tab-content">
-              <div v-if="availableRelationTypes.length > 1" class="type-filters">
-                <button
-                  class="type-chip"
-                  :class="{ active: relationTypeFilter === null }"
-                  @click="relationTypeFilter = null"
-                >Tous</button>
-                <button
-                  v-for="type in availableRelationTypes"
-                  :key="type"
-                  class="type-chip"
-                  :class="{ active: relationTypeFilter === type }"
-                  @click="relationTypeFilter = relationTypeFilter === type ? null : type"
-                >{{ type }}</button>
-              </div>
-              <div class="cards-list">
-                <div v-for="(rel, i) in pagedRelations" :key="i" class="relation-card">
-                  <div class="relation-header">
-                    <DsfrTag :label="entityName(rel.source_index)" small class="relation-entity-tag" />
-                    <span class="relation-arrow">→</span>
-                    <DsfrTag :label="rel.relationship_type" small class="relation-type-tag" />
-                    <span class="relation-arrow">→</span>
-                    <DsfrTag :label="entityName(rel.target_index)" small class="relation-entity-tag" />
+            <DsfrTabContent
+              panel-id="panel-qa"
+              tab-id="tab-qa"
+            >
+              <div
+                v-if="qaItems.length > 0"
+                class="tab-content"
+              >
+                <div class="cards-list">
+                  <div
+                    v-for="(qa, i) in pagedQaItems"
+                    :key="qaPageOffset(i)"
+                    class="qa-card"
+                  >
+                    <div class="qa-card-header">
+                      <span
+                        class="qa-question"
+                        v-html="highlight(qa.question)"
+                      />
+                      <span
+                        v-if="qa.page"
+                        class="entity-pages"
+                      >p. {{ qa.page }}</span>
+                    </div>
+                    <p
+                      class="qa-answer"
+                      v-html="highlight(qa.answer)"
+                    />
+                    <DsfrAccordionsGroup v-model="expandedQaSourceId">
+                      <DsfrAccordion
+                        :id="`qa-src-${qaPageOffset(i)}`"
+                        title="Texte source"
+                        :expanded-id="expandedQaSourceId"
+                        @expand="expandedQaSourceId = $event"
+                      >
+                        <p
+                          class="qa-source-text"
+                          v-html="highlight(qa.source_text)"
+                        />
+                      </DsfrAccordion>
+                    </DsfrAccordionsGroup>
                   </div>
-                  <p class="relation-desc" v-html="highlight(rel.description)"></p>
+                </div>
+                <div
+                  v-if="qaPageCount > 1"
+                  class="pagination"
+                >
+                  <span class="pagination-info">{{ qaPage }} / {{ qaPageCount }}</span>
+                  <DsfrButton
+                    label="Précédent"
+                    :disabled="qaPage === 1"
+                    size="sm"
+                    secondary
+                    icon="ri-arrow-left-line"
+                    icon-only
+                    @click="qaPage--"
+                  />
+                  <DsfrButton
+                    label="Suivant"
+                    :disabled="qaPage === qaPageCount"
+                    size="sm"
+                    secondary
+                    icon="ri-arrow-right-line"
+                    icon-only
+                    @click="qaPage++"
+                  />
                 </div>
               </div>
-              <div v-if="relationPageCount > 1" class="pagination">
-                <span class="pagination-info">{{ relationPage }} / {{ relationPageCount }}</span>
-                <DsfrButton
-                  label="Précédent"
-                  :disabled="relationPage === 1"
-                  size="sm"
-                  secondary
-                  icon="ri-arrow-left-line"
-                  icon-only
-                  @click="relationPage--"
-                />
-                <DsfrButton
-                  label="Suivant"
-                  :disabled="relationPage === relationPageCount"
-                  size="sm"
-                  secondary
-                  icon="ri-arrow-right-line"
-                  icon-only
-                  @click="relationPage++"
-                />
-              </div>
-            </div>
-            <p v-else class="fr-text--sm empty-state">
-              <template v-if="searchQuery">Aucune relation ne correspond à « {{ searchQuery }} ».</template>
-              <template v-else>Aucune relation détectée.</template>
-            </p>
-          </DsfrTabContent>
-
-          <DsfrTabContent panel-id="panel-qa" tab-id="tab-qa">
-            <div v-if="qaItems.length > 0" class="tab-content">
-              <div class="cards-list">
-                <div v-for="(qa, i) in pagedQaItems" :key="qaPageOffset(i)" class="qa-card">
-                  <div class="qa-card-header">
-                    <span class="qa-question" v-html="highlight(qa.question)"></span>
-                    <span v-if="qa.page" class="entity-pages">p. {{ qa.page }}</span>
-                  </div>
-                  <p class="qa-answer" v-html="highlight(qa.answer)"></p>
-                  <DsfrAccordionsGroup v-model="expandedQaSourceId">
-                    <DsfrAccordion
-                      :id="'qa-src-' + qaPageOffset(i)"
-                      title="Texte source"
-                      :expanded-id="expandedQaSourceId"
-                      @expand="expandedQaSourceId = $event"
-                    >
-                      <p class="qa-source-text" v-html="highlight(qa.source_text)"></p>
-                    </DsfrAccordion>
-                  </DsfrAccordionsGroup>
-                </div>
-              </div>
-              <div v-if="qaPageCount > 1" class="pagination">
-                <span class="pagination-info">{{ qaPage }} / {{ qaPageCount }}</span>
-                <DsfrButton
-                  label="Précédent"
-                  :disabled="qaPage === 1"
-                  size="sm"
-                  secondary
-                  icon="ri-arrow-left-line"
-                  icon-only
-                  @click="qaPage--"
-                />
-                <DsfrButton
-                  label="Suivant"
-                  :disabled="qaPage === qaPageCount"
-                  size="sm"
-                  secondary
-                  icon="ri-arrow-right-line"
-                  icon-only
-                  @click="qaPage++"
-                />
-              </div>
-            </div>
-            <p v-else class="fr-text--sm empty-state">
-              <template v-if="searchQuery">Aucune question/réponse ne correspond à « {{ searchQuery }} ».</template>
-              <template v-else>Aucune question/réponse générée.</template>
-            </p>
-          </DsfrTabContent>
-        </DsfrTabs>
+              <p
+                v-else
+                class="fr-text--sm empty-state"
+              >
+                <template v-if="searchQuery">
+                  Aucune question/réponse ne correspond à « {{ searchQuery }} ».
+                </template>
+                <template v-else>
+                  Aucune question/réponse générée.
+                </template>
+              </p>
+            </DsfrTabContent>
+          </DsfrTabs>
         </div>
       </div>
-
     </div>
 
     <div class="resume-container-buttons">
       <DsfrButton
         :icon="{ name: 'ri:volume-up-fill', fill: 'var(--border-plain-blue-france))' }"
-        icon-only tertiary no-outline
+        icon-only
+        tertiary
+        no-outline
         @click="speakMultipleTexts([summaryOutput?.summary ?? ''])"
       />
       <DsfrButton
         :icon="{ name: 'ri-refresh-line', fill: 'var(--border-plain-blue-france))' }"
-        icon-only tertiary no-outline
+        icon-only
+        tertiary
+        no-outline
         @click="reGenerate"
       />
       <DsfrButton
         :icon="{ name: 'ri-file-copy-line', fill: 'var(--border-plain-blue-france))' }"
-        icon-only tertiary no-outline
+        icon-only
+        tertiary
+        no-outline
         @click="copyOnClipboard"
       />
     </div>

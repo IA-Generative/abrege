@@ -40,8 +40,7 @@ async function initializeApp () {
         environment: ENVIRONMENT,
         sendDefaultPii: false,
       })
-    }
-    catch (e) {
+    } catch (e) {
       console.error('Sentry initialization failed, continuing without it:', e)
     }
   }

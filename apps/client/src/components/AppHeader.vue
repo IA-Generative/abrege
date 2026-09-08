@@ -25,8 +25,7 @@ const whenNotLoggedLinks: DsfrHeaderProps['quickLinks'] = [
 const quickLinks = computed<DsfrHeaderProps['quickLinks']>(() => {
   if (isLoggedIn.value) {
     return whenLoggedLinks
-  }
-  else {
+  } else {
     return whenNotLoggedLinks
   }
 })

@@ -18,21 +18,21 @@ const error = ref<string | null>(null)
 const taskId = computed(() => route.params.task_id as string)
 
 const inputLabel = computed(() => {
-  if (!task.value?.input) return null
-  if (task.value.input.url) return task.value.input.url
-  if (task.value.input.raw_filename) return task.value.input.raw_filename
+  if (!task.value?.input) { return null }
+  if (task.value.input.url) { return task.value.input.url }
+  if (task.value.input.raw_filename) { return task.value.input.raw_filename }
   if (task.value.input.text) {
     const t = task.value.input.text
-    return t.length > 80 ? t.slice(0, 80) + '…' : t
+    return t.length > 80 ? `${t.slice(0, 80)}…` : t
   }
   return null
 })
 
 const inputType = computed(() => {
-  if (!task.value?.input) return null
-  if (task.value.input.url) return 'URL'
-  if (task.value.input.raw_filename) return 'Document'
-  if (task.value.input.text) return 'Texte'
+  if (!task.value?.input) { return null }
+  if (task.value.input.url) { return 'URL' }
+  if (task.value.input.raw_filename) { return 'Document' }
+  if (task.value.input.text) { return 'Texte' }
   return null
 })
 
@@ -59,18 +59,29 @@ onMounted(async () => {
       @click="router.back()"
     />
 
-    <div v-if="loading" class="fr-mt-4w">
-      <p class="fr-text--sm">Chargement…</p>
+    <div
+      v-if="loading"
+      class="fr-mt-4w"
+    >
+      <p class="fr-text--sm">
+        Chargement…
+      </p>
     </div>
 
-    <div v-else-if="error" class="fr-alert fr-alert--error fr-mt-4w">
+    <div
+      v-else-if="error"
+      class="fr-alert fr-alert--error fr-mt-4w"
+    >
       <p>{{ error }}</p>
     </div>
 
     <template v-else-if="task">
       <div class="task-detail-header fr-mb-4w">
         <div class="task-detail-meta">
-          <span v-if="inputType" class="fr-badge fr-badge--info fr-mr-2w">{{ inputType }}</span>
+          <span
+            v-if="inputType"
+            class="fr-badge fr-badge--info fr-mr-2w"
+          >{{ inputType }}</span>
           <span class="fr-text--sm fr-text-mention--grey">Tâche {{ task.id }}</span>
         </div>
         <a
@@ -80,17 +91,25 @@ onMounted(async () => {
           target="_blank"
           rel="noopener noreferrer"
         >{{ task.input.url }}</a>
-        <p v-else-if="inputLabel" class="task-detail-source">{{ inputLabel }}</p>
+        <p
+          v-else-if="inputLabel"
+          class="task-detail-source"
+        >
+          {{ inputLabel }}
+        </p>
       </div>
 
       <div v-if="task.status === 'completed' && task.output">
         <ResumeResult
           :resume-result="task"
-          @reGenerate="router.push({ name: 'resume-tab', params: { tab: 'tasks' } })"
+          @re-generate="router.push({ name: 'resume-tab', params: { tab: 'tasks' } })"
         />
       </div>
 
-      <div v-else class="fr-alert fr-alert--warning fr-mt-4w">
+      <div
+        v-else
+        class="fr-alert fr-alert--warning fr-mt-4w"
+      >
         <p>Ce résumé n'est pas encore disponible (statut : {{ task.status }}).</p>
       </div>
     </template>

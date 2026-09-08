@@ -75,8 +75,7 @@ export const useAbregeStore = defineStore('abrege', () => {
         throw new Error(`Statut inattendu: ${data.status}`)
       }
       return true
-    }
-    catch (err: any) {
+    } catch (err: any) {
       error.value = err.message ?? 'Erreur inconnue lors du health check.'
       return false
     }
@@ -86,8 +85,7 @@ export const useAbregeStore = defineStore('abrege', () => {
     try {
       const { data } = await http.get<TaskModel>(`/task/${taskId}`)
       return data
-    }
-    catch (err: any) {
+    } catch (err: any) {
       addErrorMessage({
         title: 'Erreur :',
         description: `Erreur lors de la récupération de la tâche ${taskId}: ${err}`,
@@ -164,8 +162,7 @@ export const useAbregeStore = defineStore('abrege', () => {
         await check()
       }
       await check()
-    }
-    catch (err: any) {
+    } catch (err: any) {
       error.value = err.message ?? 'Erreur inconnue lors du polling.'
       isPolling.value = false
     }
@@ -231,8 +228,7 @@ export const useAbregeStore = defineStore('abrege', () => {
       }
 
       await pollTask(task.id)
-    }
-    catch (err: any) {
+    } catch (err: any) {
       error.value = err.message || 'Erreur lors de l\'envoi du contenu.'
       isPolling.value = false
       throw error
@@ -281,22 +277,18 @@ export const useAbregeStore = defineStore('abrege', () => {
       }
 
       await pollTask(task.id)
-    }
-    catch (err: any) {
+    } catch (err: any) {
       let errorMessage = 'Erreur lors de l\'envoi du fichier.'
       if (err.response) {
         const status = err.response.status
         if (status === 413) {
           errorMessage = 'Fichier trop volumineux pour le serveur'
-        }
-        else if (status === 415) {
+        } else if (status === 415) {
           errorMessage = 'Type de fichier non supporté'
-        }
-        else if (err.response.data?.message) {
+        } else if (err.response.data?.message) {
           errorMessage = err.response.data.message
         }
-      }
-      else if (err.message) {
+      } else if (err.message) {
         errorMessage = err.message
       }
       error.value = errorMessage
@@ -314,8 +306,7 @@ export const useAbregeStore = defineStore('abrege', () => {
       )
       const data = response.data
       return data
-    }
-    catch (error) {
+    } catch (error) {
       addErrorMessage({
         title: 'Erreur :',
         description: `Erreur lors de la récupération du texte résumé : ${error}.`,
@@ -336,29 +327,49 @@ export const useAbregeStore = defineStore('abrege', () => {
 
   const MOCK_TASKS: TaskModel[] = [
     {
-      id: 'mock-1', user_id: 'dev', type: 'text-url', status: 'completed', percentage: 1,
-      created_at: Date.now() / 1000 - 3600, updated_at: Date.now() / 1000 - 3500,
+      id: 'mock-1',
+      user_id: 'dev',
+      type: 'text-url',
+      status: 'completed',
+      percentage: 1,
+      created_at: Date.now() / 1000 - 3600,
+      updated_at: Date.now() / 1000 - 3500,
       input: { url: 'https://example.com/article' } as any,
       output: { type: 'summary', summary: 'Ceci est un résumé généré automatiquement pour tester l\'affichage de la modale.', word_count: 12, created_at: 0, model_name: 'mock', model_version: '1', texts_found: [], percentage: 1, nb_llm_calls: 1, partial_summaries: [] },
       parameters: null,
     },
     {
-      id: 'mock-2', user_id: 'dev', type: 'document', status: 'completed', percentage: 1,
-      created_at: Date.now() / 1000 - 7200, updated_at: Date.now() / 1000 - 7100,
+      id: 'mock-2',
+      user_id: 'dev',
+      type: 'document',
+      status: 'completed',
+      percentage: 1,
+      created_at: Date.now() / 1000 - 7200,
+      updated_at: Date.now() / 1000 - 7100,
       input: { raw_filename: 'rapport_annuel.pdf' } as any,
       output: { type: 'summary', summary: 'Résumé du rapport annuel : les indicateurs sont en hausse de 12% sur l\'année.', word_count: 15, created_at: 0, model_name: 'mock', model_version: '1', texts_found: [], percentage: 1, nb_llm_calls: 2, partial_summaries: [] },
       parameters: null,
     },
     {
-      id: 'mock-3', user_id: 'dev', type: 'text-url', status: 'in_progress', percentage: 0.6,
-      created_at: Date.now() / 1000 - 120, updated_at: Date.now() / 1000 - 60,
+      id: 'mock-3',
+      user_id: 'dev',
+      type: 'text-url',
+      status: 'in_progress',
+      percentage: 0.6,
+      created_at: Date.now() / 1000 - 120,
+      updated_at: Date.now() / 1000 - 60,
       input: { text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.' } as any,
       output: null,
       parameters: null,
     },
     {
-      id: 'mock-4', user_id: 'dev', type: 'text-url', status: 'failed', percentage: 0,
-      created_at: Date.now() / 1000 - 86400, updated_at: Date.now() / 1000 - 86300,
+      id: 'mock-4',
+      user_id: 'dev',
+      type: 'text-url',
+      status: 'failed',
+      percentage: 0,
+      created_at: Date.now() / 1000 - 86400,
+      updated_at: Date.now() / 1000 - 86300,
       input: { url: 'https://example.com/broken' } as any,
       output: null,
       parameters: null,
@@ -379,8 +390,7 @@ export const useAbregeStore = defineStore('abrege', () => {
       userTasksPaginated.value.page = data.page ?? page
       userTasksPaginated.value.page_size = data.page_size ?? page_size
       userTasksPaginated.value.items = data.items ?? []
-    }
-    catch (err: any) {
+    } catch (err: any) {
       addErrorMessage({ title: 'Erreur', description: `Impossible de récupérer les tâches: ${err?.message ?? err}` })
     }
   }
@@ -397,11 +407,10 @@ export const useAbregeStore = defineStore('abrege', () => {
     try {
       const { data } = await http.post<TaskModel>(`/task/${taskId}/cancel`)
       const idx = userTasksPaginated.value.items.findIndex(t => t.id === taskId)
-      if (idx !== -1) userTasksPaginated.value.items[idx] = data
+      if (idx !== -1) { userTasksPaginated.value.items[idx] = data }
       addSuccessMessage({ title: 'Tâche annulée', description: 'La tâche a été annulée avec succès.' })
       return data
-    }
-    catch (err: any) {
+    } catch (err: any) {
       addErrorMessage({ title: 'Annulation impossible', description: `Erreur lors de l'annulation: ${err?.message ?? err}` })
       throw err
     }
@@ -414,8 +423,7 @@ export const useAbregeStore = defineStore('abrege', () => {
       userTasksPaginated.value.items = userTasksPaginated.value.items.filter(t => t.id !== taskId)
       userTasksPaginated.value.total = Math.max(0, userTasksPaginated.value.total - 1)
       addSuccessMessage({ title: 'Tâche supprimée', description: 'La tâche a été supprimée avec succès.' })
-    }
-    catch (err: any) {
+    } catch (err: any) {
       addErrorMessage({ title: 'Suppression impossible', description: `Erreur lors de la suppression: ${err?.message ?? err}` })
       throw err
     }
