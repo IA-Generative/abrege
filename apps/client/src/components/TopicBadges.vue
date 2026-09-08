@@ -12,8 +12,8 @@ const props = withDefaults(defineProps<{
 type BadgeType = 'success' | 'new' | 'warning'
 
 function badgeType (confidence: number): BadgeType {
-  if (confidence >= 0.7) return 'success'
-  if (confidence >= 0.4) return 'new'
+  if (confidence >= 0.7) { return 'success' }
+  if (confidence >= 0.4) { return 'new' }
   return 'warning'
 }
 
@@ -40,7 +40,10 @@ function toggleExpanded () {
 </script>
 
 <template>
-  <div v-if="sortedTopics.length > 0" class="topic-badges">
+  <div
+    v-if="sortedTopics.length > 0"
+    class="topic-badges"
+  >
     <DsfrTooltip
       v-for="topic in displayedTopics"
       :key="topic.id"

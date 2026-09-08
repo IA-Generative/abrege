@@ -39,7 +39,7 @@ function close () {
 watch(
   () => props.opened,
   (opened) => {
-    if (opened) loadPage(1)
+    if (opened) { loadPage(1) }
   },
 )
 </script>
@@ -56,16 +56,25 @@ watch(
       <p class="fr-text--sm fr-text-mention--grey chunks-modal-subtitle">
         Tâche {{ taskId }} — {{ abrege.chunksTotal }} chunk(s) sémantique(s)
       </p>
-      <ExtractionStatusBadge :status="status" label="Extraction" />
+      <ExtractionStatusBadge
+        :status="status"
+        label="Extraction"
+      />
     </div>
 
-    <div v-if="abrege.chunksLoading" class="fr-mt-4w">
+    <div
+      v-if="abrege.chunksLoading"
+      class="fr-mt-4w"
+    >
       <p class="fr-text--sm">
         Chargement…
       </p>
     </div>
 
-    <div v-else-if="abrege.chunks.length === 0" class="fr-alert fr-alert--info fr-mt-2w">
+    <div
+      v-else-if="abrege.chunks.length === 0"
+      class="fr-alert fr-alert--info fr-mt-2w"
+    >
       <p>Aucun chunk disponible pour cette tâche.</p>
     </div>
 
@@ -77,7 +86,10 @@ watch(
         class="fr-mt-2w"
       />
 
-      <div v-if="pageCount > 1" class="chunks-modal-pagination fr-mt-2w">
+      <div
+        v-if="pageCount > 1"
+        class="chunks-modal-pagination fr-mt-2w"
+      >
         <DsfrButton
           label="Précédent"
           icon="ri-arrow-left-s-line"

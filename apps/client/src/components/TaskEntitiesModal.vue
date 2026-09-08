@@ -33,7 +33,7 @@ const entityRows = computed(() =>
 
 const entityLabelById = computed(() => {
   const map = new Map<string, string>()
-  for (const e of abrege.entities) map.set(e.id, e.text)
+  for (const e of abrege.entities) { map.set(e.id, e.text) }
   return map
 })
 
@@ -96,7 +96,7 @@ function buildGraph (entityList: EntityRow[], relationshipList: RelationshipRow[
   })
 
   relationshipList.forEach((rel) => {
-    if (!graph.hasNode(rel.source_entity_id) || !graph.hasNode(rel.target_entity_id)) return
+    if (!graph.hasNode(rel.source_entity_id) || !graph.hasNode(rel.target_entity_id)) { return }
     try {
       graph.addEdge(rel.source_entity_id, rel.target_entity_id, {
         size: 2,
@@ -104,8 +104,7 @@ function buildGraph (entityList: EntityRow[], relationshipList: RelationshipRow[
         color: RELATIONSHIP_COLOR,
         type: 'arrow',
       })
-    }
-    catch {
+    } catch {
       // duplicate edge between the same pair, ignore
     }
   })
@@ -115,7 +114,7 @@ function buildGraph (entityList: EntityRow[], relationshipList: RelationshipRow[
 
 async function renderGraph () {
   await nextTick()
-  if (!graphContainer.value) return
+  if (!graphContainer.value) { return }
   destroyGraph()
   const graph = buildGraph(abrege.entities, abrege.relationships)
   renderer = new Sigma(graph, graphContainer.value, {
@@ -125,7 +124,7 @@ async function renderGraph () {
 }
 
 watch(activeTab, (tab) => {
-  if (tab === 1) renderGraph()
+  if (tab === 1) { renderGraph() }
 })
 
 watch(
@@ -137,7 +136,7 @@ watch(
       return
     }
     await abrege.fetchEntitiesAndRelationships(props.taskId)
-    if (activeTab.value === 1) renderGraph()
+    if (activeTab.value === 1) { renderGraph() }
   },
 )
 
@@ -162,22 +161,41 @@ function close () {
       <p class="fr-text--sm fr-text-mention--grey entities-modal-subtitle">
         Tâche {{ taskId }} — {{ abrege.entities.length }} entité(s), {{ abrege.relationships.length }} relation(s)
       </p>
-      <ExtractionStatusBadge :status="entitiesStatus" label="Entités" />
-      <ExtractionStatusBadge :status="relationshipsStatus" label="Relations globales" />
+      <ExtractionStatusBadge
+        :status="entitiesStatus"
+        label="Entités"
+      />
+      <ExtractionStatusBadge
+        :status="relationshipsStatus"
+        label="Relations globales"
+      />
     </div>
 
-    <div v-if="abrege.entitiesLoading" class="fr-mt-4w">
+    <div
+      v-if="abrege.entitiesLoading"
+      class="fr-mt-4w"
+    >
       <p class="fr-text--sm">
         Chargement…
       </p>
     </div>
 
-    <CustomTabs v-else v-model="activeTab" :tabs-data="tabsData">
+    <CustomTabs
+      v-else
+      v-model="activeTab"
+      :tabs-data="tabsData"
+    >
       <template #list>
-        <div v-if="abrege.entities.length === 0" class="fr-alert fr-alert--info">
+        <div
+          v-if="abrege.entities.length === 0"
+          class="fr-alert fr-alert--info"
+        >
           <p>Aucune entité disponible pour cette tâche.</p>
         </div>
-        <div v-else class="entities-list-columns">
+        <div
+          v-else
+          class="entities-list-columns"
+        >
           <div class="entities-list-column">
             <h4 class="fr-h6">
               Entités
@@ -199,7 +217,10 @@ function close () {
               :headers="relationshipHeaders"
               :rows="relationshipRows"
             />
-            <p v-else class="fr-text--sm fr-text-mention--grey">
+            <p
+              v-else
+              class="fr-text--sm fr-text-mention--grey"
+            >
               Aucune relation détectée.
             </p>
           </div>
@@ -207,7 +228,10 @@ function close () {
       </template>
 
       <template #graph>
-        <div v-if="legendTypes.length > 0" class="entities-graph-legend">
+        <div
+          v-if="legendTypes.length > 0"
+          class="entities-graph-legend"
+        >
           <span
             v-for="type in legendTypes"
             :key="type"
@@ -224,7 +248,10 @@ function close () {
             Relation
           </span>
         </div>
-        <div ref="graphContainer" class="entities-graph-container" />
+        <div
+          ref="graphContainer"
+          class="entities-graph-container"
+        />
       </template>
     </CustomTabs>
   </DsfrModal>

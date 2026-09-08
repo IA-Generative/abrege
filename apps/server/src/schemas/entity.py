@@ -116,7 +116,7 @@ class EntityTable:
     def get_entities_by_task(self, task_id: str) -> List[EntityRow]:
         """Unpaginated — for internal callers that need every row (e.g. the global-relationships pass)."""
         with get_db() as db:
-            rows = db.query(EntityRow).filter(EntityRow.task_id == task_id).order_by(EntityRow.created_at).all()
+            rows = db.query(EntityRow).filter(EntityRow.task_id == task_id).order_by(EntityRow.created_at, EntityRow.chunk_index).all()
             db.expunge_all()
             return rows
 
@@ -126,7 +126,7 @@ class EntityTable:
             rows = (
                 db.query(EntityRow)
                 .filter(EntityRow.task_id == task_id)
-                .order_by(EntityRow.created_at)
+                .order_by(EntityRow.created_at, EntityRow.chunk_index)
                 .offset(offset)
                 .limit(page_size)
                 .all()
@@ -141,7 +141,12 @@ class EntityTable:
     def get_relationships_by_task(self, task_id: str) -> List[RelationshipRow]:
         """Unpaginated — for internal callers that need every row."""
         with get_db() as db:
-            rows = db.query(RelationshipRow).filter(RelationshipRow.task_id == task_id).order_by(RelationshipRow.created_at).all()
+            rows = (
+                db.query(RelationshipRow)
+                .filter(RelationshipRow.task_id == task_id)
+                .order_by(RelationshipRow.created_at, RelationshipRow.chunk_index)
+                .all()
+            )
             db.expunge_all()
             return rows
 
@@ -151,7 +156,7 @@ class EntityTable:
             rows = (
                 db.query(RelationshipRow)
                 .filter(RelationshipRow.task_id == task_id)
-                .order_by(RelationshipRow.created_at)
+                .order_by(RelationshipRow.created_at, RelationshipRow.chunk_index)
                 .offset(offset)
                 .limit(page_size)
                 .all()
