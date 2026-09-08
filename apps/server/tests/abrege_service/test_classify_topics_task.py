@@ -1,5 +1,4 @@
 import json
-import uuid
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
@@ -12,10 +11,6 @@ from src.schemas.task import TaskForm, TaskStatus, task_table
 
 
 def _task_id() -> str:
-    return f"task-{uuid.uuid4()}"
-
-
-def _make_task() -> str:
     task = task_table.insert_new_task(user_id="test", form_data=TaskForm(type="summary", status=TaskStatus.COMPLETED.value))
     return task.id
 
@@ -59,7 +54,7 @@ def test_classify_topics_does_not_swallow_internal_api_errors(monkeypatch: pytes
 
 
 def test_classify_topics_marks_topics_status_completed(monkeypatch: pytest.MonkeyPatch):
-    task_id = _make_task()
+    task_id = _task_id()
     monkeypatch.setattr(main, "topic_runnable", SimpleNamespace(ainvoke=AsyncMock(return_value=TopicClassificationOutput(topics=[]))))
     monkeypatch.setattr(internal_api_client, "save_topics", MagicMock())
 
@@ -69,7 +64,7 @@ def test_classify_topics_marks_topics_status_completed(monkeypatch: pytest.Monke
 
 
 def test_classify_topics_marks_topics_status_failed_on_error(monkeypatch: pytest.MonkeyPatch):
-    task_id = _make_task()
+    task_id = _task_id()
     monkeypatch.setattr(main, "topic_runnable", SimpleNamespace(ainvoke=AsyncMock(return_value=TopicClassificationOutput(topics=[]))))
     monkeypatch.setattr(internal_api_client, "save_topics", MagicMock(side_effect=RuntimeError("api down")))
 
