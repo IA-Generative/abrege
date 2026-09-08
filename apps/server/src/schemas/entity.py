@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, ForeignKey, Integer, JSON, String, Text
+from sqlalchemy import BigInteger, Column, ForeignKey, Integer, JSON, String, Text, func
 
 from src.internal.db import Base, get_db
 from src.schemas.result import EntityModel, RelationshipModel
@@ -19,6 +19,7 @@ class EntityRow(Base):
     text = Column(String, nullable=False)
     contexts = Column(JSON, nullable=True)
     pages = Column(JSON, nullable=True)
+    model_name = Column(String, nullable=True)
     created_at = Column(BigInteger, default=lambda: int(datetime.now().timestamp()))
 
 
@@ -32,6 +33,7 @@ class RelationshipRow(Base):
     target_entity_id = Column(String, ForeignKey("entities.id", ondelete="CASCADE"), nullable=False)
     relationship_type = Column(String, nullable=False)
     description = Column(Text, nullable=True)
+    model_name = Column(String, nullable=True)
     created_at = Column(BigInteger, default=lambda: int(datetime.now().timestamp()))
 
 
@@ -44,6 +46,7 @@ class EntityRowModel(BaseModel):
     text: str
     contexts: Optional[List[str]] = None
     pages: Optional[List[int]] = None
+    model_name: Optional[str] = None
     created_at: int
 
 
@@ -56,6 +59,7 @@ class RelationshipRowModel(BaseModel):
     target_entity_id: str
     relationship_type: str
     description: Optional[str] = None
+    model_name: Optional[str] = None
     created_at: int
 
 
@@ -66,6 +70,7 @@ class EntityTable:
         chunk_index: int,
         entities: List[EntityModel],
         relationships: List[RelationshipModel],
+        model_name: Optional[str] = None,
     ) -> None:
         with get_db() as db:
             db.query(RelationshipRow).filter(
@@ -86,6 +91,7 @@ class EntityTable:
                     text=entity.text,
                     contexts=entity.contexts,
                     pages=entity.pages,
+                    model_name=model_name,
                 )
                 db.add(row)
                 entity_rows.append(row)
@@ -101,22 +107,61 @@ class EntityTable:
                             target_entity_id=entity_rows[relationship.target_index].id,
                             relationship_type=relationship.relationship_type,
                             description=relationship.description,
+                            model_name=model_name,
                         )
                     )
 
             db.commit()
 
     def get_entities_by_task(self, task_id: str) -> List[EntityRow]:
+        """Unpaginated — for internal callers that need every row (e.g. the global-relationships pass)."""
         with get_db() as db:
             rows = db.query(EntityRow).filter(EntityRow.task_id == task_id).order_by(EntityRow.created_at).all()
             db.expunge_all()
             return rows
 
+    def get_entities_by_task_paginated(self, task_id: str, page: int = 1, page_size: int = 20) -> List[EntityRow]:
+        offset = (page - 1) * page_size
+        with get_db() as db:
+            rows = (
+                db.query(EntityRow)
+                .filter(EntityRow.task_id == task_id)
+                .order_by(EntityRow.created_at)
+                .offset(offset)
+                .limit(page_size)
+                .all()
+            )
+            db.expunge_all()
+            return rows
+
+    def count_entities_by_task(self, task_id: str) -> int:
+        with get_db() as db:
+            return db.query(func.count(EntityRow.id)).filter(EntityRow.task_id == task_id).scalar()
+
     def get_relationships_by_task(self, task_id: str) -> List[RelationshipRow]:
+        """Unpaginated — for internal callers that need every row."""
         with get_db() as db:
             rows = db.query(RelationshipRow).filter(RelationshipRow.task_id == task_id).order_by(RelationshipRow.created_at).all()
             db.expunge_all()
             return rows
+
+    def get_relationships_by_task_paginated(self, task_id: str, page: int = 1, page_size: int = 20) -> List[RelationshipRow]:
+        offset = (page - 1) * page_size
+        with get_db() as db:
+            rows = (
+                db.query(RelationshipRow)
+                .filter(RelationshipRow.task_id == task_id)
+                .order_by(RelationshipRow.created_at)
+                .offset(offset)
+                .limit(page_size)
+                .all()
+            )
+            db.expunge_all()
+            return rows
+
+    def count_relationships_by_task(self, task_id: str) -> int:
+        with get_db() as db:
+            return db.query(func.count(RelationshipRow.id)).filter(RelationshipRow.task_id == task_id).scalar()
 
     def get_entity_by_id(self, task_id: str, entity_id: str) -> Optional[EntityRow]:
         with get_db() as db:
@@ -157,6 +202,7 @@ class EntityTable:
         task_id: str,
         entity_ids_in_order: List[str],
         relationships: List[RelationshipModel],
+        model_name: Optional[str] = None,
     ) -> None:
         with get_db() as db:
             db.query(RelationshipRow).filter(
@@ -174,6 +220,7 @@ class EntityTable:
                             target_entity_id=entity_ids_in_order[relationship.target_index],
                             relationship_type=relationship.relationship_type,
                             description=relationship.description,
+                            model_name=model_name,
                         )
                     )
 

@@ -38,6 +38,8 @@ from abrege_service.models.summary.entity_chain import (
     build_entity_runnable,
     build_global_relationship_runnable,
 )
+from abrege_service.models.summary.topic_chain import build_topic_runnable
+from abrege_service.models.summary.chunk_chain import build_chunk_runnable
 from abrege_service.config.openai import OpenAISettings
 
 from src.schemas.task import TaskModel, task_table, TaskStatus, TaskUpdateForm
@@ -114,9 +116,31 @@ summary_service = LangChainAsyncMapReduceService(
     max_token=int(os.getenv("MAX_MODEL_TOKEN", 128_000)),
     max_concurrency=int(os.getenv("MAX_CONCURRENCY_LLM_CALL", 5)),
 )
-qa_runnable = build_qa_runnable(llm)
-entity_runnable = build_entity_runnable(llm)
-global_relationship_runnable = build_global_relationship_runnable(llm)
+def _llm_for(model_name: str | None) -> ChatOpenAI:
+    """The side extractions (Q&A, entities, chunking, topics) can each be pinned to their
+    own model via env vars; unset (the default) reuses the summary's own `llm` instance."""
+    if not model_name or model_name == llm.model_name:
+        return llm
+    return ChatOpenAI(
+        model=model_name,
+        temperature=0.0,
+        api_key=openai_settings.OPENAI_API_KEY,
+        base_url=openai_settings.OPENAI_API_BASE_URL,
+    )
+
+
+qa_llm = _llm_for(openai_settings.QA_MODEL_NAME)
+entity_llm = _llm_for(openai_settings.ENTITY_MODEL_NAME)
+chunk_llm = _llm_for(openai_settings.CHUNK_MODEL_NAME)
+topic_llm = _llm_for(openai_settings.TOPIC_MODEL_NAME)
+
+qa_runnable = build_qa_runnable(qa_llm)
+entity_runnable = build_entity_runnable(entity_llm)
+# Global relationships are inferred from entities already extracted, so they follow the
+# same model as entity extraction rather than getting their own setting.
+global_relationship_runnable = build_global_relationship_runnable(entity_llm)
+topic_runnable = build_topic_runnable(topic_llm)
+chunk_runnable = build_chunk_runnable(chunk_llm)
 tmp_folder = os.environ.get("CACHE_FOLDER")
 os.makedirs(tmp_folder, exist_ok=True)
 
@@ -195,7 +219,8 @@ def launch(self, task: str):
 
 @celery_app.task(name="worker.tasks.extract_chunk_details", bind=True)
 def extract_chunk_details(self, payload: str):
-    """Extract Q&A, entities and local relationships for a single chunk, and persist them.
+    """Extract Q&A, entities/local relationships and semantic sub-chunks for a single map-step
+    window, and persist them all.
 
     Runs as its own Celery message, fully decoupled from the parent summarize task, so it
     never adds latency to `worker.tasks.abrege`. The last chunk of a task to finish triggers
@@ -212,9 +237,10 @@ def extract_chunk_details(self, payload: str):
             return await asyncio.gather(
                 qa_runnable.ainvoke({"text": data["text"], "language": data["language"], "qa_per_chunk": data["qa_per_chunk"]}),
                 entity_runnable.ainvoke({"text": data["text"], "language": data["language"]}),
+                chunk_runnable.ainvoke({"text": data["text"]}),
             )
 
-        qa_output, entity_output = asyncio.run(run())
+        qa_output, entity_output, chunk_output = asyncio.run(run())
 
         internal_api_client.save_chunk_qa_items(
             task_id=task_id,
@@ -223,6 +249,7 @@ def extract_chunk_details(self, payload: str):
                 {"page": page, "source_text": data["text"], "question": item.question, "answer": item.answer}
                 for item in qa_output.items
             ],
+            model_name=qa_llm.model_name,
         )
         internal_api_client.save_chunk_entities(
             task_id=task_id,
@@ -232,14 +259,26 @@ def extract_chunk_details(self, payload: str):
                 for e in entity_output.entities
             ],
             relationships=[r.model_dump() for r in entity_output.relationships],
+            model_name=entity_llm.model_name,
+        )
+        internal_api_client.save_chunks(
+            task_id=task_id,
+            chunk_index=chunk_index,
+            page=page,
+            chunks=chunk_output.chunks or [data["text"]],
+            model_name=chunk_llm.model_name,
         )
     except Exception as e:
         logger_abrege.error(f"Chunk details extraction failed: {e} - {traceback.format_exc()}", extra=extra_log)
+        task_table.update_task(task_id=task_id, form_data=TaskUpdateForm(qa_entities_status="failed"))
         raise e
 
     remaining = redis_client.decr(f"chunk_pending:{task_id}")
     if remaining <= 0:
         redis_client.delete(f"chunk_pending:{task_id}")
+        task_table.update_task(
+            task_id=task_id, form_data=TaskUpdateForm(qa_entities_status="completed", relationships_status="pending")
+        )
         celery_app.send_task(
             "worker.tasks.compute_global_relationships",
             args=[json.dumps({"task_id": task_id})],
@@ -253,16 +292,24 @@ def compute_global_relationships(self, payload: str):
     chunks are done, so entities found in different chunks can still be linked together."""
     data = json.loads(payload)
     task_id = data["task_id"]
-    entity_rows = entity_table.get_entities_by_task(task_id)
-    if len(entity_rows) < 2:
-        return
-    entities_list = "\n".join(f"{i}: {e.type} - {e.text} - pages {e.pages}" for i, e in enumerate(entity_rows))
-    output = asyncio.run(global_relationship_runnable.ainvoke({"entities_list": entities_list}))
-    internal_api_client.save_global_relationships(
-        task_id=task_id,
-        entity_ids_in_order=[e.id for e in entity_rows],
-        relationships=[r.model_dump() for r in output.relationships],
-    )
+    try:
+        entity_rows = entity_table.get_entities_by_task(task_id)
+        if len(entity_rows) < 2:
+            task_table.update_task(task_id=task_id, form_data=TaskUpdateForm(relationships_status="completed"))
+            return
+        entities_list = "\n".join(f"{i}: {e.type} - {e.text} - pages {e.pages}" for i, e in enumerate(entity_rows))
+        output = asyncio.run(global_relationship_runnable.ainvoke({"entities_list": entities_list}))
+        internal_api_client.save_global_relationships(
+            task_id=task_id,
+            entity_ids_in_order=[e.id for e in entity_rows],
+            relationships=[r.model_dump() for r in output.relationships],
+            model_name=entity_llm.model_name,
+        )
+        task_table.update_task(task_id=task_id, form_data=TaskUpdateForm(relationships_status="completed"))
+    except Exception as e:
+        logger_abrege.error(f"Global relationships computation failed: {e} - {traceback.format_exc()}", extra={"task_id": task_id})
+        task_table.update_task(task_id=task_id, form_data=TaskUpdateForm(relationships_status="failed"))
+        raise e
 
 
 @celery_app.task(name="worker.tasks.extract_task_details", bind=True)
@@ -279,4 +326,26 @@ def extract_task_details(self, task_id: str):
     language = params.language or "French"
 
     texts = summary_service.split_task_texts(task)
+    task_table.update_task(task_id=task.id, form_data=TaskUpdateForm(qa_entities_status="in_progress"))
     summary_service.dispatch_all_chunks(task_id=task.id, texts=texts, language=language, qa_per_chunk=qa_per_chunk)
+
+
+@celery_app.task(name="worker.tasks.classify_topics", bind=True)
+def classify_topics(self, payload: str):
+    """Free-form topic/subject classification of a task's final summary, with a confidence
+    score and an explanation per topic. Fired once the summary is complete, fully decoupled
+    from `worker.tasks.abrege` — it never adds latency to the summary itself."""
+    data = json.loads(payload)
+    task_id = data["task_id"]
+    try:
+        output = asyncio.run(topic_runnable.ainvoke({"text": data["summary"], "language": data["language"]}))
+        internal_api_client.save_topics(
+            task_id=task_id,
+            topics=[{"topic": t.topic, "confidence": t.confidence, "explanation": t.explanation} for t in output.topics],
+            model_name=topic_llm.model_name,
+        )
+        task_table.update_task(task_id=task_id, form_data=TaskUpdateForm(topics_status="completed"))
+    except Exception as e:
+        logger_abrege.error(f"Topic classification failed: {e} - {traceback.format_exc()}", extra={"task_id": task_id})
+        task_table.update_task(task_id=task_id, form_data=TaskUpdateForm(topics_status="failed"))
+        raise e
