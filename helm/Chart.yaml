@@ -2,7 +2,7 @@ apiVersion: v2
 name: abrege
 type: application
 version: 0.1.0
-# Current dev prerelease (.github/releases/release-please-manifest-prerelease.json), not the
+# Current dev prerelease (.github/releases/.release-please-manifest-prerelease.json), not the
 # 0.1.0 placeholder: update-helm-chart.yml derives the chart's bump level from the appVersion
 # delta, so a stale placeholder would compare against every future release as a huge jump.
 appVersion: "3.4.0-rc.2"

@@ -28,9 +28,9 @@ env:
   PRERELEASE_BRANCH: dev
   RELEASE_BRANCH: main
   RELEASE_CONFIG_FILE: .github/releases/release-please-config-release.json
-  RELEASE_MANIFEST_FILE: .github/releases/release-please-manifest.json
+  RELEASE_MANIFEST_FILE: .github/releases/.release-please-manifest.json
   PRERELEASE_CONFIG_FILE: .github/releases/release-please-config-prerelease.json
-  PRERELEASE_MANIFEST_FILE: .github/releases/release-please-manifest-prerelease.json
+  PRERELEASE_MANIFEST_FILE: .github/releases/.release-please-manifest-prerelease.json
   ENABLE_PRERELEASE: true
   # The chart lives at the repository root as `helm/`; CHART_NAME is the
   # directory under CHARTS_DIR, while the published OCI artifact is named from
