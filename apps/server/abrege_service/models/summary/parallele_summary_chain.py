@@ -1,5 +1,6 @@
 import os
 import time
+import json
 from time import perf_counter
 import traceback
 import asyncio
@@ -14,14 +15,15 @@ from langfuse import Langfuse, get_client
 from langfuse.langchain import CallbackHandler
 
 
-from src.schemas.result import SummaryModel, Text, EntityModel, RelationshipModel, QAItem
+from src.schemas.result import SummaryModel, Text
 from src.schemas.parameters import SummaryParameters
 from src.schemas.task import TaskModel, TaskStatus
+from src.clients import celery_app, redis_client
 from src.utils.logger import logger_abrege
 
 
 from abrege_service.models.base import BaseSummaryService
-from abrege_service.models.summary.qa_chain import build_qa_runnable, extract_leading_page_number
+from abrege_service.models.summary.qa_chain import extract_leading_page_number
 from abrege_service.utils.text import (
     split_texts_by_token_limit,
     split_texts_by_word_limit,
@@ -32,83 +34,33 @@ from abrege_service.utils.text import (
 # Prompt pour l'étape de "map"
 map_template = """The following is a set of documents:
 {text}
-Based on this list of docs:
-1. Summarize concisely and clearly in paragraph form. Highlight the main ideas and recurring themes.
-2. Extract the most important named entities (max 10): people, dates, organizations, locations, amounts. For each, provide only type and text.
-Respond ONLY with a valid JSON object matching this schema: {{"summary": "...", "entities": [{{"type": "<the category you deem most appropriate, e.g. PERSON, DATE, ORGANIZATION, LOCATION, AMOUNT, EVENT, or any other relevant category>", "text": "..."}}]}}
+Summarize concisely and clearly in paragraph form. Highlight the main ideas and recurring themes.
+Respond ONLY with a valid JSON object matching this schema: {{"summary": "..."}}
 Helpful Answer in {language}:"""
 
 # Prompt pour l'étape de "reduce"
 combine_template = """The following is a set of summaries:
 {text}
-Take these and:
-1. Consolidate them into a clear and well-organized final summary. Highlight recurring ideas, themes, and insights. {prompt_size}.{custom_prompt}
-2. Collect all named entities. For entities referring to the same real-world object, group them into a single entry and merge their pages and contexts — do NOT drop any occurrence.
-3. Based on the entities and their contexts, infer relationships between pairs of entities (0-based indices). Only include relationships clearly supported by the text.
-Respond ONLY with a valid JSON object matching this schema: {{"summary": "...", "entities": [{{"type": "<the category you deem most appropriate, e.g. PERSON, DATE, ORGANIZATION, LOCATION, AMOUNT, EVENT, or any other relevant category>", "text": "...", "contexts": ["..."], "pages": [1]}}], "relationships": [{{"source_index": 0, "target_index": 1, "relationship_type": "...", "description": "..."}}]}}
+Consolidate them into a clear and well-organized final summary. Highlight recurring ideas, themes, and insights. {prompt_size}.{custom_prompt}
+Respond ONLY with a valid JSON object matching this schema: {{"summary": "..."}}
 Helpful Answer in {language}:"""
 
-# Prompt pour l'étape de "collapse" (intermédiaire) — sans relations
+# Prompt pour l'étape de "collapse" (intermédiaire)
 collapse_template = """The following is a set of summaries:
 {text}
-Take these and:
-1. Consolidate them into a clear and well-organized intermediate summary. {prompt_size}.{custom_prompt}
-2. Extract the most important named entities (max 10): people, dates, organizations, locations, amounts.
-Respond ONLY with a valid JSON object matching this schema: {{"summary": "...", "entities": [{{"type": "<the category you deem most appropriate, e.g. PERSON, DATE, ORGANIZATION, LOCATION, AMOUNT, EVENT, or any other relevant category>", "text": "..."}}]}}
+Consolidate them into a clear and well-organized intermediate summary. {prompt_size}.{custom_prompt}
+Respond ONLY with a valid JSON object matching this schema: {{"summary": "..."}}
 Helpful Answer in {language}:"""
-
-
-class EntityOutput(BaseModel):
-    type: str = Field(
-        description="The category of the entity, freely chosen to best describe it (e.g. PERSON, DATE, ORGANIZATION, LOCATION, AMOUNT, EVENT, or any other relevant category)"
-    )
-    text: str = Field(description="The normalized text value of the entity (e.g. full name, ISO date, etc.)")
-    contexts: list[str] = Field(
-        description="All sentences or phrases where this entity was found (one entry per occurrence, preserving duplicates across chunks)",
-        default_factory=list,
-    )
-    pages: list[int] = Field(
-        description="The list of page numbers where the entity was found",
-        default_factory=list,
-    )
-
-
-class RelationshipOutput(BaseModel):
-    source_index: int = Field(description="0-based index of the source entity in the entities list")
-    target_index: int = Field(description="0-based index of the target entity in the entities list")
-    relationship_type: str = Field(description="Type of relationship between the two entities")
-    description: str = Field(description="Description of the relationship, including context and any relevant details")
-
-
-class MapEntityOutput(BaseModel):
-    """Minimal entity for the map step \u2014 no contexts or pages to keep output short."""
-
-    type: str = Field(
-        description="The category of the entity, freely chosen to best describe it (e.g. PERSON, DATE, ORGANIZATION, LOCATION, AMOUNT, EVENT, or any other relevant category)"
-    )
-    text: str = Field(description="The normalized text value of the entity (e.g. full name, ISO date)")
 
 
 class MapOutput(BaseModel):
-    """Lightweight output for the map and collapse steps \u2014 no relationships."""
+    """Output for the map and collapse steps."""
 
     summary: str = Field(description="The generated summary text")
-    entities: list[MapEntityOutput] = Field(
-        description="A list of entities extracted from the text chunk",
-        default_factory=list,
-    )
 
 
 class SummaryOutput(BaseModel):
     summary: str = Field(description="The generated summary text")
-    entities: list[EntityOutput] = Field(
-        description="A list of entities extracted from the summary",
-        default_factory=list,
-    )
-    relationships: list[RelationshipOutput] = Field(
-        description="A list of relationships between entities, inferred from their contexts. Only populated in the final reduce step.",
-        default_factory=list,
-    )
 
 
 # Définition des PromptTemplates avec les variables d'entrée appropriées
@@ -183,10 +135,59 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
         self.llm_chain_map = StuffSummarizeChain(llm, MAP_PROMPT, output_schema=MapOutput)
         self.combine_document_chain = StuffSummarizeChain(llm, COMBINE_PROMPT, output_schema=SummaryOutput)
         self.collapse_document_chain = StuffSummarizeChain(llm, COLLAPSE_PROMPT, output_schema=MapOutput)
-        self.qa_runnable = build_qa_runnable(llm)
         if isinstance(max_token, str):
             max_token = int(max_token)
         self.max_token = max_token
+
+    def split_task_texts(self, task: TaskModel) -> list[str]:
+        """Split a task's source texts into chunks respecting the model's token limit.
+
+        Shared between the normal summarize flow and the standalone re-trigger of
+        Q&A/entity extraction, so both operate on the exact same chunk boundaries.
+        """
+        current_text = task.output.texts_found
+        max_token = self.max_token
+        if self.llm.max_tokens:
+            max_token = min(self.max_token, self.llm.max_tokens)
+        try:
+            return split_texts_by_token_limit(texts=current_text, max_tokens=max_token, model=self.llm.model_name)
+        except Exception as e:
+            logger_abrege.warning(f"{self.llm.model_name} - {e}")
+            return split_texts_by_word_limit(current_text, max_words=int(max_token * 0.75))
+
+    def dispatch_chunk_extraction(self, task_id: str, chunk_index: int, text: str, language: str, qa_per_chunk: int) -> None:
+        """Fire-and-forget a Celery task extracting Q&A/entities/relationships for one chunk.
+
+        Runs fully decoupled from the summarize flow (own Celery message, own worker slot)
+        so it never adds latency to the summary itself.
+        """
+        page = extract_leading_page_number(text)
+        celery_app.send_task(
+            "worker.tasks.extract_chunk_details",
+            args=[
+                json.dumps(
+                    {
+                        "task_id": task_id,
+                        "chunk_index": chunk_index,
+                        "page": page,
+                        "text": text,
+                        "language": language,
+                        "qa_per_chunk": qa_per_chunk,
+                    }
+                )
+            ],
+            task_id=f"{task_id}:chunk:{chunk_index}",
+        )
+
+    def dispatch_all_chunks(self, task_id: str, texts: list[str], language: str, qa_per_chunk: int) -> None:
+        """Initialize the completion counter and dispatch one extraction task per chunk.
+
+        The Redis counter (rather than a Celery chord) tracks when the last chunk finishes,
+        since the Celery app here has no result backend configured for chord support.
+        """
+        redis_client.set(f"chunk_pending:{task_id}", len(texts))
+        for index, text in enumerate(texts):
+            self.dispatch_chunk_extraction(task_id=task_id, chunk_index=index, text=text, language=language, qa_per_chunk=qa_per_chunk)
 
     async def map_documents(
         self,
@@ -215,29 +216,16 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
         if task.output is None or not task.output.texts_found:
             raise TextResultNotGiven("No text is given")
 
-        current_text = task.output.texts_found
-        nb_total_documents = len(current_text)
-        max_token = self.max_token
-        if self.llm.max_tokens:
-            max_token = min(self.max_token, self.llm.max_tokens)
-
-        logger_abrege.debug(f"max_token {max_token} - {type(max_token)}")
-        logger_abrege.debug(
-            f"Current number of documents {nb_total_documents}%",
-            extra=extra_log,
-        )
-        try:
-            transform_texts: list[str] = split_texts_by_token_limit(texts=current_text, max_tokens=max_token, model=self.llm.model_name)
-
-        except Exception as e:
-            logger_abrege.warning(f"{self.llm.model_name} - {e}")
-            transform_texts: list[str] = split_texts_by_word_limit(current_text, max_words=int(max_token * 0.75))
+        transform_texts: list[str] = self.split_task_texts(task)
         nb_total_documents = len(transform_texts)
         logger_abrege.debug(
-            f"After transformation, number of documents {nb_total_documents} - max_words {int(max_token * 0.75)} - {[len(text.split()) for text in transform_texts]}",  # noqa
+            f"After transformation, number of documents {nb_total_documents} - {[len(text.split()) for text in transform_texts]}",  # noqa
             extra=extra_log,
         )
         percentage_left = 1 - current_percentage
+
+        if extract_qa and qa_per_chunk > 0:
+            self.dispatch_all_chunks(task_id=task.id, texts=transform_texts, language=language, qa_per_chunk=qa_per_chunk)
 
         async def map_one_document(doc: Document) -> Document:
             nonlocal counter
@@ -265,28 +253,7 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
                             "langfuse_tags": ["map_one_document"],
                         }  # ty:ignore[invalid-assignment]
 
-                    if extract_qa and qa_per_chunk > 0:
-                        qa_config = config.copy()
-                        if qa_config:
-                            qa_config["metadata"] = {
-                                "langfuse_user_id": task.user_id,
-                                "langfuse_session_id": task.id,
-                                "langfuse_tags": ["map_one_document_qa"],
-                            }  # ty:ignore[invalid-assignment]
-                        summary, qa_output = await asyncio.gather(
-                            self.llm_chain_map.ainvoke(inputs, config=tmp_copy_config),
-                            self.qa_runnable.ainvoke(
-                                {
-                                    "text": doc.page_content,
-                                    "language": language,
-                                    "qa_per_chunk": qa_per_chunk,
-                                },
-                                config=qa_config,
-                            ),
-                        )
-                    else:
-                        summary = await self.llm_chain_map.ainvoke(inputs, config=tmp_copy_config)
-                        qa_output = None
+                    summary = await self.llm_chain_map.ainvoke(inputs, config=tmp_copy_config)
                     copy_log = extra_log.copy()
                     copy_log["process_name"] = "llm_chain_map.ainvoke"
                     copy_log["process_time"] = perf_counter() - t_doc_summary  # ty:ignore[invalid-assignment]
@@ -310,20 +277,6 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
                             task.output.partial_summaries = []
 
                         task.output.partial_summaries.append(partial_sum)
-
-                        if qa_output is not None and qa_output.items:
-                            page = extract_leading_page_number(doc.page_content)
-                            if task.output.qa_items is None:
-                                task.output.qa_items = []
-                            task.output.qa_items.extend(
-                                QAItem(
-                                    page=page,
-                                    source_text=doc.page_content,
-                                    question=item.question,
-                                    answer=item.answer,
-                                )
-                                for item in qa_output.items
-                            )
 
                         task = self.update_result_task(
                             task=task,
@@ -515,26 +468,6 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
             task.output.summary = summary["output_text"]
             task.output.word_count = len(task.output.summary.split())
 
-            final: SummaryOutput = summary.get("output")
-            if final and hasattr(final, "entities"):
-                task.output.entities = [
-                    EntityModel(
-                        type=e.type,
-                        text=e.text,
-                        contexts=e.contexts,
-                        pages=e.pages,
-                    )
-                    for e in final.entities
-                ]
-                task.output.relationships = [
-                    RelationshipModel(
-                        source_index=r.source_index,
-                        target_index=r.target_index,
-                        relationship_type=r.relationship_type,
-                        description=r.description,
-                    )
-                    for r in final.relationships
-                ]
             logger_abrege.info(
                 f"{task.output.word_count} words",
                 extra={"task.id": task.id, "user_id": task.user_id},

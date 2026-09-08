@@ -1,11 +1,13 @@
 import pytest
 import os
+import json
 import random
 import openai
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 from langchain_openai import ChatOpenAI
 from langchain_core.documents import Document
+from src.clients import celery_app, redis_client
 from src.schemas.task import TaskModel, TaskForm, task_table, TaskStatus
 from src.schemas.result import ResultModel
 from src.schemas.parameters import SummaryParameters
@@ -18,8 +20,6 @@ from abrege_service.models.summary.parallele_summary_chain import (
     LangChainAsyncMapReduceService,
     StuffSummarizeChain,
     SummaryOutput,
-    EntityOutput,
-    RelationshipOutput,
     MAP_PROMPT,
 )
 
@@ -198,23 +198,7 @@ def test_summary(mock_llm: ChatOpenAI, dummy_task_large4: TaskModel):
 @pytest.mark.asyncio
 async def test_stuff_chain_ainvoke_returns_structured_output_keys():
     """StuffSummarizeChain.ainvoke must always return output_text and output keys."""
-    fake_output = SummaryOutput(
-        summary="Un résumé de test.",
-        entities=[
-            EntityOutput(
-                type="PERSON",
-                text="Jean Dupont",
-                contexts=["Jean Dupont signe le contrat"],
-                pages=[1],
-            ),
-            EntityOutput(
-                type="DATE",
-                text="2024-01-12",
-                contexts=["Le 12 janvier 2024"],
-                pages=[2],
-            ),
-        ],
-    )
+    fake_output = SummaryOutput(summary="Un résumé de test.")
 
     mock_llm = MagicMock()
     chain = StuffSummarizeChain(llm=mock_llm, prompt=MAP_PROMPT)
@@ -227,185 +211,73 @@ async def test_stuff_chain_ainvoke_returns_structured_output_keys():
 
     assert result["output_text"] == "Un résumé de test."
     assert isinstance(result["output"], SummaryOutput)
-    assert len(result["output"].entities) == 2
-
-
-@pytest.mark.asyncio
-async def test_stuff_chain_entities_types_are_valid():
-    """All entity types returned must belong to the EntityType literal."""
-    valid_types = {
-        "PERSON",
-        "DATE",
-        "ORGANIZATION",
-        "LOCATION",
-        "AMOUNT",
-        "EVENT",
-        "OTHER",
-    }
-    fake_output = SummaryOutput(
-        summary="Résumé.",
-        entities=[
-            EntityOutput(type="PERSON", text="Marie Curie", contexts=["Prix Nobel"], pages=[3]),
-            EntityOutput(
-                type="ORGANIZATION",
-                text="Académie des Sciences",
-                contexts=["membre de"],
-                pages=[3],
-            ),
-            EntityOutput(type="DATE", text="1903-12-10", contexts=["remise du prix"], pages=[4]),
-        ],
-    )
-
-    mock_llm = MagicMock()
-    chain = StuffSummarizeChain(llm=mock_llm, prompt=MAP_PROMPT)
-    runnable_mock = MagicMock()
-    runnable_mock.ainvoke = AsyncMock(return_value=fake_output)
-    chain._runnable = runnable_mock
-
-    docs = [Document(page_content="Marie Curie reçut le prix Nobel en 1903.")]
-    result = await chain.ainvoke({"input_documents": docs, "language": "French"})
-
-    for entity in result["output"].entities:
-        assert entity.type in valid_types
-
-
-@pytest.mark.asyncio
-async def test_stuff_chain_entity_contexts_preserved():
-    """Each entity must preserve all its context strings."""
-    fake_output = SummaryOutput(
-        summary="Résumé.",
-        entities=[
-            EntityOutput(
-                type="PERSON",
-                text="Jean Dupont",
-                contexts=["signe le contrat", "rencontre le PDG"],
-                pages=[1, 5],
-            ),
-        ],
-    )
-
-    mock_llm = MagicMock()
-    chain = StuffSummarizeChain(llm=mock_llm, prompt=MAP_PROMPT)
-    runnable_mock = MagicMock()
-    runnable_mock.ainvoke = AsyncMock(return_value=fake_output)
-    chain._runnable = runnable_mock
-
-    docs = [Document(page_content="Jean Dupont signe le contrat. Jean Dupont rencontre le PDG.")]
-    result = await chain.ainvoke({"input_documents": docs, "language": "French"})
-
-    entity = result["output"].entities[0]
-    assert len(entity.contexts) == 2
-    assert len(entity.pages) == 2
 
 
 # ---------------------------------------------------------------------------
-# Integration tests — require a real LLM (OPENAI_API_KEY etc.)
+# Unit tests — Q&A/entities/relationships extraction dispatch (no LLM required)
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture(scope="module")
-def dummy_task_entities() -> TaskModel:
-    return dummy_task_large()
-
-
-@pytest.mark.skipif(condition=not is_openai_is_set, reason="Openai not set")
-@pytest.mark.asyncio
-async def test_acall_returns_entities(mock_llm: ChatOpenAI, dummy_task_entities: TaskModel):
-    """acall must return a SummaryOutput with at least one entity."""
-    service = LangChainAsyncMapReduceService(llm=mock_llm, max_token=10_000)
-    result = await service.acall(task=dummy_task_entities)
-
-    assert "output" in result
-    assert isinstance(result["output"], SummaryOutput)
-    assert isinstance(result["output"].entities, list)
-    assert len(result["output"].entities) > 0, "Expected at least one extracted entity"
-
-
-@pytest.mark.skipif(condition=not is_openai_is_set, reason="Openai not set")
-@pytest.mark.asyncio
-async def test_acall_entity_structure(mock_llm: ChatOpenAI, dummy_task_entities: TaskModel):
-    """Every entity in the final output must have a non-empty type and text."""
-    service = LangChainAsyncMapReduceService(llm=mock_llm, max_token=10_000)
-    result = await service.acall(task=dummy_task_entities)
-
-    for entity in result["output"].entities:
-        assert entity.type, "Entity type must not be empty"
-        assert entity.text, "Entity text must not be empty"
-        assert isinstance(entity.contexts, list)
-        assert isinstance(entity.pages, list)
-
-
-@pytest.mark.asyncio
-async def test_stuff_chain_relationships_reference_valid_entity_indices():
-    """Relationship indices must point to existing entities in the list."""
-    entities = [
-        EntityOutput(
-            type="PERSON",
-            text="Jean Dupont",
-            contexts=["signe le contrat avec Acme"],
-            pages=[1],
-        ),
-        EntityOutput(
-            type="ORGANIZATION",
-            text="Acme",
-            contexts=["Jean Dupont signe le contrat avec Acme"],
-            pages=[1],
-        ),
-        EntityOutput(
-            type="DATE",
-            text="2024-01-12",
-            contexts=["contrat signé le 12 janvier 2024"],
-            pages=[1],
-        ),
-    ]
-    fake_output = SummaryOutput(
-        summary="Jean Dupont a signé un contrat avec Acme le 12 janvier 2024.",
-        entities=entities,
-        relationships=[
-            RelationshipOutput(
-                source_index=0,
-                target_index=1,
-                relationship_type="SIGNED_CONTRACT_WITH",
-                description="Jean Dupont a signé un contrat avec Acme.",
-            ),
-            RelationshipOutput(
-                source_index=0,
-                target_index=2,
-                relationship_type="ACTED_ON_DATE",
-                description="Jean Dupont a signé le contrat le 12 janvier 2024.",
-            ),
-        ],
+def test_split_task_texts_uses_token_split_by_default(monkeypatch: pytest.MonkeyPatch):
+    task = dummy_task_large()
+    monkeypatch.setattr(
+        "abrege_service.models.summary.parallele_summary_chain.split_texts_by_token_limit",
+        lambda texts, max_tokens, model: [f"token-chunk::{len(texts)}::{max_tokens}"],
     )
+    service = LangChainAsyncMapReduceService(llm=MagicMock(model_name="gpt-4", max_tokens=None), max_token=3_000)
 
-    mock_llm = MagicMock()
-    chain = StuffSummarizeChain(llm=mock_llm, prompt=MAP_PROMPT)
-    runnable_mock = MagicMock()
-    runnable_mock.ainvoke = AsyncMock(return_value=fake_output)
-    chain._runnable = runnable_mock
+    chunks = service.split_task_texts(task)
 
-    docs = [Document(page_content="Jean Dupont a signé un contrat avec Acme le 12 janvier 2024.")]
-    result = await chain.ainvoke({"input_documents": docs, "language": "French"})
-
-    output: SummaryOutput = result["output"]
-    nb_entities = len(output.entities)
-    for rel in output.relationships:
-        assert 0 <= rel.source_index < nb_entities, f"source_index={rel.source_index} out of range"
-        assert 0 <= rel.target_index < nb_entities, f"target_index={rel.target_index} out of range"
-        assert rel.source_index != rel.target_index, "A relationship must link two different entities"
-        assert rel.relationship_type, "relationship_type must not be empty"
-        assert rel.description, "description must not be empty"
+    assert chunks == [f"token-chunk::{len(task.output.texts_found)}::3000"]
 
 
-@pytest.mark.skipif(condition=not is_openai_is_set, reason="Openai not set")
-@pytest.mark.asyncio
-async def test_acall_returns_relationships(mock_llm: ChatOpenAI, dummy_task_entities: TaskModel):
-    """acall must return a SummaryOutput with relationships whose indices are valid."""
-    service = LangChainAsyncMapReduceService(llm=mock_llm, max_token=10_000)
-    result = await service.acall(task=dummy_task_entities)
+def test_split_task_texts_falls_back_to_word_split_on_error(monkeypatch: pytest.MonkeyPatch):
+    task = dummy_task_large()
 
-    output: SummaryOutput = result["output"]
-    nb_entities = len(output.entities)
-    for rel in output.relationships:
-        assert 0 <= rel.source_index < nb_entities
-        assert 0 <= rel.target_index < nb_entities
-        assert rel.source_index != rel.target_index
+    def raise_error(texts, max_tokens, model):
+        raise RuntimeError("tokenizer unavailable")
+
+    monkeypatch.setattr("abrege_service.models.summary.parallele_summary_chain.split_texts_by_token_limit", raise_error)
+    monkeypatch.setattr(
+        "abrege_service.models.summary.parallele_summary_chain.split_texts_by_word_limit",
+        lambda texts, max_words: [f"word-chunk::{len(texts)}::{max_words}"],
+    )
+    service = LangChainAsyncMapReduceService(llm=MagicMock(model_name="gpt-4", max_tokens=None), max_token=1_000)
+
+    chunks = service.split_task_texts(task)
+
+    assert chunks == [f"word-chunk::{len(task.output.texts_found)}::750"]
+
+
+def test_dispatch_chunk_extraction_sends_one_celery_task(monkeypatch: pytest.MonkeyPatch):
+    sent = []
+    monkeypatch.setattr(celery_app, "send_task", lambda name, args, task_id=None: sent.append((name, args, task_id)))
+
+    service = LangChainAsyncMapReduceService(llm=MagicMock(), max_token=3_000)
+    service.dispatch_chunk_extraction(task_id="task-abc", chunk_index=2, text="Page3: hello world", language="French", qa_per_chunk=3)
+
+    assert len(sent) == 1
+    name, args, task_id = sent[0]
+    assert name == "worker.tasks.extract_chunk_details"
+    assert task_id == "task-abc:chunk:2"
+    payload = json.loads(args[0])
+    assert payload["task_id"] == "task-abc"
+    assert payload["chunk_index"] == 2
+    assert payload["page"] == 3
+    assert payload["text"] == "Page3: hello world"
+    assert payload["language"] == "French"
+    assert payload["qa_per_chunk"] == 3
+
+
+def test_dispatch_all_chunks_sets_redis_counter_and_dispatches_each_chunk(monkeypatch: pytest.MonkeyPatch):
+    sent = []
+    redis_calls = {}
+    monkeypatch.setattr(celery_app, "send_task", lambda name, args, task_id=None: sent.append(task_id))
+    monkeypatch.setattr(redis_client, "set", lambda key, value: redis_calls.__setitem__(key, value))
+
+    service = LangChainAsyncMapReduceService(llm=MagicMock(), max_token=3_000)
+    texts = ["chunk one", "chunk two", "chunk three"]
+    service.dispatch_all_chunks(task_id="task-xyz", texts=texts, language="French", qa_per_chunk=3)
+
+    assert redis_calls == {"chunk_pending:task-xyz": 3}
+    assert sent == ["task-xyz:chunk:0", "task-xyz:chunk:1", "task-xyz:chunk:2"]
