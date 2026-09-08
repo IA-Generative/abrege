@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed } from 'vue'
 
 interface TabData {
   label: string
@@ -17,7 +17,7 @@ const emit = defineEmits<{
 
 const activeTab = computed({
   get: () => props.modelValue ?? 0,
-  set: (v) => emit('update:modelValue', v),
+  set: v => emit('update:modelValue', v),
 })
 
 const tabListId = 'dynamic-tabs'

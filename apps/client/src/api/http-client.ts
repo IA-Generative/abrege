@@ -27,7 +27,7 @@ function createHttpClient (baseURL: string): AxiosInstance {
       }
       return config
     },
-    (error: AxiosError) => Promise.reject(error)
+    (error: AxiosError) => Promise.reject(error),
   )
 
   // Intercepteur pour gérer les erreurs 401 (token expiré)
@@ -46,14 +46,13 @@ function createHttpClient (baseURL: string): AxiosInstance {
             }
             return httpClient(originalRequest)
           }
-        }
-        catch (refreshError) {
+        } catch (refreshError) {
           console.error('Echec du rafraîchissement du token :', refreshError)
           await keycloak.login()
         }
       }
       return Promise.reject(error)
-    }
+    },
   )
 
   return httpClient

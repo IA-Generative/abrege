@@ -31,8 +31,7 @@ function MapStatusToLabel (status) {
 function sortBy (key) {
   if (sortKey.value === key) {
     sortAsc.value = !sortAsc.value
-  }
-  else {
+  } else {
     sortKey.value = key
     sortAsc.value = true
   }
@@ -40,12 +39,18 @@ function sortBy (key) {
 
 const sortedTasks = computed(() => {
   const items = abrege.userTasksPaginated?.items ?? []
-  if (!sortKey.value) { return items }
+  if (!sortKey.value) {
+    return items
+  }
   return [...items].sort((a, b) => {
     const valA = a[sortKey.value]
     const valB = b[sortKey.value]
-    if (valA === valB) { return 0 }
-    if (sortAsc.value) { return valA > valB ? 1 : -1 }
+    if (valA === valB) {
+      return 0
+    }
+    if (sortAsc.value) {
+      return valA > valB ? 1 : -1
+    }
     return valA < valB ? 1 : -1
   })
 })
@@ -64,7 +69,9 @@ async function cancelTask (taskId) {
 
 // ----- TÉLÉCHARGEMENT -----
 function downloadTaskResult (task) {
-  if (!task || task.status !== 'completed') { return }
+  if (!task || task.status !== 'completed') {
+    return
+  }
   const text = task.output?.summary ?? ''
   const blob = new Blob([text], { type: 'text/plain' })
   const url = URL.createObjectURL(blob)
@@ -73,11 +80,9 @@ function downloadTaskResult (task) {
   let baseName
   if (task.input?.raw_filename) {
     baseName = task.input.raw_filename.replace(/\.[^/.]+$/, '')
-  }
-  else if (task.input?.url) {
+  } else if (task.input?.url) {
     baseName = 'resume-url'
-  }
-  else {
+  } else {
     baseName = `resume-${task.id}`
   }
   a.download = `${baseName}.txt`
@@ -88,10 +93,16 @@ function downloadTaskResult (task) {
 }
 
 function formatDate (ts) {
-  if (ts === null || ts === undefined || ts === '') { return '' }
+  if (ts === null || ts === undefined || ts === '') {
+    return ''
+  }
   let n = Number(ts)
-  if (Number.isNaN(n)) { return String(ts) }
-  if (n < 1e12) { n = n * 1000 }
+  if (Number.isNaN(n)) {
+    return String(ts)
+  }
+  if (n < 1e12) {
+    n = n * 1000
+  }
   return new Date(n).toLocaleString()
 }
 

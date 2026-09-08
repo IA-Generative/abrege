@@ -68,8 +68,7 @@ export function getUserProfile (): IUser {
       lastName,
       groups,
     }
-  }
-  catch (error) {
+  } catch (error) {
     if (error instanceof Error) {
       throw new TypeError(error.message)
     }
@@ -88,8 +87,7 @@ export async function keycloakInit () {
       flow,
       redirectUri,
     })
-  }
-  catch (error) {
+  } catch (error) {
     if (error instanceof Error) {
       throw new TypeError(error.message)
     }
@@ -103,8 +101,7 @@ export async function keycloakLogin () {
     const currentUrl = new URL(window.location.href)
     const redirectUri = `${window.location.origin}${currentUrl.pathname}${currentUrl.search}`
     await keycloak.login({ redirectUri })
-  }
-  catch (error) {
+  } catch (error) {
     if (error instanceof Error) {
       throw new TypeError(error.message)
     }
@@ -118,8 +115,7 @@ export async function keycloakRegister () {
     const currentUrl = new URL(window.location.href)
     const redirectUri = `${window.location.origin}${currentUrl.pathname}${currentUrl.search}`
     await keycloak.register({ redirectUri })
-  }
-  catch (error) {
+  } catch (error) {
     if (error instanceof Error) {
       throw new TypeError(error.message)
     }
@@ -131,8 +127,7 @@ export async function keycloakLogout () {
   try {
     const keycloak = getKeycloak()
     await keycloak.logout()
-  }
-  catch (error) {
+  } catch (error) {
     if (error instanceof Error) {
       throw new TypeError(error.message)
     }

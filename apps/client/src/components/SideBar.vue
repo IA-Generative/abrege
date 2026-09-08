@@ -9,7 +9,6 @@ defineProps({
   otherTools: {
     name: 'otherTools',
     type: Array as () => DsfrTileProps[],
-    required: true,
     default: () => [
       {
         title: 'Converser avec le Chatbot',
