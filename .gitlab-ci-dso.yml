@@ -44,15 +44,20 @@ docker-build-abrege-api:
   before_script:
     - |
       SHORT_SHA=$(echo $CI_COMMIT_SHA | cut -c1-7)
+      # The DSO mirror only ever syncs branches, never tags (see dso-auto-sync.yaml),
+      # so this pipeline never runs as a GitLab tag pipeline and $CI_COMMIT_TAG is
+      # always empty here. appVersion is the app version bump/release-please already
+      # committed to Chart.yaml before the sync ran - same source of truth
+      # helm-package-push below reads for the chart's own version.
+      APP_VERSION=$(grep '^appVersion:' helm/Chart.yaml | awk '{print $2}' | tr -d '"')
+      if [ -z "$APP_VERSION" ]; then
+        echo "Error: Could not extract appVersion from helm/Chart.yaml"
+        exit 1
+      fi
       TAGS="abrege-api:$SHORT_SHA"
       TAGS="$TAGS abrege-api:$CI_COMMIT_REF_SLUG"
-      if [ -n "$CI_COMMIT_TAG" ]; then
-        TAG_WITHOUT_V=${CI_COMMIT_TAG#v}
-        TAGS="$TAGS abrege-api:$TAG_WITHOUT_V"
-        if echo "$CI_COMMIT_TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
-          TAGS="$TAGS abrege-api:latest"
-        fi
-      elif [ "$CI_COMMIT_BRANCH" = "main" ]; then
+      TAGS="$TAGS abrege-api:$APP_VERSION"
+      if echo "$APP_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
         TAGS="$TAGS abrege-api:latest"
       fi
       export IMAGE_NAMES="$TAGS"
@@ -71,15 +76,17 @@ docker-build-abrege-service:
   before_script:
     - |
       SHORT_SHA=$(echo $CI_COMMIT_SHA | cut -c1-7)
+      # See docker-build-abrege-api: this pipeline never runs as a GitLab tag pipeline,
+      # so the version tag comes from the appVersion already committed to Chart.yaml.
+      APP_VERSION=$(grep '^appVersion:' helm/Chart.yaml | awk '{print $2}' | tr -d '"')
+      if [ -z "$APP_VERSION" ]; then
+        echo "Error: Could not extract appVersion from helm/Chart.yaml"
+        exit 1
+      fi
       TAGS="abrege-service:$SHORT_SHA"
       TAGS="$TAGS abrege-service:$CI_COMMIT_REF_SLUG"
-      if [ -n "$CI_COMMIT_TAG" ]; then
-        TAG_WITHOUT_V=${CI_COMMIT_TAG#v}
-        TAGS="$TAGS abrege-service:$TAG_WITHOUT_V"
-        if echo "$CI_COMMIT_TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
-          TAGS="$TAGS abrege-service:latest"
-        fi
-      elif [ "$CI_COMMIT_BRANCH" = "main" ]; then
+      TAGS="$TAGS abrege-service:$APP_VERSION"
+      if echo "$APP_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
         TAGS="$TAGS abrege-service:latest"
       fi
       export IMAGE_NAMES="$TAGS"
@@ -98,15 +105,17 @@ docker-build-abrege-migration:
   before_script:
     - |
       SHORT_SHA=$(echo $CI_COMMIT_SHA | cut -c1-7)
+      # See docker-build-abrege-api: this pipeline never runs as a GitLab tag pipeline,
+      # so the version tag comes from the appVersion already committed to Chart.yaml.
+      APP_VERSION=$(grep '^appVersion:' helm/Chart.yaml | awk '{print $2}' | tr -d '"')
+      if [ -z "$APP_VERSION" ]; then
+        echo "Error: Could not extract appVersion from helm/Chart.yaml"
+        exit 1
+      fi
       TAGS="abrege-migration:$SHORT_SHA"
       TAGS="$TAGS abrege-migration:$CI_COMMIT_REF_SLUG"
-      if [ -n "$CI_COMMIT_TAG" ]; then
-        TAG_WITHOUT_V=${CI_COMMIT_TAG#v}
-        TAGS="$TAGS abrege-migration:$TAG_WITHOUT_V"
-        if echo "$CI_COMMIT_TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
-          TAGS="$TAGS abrege-migration:latest"
-        fi
-      elif [ "$CI_COMMIT_BRANCH" = "main" ]; then
+      TAGS="$TAGS abrege-migration:$APP_VERSION"
+      if echo "$APP_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
         TAGS="$TAGS abrege-migration:latest"
       fi
       export IMAGE_NAMES="$TAGS"
@@ -126,15 +135,17 @@ docker-build-abrege-frontend:
   before_script:
     - |
       SHORT_SHA=$(echo $CI_COMMIT_SHA | cut -c1-7)
+      # See docker-build-abrege-api: this pipeline never runs as a GitLab tag pipeline,
+      # so the version tag comes from the appVersion already committed to Chart.yaml.
+      APP_VERSION=$(grep '^appVersion:' helm/Chart.yaml | awk '{print $2}' | tr -d '"')
+      if [ -z "$APP_VERSION" ]; then
+        echo "Error: Could not extract appVersion from helm/Chart.yaml"
+        exit 1
+      fi
       TAGS="abrege-frontend:$SHORT_SHA"
       TAGS="$TAGS abrege-frontend:$CI_COMMIT_REF_SLUG"
-      if [ -n "$CI_COMMIT_TAG" ]; then
-        TAG_WITHOUT_V=${CI_COMMIT_TAG#v}
-        TAGS="$TAGS abrege-frontend:$TAG_WITHOUT_V"
-        if echo "$CI_COMMIT_TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
-          TAGS="$TAGS abrege-frontend:latest"
-        fi
-      elif [ "$CI_COMMIT_BRANCH" = "main" ]; then
+      TAGS="$TAGS abrege-frontend:$APP_VERSION"
+      if echo "$APP_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
         TAGS="$TAGS abrege-frontend:latest"
       fi
       export IMAGE_NAMES="$TAGS"
