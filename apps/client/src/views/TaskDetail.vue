@@ -27,11 +27,13 @@ const qaModalOpened = ref(false)
 const entitiesModalOpened = ref(false)
 const chunksModalOpened = ref(false)
 
+const taskId = computed(() => route.params.task_id as string)
+
 const PENDING_STATUSES = new Set(['in_progress', 'pending'])
 let statusPollTimer: ReturnType<typeof setInterval> | null = null
 
 function isStillPending (): boolean {
-  if (!task.value) return false
+  if (!task.value) { return false }
   return (
     PENDING_STATUSES.has(task.value.qa_entities_status ?? '')
     || PENDING_STATUSES.has(task.value.relationships_status ?? '')
@@ -40,10 +42,10 @@ function isStillPending (): boolean {
 }
 
 function startStatusPolling () {
-  if (statusPollTimer) return
+  if (statusPollTimer) { return }
   statusPollTimer = setInterval(async () => {
     if (!isStillPending()) {
-      if (statusPollTimer) clearInterval(statusPollTimer)
+      if (statusPollTimer) { clearInterval(statusPollTimer) }
       statusPollTimer = null
       return
     }
@@ -57,7 +59,7 @@ function startStatusPolling () {
 }
 
 onBeforeUnmount(() => {
-  if (statusPollTimer) clearInterval(statusPollTimer)
+  if (statusPollTimer) { clearInterval(statusPollTimer) }
 })
 
 const detailsButtons = [
@@ -65,8 +67,6 @@ const detailsButtons = [
   { label: 'Entités & relations', icon: 'ri-node-tree', onClick: () => { entitiesModalOpened.value = true } },
   { label: 'Chunks', icon: 'ri-file-list-3-line', onClick: () => { chunksModalOpened.value = true } },
 ]
-
-const taskId = computed(() => route.params.task_id as string)
 
 const inputLabel = computed(() => {
   if (!task.value?.input) { return null }
@@ -92,7 +92,7 @@ onMounted(async () => {
     task.value = await abrege.getTask(taskId.value) as TaskModel
     if (task.value?.status === 'completed') {
       abrege.fetchTopics(taskId.value)
-      if (isStillPending()) startStatusPolling()
+      if (isStillPending()) { startStatusPolling() }
     }
   } catch (e: any) {
     error.value = e.message ?? 'Impossible de charger la tâche.'
@@ -155,10 +155,19 @@ onMounted(async () => {
       </div>
 
       <div v-if="task.status === 'completed' && task.output">
-        <div v-if="!abrege.topicsLoading && (abrege.topics.length > 0 || task.topics_status)" class="task-detail-topics fr-mb-3w">
+        <div
+          v-if="!abrege.topicsLoading && (abrege.topics.length > 0 || task.topics_status)"
+          class="task-detail-topics fr-mb-3w"
+        >
           <span class="fr-text--sm task-detail-topics-label">Sujets détectés :</span>
-          <TopicBadges v-if="abrege.topics.length > 0" :topics="abrege.topics" />
-          <ExtractionStatusBadge :status="task.topics_status" label="Classification" />
+          <TopicBadges
+            v-if="abrege.topics.length > 0"
+            :topics="abrege.topics"
+          />
+          <ExtractionStatusBadge
+            :status="task.topics_status"
+            label="Classification"
+          />
         </div>
 
         <div class="task-detail-actions fr-mb-3w">

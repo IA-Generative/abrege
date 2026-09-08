@@ -1,10 +1,10 @@
-import uuid
-
 from src.schemas.chunk import ChunkTable
+from src.schemas.task import TaskForm, TaskStatus, task_table
 
 
 def _task_id() -> str:
-    return f"task-{uuid.uuid4()}"
+    task = task_table.insert_new_task(user_id="test", form_data=TaskForm(type="summary", status=TaskStatus.COMPLETED.value))
+    return task.id
 
 
 def test_save_chunk_group_persists_chunks_in_order():
