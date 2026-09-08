@@ -156,7 +156,7 @@ jobs:
       # silently stop affecting CI.
       CONFIG_FILE: commitlint.config.js
 
-  lint-python:
+  lint:
     uses: ./.github/workflows/lint.yml
     needs:
     - path-filter
@@ -323,7 +323,7 @@ jobs:
     - path-filter
     - expose-vars
     - lint-commits
-    - lint-python
+    - lint
     - unit-tests
     - scan-gitleaks
     - scan-trivy-conf
