@@ -7,8 +7,18 @@ on:
         description: Python version used to run tests
         required: true
         type: string
+      NODE_VERSION:
+        description: Node version used to run the frontend linter
+        required: false
+        type: string
+        default: "24"
       run-backend:
         description: Run backend tests
+        required: false
+        type: boolean
+        default: true
+      run-frontend:
+        description: Run frontend tests
         required: false
         type: boolean
         default: true
@@ -24,11 +34,16 @@ on:
         required: true
         type: string
         default: 3.X
+      NODE_VERSION:
+        description: Node version used to run the frontend linter
+        required: false
+        type: string
+        default: "24"
 
 jobs:
   tests:
     name: Lint code
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     if: inputs.run-backend == true || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
@@ -46,9 +61,42 @@ jobs:
 
       - name: Run lint
         run: make lint
+
+  lint-frontend:
+    name: Lint frontend code
+    runs-on: ubuntu-latest
+    if: inputs.run-frontend == true || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            apps/client/pnpm-lock.yaml
+
+      - name: Install Node dependencies
+        # `lint:frontend` (root package.json) shells out to apps/client's own eslint, which
+        # keeps a separate install (apps/client is not a pnpm workspace member).
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --dir apps/client install --frozen-lockfile
+
+      - name: Run lint
+        run: pnpm run lint:frontend
+
   lint-sdk:
     name: Lint SDK code
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     if: inputs.run-sdk == true || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
