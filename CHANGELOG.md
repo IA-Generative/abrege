@@ -210,6 +210,24 @@
 - clean code
 - clean code
 
+## [3.4.0-rc.3](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.2...v3.4.0-rc.3) (2026-09-08)
+
+
+### Bug Fixes
+
+* **ci:** configure gitleaks allowlist and fix SDK test regression ([4ca1b5d](https://github.com/IA-Generative/abrege/commit/4ca1b5d108d3e6141ac4f17247debb423ab1bbb2))
+* **ci:** rename lint-python job to lint ([3540a62](https://github.com/IA-Generative/abrege/commit/3540a622161eb6d217a653180a2dacd05f46814f))
+* **client:** resolve frontend lint violations ([664ec04](https://github.com/IA-Generative/abrege/commit/664ec04037bcf8f6f4e00b45eb2a414142a511f4))
+* **helm:** pin chart appVersion to the current dev prerelease ([d731ff8](https://github.com/IA-Generative/abrege/commit/d731ff87f522acd90ea3fbc94ec0d8bcccd21a43))
+* **helm:** satisfy yamllint's comment-spacing rule in values.yaml ([dbe6239](https://github.com/IA-Generative/abrege/commit/dbe6239a47002bb674c064f207503be6c9f3f263))
+* **images:** repo-scope ghcr.io image names to match ocr-api ([533a821](https://github.com/IA-Generative/abrege/commit/533a8215a61532d574b2addbc55d413c092144b8))
+
+
+### Code Refactoring
+
+* **cd:** use release-app.yml, mirroring ocr-api's pipeline exactly ([8179f8e](https://github.com/IA-Generative/abrege/commit/8179f8e80a523794c70317b66e69d748766af1eb))
+* **helm:** move abrege chart into this repository ([0690900](https://github.com/IA-Generative/abrege/commit/0690900c5eb1cbb3d0a3897ddfaf5959950aebfa))
+
 ## [3.4.0-rc.2](https://github.com/IA-Generative/abrege/compare/v3.3.3-rc.2...v3.4.0-rc.2) (2026-09-07)
 
 
