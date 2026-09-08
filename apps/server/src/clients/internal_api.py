@@ -19,19 +19,39 @@ class InternalApiClient:
             headers={"X-Internal-Token": token} if token else {},
         )
 
-    def save_chunk_qa_items(self, task_id: str, chunk_index: int, qa_items: list[dict]) -> None:
-        self._post(f"/api/task/{task_id}/qa", {"chunk_index": chunk_index, "qa_items": qa_items})
+    def save_chunk_qa_items(self, task_id: str, chunk_index: int, qa_items: list[dict], model_name: str | None = None) -> None:
+        self._post(f"/api/task/{task_id}/qa", {"chunk_index": chunk_index, "qa_items": qa_items, "model_name": model_name})
 
-    def save_chunk_entities(self, task_id: str, chunk_index: int, entities: list[dict], relationships: list[dict]) -> None:
+    def save_chunk_entities(
+        self,
+        task_id: str,
+        chunk_index: int,
+        entities: list[dict],
+        relationships: list[dict],
+        model_name: str | None = None,
+    ) -> None:
         self._post(
             f"/api/task/{task_id}/entities",
-            {"chunk_index": chunk_index, "entities": entities, "relationships": relationships},
+            {"chunk_index": chunk_index, "entities": entities, "relationships": relationships, "model_name": model_name},
         )
 
-    def save_global_relationships(self, task_id: str, entity_ids_in_order: list[str], relationships: list[dict]) -> None:
+    def save_global_relationships(
+        self, task_id: str, entity_ids_in_order: list[str], relationships: list[dict], model_name: str | None = None
+    ) -> None:
         self._post(
             f"/api/task/{task_id}/relationships/global",
-            {"entity_ids_in_order": entity_ids_in_order, "relationships": relationships},
+            {"entity_ids_in_order": entity_ids_in_order, "relationships": relationships, "model_name": model_name},
+        )
+
+    def save_topics(self, task_id: str, topics: list[dict], model_name: str | None = None) -> None:
+        self._post(f"/api/task/{task_id}/topics", {"topics": topics, "model_name": model_name})
+
+    def save_chunks(
+        self, task_id: str, chunk_index: int, page: int | None, chunks: list[str], model_name: str | None = None
+    ) -> None:
+        self._post(
+            f"/api/task/{task_id}/chunks",
+            {"chunk_index": chunk_index, "page": page, "chunks": chunks, "model_name": model_name},
         )
 
     def _post(self, path: str, json_body: dict) -> None:

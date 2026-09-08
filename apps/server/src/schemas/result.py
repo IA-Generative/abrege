@@ -34,6 +34,12 @@ class QAItem(BaseModel):
     answer: str
 
 
+class TopicModel(BaseModel):
+    topic: str
+    confidence: float
+    explanation: Optional[str] = None
+
+
 class OcrBbox(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     x: float

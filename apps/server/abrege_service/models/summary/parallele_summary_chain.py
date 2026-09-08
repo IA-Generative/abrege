@@ -17,7 +17,7 @@ from langfuse.langchain import CallbackHandler
 
 from src.schemas.result import SummaryModel, Text
 from src.schemas.parameters import SummaryParameters
-from src.schemas.task import TaskModel, TaskStatus
+from src.schemas.task import TaskModel, TaskStatus, TaskUpdateForm, task_table
 from src.clients import celery_app, redis_client
 from src.utils.logger import logger_abrege
 
@@ -189,6 +189,18 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
         for index, text in enumerate(texts):
             self.dispatch_chunk_extraction(task_id=task_id, chunk_index=index, text=text, language=language, qa_per_chunk=qa_per_chunk)
 
+    def dispatch_topic_classification(self, task_id: str, summary: str, language: str) -> None:
+        """Fire-and-forget the free-form topic/subject classification of the final summary.
+
+        Runs as its own Celery message once the summary is ready, so it never adds latency
+        to `summarize()` — same rationale as `dispatch_chunk_extraction`.
+        """
+        celery_app.send_task(
+            "worker.tasks.classify_topics",
+            args=[json.dumps({"task_id": task_id, "summary": summary, "language": language})],
+            task_id=f"{task_id}:topics",
+        )
+
     async def map_documents(
         self,
         task: TaskModel,
@@ -225,6 +237,7 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
         percentage_left = 1 - current_percentage
 
         if extract_qa and qa_per_chunk > 0:
+            task_table.update_task(task_id=task.id, form_data=TaskUpdateForm(qa_entities_status="in_progress"))
             self.dispatch_all_chunks(task_id=task.id, texts=transform_texts, language=language, qa_per_chunk=qa_per_chunk)
 
         async def map_one_document(doc: Document) -> Document:
@@ -471,6 +484,14 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
             logger_abrege.info(
                 f"{task.output.word_count} words",
                 extra={"task.id": task.id, "user_id": task.user_id},
+            )
+
+            params = task.parameters or SummaryParameters()
+            task_table.update_task(task_id=task.id, form_data=TaskUpdateForm(topics_status="pending"))
+            self.dispatch_topic_classification(
+                task_id=task.id,
+                summary=task.output.summary,
+                language=params.language if params.language else "French",
             )
 
             task = self.update_result_task(

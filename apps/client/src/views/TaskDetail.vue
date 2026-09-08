@@ -1,11 +1,20 @@
 <script setup lang="ts">
 import type { components } from '@/api/types/api.schema'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ResumeResult from '@/components/ResumeResult.vue'
+import TaskChunksModal from '@/components/TaskChunksModal.vue'
+import TaskEntitiesModal from '@/components/TaskEntitiesModal.vue'
+import TaskQAModal from '@/components/TaskQAModal.vue'
+import TopicBadges from '@/components/TopicBadges.vue'
 import { useAbregeStore } from '@/stores/abrege'
 
-type TaskModel = components['schemas']['TaskModel']
+// The generated schema doesn't yet know about these — the API already returns them.
+type TaskModel = components['schemas']['TaskModel'] & {
+  qa_entities_status?: string | null
+  relationships_status?: string | null
+  topics_status?: string | null
+}
 
 const route = useRoute()
 const router = useRouter()
@@ -14,6 +23,48 @@ const abrege = useAbregeStore()
 const task = ref<TaskModel | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
+const qaModalOpened = ref(false)
+const entitiesModalOpened = ref(false)
+const chunksModalOpened = ref(false)
+
+const PENDING_STATUSES = new Set(['in_progress', 'pending'])
+let statusPollTimer: ReturnType<typeof setInterval> | null = null
+
+function isStillPending (): boolean {
+  if (!task.value) return false
+  return (
+    PENDING_STATUSES.has(task.value.qa_entities_status ?? '')
+    || PENDING_STATUSES.has(task.value.relationships_status ?? '')
+    || PENDING_STATUSES.has(task.value.topics_status ?? '')
+  )
+}
+
+function startStatusPolling () {
+  if (statusPollTimer) return
+  statusPollTimer = setInterval(async () => {
+    if (!isStillPending()) {
+      if (statusPollTimer) clearInterval(statusPollTimer)
+      statusPollTimer = null
+      return
+    }
+    const refreshed = await abrege.getTask(taskId.value) as TaskModel
+    task.value = refreshed
+    if (!isStillPending() && statusPollTimer) {
+      clearInterval(statusPollTimer)
+      statusPollTimer = null
+    }
+  }, 3000)
+}
+
+onBeforeUnmount(() => {
+  if (statusPollTimer) clearInterval(statusPollTimer)
+})
+
+const detailsButtons = [
+  { label: 'Questions / réponses', icon: 'ri-question-answer-line', onClick: () => { qaModalOpened.value = true } },
+  { label: 'Entités & relations', icon: 'ri-node-tree', onClick: () => { entitiesModalOpened.value = true } },
+  { label: 'Chunks', icon: 'ri-file-list-3-line', onClick: () => { chunksModalOpened.value = true } },
+]
 
 const taskId = computed(() => route.params.task_id as string)
 
@@ -38,7 +89,11 @@ const inputType = computed(() => {
 
 onMounted(async () => {
   try {
-    task.value = await abrege.getTask(taskId.value)
+    task.value = await abrege.getTask(taskId.value) as TaskModel
+    if (task.value?.status === 'completed') {
+      abrege.fetchTopics(taskId.value)
+      if (isStillPending()) startStatusPolling()
+    }
   } catch (e: any) {
     error.value = e.message ?? 'Impossible de charger la tâche.'
   } finally {
@@ -100,6 +155,18 @@ onMounted(async () => {
       </div>
 
       <div v-if="task.status === 'completed' && task.output">
+        <div v-if="!abrege.topicsLoading && (abrege.topics.length > 0 || task.topics_status)" class="task-detail-topics fr-mb-3w">
+          <span class="fr-text--sm task-detail-topics-label">Sujets détectés :</span>
+          <TopicBadges v-if="abrege.topics.length > 0" :topics="abrege.topics" />
+          <ExtractionStatusBadge :status="task.topics_status" label="Classification" />
+        </div>
+
+        <div class="task-detail-actions fr-mb-3w">
+          <DsfrDropdown
+            :main-button="{ label: 'Détails', icon: 'ri-list-check-2', size: 'sm' }"
+            :buttons="detailsButtons"
+          />
+        </div>
         <ResumeResult
           :resume-result="task"
           @re-generate="router.push({ name: 'resume-tab', params: { tab: 'tasks' } })"
@@ -112,6 +179,26 @@ onMounted(async () => {
       >
         <p>Ce résumé n'est pas encore disponible (statut : {{ task.status }}).</p>
       </div>
+
+      <TaskQAModal
+        :opened="qaModalOpened"
+        :task-id="taskId"
+        :status="task.qa_entities_status"
+        @close="qaModalOpened = false"
+      />
+      <TaskEntitiesModal
+        :opened="entitiesModalOpened"
+        :task-id="taskId"
+        :entities-status="task.qa_entities_status"
+        :relationships-status="task.relationships_status"
+        @close="entitiesModalOpened = false"
+      />
+      <TaskChunksModal
+        :opened="chunksModalOpened"
+        :task-id="taskId"
+        :status="task.qa_entities_status"
+        @close="chunksModalOpened = false"
+      />
     </template>
   </div>
 </template>
@@ -136,5 +223,19 @@ onMounted(async () => {
   color: var(--text-mention-grey);
   word-break: break-all;
   margin: 0;
+}
+.task-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.task-detail-topics {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.task-detail-topics-label {
+  color: var(--text-mention-grey);
 }
 </style>

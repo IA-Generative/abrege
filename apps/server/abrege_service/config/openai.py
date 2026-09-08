@@ -25,6 +25,13 @@ class OpenAISettings(BaseSettings):
     OPENAI_API_BASE_URL: Optional[str] = None
     OPENAI_API_MODEL: Optional[str] = GENERIC_CHAT_ALIAS
     OPENAI_VLM_MODEL_NAME: Optional[str] = GENERIC_CHAT_ALIAS
+    # Per-feature model overrides for the side extractions (Q&A, entities/relationships,
+    # semantic chunking, topic classification) dispatched alongside the summary. Each falls
+    # back to OPENAI_API_MODEL (the summary's own model) when unset.
+    QA_MODEL_NAME: Optional[str] = None
+    ENTITY_MODEL_NAME: Optional[str] = None
+    CHUNK_MODEL_NAME: Optional[str] = None
+    TOPIC_MODEL_NAME: Optional[str] = None
     MAX_CONTEXT_SIZE: Optional[int] = 128_000  # Context size that the llm can handle
     TOKENIZER_MODEL_NAME: Optional[str] = (
         "gpt-4"  # For counting number of token the system has, please make sure the tokenizer is available in hugging-face
