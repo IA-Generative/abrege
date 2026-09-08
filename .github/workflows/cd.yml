@@ -43,7 +43,7 @@ env:
 
 jobs:
   expose-vars:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     permissions: {}
     outputs:
       BUILD_AMD64: ${{ env.BUILD_AMD64 }}
@@ -148,6 +148,8 @@ jobs:
       TAG_SHORT_SHA: ${{ needs.expose-vars.outputs.TAG_SHORT_SHA == 'true' }}
       CACHE: true
       CACHE_MODE: min
+      BUILD_ARGS: |
+        APP_VERSION=${{ needs.release.outputs.version }}
 
   bump-chart:
     uses: dnum-mi/fabnum-cicd/.github/workflows/update-helm-chart.yml@v0
