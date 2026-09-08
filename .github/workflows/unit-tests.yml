@@ -134,6 +134,8 @@ jobs:
           LLM_GUARD_API_KEY=${{ secrets.LLM_GUARD_API_KEY }}
           LLM_GUARD_URL=http://llm_guard_api:8000
           OCR_API_KEY=${{ secrets.OCR_API_KEY || 'ocr-test-placeholder' }}
+          INTERNAL_SERVICE_TOKEN=test-internal-token
+          ABREGE_API_BASE_URL=http://abrege_api:5000
           MAX_CONCURRENCY_LLM_CALL=5
           MAX_MODEL_TOKEN=16384
           PYPANDOC_PANDOC_FOLDER=/app/pandoc

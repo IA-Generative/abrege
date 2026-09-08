@@ -9,6 +9,7 @@ os.environ.setdefault("TRANSFORMERS_VERBOSITY", "error")
 from typing import List
 import time
 import json
+import asyncio
 import traceback
 
 import openai
@@ -32,12 +33,20 @@ from abrege_service.modules.cache import CacheService
 from abrege_service.models.summary.parallele_summary_chain import (
     LangChainAsyncMapReduceService,
 )
+from abrege_service.models.summary.qa_chain import build_qa_runnable
+from abrege_service.models.summary.entity_chain import (
+    build_entity_runnable,
+    build_global_relationship_runnable,
+)
 from abrege_service.config.openai import OpenAISettings
 
 from src.schemas.task import TaskModel, task_table, TaskStatus, TaskUpdateForm
 from src.schemas.content import URLModel, DocumentModel, TextModel
 from src.schemas.result import ResultModel
-from src.clients import celery_app, file_connector
+from src.schemas.parameters import SummaryParameters
+from src.schemas.entity import entity_table
+from src.clients import celery_app, file_connector, redis_client
+from src.clients.internal_api import internal_api_client
 from src import __version__
 from src.utils.logger import logger_abrege
 
@@ -105,6 +114,9 @@ summary_service = LangChainAsyncMapReduceService(
     max_token=int(os.getenv("MAX_MODEL_TOKEN", 128_000)),
     max_concurrency=int(os.getenv("MAX_CONCURRENCY_LLM_CALL", 5)),
 )
+qa_runnable = build_qa_runnable(llm)
+entity_runnable = build_entity_runnable(llm)
+global_relationship_runnable = build_global_relationship_runnable(llm)
 tmp_folder = os.environ.get("CACHE_FOLDER")
 os.makedirs(tmp_folder, exist_ok=True)
 
@@ -179,3 +191,92 @@ def launch(self, task: str):
         )
         logger_abrege.error(f"Task {task.id} failed: {e} - {traceback.format_exc()}")
         raise e
+
+
+@celery_app.task(name="worker.tasks.extract_chunk_details", bind=True)
+def extract_chunk_details(self, payload: str):
+    """Extract Q&A, entities and local relationships for a single chunk, and persist them.
+
+    Runs as its own Celery message, fully decoupled from the parent summarize task, so it
+    never adds latency to `worker.tasks.abrege`. The last chunk of a task to finish triggers
+    the follow-up global-relationships pass (see `dispatch_all_chunks`).
+    """
+    data = json.loads(payload)
+    task_id = data["task_id"]
+    chunk_index = data["chunk_index"]
+    page = data["page"]
+    extra_log = {"task_id": task_id, "chunk_index": chunk_index}
+    try:
+
+        async def run():
+            return await asyncio.gather(
+                qa_runnable.ainvoke({"text": data["text"], "language": data["language"], "qa_per_chunk": data["qa_per_chunk"]}),
+                entity_runnable.ainvoke({"text": data["text"], "language": data["language"]}),
+            )
+
+        qa_output, entity_output = asyncio.run(run())
+
+        internal_api_client.save_chunk_qa_items(
+            task_id=task_id,
+            chunk_index=chunk_index,
+            qa_items=[
+                {"page": page, "source_text": data["text"], "question": item.question, "answer": item.answer}
+                for item in qa_output.items
+            ],
+        )
+        internal_api_client.save_chunk_entities(
+            task_id=task_id,
+            chunk_index=chunk_index,
+            entities=[
+                {"type": e.type, "text": e.text, "contexts": e.contexts, "pages": [page] if page is not None else []}
+                for e in entity_output.entities
+            ],
+            relationships=[r.model_dump() for r in entity_output.relationships],
+        )
+    except Exception as e:
+        logger_abrege.error(f"Chunk details extraction failed: {e} - {traceback.format_exc()}", extra=extra_log)
+        raise e
+
+    remaining = redis_client.decr(f"chunk_pending:{task_id}")
+    if remaining <= 0:
+        redis_client.delete(f"chunk_pending:{task_id}")
+        celery_app.send_task(
+            "worker.tasks.compute_global_relationships",
+            args=[json.dumps({"task_id": task_id})],
+            task_id=f"{task_id}:global-relationships",
+        )
+
+
+@celery_app.task(name="worker.tasks.compute_global_relationships", bind=True)
+def compute_global_relationships(self, payload: str):
+    """Infer relationships across every entity already extracted for a task, once all its
+    chunks are done, so entities found in different chunks can still be linked together."""
+    data = json.loads(payload)
+    task_id = data["task_id"]
+    entity_rows = entity_table.get_entities_by_task(task_id)
+    if len(entity_rows) < 2:
+        return
+    entities_list = "\n".join(f"{i}: {e.type} - {e.text} - pages {e.pages}" for i, e in enumerate(entity_rows))
+    output = asyncio.run(global_relationship_runnable.ainvoke({"entities_list": entities_list}))
+    internal_api_client.save_global_relationships(
+        task_id=task_id,
+        entity_ids_in_order=[e.id for e in entity_rows],
+        relationships=[r.model_dump() for r in output.relationships],
+    )
+
+
+@celery_app.task(name="worker.tasks.extract_task_details", bind=True)
+def extract_task_details(self, task_id: str):
+    """Re-run Q&A/entities/relationships extraction for a task that was summarized without
+    it (`extract_qa=False` at the time), on user demand, without re-running the summary."""
+    task = task_table.get_task_by_id(task_id)
+    if task is None or task.output is None or not task.output.texts_found:
+        logger_abrege.warning(f"Task {task_id} has no source text, cannot extract details.", extra={"task_id": task_id})
+        return
+
+    params = task.parameters or SummaryParameters()
+    qa_per_chunk = params.qa_per_chunk if params.qa_per_chunk else 3
+    language = params.language or "French"
+
+    texts = summary_service.split_task_texts(task)
+    summary_service.dispatch_all_chunks(task_id=task.id, texts=texts, language=language, qa_per_chunk=qa_per_chunk)

@@ -50,6 +50,8 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_API_BASE_URL=${OPENAI_API_BASE_URL}
       - OPENAI_API_MODEL=${OPENAI_API_MODEL}
+      - ABREGE_API_BASE_URL=http://abrege_api:5000
+      - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN}
     env_file:
       - .env
 
@@ -84,6 +86,7 @@ services:
       DEV_MODE: "true"
       CELERY_APP_NAME: default
       VERIFY_TOKEN_MODEL: keycloak
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
     depends_on:
       - redis
       - minio
