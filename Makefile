@@ -131,6 +131,6 @@ test-abrege-service: ## Lance les tests du service abrege dans un environnement 
 	docker compose -f docker-compose.test.yaml down -v
 
 
-test-sdk-python:
+test-sdk-python: install-uv
 	cd sdk && \
 		uv run pytest -s --cov=./abrege_sdk --cov-report=term-missing tests/ -ra -v --maxfail=0
