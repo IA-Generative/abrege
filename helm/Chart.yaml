@@ -1,37 +1,37 @@
 apiVersion: v2
 name: abrege
 type: application
-version: 0.1.0
+version: 0.1.1-rc
 # Current dev prerelease (.github/releases/.release-please-manifest-prerelease.json), not the
 # 0.1.0 placeholder: update-helm-chart.yml derives the chart's bump level from the appVersion
 # delta, so a stale placeholder would compare against every future release as a huge jump.
-appVersion: "3.4.0-rc.2"
+appVersion: "3.4.0-rc.3"
 description: A Helm chart to deploy abrege.
 # home: https://this-is-tobi.com
 deprecated: false
 annotations: {}
 keywords: []
 dependencies:
-- name: redis
-  alias: redis
-  version: 0.27.9
-  repository: oci://registry-1.docker.io/cloudpirates
-  condition: redis.enabled
-- name: postgres
-  alias: postgres
-  version: 0.19.6
-  repository: oci://registry-1.docker.io/cloudpirates
-  condition: postgres.enabled
-- name: rustfs
-  alias: rustfs
-  version: 0.10.0
-  repository: oci://registry-1.docker.io/cloudpirates
-  condition: rustfs.enabled
-- name: cluster
-  alias: cnpg
-  version: 0.8.1
-  repository: https://cloudnative-pg.github.io/charts
-  condition: cnpg.enabled
+  - name: redis
+    alias: redis
+    version: 0.27.9
+    repository: oci://registry-1.docker.io/cloudpirates
+    condition: redis.enabled
+  - name: postgres
+    alias: postgres
+    version: 0.19.6
+    repository: oci://registry-1.docker.io/cloudpirates
+    condition: postgres.enabled
+  - name: rustfs
+    alias: rustfs
+    version: 0.10.0
+    repository: oci://registry-1.docker.io/cloudpirates
+    condition: rustfs.enabled
+  - name: cluster
+    alias: cnpg
+    version: 0.8.1
+    repository: https://cloudnative-pg.github.io/charts
+    condition: cnpg.enabled
 sources:
   - https://github.com/IA-Generative/abrege
 maintainers: []
