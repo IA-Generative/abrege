@@ -1,4 +1,3 @@
-import process from 'node:process'
 import { defineConfig, devices } from '@playwright/test'
 
 import dotenv from 'dotenv'
@@ -9,7 +8,7 @@ export default defineConfig({
   testDir: './playwright/e2e',
   timeout: 30 * 1000,
   expect: {
-    timeout: 5000
+    timeout: 5000,
   },
   use: {
     actionTimeout: 60000,
@@ -23,8 +22,8 @@ export default defineConfig({
     {
       name: 'firefox',
       use: {
-        ...devices['Desktop Firefox']
-      }
+        ...devices['Desktop Firefox'],
+      },
     },
   ],
 
@@ -34,5 +33,5 @@ export default defineConfig({
   webServer: {
     command: 'pnpm run dev',
     port: Number(process.env.FRONT_PORT),
-  }
+  },
 })

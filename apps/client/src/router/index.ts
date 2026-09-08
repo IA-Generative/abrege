@@ -19,7 +19,7 @@ function authGuard (_path: string) {
   return async (
     _to: RouteLocationNormalized,
     _from: RouteLocationNormalized,
-    next: NavigationGuardNext
+    next: NavigationGuardNext,
   ) => {
     // During development or when explicitly bypassed, skip the SSO redirect
     const bypassSSO = (import.meta.env && import.meta.env.DEV) || import.meta.env.VITE_SSO_BYPASS === 'true' || (window as any).VITE_SSO_BYPASS === 'true'
