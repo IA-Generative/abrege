@@ -16,15 +16,13 @@ from src.utils.logger import logger_abrege
 
 # Optional: only used to propagate task cancellation to the OCR service (below). Building
 # it can now raise (see src.clients.ocr_client.build_token_manager, abrege#354) when OCR
-# delegation has no usable auth configured - that must not block the whole API from
-# booting over what only the cancellation path needs.
+# delegation has no usable auth configured, or when OCR_BACKEND_URL isn't set - that must
+# not block the whole API from booting over what only the cancellation path needs.
 try:
-    ocr_client = OCRClient(
-        url=os.getenv(
-            "OCR_BACKEND_URL",
-            "https://mirai-ocr-staging.sdid-app.cpin.numerique-interieur.com/1",
-        )
-    )
+    ocr_backend_url = os.getenv("OCR_BACKEND_URL")
+    if not ocr_backend_url:
+        raise RuntimeError("OCR_BACKEND_URL is not set")
+    ocr_client = OCRClient(url=ocr_backend_url)
 except RuntimeError as e:
     logger_abrege.warning(f"OCR client not configured, task cancellation will not propagate to it: {e}")
     ocr_client = None
