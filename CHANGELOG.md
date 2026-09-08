@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [3.4.0-rc.5](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.4...v3.4.0-rc.5) (2026-09-08)
+
+
+### Bug Fixes
+
+* run all Docker images as non-root ([6bcc44d](https://github.com/IA-Generative/abrege/commit/6bcc44d412dc211b711961df430068af35b89d03)), closes [#378](https://github.com/IA-Generative/abrege/issues/378)
+
 ## [3.4.0-rc.4](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.3...v3.4.0-rc.4) (2026-09-08)
 
 
