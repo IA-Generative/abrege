@@ -1,11 +1,11 @@
-import uuid
-
 from src.schemas.result import TopicModel
+from src.schemas.task import TaskForm, TaskStatus, task_table
 from src.schemas.topic import TopicTable
 
 
 def _task_id() -> str:
-    return f"task-{uuid.uuid4()}"
+    task = task_table.insert_new_task(user_id="test", form_data=TaskForm(type="summary", status=TaskStatus.COMPLETED.value))
+    return task.id
 
 
 def test_save_topics_persists_rows():

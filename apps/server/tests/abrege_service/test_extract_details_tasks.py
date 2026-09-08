@@ -1,19 +1,17 @@
 import json
 import uuid
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+import abrege_service.main as main
 from abrege_service.main import (
-    chunk_runnable,
     compute_global_relationships,
-    entity_runnable,
     extract_chunk_details,
     extract_task_details,
-    global_relationship_runnable,
     internal_api_client,
     llm,
-    qa_runnable,
     summary_service,
 )
 from abrege_service.models.summary.chunk_chain import ChunkingOutput
@@ -31,11 +29,15 @@ def _task_id() -> str:
 
 
 def _mock_extraction_runnables(monkeypatch: pytest.MonkeyPatch, qa_items=None, entities=None, relationships=None, chunks=None):
-    monkeypatch.setattr(qa_runnable, "ainvoke", AsyncMock(return_value=QAOutput(items=qa_items or [])))
+    monkeypatch.setattr(main, "qa_runnable", SimpleNamespace(ainvoke=AsyncMock(return_value=QAOutput(items=qa_items or []))))
     monkeypatch.setattr(
-        entity_runnable, "ainvoke", AsyncMock(return_value=ChunkEntitiesOutput(entities=entities or [], relationships=relationships or []))
+        main,
+        "entity_runnable",
+        SimpleNamespace(ainvoke=AsyncMock(return_value=ChunkEntitiesOutput(entities=entities or [], relationships=relationships or []))),
     )
-    monkeypatch.setattr(chunk_runnable, "ainvoke", AsyncMock(return_value=ChunkingOutput(chunks=chunks if chunks is not None else ["x"])))
+    monkeypatch.setattr(
+        main, "chunk_runnable", SimpleNamespace(ainvoke=AsyncMock(return_value=ChunkingOutput(chunks=chunks if chunks is not None else ["x"])))
+    )
 
 
 def test_extract_chunk_details_saves_qa_entities_and_chunks_through_the_internal_api(monkeypatch: pytest.MonkeyPatch):
@@ -153,11 +155,13 @@ def test_compute_global_relationships_saves_through_the_internal_api(monkeypatch
     entity_by_text = {e.text: e.id for e in entities}
 
     monkeypatch.setattr(
-        global_relationship_runnable,
-        "ainvoke",
-        AsyncMock(
-            return_value=GlobalRelationshipsOutput(
-                relationships=[ChunkRelationshipOutput(source_index=0, target_index=1, relationship_type="WORKS_AT", description="link")]
+        main,
+        "global_relationship_runnable",
+        SimpleNamespace(
+            ainvoke=AsyncMock(
+                return_value=GlobalRelationshipsOutput(
+                    relationships=[ChunkRelationshipOutput(source_index=0, target_index=1, relationship_type="WORKS_AT", description="link")]
+                )
             )
         ),
     )
@@ -176,7 +180,7 @@ def test_compute_global_relationships_saves_through_the_internal_api(monkeypatch
 def test_compute_global_relationships_skips_when_fewer_than_two_entities(monkeypatch: pytest.MonkeyPatch):
     task_id = _task_id()
     mock_ainvoke = AsyncMock()
-    monkeypatch.setattr(global_relationship_runnable, "ainvoke", mock_ainvoke)
+    monkeypatch.setattr(main, "global_relationship_runnable", SimpleNamespace(ainvoke=mock_ainvoke))
     monkeypatch.setattr(internal_api_client, "save_global_relationships", MagicMock())
 
     compute_global_relationships.apply(args=[json.dumps({"task_id": task_id})]).get()
@@ -295,7 +299,7 @@ def test_compute_global_relationships_marks_relationships_completed(monkeypatch:
         relationships=[],
     )
     monkeypatch.setattr(
-        global_relationship_runnable, "ainvoke", AsyncMock(return_value=GlobalRelationshipsOutput(relationships=[]))
+        main, "global_relationship_runnable", SimpleNamespace(ainvoke=AsyncMock(return_value=GlobalRelationshipsOutput(relationships=[])))
     )
     monkeypatch.setattr(internal_api_client, "save_global_relationships", MagicMock())
 
@@ -320,7 +324,7 @@ def test_compute_global_relationships_marks_relationships_failed_on_error(monkey
         entities=[EntityModel(type="PERSON", text="Alice", contexts=[], pages=[1]), EntityModel(type="ORGANIZATION", text="Acme", contexts=[], pages=[1])],
         relationships=[],
     )
-    monkeypatch.setattr(global_relationship_runnable, "ainvoke", AsyncMock(side_effect=RuntimeError("llm down")))
+    monkeypatch.setattr(main, "global_relationship_runnable", SimpleNamespace(ainvoke=AsyncMock(side_effect=RuntimeError("llm down"))))
 
     with pytest.raises(RuntimeError):
         compute_global_relationships.apply(args=[json.dumps({"task_id": task_id})]).get()
