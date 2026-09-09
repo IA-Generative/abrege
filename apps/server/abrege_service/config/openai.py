@@ -33,13 +33,6 @@ class OpenAISettings(BaseSettings):
     CHUNK_MODEL_NAME: Optional[str] = None
     TOPIC_MODEL_NAME: Optional[str] = None
     MAX_CONTEXT_SIZE: Optional[int] = 128_000  # Context size that the llm can handle
-    TOKENIZER_MODEL_NAME: Optional[str] = (
-        "gpt-4"  # For counting number of token the system has, please make sure the tokenizer is available in hugging-face
-    )
-    # Implicitly read by huggingface_hub whenever TOKENIZER_MODEL_NAME points at a gated
-    # repo (e.g. mistralai/*) - documented here so a missing token fails visibly at boot
-    # instead of at the first task that needs to download the tokenizer.
-    HF_TOKEN: Optional[str] = None
 
     @model_validator(mode="before")
     @classmethod
