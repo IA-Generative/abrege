@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [3.4.0-rc.8](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.7...v3.4.0-rc.8) (2026-09-09)
+
+
+### Bug Fixes
+
+* delete OCR sub-tasks only once the whole document is done ([5ba442d](https://github.com/IA-Generative/abrege/commit/5ba442dfbab34b14a1134d110d86674eb25d42f5))
+
 ## [3.4.0-rc.7](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.6...v3.4.0-rc.7) (2026-09-09)
 
 
