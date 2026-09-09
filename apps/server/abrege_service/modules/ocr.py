@@ -77,18 +77,17 @@ class OCRMIService(BaseService):
                 )
         return task_ids
 
-    def _delete_ocr_task(self, task_id_ocr: str, deleted_ids: set, extra_log: dict) -> None:
+    def _delete_ocr_tasks(self, task_ids_ocr: list[str], extra_log: dict) -> None:
         """The OCR client authenticates as a shared/generic account (see abrege#354), not
         as the end user - so nothing on the ocr side ties this document to anyone in
-        particular. Delete it there once we're done reading its result, rather than
-        leaving it to accumulate under that one shared account indefinitely."""
-        if task_id_ocr in deleted_ids:
-            return
-        deleted_ids.add(task_id_ocr)
-        try:
-            self.ocr_mi_client.delete_task(task_id=task_id_ocr)
-        except Exception as e:
-            logger.warning(f"Failed to delete OCR task {task_id_ocr}: {e}", extra=extra_log)
+        particular. Delete every OCR sub-task once the whole document is done (or has
+        failed) - not as each one individually finishes, since other sub-tasks in the same
+        batch are still being polled at that point and would 404 on an already-deleted id."""
+        for task_id_ocr in task_ids_ocr:
+            try:
+                self.ocr_mi_client.delete_task(task_id=task_id_ocr)
+            except Exception as e:
+                logger.warning(f"Failed to delete OCR task {task_id_ocr}: {e}", extra=extra_log)
 
     def task_to_text(self, task: TaskModel, **kwargs) -> TaskModel:
         extra_log = {
@@ -138,7 +137,6 @@ class OCRMIService(BaseService):
         page_ocr_index = {}
         global_status = TaskStatus.IN_PROGRESS.value
         index = 0
-        deleted_ocr_task_ids: set = set()
         text_found = ["" for i in range(len(images))]
         logger.debug(f"Start processing {len(images)} images", extra=extra_log)
         logger.debug(f"task parameters {task.parameters}", extra=extra_log)
@@ -171,7 +169,7 @@ class OCRMIService(BaseService):
                             logger.error(f"{task_id_tmp} is on error - {status}", extra=extra_log)
                             is_batch_processed = True
                             task = self.update_task(task=task, status=status, result=task.output)
-                            self._delete_ocr_task(task_id_tmp, deleted_ocr_task_ids, extra_log)
+                            self._delete_ocr_tasks(task.output.extras["task_ocr_id"], extra_log)
                             return task
                         if status in task_status_finish:
                             text = ""
@@ -181,7 +179,6 @@ class OCRMIService(BaseService):
                                 text = sort_reader(page=result.pages[0])
                                 page_raw_index[current_index] = result.pages[0]
                             tmp_page_ocr_index[current_index] = text
-                            self._delete_ocr_task(task_id_tmp, deleted_ocr_task_ids, extra_log)
                         logger.info(f"status: {status}", extra=extra_log)
                     current_index += 1
 
@@ -230,5 +227,7 @@ class OCRMIService(BaseService):
 
         if global_status in task_finish_on_error:
             task = self.update_task(task=task, status=global_status, result=task.output)
+
+        self._delete_ocr_tasks(task.output.extras["task_ocr_id"], extra_log)
 
         return task
