@@ -210,6 +210,14 @@
 - clean code
 - clean code
 
+## [3.4.0-rc.7](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.6...v3.4.0-rc.7) (2026-09-09)
+
+
+### Bug Fixes
+
+* enhance OCR client authentication handling and update tests for availability checks ([ac7f064](https://github.com/IA-Generative/abrege/commit/ac7f06401284d7bd22f2516931feb77a14e1bf09))
+* improve OCR client initialization and error handling for missing backend URL ([b922084](https://github.com/IA-Generative/abrege/commit/b922084df6219013938463dfca96cbfb9289d2f2))
+
 ## [3.4.0-rc.6](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.5...v3.4.0-rc.6) (2026-09-09)
 
 
