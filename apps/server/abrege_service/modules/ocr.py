@@ -5,7 +5,7 @@ import tempfile
 from PIL import Image
 
 from src.clients.ocr_client import OCRClient, sort_reader, OCRResult
-from abrege_service.schemas import IMAGE_CONTENT_TYPES, PDF_CONTENT_TYPES
+from abrege_service.schemas import AUDIO_CONTENT_TYPES, IMAGE_CONTENT_TYPES, PDF_CONTENT_TYPES, VIDEO_CONTENT_TYPES
 from abrege_service.modules.base import BaseService
 from abrege_service.utils.lazy_pdf import LazyPdfImageList
 from src.schemas.task import TaskModel, TaskStatus
@@ -46,7 +46,7 @@ class OCRMIService(BaseService):
     def __init__(
         self,
         url_ocr: str = url,
-        content_type_allowed=IMAGE_CONTENT_TYPES + PDF_CONTENT_TYPES,
+        content_type_allowed=IMAGE_CONTENT_TYPES + PDF_CONTENT_TYPES + AUDIO_CONTENT_TYPES + VIDEO_CONTENT_TYPES,
     ):
         super().__init__(content_type_allowed)
         self.ocr_mi_client = OCRClient(url=url_ocr)
@@ -56,7 +56,7 @@ class OCRMIService(BaseService):
         user_id: str,
         file_path: str,
         task_id: str,
-        batch: list[Image.Image],
+        batch: "list[Image.Image | str]",
         headers: dict = None,
     ) -> list[str]:
         extra_log = {
@@ -64,17 +64,22 @@ class OCRMIService(BaseService):
             "file_path": file_path,
             "parent-task-id": task_id,
         }
-        logger.debug(f"{len(batch)} images", extra=extra_log)
+        logger.debug(f"{len(batch)} items", extra=extra_log)
         task_ids = []
-        for image in batch:
-            with temp_image_file(image) as tmp_path:
-                task_ocr = self.ocr_mi_client.send(file_path=tmp_path)
-                task_ocr_id = task_ocr["id"]
-                task_ids.append(task_ocr_id)
-                logger.debug(
-                    f"Send {len(task_ids)} / {len(batch)} images",
-                    extra=extra_log,
-                )
+        for item in batch:
+            # A PDF page comes in as a rasterized PIL Image and needs writing to a temp
+            # file first; a whole file (image/audio/video) is already a path on disk.
+            if isinstance(item, Image.Image):
+                with temp_image_file(item) as tmp_path:
+                    task_ocr = self.ocr_mi_client.send(file_path=tmp_path)
+            else:
+                task_ocr = self.ocr_mi_client.send(file_path=item)
+            task_ocr_id = task_ocr["id"]
+            task_ids.append(task_ocr_id)
+            logger.debug(
+                f"Send {len(task_ids)} / {len(batch)} items",
+                extra=extra_log,
+            )
         return task_ids
 
     def _delete_ocr_tasks(self, task_ids_ocr: list[str], extra_log: dict) -> None:
@@ -108,9 +113,9 @@ class OCRMIService(BaseService):
                 extras={},
             )
 
-        if task.input.content_type in IMAGE_CONTENT_TYPES:
-            logger.debug("Image file 1 image", extra=extra_log)
-            images = [self.ocr_mi_client.send(user_id=task.user_id, file_path=task.input.file_path)]
+        if task.input.content_type in IMAGE_CONTENT_TYPES + AUDIO_CONTENT_TYPES + VIDEO_CONTENT_TYPES:
+            logger.debug("Single file, 1 job", extra=extra_log)
+            images = [task.input.file_path]
         elif task.input.content_type in PDF_CONTENT_TYPES:
             images = LazyPdfImageList(pdf_path=task.input.file_path)
             logger.debug(f"Pdf file {len(images)} images", extra=extra_log)

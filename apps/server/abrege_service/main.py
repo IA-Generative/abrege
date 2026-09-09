@@ -17,8 +17,6 @@ from langchain_openai import ChatOpenAI
 from abrege_service.utils.file import hash_file, hash_string
 from abrege_service.modules.base import BaseService
 from abrege_service.modules.url import URLService
-from abrege_service.modules.audio import AudioVoskTranscriptionService
-from abrege_service.modules.video import VideoTranscriptionService
 from abrege_service.modules.documents.openoffice import LibreOfficeDocumentToMdService
 from abrege_service.modules.doc import (
     MicrosoftDocumnentToMdService,
@@ -71,8 +69,6 @@ if _sentry_settings.SENTRY_WORKER_DSN:
 
 openai_settings = OpenAISettings()
 cache_service = CacheService()
-audio_service = AudioVoskTranscriptionService(service_ratio_representaion=0.5)
-video_service = VideoTranscriptionService(service_ratio_representaion=0.5)
 microsof_service = MicrosoftDocumnentToMdService()
 microsoft_service_older = MicrosoftOlderDocumentToMdService()
 libre_office_service = LibreOfficeDocumentToMdService()
@@ -88,8 +84,6 @@ else:
     ocr_service = OCRMIService(url_ocr=os.environ.get("OCR_BACKEND_URL"))
 services: List[BaseService] = [
     cache_service,
-    audio_service,
-    video_service,
     microsoft_service_older,
     microsof_service,
     flat_text_service,

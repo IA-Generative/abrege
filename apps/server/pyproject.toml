@@ -57,11 +57,9 @@ abrege-service = [
     "langfuse>=3.3.0",
     "langgraph>=1.2.7",
     "markitdown[docx,pdf,pptx,xlsx]==0.1.6",
-    "moviepy>=2.2.1",
     "odfpy>=1.4.1",
     "openai>=2.44.0",
     "pdf2image>=1.17.0",
-    "pydub>=0.25.1",
     "pymupdf4llm>=1.28.0",
     "pypandoc>=1.17",
     "python-keycloak>=7.1.1",
@@ -70,7 +68,6 @@ abrege-service = [
     "tiktoken>=0.13.0",
     "transformers>=5.12.1",
     "unstructured>=0.23.1",
-    "vosk==0.3.45",
     "sentry-sdk[celery]>=2.64.0",
 ]
 evaluation = [
