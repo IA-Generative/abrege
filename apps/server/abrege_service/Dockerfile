@@ -1,6 +1,6 @@
-FROM python:3.11-slim AS builder
+FROM python:3.11-slim AS deps
 
-# Copier les binaires uv
+# Copier les binaires uv - only needed to build the venv, not to run the app afterwards.
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # Réduction des interactions lors de l'installation
@@ -43,6 +43,36 @@ USER 10001:0
 
 RUN uv sync --no-cache --group abrege-service
 
+
+FROM python:3.11-slim AS builder
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV UV_COMPILE_BYTECODE=1
+
+WORKDIR /app
+
+# Same runtime libs as the deps stage (libmagic/pdf2image/etc need their .so at runtime,
+# not just at install time) - no uv, no build-only packages: this is what actually ships.
+RUN apt-get update -y && \
+    apt-get install -y --no-install-recommends \
+        libmagic1 \
+        libsm6 \
+        libxext6 \
+        poppler-utils \
+        libicu-dev \
+        libatomic1 && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV CACHE_FOLDER=/app/.cache
+
+RUN useradd --uid 10001 --gid 0 --no-create-home --home-dir /app --shell /usr/sbin/nologin appuser \
+    && chown 10001:0 /app \
+    && chmod g=u /app
+
+USER 10001:0
+
+COPY --from=deps --chown=10001:0 /app/.venv /app/.venv
 COPY --chown=10001:0 apps/server/abrege_service /app/abrege_service
 COPY --chown=10001:0 apps/server/src /app/src
 COPY --chown=10001:0 apps/server/config /app/config
@@ -50,11 +80,19 @@ COPY --chown=10001:0 apps/server/config /app/config
 ENV PYTHONPATH=/app
 ENV PATH="/app/.venv/bin:$PATH"
 
-CMD ["uv", "run", "abrege_service/main.py"]
+# Direct venv interpreter, not `uv run`: the latter re-checks the lockfile against the
+# environment on every invocation (network/index access, mutable at runtime) - pointless
+# and fragile for an image whose venv is already locked and baked in at build time.
+CMD ["python", "abrege_service/main.py"]
 
 
-FROM builder AS test
+FROM deps AS test
 WORKDIR /app
 RUN uv sync --no-cache --group test --group abrege-service
+COPY --chown=10001:0 apps/server/abrege_service /app/abrege_service
+COPY --chown=10001:0 apps/server/src /app/src
+COPY --chown=10001:0 apps/server/config /app/config
 COPY --chown=10001:0 apps/server/tests tests
-CMD ["uv", "run", "abrege_service/main.py"]
+ENV PYTHONPATH=/app
+ENV PATH="/app/.venv/bin:$PATH"
+CMD ["python", "abrege_service/main.py"]

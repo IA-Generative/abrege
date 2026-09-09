@@ -130,7 +130,6 @@ jobs:
           OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY || 'sk-test-placeholder' }}
           OPENAI_API_BASE_URL=${{ secrets.OPENAI_API_BASE_URL || secrets.OPENAI_API_BASE || 'http://test-placeholder.invalid/v1' }}
           OPENAI_API_MODEL=${{ vars.OPENAI_API_MODEL }}
-          TOKENIZER_MODEL_NAME=gpt-4
           LLM_GUARD_API_KEY=${{ secrets.LLM_GUARD_API_KEY }}
           LLM_GUARD_URL=http://llm_guard_api:8000
           OCR_API_KEY=${{ secrets.OCR_API_KEY || 'ocr-test-placeholder' }}

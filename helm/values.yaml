@@ -1970,11 +1970,6 @@ worker:
     # ("mistral-small-3.1-24b-instruct-2503") assumes a Mistral-compatible endpoint, not the
     # OpenAI default above; set both together explicitly for a working combination.
     # OPENAI_VLM_MODEL_NAME: ""
-    # Tokenizer used for chunking/token counting (`abrege_service/utils/tokenizer.py`). Fallback
-    # "gpt-4" resolves via tiktoken (offline); any Hugging Face model name here is downloaded from
-    # the Hub instead, which for gated repos (e.g. mistralai/*) additionally needs HF_TOKEN in the
-    # environment (read implicitly by huggingface_hub, not by any abrege settings class).
-    # TOKENIZER_MODEL_NAME: ""
   # A: "A"
   # B:
   #   valueFrom:

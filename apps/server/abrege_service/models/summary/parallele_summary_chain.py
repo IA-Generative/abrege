@@ -26,7 +26,6 @@ from abrege_service.models.base import BaseSummaryService
 from abrege_service.models.summary.qa_chain import extract_leading_page_number
 from abrege_service.utils.text import (
     split_texts_by_token_limit,
-    split_texts_by_word_limit,
     sum_words,
     group_by_max_word_sum,
 )
@@ -149,11 +148,7 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
         max_token = self.max_token
         if self.llm.max_tokens:
             max_token = min(self.max_token, self.llm.max_tokens)
-        try:
-            return split_texts_by_token_limit(texts=current_text, max_tokens=max_token, model=self.llm.model_name)
-        except Exception as e:
-            logger_abrege.warning(f"{self.llm.model_name} - {e}")
-            return split_texts_by_word_limit(current_text, max_words=int(max_token * 0.75))
+        return split_texts_by_token_limit(texts=current_text, max_tokens=max_token)
 
     def dispatch_chunk_extraction(self, task_id: str, chunk_index: int, text: str, language: str, qa_per_chunk: int) -> None:
         """Fire-and-forget a Celery task extracting Q&A/entities/relationships for one chunk.

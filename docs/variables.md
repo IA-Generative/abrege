@@ -21,8 +21,6 @@ besoin d'être en lockstep avec la release.
 | `OPENAI_API_MODEL` | | Modèle LLM texte. Repli sur l'alias générique du hub (`chat`), jamais un nom de moteur concret, sauf en parlant directement à un provider (ex. Ollama local) | `chat` |
 | `OPENAI_VLM_MODEL_NAME` | | Modèle VLM (utilisé quand `OCR_SERVICE_LLM=LLM`). Même logique d'alias générique | `chat` |
 | `MAX_CONTEXT_SIZE` | | Taille max du contexte en tokens | `128000` |
-| `TOKENIZER_MODEL_NAME` | | Modèle HuggingFace pour le comptage de tokens | `gpt-4` |
-| `HF_TOKEN` | | Token HuggingFace, lu implicitement par `huggingface_hub` quand `TOKENIZER_MODEL_NAME` pointe vers un repo gated (ex. `mistralai/*`) — sans quoi le téléchargement du tokenizer échoue silencieusement à la première tâche | — |
 
 ---
 

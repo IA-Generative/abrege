@@ -1,11 +1,5 @@
 import os
 
-# Must run before `transformers` is imported anywhere in the process (directly or via
-# abrege_service.utils.text/tokenizer): its own logging setup reads this env var once, at
-# import time, and otherwise prints plain-text advisories (e.g. "PyTorch was not found")
-# straight to stderr, breaking JSON log pipelines.
-os.environ.setdefault("TRANSFORMERS_VERBOSITY", "error")
-
 from typing import List
 import time
 import json
