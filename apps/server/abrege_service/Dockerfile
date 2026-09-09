@@ -14,11 +14,8 @@ WORKDIR /app
 RUN apt-get update -y && \
     apt-get install -y --no-install-recommends \
         libmagic1 \
-        ffmpeg \
         libsm6 \
         libxext6 \
-        curl \
-        unzip \
         poppler-utils \
         libicu-dev \
         libatomic1 && \
@@ -32,11 +29,6 @@ COPY apps/server/pyproject.toml apps/server/uv.lock ./
 
 RUN uv sync --no-cache --group abrege-service
 
-RUN mkdir -p /app/data/models && \
-    curl -L -o vosk-model-small-fr-0.22.zip https://alphacephei.com/vosk/models/vosk-model-small-fr-0.22.zip && \
-    unzip vosk-model-small-fr-0.22.zip -d /app/data/models && \
-    rm vosk-model-small-fr-0.22.zip
-
 COPY apps/server/abrege_service /app/abrege_service
 COPY apps/server/src /app/src
 COPY apps/server/config /app/config
@@ -47,8 +39,8 @@ ENV PATH="/app/.venv/bin:$PATH"
 # OpenShift's restricted-v2 SCC ignores the image's USER and runs the container as an
 # arbitrary UID from the namespace's range, always with GID 0. Owning the tree by group
 # root and mirroring the owner bits onto the group is what lets one image work both as
-# 10001 on the current cluster and as that arbitrary UID later. Covers /app/data/models
-# (vosk model downloaded above) and /app/.cache (CACHE_FOLDER, written to at runtime).
+# 10001 on the current cluster and as that arbitrary UID later. Covers /app/.cache
+# (CACHE_FOLDER, written to at runtime).
 RUN groupadd --gid 10001 appuser \
     && useradd --uid 10001 --gid appuser --no-create-home --home-dir /app --shell /usr/sbin/nologin appuser \
     && chown -R 10001:0 /app \
