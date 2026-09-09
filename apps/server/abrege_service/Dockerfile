@@ -2,7 +2,6 @@ FROM python:3.11-slim AS builder
 
 # Copier les binaires uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
-COPY --from=pandoc/minimal:2.19.2 /pandoc /usr/bin/pandoc
 
 # Réduction des interactions lors de l'installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -25,30 +24,31 @@ RUN apt-get update -y && \
 ENV UV_CACHE_DIR=/app/.cache
 ENV CACHE_FOLDER=/app/.cache
 
-COPY apps/server/pyproject.toml apps/server/uv.lock ./
+# OpenShift's restricted-v2 SCC ignores the image's USER and runs the container as an
+# arbitrary UID from the namespace's range, always with GID 0. Creating the user with
+# GID 0 as its *primary* group - before installing anything - means every file created
+# from here on (venv, source, cache) already gets group 0 for free: no `chown -R` needed
+# at the end, which used to double the size of every layer it touched (it rewrites every
+# file's metadata, so Docker stores a full extra copy of the tree as a new layer).
+RUN useradd --uid 10001 --gid 0 --no-create-home --home-dir /app --shell /usr/sbin/nologin appuser \
+    && chown 10001:0 /app \
+    && chmod g=u /app
+
+COPY --chown=10001:0 apps/server/pyproject.toml apps/server/uv.lock ./
+
+# Numeric, not `appuser`: with `runAsNonRoot: true` and no explicit `runAsUser`, the
+# kubelet cannot resolve a named user and refuses to start the container. GID 0 so
+# everything this user creates from here on matches the primary group set above.
+USER 10001:0
 
 RUN uv sync --no-cache --group abrege-service
 
-COPY apps/server/abrege_service /app/abrege_service
-COPY apps/server/src /app/src
-COPY apps/server/config /app/config
+COPY --chown=10001:0 apps/server/abrege_service /app/abrege_service
+COPY --chown=10001:0 apps/server/src /app/src
+COPY --chown=10001:0 apps/server/config /app/config
 
 ENV PYTHONPATH=/app
 ENV PATH="/app/.venv/bin:$PATH"
-
-# OpenShift's restricted-v2 SCC ignores the image's USER and runs the container as an
-# arbitrary UID from the namespace's range, always with GID 0. Owning the tree by group
-# root and mirroring the owner bits onto the group is what lets one image work both as
-# 10001 on the current cluster and as that arbitrary UID later. Covers /app/.cache
-# (CACHE_FOLDER, written to at runtime).
-RUN groupadd --gid 10001 appuser \
-    && useradd --uid 10001 --gid appuser --no-create-home --home-dir /app --shell /usr/sbin/nologin appuser \
-    && chown -R 10001:0 /app \
-    && chmod -R g=u /app
-
-# Numeric, not `appuser`: with `runAsNonRoot: true` and no explicit `runAsUser`, the
-# kubelet cannot resolve a named user and refuses to start the container.
-USER 10001:10001
 
 CMD ["uv", "run", "abrege_service/main.py"]
 
