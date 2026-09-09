@@ -1,7 +1,15 @@
 import os
 import pytest
 from abrege_service.modules.ocr import OCRMIService
-from abrege_service.schemas import AUDIO_CONTENT_TYPES, VIDEO_CONTENT_TYPES
+from abrege_service.schemas import (
+    AUDIO_CONTENT_TYPES,
+    LIBRE_OFFICE_CONTENT_TYPES,
+    LIBRE_OFFICE_PRESENTATION_TYPES,
+    MICROSOFT_PRESENTATION_CONTENT_TYPES,
+    MICROSOFT_SPREADSHEET_CONTENT_TYPES,
+    MICROSOFT_WORD_CONTENT_TYPES_DOCX,
+    VIDEO_CONTENT_TYPES,
+)
 from src.schemas.task import TaskModel, TaskStatus, task_table, TaskForm
 from src.schemas.content import DocumentModel
 
@@ -44,18 +52,35 @@ def test_integration_ocr_api(dummy_task: TaskModel):
     assert task.output.percentage == 1
 
 
-def test_content_type_allowed_includes_audio_and_video(monkeypatch: pytest.MonkeyPatch):
+def test_content_type_allowed_includes_audio_video_and_office_docs(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("OCR_API_KEY", "test-key")  # bypass the Keycloak-config check
     service = OCRMIService(url_ocr=url)
 
     assert set(AUDIO_CONTENT_TYPES).issubset(service.content_type_allowed)
     assert set(VIDEO_CONTENT_TYPES).issubset(service.content_type_allowed)
+    assert set(MICROSOFT_WORD_CONTENT_TYPES_DOCX).issubset(service.content_type_allowed)
+    assert set(MICROSOFT_SPREADSHEET_CONTENT_TYPES).issubset(service.content_type_allowed)
+    assert set(MICROSOFT_PRESENTATION_CONTENT_TYPES).issubset(service.content_type_allowed)
+    assert set(LIBRE_OFFICE_CONTENT_TYPES).issubset(service.content_type_allowed)
+    assert set(LIBRE_OFFICE_PRESENTATION_TYPES).issubset(service.content_type_allowed)
 
 
-@pytest.mark.parametrize("content_type,ext", [("audio/wav", ".wav"), ("video/mp4", ".mp4")])
-def test_audio_and_video_are_sent_as_a_single_file_not_rasterized(monkeypatch: pytest.MonkeyPatch, content_type, ext):
-    """Audio/video have no per-page structure: the whole file must be sent to the OCR
-    backend as one job, unlike a PDF which gets rasterized into per-page images first."""
+@pytest.mark.parametrize(
+    "content_type,ext",
+    [
+        ("audio/wav", ".wav"),
+        ("video/mp4", ".mp4"),
+        ("application/vnd.openxmlformats-officedocument.wordprocessingml.document", ".docx"),
+        ("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ".xlsx"),
+        ("application/vnd.openxmlformats-officedocument.presentationml.presentation", ".pptx"),
+        ("application/vnd.oasis.opendocument.text", ".odt"),
+        ("application/vnd.oasis.opendocument.presentation", ".odp"),
+    ],
+)
+def test_single_file_content_types_are_sent_as_a_single_file_not_rasterized(monkeypatch: pytest.MonkeyPatch, content_type, ext):
+    """These formats have no per-page structure of their own: the whole file must be sent
+    to the OCR backend as one job, unlike a PDF which gets rasterized into per-page images
+    first."""
     monkeypatch.setenv("OCR_API_KEY", "test-key")  # bypass the Keycloak-config check
     task = task_table.insert_new_task(
         user_id="1",
