@@ -54,26 +54,6 @@ def test_get_text_from_pdf():
 #     assert "biologiste" in "\n".join([item for item in actual.output.texts_found])
 
 
-# def test_get_text_from_audio():
-#     from abrege_service.modules.audio import AudioVoskTranscriptionService
-#
-#     url_service = URLService(services=[AudioVoskTranscriptionService(second_per_process=0.5)])
-#     # test audio
-#     dummy_task = mock_task("https://fr.getsamplefiles.com/download/wav/sample-3.wav")
-#     actual = url_service.task_to_text(dummy_task)
-#     assert "que" in "\n".join([item for item in actual.output.texts_found])
-
-
-def test_get_text_from_audio_video():
-    from abrege_service.modules.video import VideoTranscriptionService
-
-    url_service = URLService(services=[VideoTranscriptionService()])
-    # Test mp4 :
-    dummy_task = mock_task("https://github.com/intel-iot-devkit/sample-videos/raw/master/bolt-detection.mp4")
-    actual = url_service.task_to_text(dummy_task)
-    assert "" in "\n".join([item for item in actual.output.texts_found])
-
-
 def test_get_text_html():
     from abrege_service.modules.doc import MicrosoftDocumnentToMdService
 

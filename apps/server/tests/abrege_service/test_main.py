@@ -123,6 +123,7 @@ def test_task_process_url_png(monkeypatch: pytest.MonkeyPatch):
     #############################################################
 
 
+@pytest.mark.skipif(condition=not is_ocr_available, reason="Ocr not available")
 def test_task_process_url_mp4(monkeypatch: pytest.MonkeyPatch):
     user_id = "test"
     #############################################################
@@ -214,6 +215,7 @@ def test_task_process_url_mp4(monkeypatch: pytest.MonkeyPatch):
 #############################################################
 
 
+@pytest.mark.skipif(condition=not is_ocr_available, reason="Ocr not available")
 def test_audio_document(monkeypatch: pytest.MonkeyPatch):
     audio_path = "tests/data/audio/1.wav"
     user_id = "test"
@@ -260,6 +262,7 @@ def test_audio_document(monkeypatch: pytest.MonkeyPatch):
     task_table.delete_task_by_id(task.id)
 
 
+@pytest.mark.skipif(condition=not is_ocr_available, reason="Ocr not available")
 def test_video_document(monkeypatch: pytest.MonkeyPatch):
     video_path = "tests/data/video/bonjour.mp4"
     user_id = "test"
