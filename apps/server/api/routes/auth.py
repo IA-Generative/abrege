@@ -5,12 +5,24 @@ from urllib.parse import urlencode
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response, status
 from fastapi.responses import RedirectResponse
+from pydantic import BaseModel
 
 from api.core.security import keycloak_client
 from api.core.security.claims import extract_identity
 from src.utils.logger import logger_abrege as logger
 
 router = APIRouter(tags=["Auth"])
+
+
+class PasswordGrantRequest(BaseModel):
+    username: str
+    password: str
+
+
+class PasswordGrantResponse(BaseModel):
+    access_token: str
+    expires_in: int
+    token_type: str = "Bearer"
 
 _keycloak_openid = keycloak_client.keycloak_openid
 _keycloak_settings = keycloak_client.keycloak_settings
@@ -123,6 +135,39 @@ async def login(request: Request, redirect: str | None = Query(default=None)):
     }
     auth_url = f"{_keycloak_settings.public_url}/realms/{_keycloak_settings.KEYCLOAK_REALM}/protocol/openid-connect/auth?{urlencode(params)}"
     return RedirectResponse(auth_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
+
+
+@router.post("/token", response_model=PasswordGrantResponse)
+async def token(request: Request, body: PasswordGrantRequest):
+    """Non-browser counterpart to `/login`, for the SDK/scripts: exchanges a
+    username/password for a Keycloak access token via the Resource Owner Password
+    Credentials grant, entirely server-side - the client secret never leaves this
+    backend, and the caller never talks to Keycloak directly.
+
+    The returned access token is a genuine Keycloak token, accepted on subsequent API
+    calls as `Authorization: Bearer <token>` by `KeycloakToken.verify()`
+    (`api/core/security/factory.py`), the same way a service token is - it is not
+    persisted as a BFF session here, unlike `/callback`.
+    """
+    client_ip = request.client.host if request.client else "unknown"
+    if not _session_store.check_rate_limit(f"token:{client_ip}", _LOGIN_RATE_LIMIT, _LOGIN_RATE_LIMIT_WINDOW_SECONDS):
+        logger.warning("Rate-limiting /api/auth/token for %s", client_ip)
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="TOO_MANY_REQUESTS")
+
+    try:
+        token_response = _keycloak_openid.token(
+            username=body.username,
+            password=body.password,
+            scope="openid profile email",
+        )
+    except Exception:
+        logger.warning("Password grant failed for %s", client_ip)
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="INVALID_CREDENTIALS")
+
+    return PasswordGrantResponse(
+        access_token=token_response["access_token"],
+        expires_in=token_response["expires_in"],
+    )
 
 
 @router.get("/callback")

@@ -13,7 +13,7 @@
       "clientAuthenticatorType": "client-secret",
       "secret": "dev-only-secret-not-for-prod",
       "standardFlowEnabled": true,
-      "directAccessGrantsEnabled": false,
+      "directAccessGrantsEnabled": true,
       "implicitFlowEnabled": false,
       "serviceAccountsEnabled": false,
       "redirectUris": ["http://localhost:5000/api/auth/callback"],
