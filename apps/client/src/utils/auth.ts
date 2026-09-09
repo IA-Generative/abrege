@@ -27,8 +27,7 @@ export async function logout (): Promise<void> {
     })
     const data = await response.json() as { redirectUrl?: string }
     redirectUrl = data.redirectUrl ?? redirectUrl
-  }
-  catch (error) {
+  } catch (error) {
     console.error('[auth] logout request failed, clearing local state anyway:', error)
   }
   // Redirects through Keycloak's end_session_endpoint (which then redirects back here):
