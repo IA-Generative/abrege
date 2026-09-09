@@ -210,6 +210,21 @@
 - clean code
 - clean code
 
+## [3.4.0-rc.6](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.5...v3.4.0-rc.6) (2026-09-09)
+
+
+### Features
+
+* mettre en place l'authentification BFF avec cookie de session httpOnly ([5b6e417](https://github.com/IA-Generative/abrege/commit/5b6e4179b7e4991b462656d7fecf67a4f10a98cd))
+
+
+### Bug Fixes
+
+* correct formatting in logout function's try-catch block ([62ab6aa](https://github.com/IA-Generative/abrege/commit/62ab6aac6e7e561791cb45e4154ec53e239571fd))
+* delete bypass and update packages ([1252dae](https://github.com/IA-Generative/abrege/commit/1252dae02586168e280787ff97e54dc0ca4b6b04))
+* revert incidental dependency version bumps in pyproject.toml/uv.lock ([0fff6dd](https://github.com/IA-Generative/abrege/commit/0fff6dd4b690882033e2aeaa557c2f2fa2750335))
+* update all Python dependencies except ruff ([75e1b0b](https://github.com/IA-Generative/abrege/commit/75e1b0bd7ffbc917feb5b88b6da5cb569056673b))
+
 ## [3.4.0-rc.5](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.4...v3.4.0-rc.5) (2026-09-08)
 
 
