@@ -1,4 +1,14 @@
-"""Async client for OCR API."""
+"""Sync client for Abrège API.
+
+Example (static API key, e.g. a Keycloak service-account token):
+    >>> with SyncAbregeClient("http://localhost:5000", api_key="...") as client:
+    ...     task = client.summarize_text(Input(text="..."))
+
+Example (Keycloak username/password - real user identity):
+    >>> with SyncAbregeClient("http://localhost:5000") as client:
+    ...     client.login("user@example.com", "hunter2")
+    ...     task = client.summarize_text(Input(text="..."))
+"""
 
 from pathlib import Path
 from typing import Optional, Union
@@ -7,10 +17,11 @@ import httpx
 import json
 
 from abrege_sdk.schemas.health import Health
+from abrege_sdk.schemas.pagination import Pagination
 from abrege_sdk.schemas.task import TaskModel, TaskStatus
 from abrege_sdk.schemas.content import Input
 from abrege_sdk.schemas.parameters import SummaryParameters
-from abrege_sdk.exceptions import AbregeAPIError, AbregeTimeoutError
+from abrege_sdk.exceptions import AbregeAPIError, AbregeAuthenticationError, AbregeTimeoutError
 
 
 class SyncAbregeClient:
@@ -20,6 +31,14 @@ class SyncAbregeClient:
         api_key: Optional[str] = None,
         timeout: float = 30.0,
     ):
+        """
+        Args:
+            base_url: Base URL of the Abrège API (e.g. "http://localhost:5000")
+            api_key: Optional static bearer token for authentication (a Keycloak
+                access/service token - mutually exclusive with `login()`, whichever
+                sets the `Authorization` header last wins)
+            timeout: Default timeout for requests in seconds
+        """
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.timeout = timeout
@@ -57,6 +76,35 @@ class SyncAbregeClient:
                 status_code=e.response.status_code,
                 message=e.response.text,
             )
+
+    def login(self, username: str, password: str) -> None:
+        """Authenticate with a Keycloak username/password, and use the resulting
+        access token for subsequent requests instead of `api_key`.
+
+        Calls this API's own `POST /api/auth/token`, which performs the Keycloak
+        exchange server-side (the client secret never leaves the backend, and the
+        SDK never talks to Keycloak directly). Requires the Keycloak client to have
+        "Direct Access Grants" enabled.
+
+        Args:
+            username: Keycloak username (or email, depending on realm config)
+            password: Keycloak password
+
+        Raises:
+            AbregeAuthenticationError: If the credentials are rejected
+        """
+        try:
+            response = self._request(
+                "POST",
+                "/api/auth/token",
+                json={"username": username, "password": password},
+            )
+        except AbregeAPIError as e:
+            raise AbregeAuthenticationError(f"Login failed: {e.message}")
+
+        self.api_key = response.json()["access_token"]
+        if self._client is not None:
+            self._client.headers["Authorization"] = f"Bearer {self.api_key}"
 
     def get_health(self) -> Health:
         response = self._request("GET", "/api/health")
@@ -109,12 +157,53 @@ class SyncAbregeClient:
         return TaskModel(**response.json())
 
     def get_task(self, task_id: str) -> TaskModel:
-        response = self._request("GET", f"/api/tasks/{task_id}")
+        response = self._request("GET", f"/api/task/{task_id}")
         return TaskModel(**response.json())
 
     def get_task_text(self, task_id: str) -> str:
-        response = self._request("GET", f"/api/text-task/{task_id}")
-        return response.text
+        """Convenience wrapper around `get_task`: there is no dedicated
+        "text" endpoint on this API - the summarized text is a field on the task's
+        own output. Returns an empty string until the task has produced one."""
+        task = self.get_task(task_id)
+        return getattr(task.output, "summary", "") or ""
+
+    def get_user_tasks(self, page: int = 1, page_size: int = 10) -> Pagination[TaskModel]:
+        """Get a page of tasks belonging to the authenticated user.
+
+        Args:
+            page: Page number (1-indexed)
+            page_size: Number of tasks per page
+
+        Returns:
+            Paginated list of TaskModel objects (``total``/``page``/``page_size``/``items``)
+        """
+        response = self._request(
+            "GET",
+            "/api/task/user/",
+            params={"offset": page, "limit": page_size},
+        )
+        return Pagination[TaskModel](**response.json())
+
+    def cancel_task(self, task_id: str) -> TaskModel:
+        """Cancel a queued/running task.
+
+        Args:
+            task_id: Task ID
+
+        Returns:
+            The updated TaskModel (status ``canceled``)
+        """
+        response = self._request("POST", f"/api/task/{task_id}/cancel")
+        return TaskModel(**response.json())
+
+    def delete_task(self, task_id: str) -> None:
+        """Delete a finished task (and its stored result) by ID. The task must not
+        be active - cancel it first.
+
+        Args:
+            task_id: Task ID
+        """
+        self._request("DELETE", f"/api/task/{task_id}")
 
     def wait_for_task(
         self,

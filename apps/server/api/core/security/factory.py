@@ -2,6 +2,7 @@ import logging
 import os
 import warnings
 from api.core.security import keycloak_client
+from api.core.security.claims import extract_identity
 from api.core.security.token import BaseVerifyToken, RequestContext, parse_header_context
 from fastapi import HTTPException, Request, status
 
@@ -34,13 +35,15 @@ class DevToken(BaseVerifyToken):
 
 
 class KeycloakToken(BaseVerifyToken):
-    """Authenticates a request either via a service `Authorization: Bearer <Keycloak token>`
-    header (service-to-service, e.g. the SDK using a client-credentials token), or via the
-    BFF session cookie set by `/api/auth/callback`.
+    """Authenticates a request either via a genuine Keycloak access token sent as
+    `Authorization: Bearer <token>` (e.g. from the SDK's password-grant `login()`, see
+    `SyncAbregeClient.login`/`AsyncAbregeClient.login` - `POST /api/auth/token`), or via
+    the BFF session cookie set by `/api/auth/callback`.
 
-    The browser never holds a Keycloak token: the frontend only ever sends the opaque
-    session cookie, and the actual access/refresh tokens stay server-side in Redis
-    (see `api.core.security.session.SessionStore`).
+    The browser itself never holds a Keycloak token: the frontend only ever sends the
+    opaque session cookie, and the actual access/refresh tokens stay server-side in Redis
+    (see `api.core.security.session.SessionStore`). The bearer-token path exists for
+    non-browser callers (the SDK, scripts) that authenticate as a real Keycloak identity.
     """
 
     def __init__(self):
@@ -48,31 +51,38 @@ class KeycloakToken(BaseVerifyToken):
         self.keycloak_openid = keycloak_client.keycloak_openid
 
     def verify(self, ctx: RequestContext) -> bool:
-        """Vérifie un token Keycloak (Bearer) via introspection et remplit ctx.
+        """Accepts `ctx.token` as a genuine Keycloak access token, populating `ctx`
+        from it on success.
 
         Returns immediately without a network call when there is no bearer token: this is
         also the browser/cookie-session path (see `__call__`), which must not pay a round
-        trip to Keycloak's introspection endpoint on every single request.
+        trip to Keycloak on every single request.
+
+        `userinfo()` rather than `introspect()`: introspection requires the
+        authenticating client to be in the token's `aud`, which a client's own token
+        never is (only ever in `azp`) - this client would reject its own tokens, e.g.
+        the very ones `POST /api/auth/token` just minted with it. userinfo has no such
+        restriction and a rejected/expired token 401s here rather than silently
+        producing an empty-but-valid identity.
         """
         if not ctx.token:
             return False
         try:
-            user_info = self.keycloak_openid.introspect(ctx.token)
-            logging.debug(f"Token info: {user_info.keys()}")
-            if user_info.get("active") is False:
-                return False
-
-            ctx.user_id = user_info.get("sub", "")
-            ctx.email = user_info.get("email", "")
-            ctx.groups = user_info.get("groups", [])
-            ctx.roles = user_info.get("realm_access", {}).get("roles", [])
-            ctx.is_admin = "admin" in ctx.roles or "realm-admin" in ctx.roles
-
-            return True
-
+            claims = self.keycloak_openid.userinfo(ctx.token)
         except Exception:
             logging.exception("Erreur lors de la vérification du token")
             return False
+
+        identity = extract_identity(claims, self.keycloak_openid.client_id)
+        if identity is None:
+            return False
+
+        ctx.user_id = identity["user_id"]
+        ctx.email = identity["email"]
+        ctx.roles = identity["roles"]
+        ctx.groups = identity["groups"]
+        ctx.is_admin = identity["is_admin"]
+        return True
 
     def __call__(self, request: Request) -> RequestContext:
         ctx = parse_header_context(request, is_fastapi=self.is_fastapi)
