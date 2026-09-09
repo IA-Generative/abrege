@@ -17,12 +17,10 @@ from langchain_openai import ChatOpenAI
 from abrege_service.utils.file import hash_file, hash_string
 from abrege_service.modules.base import BaseService
 from abrege_service.modules.url import URLService
-from abrege_service.modules.documents.openoffice import LibreOfficeDocumentToMdService
 from abrege_service.modules.doc import (
-    MicrosoftDocumnentToMdService,
+    HtmlToMdService,
     FlatTextService,
     MicrosoftOlderDocumentToMdService,
-    # PDFTOMD4LLMService,
 )
 from abrege_service.modules.image import ImageFromVLM
 from abrege_service.modules.ocr import OCRMIService
@@ -69,9 +67,8 @@ if _sentry_settings.SENTRY_WORKER_DSN:
 
 openai_settings = OpenAISettings()
 cache_service = CacheService()
-microsof_service = MicrosoftDocumnentToMdService()
+html_service = HtmlToMdService()
 microsoft_service_older = MicrosoftOlderDocumentToMdService()
-libre_office_service = LibreOfficeDocumentToMdService()
 flat_text_service = FlatTextService()
 
 async_client = openai.AsyncOpenAI(
@@ -85,10 +82,9 @@ else:
 services: List[BaseService] = [
     cache_service,
     microsoft_service_older,
-    microsof_service,
+    html_service,
     flat_text_service,
     ocr_service,
-    libre_office_service,
 ]
 url_service = URLService(services=services)
 

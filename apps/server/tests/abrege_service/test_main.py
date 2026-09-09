@@ -354,6 +354,7 @@ def test_pdf_document(monkeypatch: pytest.MonkeyPatch):
     task_table.delete_task_by_id(task.id)
 
 
+@pytest.mark.skipif(condition=not is_ocr_available, reason="Ocr not available")
 def test_docx_document(monkeypatch: pytest.MonkeyPatch):
     video_path = "tests/test_data/Cadrage.docx"
     user_id = "test"
@@ -399,6 +400,7 @@ def test_docx_document(monkeypatch: pytest.MonkeyPatch):
     task_table.delete_task_by_id(task.id)
 
 
+@pytest.mark.skipif(condition=not is_ocr_available, reason="Ocr not available")
 def test_odt_document(monkeypatch: pytest.MonkeyPatch):
     video_path = "tests/test_data/Lettre_de_Camus.odt"
     user_id = "test"

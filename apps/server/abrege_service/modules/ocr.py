@@ -5,7 +5,17 @@ import tempfile
 from PIL import Image
 
 from src.clients.ocr_client import OCRClient, sort_reader, OCRResult
-from abrege_service.schemas import AUDIO_CONTENT_TYPES, IMAGE_CONTENT_TYPES, PDF_CONTENT_TYPES, VIDEO_CONTENT_TYPES
+from abrege_service.schemas import (
+    AUDIO_CONTENT_TYPES,
+    IMAGE_CONTENT_TYPES,
+    LIBRE_OFFICE_CONTENT_TYPES,
+    LIBRE_OFFICE_PRESENTATION_TYPES,
+    MICROSOFT_PRESENTATION_CONTENT_TYPES,
+    MICROSOFT_SPREADSHEET_CONTENT_TYPES,
+    MICROSOFT_WORD_CONTENT_TYPES_DOCX,
+    PDF_CONTENT_TYPES,
+    VIDEO_CONTENT_TYPES,
+)
 from abrege_service.modules.base import BaseService
 from abrege_service.utils.lazy_pdf import LazyPdfImageList
 from src.schemas.task import TaskModel, TaskStatus
@@ -16,6 +26,20 @@ from src.utils.logger import logger_abrege as logger
 url = os.getenv(
     "OCR_BACKEND_URL",
     "https://mirai-ocr-staging.sdid-app.cpin.numerique-interieur.com/1",
+)
+
+# Everything here has no per-page structure of its own (unlike a PDF, which gets
+# rasterized into one image per page): the whole file is sent to the OCR backend as a
+# single job.
+SINGLE_FILE_CONTENT_TYPES = (
+    IMAGE_CONTENT_TYPES
+    + AUDIO_CONTENT_TYPES
+    + VIDEO_CONTENT_TYPES
+    + MICROSOFT_WORD_CONTENT_TYPES_DOCX
+    + MICROSOFT_SPREADSHEET_CONTENT_TYPES
+    + MICROSOFT_PRESENTATION_CONTENT_TYPES
+    + LIBRE_OFFICE_CONTENT_TYPES
+    + LIBRE_OFFICE_PRESENTATION_TYPES
 )
 
 
@@ -46,7 +70,7 @@ class OCRMIService(BaseService):
     def __init__(
         self,
         url_ocr: str = url,
-        content_type_allowed=IMAGE_CONTENT_TYPES + PDF_CONTENT_TYPES + AUDIO_CONTENT_TYPES + VIDEO_CONTENT_TYPES,
+        content_type_allowed=SINGLE_FILE_CONTENT_TYPES + PDF_CONTENT_TYPES,
     ):
         super().__init__(content_type_allowed)
         self.ocr_mi_client = OCRClient(url=url_ocr)
@@ -113,7 +137,7 @@ class OCRMIService(BaseService):
                 extras={},
             )
 
-        if task.input.content_type in IMAGE_CONTENT_TYPES + AUDIO_CONTENT_TYPES + VIDEO_CONTENT_TYPES:
+        if task.input.content_type in SINGLE_FILE_CONTENT_TYPES:
             logger.debug("Single file, 1 job", extra=extra_log)
             images = [task.input.file_path]
         elif task.input.content_type in PDF_CONTENT_TYPES:
