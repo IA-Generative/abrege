@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [3.4.0-rc.9](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.8...v3.4.0-rc.9) (2026-09-10)
+
+
+### Features
+
+* add AppFooter component and integrate app version management ([29ce9e4](https://github.com/IA-Generative/abrege/commit/29ce9e45c578fb0ca3624a7456623066ef6c1385))
+
 ## [3.4.0-rc.8](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.7...v3.4.0-rc.8) (2026-09-09)
 
 
