@@ -12,6 +12,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AppFooter: typeof import('./components/AppFooter.vue')['default']
     AppHeader: typeof import('./components/AppHeader.vue')['default']
     AppToaster: typeof import('./components/AppToaster.vue')['default']
     CopiedTextTab: typeof import('./components/CopiedTextTab.vue')['default']
@@ -25,6 +26,7 @@ declare module 'vue' {
     DsfrCallout: typeof import('@gouvminint/vue-dsfr')['DsfrCallout']
     DsfrDropdown: typeof import('./components/DsfrDropdown.vue')['default']
     DsfrFileUpload: typeof import('@gouvminint/vue-dsfr')['DsfrFileUpload']
+    DsfrFooter: typeof import('@gouvminint/vue-dsfr')['DsfrFooter']
     DsfrHeader: typeof import('@gouvminint/vue-dsfr')['DsfrHeader']
     DsfrInput: typeof import('@gouvminint/vue-dsfr')['DsfrInput']
     DsfrInputGroup: typeof import('@gouvminint/vue-dsfr')['DsfrInputGroup']
@@ -48,6 +50,7 @@ declare module 'vue' {
 
 // For TSX support
 declare global {
+  const AppFooter: typeof import('./components/AppFooter.vue')['default']
   const AppHeader: typeof import('./components/AppHeader.vue')['default']
   const AppToaster: typeof import('./components/AppToaster.vue')['default']
   const CopiedTextTab: typeof import('./components/CopiedTextTab.vue')['default']
@@ -61,6 +64,7 @@ declare global {
   const DsfrCallout: typeof import('@gouvminint/vue-dsfr')['DsfrCallout']
   const DsfrDropdown: typeof import('./components/DsfrDropdown.vue')['default']
   const DsfrFileUpload: typeof import('@gouvminint/vue-dsfr')['DsfrFileUpload']
+  const DsfrFooter: typeof import('@gouvminint/vue-dsfr')['DsfrFooter']
   const DsfrHeader: typeof import('@gouvminint/vue-dsfr')['DsfrHeader']
   const DsfrInput: typeof import('@gouvminint/vue-dsfr')['DsfrInput']
   const DsfrInputGroup: typeof import('@gouvminint/vue-dsfr')['DsfrInputGroup']
