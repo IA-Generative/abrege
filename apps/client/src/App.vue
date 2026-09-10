@@ -14,4 +14,6 @@ const toaster = useToaster()
     :messages="toaster.messages"
     @close-message="toaster.removeMessage($event)"
   />
+
+  <AppFooter />
 </template>
