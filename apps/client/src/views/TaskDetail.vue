@@ -3,9 +3,6 @@ import type { components } from '@/api/types/api.schema'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ResumeResult from '@/components/ResumeResult.vue'
-import TaskChunksModal from '@/components/TaskChunksModal.vue'
-import TaskEntitiesModal from '@/components/TaskEntitiesModal.vue'
-import TaskQAModal from '@/components/TaskQAModal.vue'
 import TopicBadges from '@/components/TopicBadges.vue'
 import { useAbregeStore } from '@/stores/abrege'
 
@@ -23,9 +20,6 @@ const abrege = useAbregeStore()
 const task = ref<TaskModel | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
-const qaModalOpened = ref(false)
-const entitiesModalOpened = ref(false)
-const chunksModalOpened = ref(false)
 
 const taskId = computed(() => route.params.task_id as string)
 
@@ -61,12 +55,6 @@ function startStatusPolling () {
 onBeforeUnmount(() => {
   if (statusPollTimer) { clearInterval(statusPollTimer) }
 })
-
-const detailsButtons = [
-  { label: 'Questions / réponses', icon: 'ri-question-answer-line', onClick: () => { qaModalOpened.value = true } },
-  { label: 'Entités & relations', icon: 'ri-node-tree', onClick: () => { entitiesModalOpened.value = true } },
-  { label: 'Chunks', icon: 'ri-file-list-3-line', onClick: () => { chunksModalOpened.value = true } },
-]
 
 const inputLabel = computed(() => {
   if (!task.value?.input) { return null }
@@ -170,12 +158,6 @@ onMounted(async () => {
           />
         </div>
 
-        <div class="task-detail-actions fr-mb-3w">
-          <DsfrDropdown
-            :main-button="{ label: 'Détails', icon: 'ri-list-check-2', size: 'sm' }"
-            :buttons="detailsButtons"
-          />
-        </div>
         <ResumeResult
           :resume-result="task"
           @re-generate="router.push({ name: 'resume-tab', params: { tab: 'tasks' } })"
@@ -188,26 +170,6 @@ onMounted(async () => {
       >
         <p>Ce résumé n'est pas encore disponible (statut : {{ task.status }}).</p>
       </div>
-
-      <TaskQAModal
-        :opened="qaModalOpened"
-        :task-id="taskId"
-        :status="task.qa_entities_status"
-        @close="qaModalOpened = false"
-      />
-      <TaskEntitiesModal
-        :opened="entitiesModalOpened"
-        :task-id="taskId"
-        :entities-status="task.qa_entities_status"
-        :relationships-status="task.relationships_status"
-        @close="entitiesModalOpened = false"
-      />
-      <TaskChunksModal
-        :opened="chunksModalOpened"
-        :task-id="taskId"
-        :status="task.qa_entities_status"
-        @close="chunksModalOpened = false"
-      />
     </template>
   </div>
 </template>
@@ -232,11 +194,6 @@ onMounted(async () => {
   color: var(--text-mention-grey);
   word-break: break-all;
   margin: 0;
-}
-.task-detail-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
 }
 .task-detail-topics {
   display: flex;
