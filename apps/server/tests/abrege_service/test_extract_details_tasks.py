@@ -327,6 +327,78 @@ def test_compute_global_relationships_marks_relationships_failed_on_error(monkey
     assert task_table.get_task_by_id(task_id).relationships_status == "failed"
 
 
+# ---------------------------------------------------------------------------
+# Optional extraction flags — each of Q&A/entities/chunks can be requested
+# independently, and only what's requested is invoked/saved/dispatched.
+# ---------------------------------------------------------------------------
+
+
+def test_extract_chunk_details_only_runs_and_saves_what_was_requested(monkeypatch: pytest.MonkeyPatch):
+    task_id = _task_id()
+    mock_qa_ainvoke = AsyncMock(return_value=QAOutput(items=[QAItemOutput(question="Q1", answer="A1")]))
+    mock_entity_ainvoke = AsyncMock()
+    mock_chunk_ainvoke = AsyncMock()
+    monkeypatch.setattr(main, "qa_runnable", SimpleNamespace(ainvoke=mock_qa_ainvoke))
+    monkeypatch.setattr(main, "entity_runnable", SimpleNamespace(ainvoke=mock_entity_ainvoke))
+    monkeypatch.setattr(main, "chunk_runnable", SimpleNamespace(ainvoke=mock_chunk_ainvoke))
+    monkeypatch.setattr(redis_client, "decr", lambda key: 1)  # not the last chunk
+    monkeypatch.setattr(internal_api_client, "save_chunk_qa_items", MagicMock())
+    monkeypatch.setattr(internal_api_client, "save_chunk_entities", MagicMock())
+    monkeypatch.setattr(internal_api_client, "save_chunks", MagicMock())
+
+    payload = json.dumps(
+        {
+            "task_id": task_id,
+            "chunk_index": 0,
+            "page": 1,
+            "text": "x",
+            "language": "French",
+            "qa_per_chunk": 3,
+            "extract_qa": True,
+            "extract_entities": False,
+            "extract_chunks": False,
+        }
+    )
+    extract_chunk_details.apply(args=[payload]).get()
+
+    mock_qa_ainvoke.assert_called_once()
+    mock_entity_ainvoke.assert_not_called()
+    mock_chunk_ainvoke.assert_not_called()
+    internal_api_client.save_chunk_qa_items.assert_called_once()
+    internal_api_client.save_chunk_entities.assert_not_called()
+    internal_api_client.save_chunks.assert_not_called()
+
+
+def test_extract_chunk_details_skips_global_relationships_when_entities_not_requested(monkeypatch: pytest.MonkeyPatch):
+    task_id = _task_id()
+    _mock_extraction_runnables(monkeypatch)
+    monkeypatch.setattr(internal_api_client, "save_chunk_qa_items", MagicMock())
+    monkeypatch.setattr(redis_client, "decr", lambda key: 0)  # last chunk
+    monkeypatch.setattr(redis_client, "delete", lambda key: None)
+    sent = []
+    monkeypatch.setattr(celery_app, "send_task", lambda name, args, task_id=None: sent.append(name))
+
+    payload = json.dumps(
+        {
+            "task_id": task_id,
+            "chunk_index": 0,
+            "page": None,
+            "text": "x",
+            "language": "French",
+            "qa_per_chunk": 3,
+            "extract_qa": True,
+            "extract_entities": False,
+            "extract_chunks": False,
+        }
+    )
+    extract_chunk_details.apply(args=[payload]).get()
+
+    assert sent == []
+    updated = task_table.get_task_by_id(task_id)
+    assert updated.qa_entities_status == "completed"
+    assert updated.relationships_status is None
+
+
 def test_extract_task_details_marks_qa_entities_in_progress(monkeypatch: pytest.MonkeyPatch):
     task = task_table.insert_new_task(
         user_id="test",
