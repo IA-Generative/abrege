@@ -210,6 +210,25 @@
 - clean code
 - clean code
 
+## [3.4.0-rc.10](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.9...v3.4.0-rc.10) (2026-09-11)
+
+
+### Features
+
+* add AppFooter component and API routes documentation ([44c2db2](https://github.com/IA-Generative/abrege/commit/44c2db28f8a4db6dca065d814d9945df6112fa67))
+* add refresh token support and auto-refresh mechanism for access tokens ([4d253bf](https://github.com/IA-Generative/abrege/commit/4d253bfdd7f80da2edc56ce12a120be1de2809bf))
+* sdk username/password auth and full task-route coverage ([a90fc27](https://github.com/IA-Generative/abrege/commit/a90fc27098336d3c8b392197e7c9b53ad36dc678)), closes [#388](https://github.com/IA-Generative/abrege/issues/388)
+
+
+### Bug Fixes
+
+* update paths in configuration and documentation for Python SDK ([1334a6f](https://github.com/IA-Generative/abrege/commit/1334a6f050737c35d05a4edfd1a240e8d6521bb1))
+
+
+### Code Refactoring
+
+* code structure for improved readability and maintainability ([6e174ba](https://github.com/IA-Generative/abrege/commit/6e174bae7ea1702bae6346babe9966e70cb8d84f))
+
 ## [3.4.0-rc.9](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.8...v3.4.0-rc.9) (2026-09-10)
 
 
