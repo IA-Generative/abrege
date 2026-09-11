@@ -24,6 +24,9 @@ with SyncAbregeClient("http://localhost:5000") as client:
     task = client.summarize_text(...)
 ```
 
+`login()` also stores a refresh token; subsequent requests renew the access token
+automatically as it nears expiry (`client.refresh_access_token()` to force it early).
+
 The async client (`AsyncAbregeClient`) mirrors the same API with `async`/`await`.
 
 ## Tasks
