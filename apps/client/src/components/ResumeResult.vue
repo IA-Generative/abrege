@@ -40,11 +40,21 @@ const qaModalOpened = ref(false)
 const entitiesModalOpened = ref(false)
 const chunksModalOpened = ref(false)
 
-const detailsButtons = [
-  { label: 'Questions / réponses', icon: 'ri-question-answer-line', onClick: () => { qaModalOpened.value = true } },
-  { label: 'Entités & relations', icon: 'ri-node-tree', onClick: () => { entitiesModalOpened.value = true } },
-  { label: 'Chunks', icon: 'ri-file-list-3-line', onClick: () => { chunksModalOpened.value = true } },
-]
+// Each side extraction is opt-in per task (see ParamsResume.vue) - only offer a button for
+// what was actually requested, rather than one that always opens an empty modal.
+const detailsButtons = computed(() => {
+  const buttons = []
+  if (props.resumeResult.parameters?.extract_qa) {
+    buttons.push({ label: 'Questions / réponses', icon: 'ri-question-answer-line', onClick: () => { qaModalOpened.value = true } })
+  }
+  if (props.resumeResult.parameters?.extract_entities) {
+    buttons.push({ label: 'Entités & relations', icon: 'ri-node-tree', onClick: () => { entitiesModalOpened.value = true } })
+  }
+  if (props.resumeResult.parameters?.extract_chunks) {
+    buttons.push({ label: 'Chunks', icon: 'ri-file-list-3-line', onClick: () => { chunksModalOpened.value = true } })
+  }
+  return buttons
+})
 
 const tags = ref<string[]>([
   'Synthèse',
@@ -145,7 +155,10 @@ onMounted(() => {
         v-html="renderMarkdown(summaryOutput?.summary ?? '')"
       />
 
-      <div class="details-wrapper">
+      <div
+        v-if="detailsButtons.length > 0"
+        class="details-wrapper"
+      >
         <DsfrDropdown
           :main-button="{ label: 'Analyse du document', icon: 'ri-list-check-2', size: 'sm' }"
           :buttons="detailsButtons"
@@ -153,12 +166,14 @@ onMounted(() => {
       </div>
 
       <TaskQAModal
+        v-if="resumeResult.parameters?.extract_qa"
         :opened="qaModalOpened"
         :task-id="resumeResult.id"
         :status="resumeResult.qa_entities_status"
         @close="qaModalOpened = false"
       />
       <TaskEntitiesModal
+        v-if="resumeResult.parameters?.extract_entities"
         :opened="entitiesModalOpened"
         :task-id="resumeResult.id"
         :entities-status="resumeResult.qa_entities_status"
@@ -166,6 +181,7 @@ onMounted(() => {
         @close="entitiesModalOpened = false"
       />
       <TaskChunksModal
+        v-if="resumeResult.parameters?.extract_chunks"
         :opened="chunksModalOpened"
         :task-id="resumeResult.id"
         :status="resumeResult.qa_entities_status"
