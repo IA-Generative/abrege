@@ -16,12 +16,17 @@ from typing import Optional, Union
 import httpx
 import json
 import asyncio
+import time
 from abrege_sdk.schemas.health import Health
 from abrege_sdk.schemas.pagination import Pagination
 from abrege_sdk.schemas.task import TaskModel, TaskStatus
 from abrege_sdk.schemas.content import Input
 from abrege_sdk.schemas.parameters import SummaryParameters
 from abrege_sdk.exceptions import AbregeAPIError, AbregeAuthenticationError, AbregeTimeoutError
+
+# Refresh proactively before actual expiry, so a request never races a token that
+# expires mid-flight - same skew the BFF session store uses server-side.
+_TOKEN_REFRESH_SKEW_SECONDS = 30
 
 
 class AsyncAbregeClient:
@@ -44,6 +49,12 @@ class AsyncAbregeClient:
         self.api_key = api_key
         self.timeout = timeout
         self._client: Optional[httpx.AsyncClient] = None
+
+        # Only populated by `login()`/`refresh_access_token()` - a static `api_key`
+        # has no refresh token to renew, so auto-refresh stays a no-op for it.
+        self.refresh_token: Optional[str] = None
+        self.token_expires_at: Optional[float] = None
+        self.refresh_token_expires_at: Optional[float] = None
 
     async def __aenter__(self):
         """Async context manager entry."""
@@ -72,10 +83,13 @@ class AsyncAbregeClient:
         self,
         method: str,
         endpoint: str,
+        _skip_auth_refresh: bool = False,
         **kwargs,
     ) -> httpx.Response:
         """Make an HTTP request."""
         self._ensure_client()
+        if not _skip_auth_refresh:
+            await self._ensure_fresh_token()
 
         try:
             response = await self._client.request(method, endpoint, **kwargs)
@@ -89,6 +103,28 @@ class AsyncAbregeClient:
                 message=e.response.text,
             )
 
+    def _apply_token_response(self, data: dict) -> None:
+        self.api_key = data["access_token"]
+        self.token_expires_at = time.time() + data["expires_in"]
+        if "refresh_token" in data:
+            self.refresh_token = data["refresh_token"]
+        if "refresh_expires_in" in data:
+            self.refresh_token_expires_at = time.time() + data["refresh_expires_in"]
+        if self._client is not None:
+            self._client.headers["Authorization"] = f"Bearer {self.api_key}"
+
+    async def _ensure_fresh_token(self) -> None:
+        """Proactively refresh the access token before it expires, mirroring how the
+        BFF refreshes browser sessions server-side (`SessionStore.ensure_fresh`). A
+        no-op unless `login()`/`refresh_access_token()` populated `refresh_token`."""
+        if self.refresh_token is None or self.token_expires_at is None:
+            return
+        if time.time() < self.token_expires_at - _TOKEN_REFRESH_SKEW_SECONDS:
+            return
+        if self.refresh_token_expires_at is not None and time.time() >= self.refresh_token_expires_at:
+            raise AbregeAuthenticationError("Refresh token expired - call login() again.")
+        await self.refresh_access_token()
+
     async def login(self, username: str, password: str) -> None:
         """Authenticate with a Keycloak username/password, and use the resulting
         access token for subsequent requests instead of `api_key`.
@@ -97,6 +133,10 @@ class AsyncAbregeClient:
         exchange server-side (the client secret never leaves the backend, and the
         SDK never talks to Keycloak directly). Requires the Keycloak client to have
         "Direct Access Grants" enabled.
+
+        The response also carries a refresh token, which subsequent requests use to
+        transparently renew the access token as it approaches expiry - see
+        `refresh_access_token()`.
 
         Args:
             username: Keycloak username (or email, depending on realm config)
@@ -114,9 +154,33 @@ class AsyncAbregeClient:
         except AbregeAPIError as e:
             raise AbregeAuthenticationError(f"Login failed: {e.message}")
 
-        self.api_key = response.json()["access_token"]
-        if self._client is not None:
-            self._client.headers["Authorization"] = f"Bearer {self.api_key}"
+        self._apply_token_response(response.json())
+
+    async def refresh_access_token(self) -> None:
+        """Exchange the current `refresh_token` for a fresh access token, via this
+        API's `POST /api/auth/refresh` (same server-side trust boundary as `login()`).
+
+        Called automatically before a request if the access token is near expiry -
+        call it directly only to force an early renewal.
+
+        Raises:
+            AbregeAuthenticationError: If there is no refresh token to use, or the
+                server rejects it (e.g. expired/revoked).
+        """
+        if self.refresh_token is None:
+            raise AbregeAuthenticationError("No refresh token available - call login() first.")
+
+        try:
+            response = await self._request(
+                "POST",
+                "/api/auth/refresh",
+                json={"refresh_token": self.refresh_token},
+                _skip_auth_refresh=True,
+            )
+        except AbregeAPIError as e:
+            raise AbregeAuthenticationError(f"Token refresh failed: {e.message}")
+
+        self._apply_token_response(response.json())
 
     async def get_health(self) -> Health:
         response = await self._request("GET", "/api/health")
