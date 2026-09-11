@@ -33,7 +33,7 @@ par `/api/auth`. Sauf mention contraire, une route protégée attend un `Authori
 }
 ```
 
-Voir le [SDK Python](../sdk/README.md) : `login()` gère ce cycle automatiquement (rafraîchissement
+Voir le [SDK Python](../sdk/python/README.md) : `login()` gère ce cycle automatiquement (rafraîchissement
 transparent de l'access token avant expiration).
 
 ---

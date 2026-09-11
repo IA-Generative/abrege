@@ -29,12 +29,12 @@
         },
         {
           "type": "toml",
-          "path": "sdk/pyproject.toml",
+          "path": "sdk/python/pyproject.toml",
           "jsonpath": "project.version"
         },
         {
           "type": "toml",
-          "path": "sdk/uv.lock",
+          "path": "sdk/python/uv.lock",
           "jsonpath": "$.package[?(@.name.value=='abrege-sdk')].version"
         }
       ],

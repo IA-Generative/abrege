@@ -135,7 +135,7 @@ Runs comprehensive end-to-end tests via the test runner.
 make test-sdk-python
 ```
 
-Tests the [Python SDK](sdk/README.md) client.
+Tests the [Python SDK](sdk/python/README.md) client.
 
 ### 🧹 Development Tools
 
@@ -178,7 +178,7 @@ For a summary of the API routes, see [docs/routes.md](docs/routes.md) — the in
 ### Python SDK
 
 A Python client for the API - sync (`SyncAbregeClient`) and async (`AsyncAbregeClient`) - lives
-in [sdk/](sdk/README.md), with either a static API key or Keycloak username/password login
+in [sdk/python/](sdk/python/README.md), with either a static API key or Keycloak username/password login
 (automatic access-token refresh included).
 
 ---
