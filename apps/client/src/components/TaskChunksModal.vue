@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useAbregeStore } from '@/stores/abrege'
 
 const props = defineProps<{
@@ -14,10 +14,22 @@ const emit = defineEmits<{
 
 const abrege = useAbregeStore()
 
+// Loaded in one page (rather than the store's default 20/page) so the search box below
+// searches the whole task's chunks, not just whatever page happens to be on screen.
+const PAGE_SIZE = 200
+
+const searchQuery = ref('')
+
 const headers = ['Page', 'Chunk', 'Position', 'Texte', 'Modèle']
 
+const filteredChunks = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase()
+  if (!q) { return abrege.chunks }
+  return abrege.chunks.filter(c => c.text.toLowerCase().includes(q))
+})
+
 const rows = computed(() =>
-  abrege.chunks.map(c => [
+  filteredChunks.value.map(c => [
     c.page != null ? String(c.page) : '—',
     String(c.chunk_index),
     String(c.position),
@@ -29,7 +41,7 @@ const rows = computed(() =>
 const pageCount = computed(() => Math.max(1, Math.ceil(abrege.chunksTotal / abrege.chunksPageSize)))
 
 function loadPage (page: number) {
-  abrege.fetchChunks(props.taskId, page, abrege.chunksPageSize)
+  abrege.fetchChunks(props.taskId, page, PAGE_SIZE)
 }
 
 function close () {
@@ -39,7 +51,10 @@ function close () {
 watch(
   () => props.opened,
   (opened) => {
-    if (opened) { loadPage(1) }
+    if (opened) {
+      searchQuery.value = ''
+      loadPage(1)
+    }
   },
 )
 </script>
@@ -79,7 +94,21 @@ watch(
     </div>
 
     <template v-else>
+      <DsfrSearchBar
+        v-model="searchQuery"
+        label="Rechercher dans les chunks"
+        placeholder="Rechercher un texte…"
+        class="fr-mt-2w"
+      />
+
+      <p
+        v-if="rows.length === 0"
+        class="fr-text--sm fr-text-mention--grey fr-mt-2w"
+      >
+        Aucun résultat pour « {{ searchQuery }} ».
+      </p>
       <DsfrTable
+        v-else
         title="Chunks sémantiques"
         :headers="headers"
         :rows="rows"

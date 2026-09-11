@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useAbregeStore } from '@/stores/abrege'
 
 const props = defineProps<{
@@ -14,10 +14,26 @@ const emit = defineEmits<{
 
 const abrege = useAbregeStore()
 
+// Loaded in one page (rather than the store's default 20/page) so the search box below
+// searches the whole task's Q&A, not just whatever page happens to be on screen.
+const PAGE_SIZE = 200
+
+const searchQuery = ref('')
+
 const headers = ['Question', 'Réponse', 'Page', 'Chunk', 'Texte source', 'Modèle']
 
+const filteredItems = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase()
+  if (!q) { return abrege.qaItems }
+  return abrege.qaItems.filter(item =>
+    item.question.toLowerCase().includes(q)
+    || item.answer.toLowerCase().includes(q)
+    || item.source_text.toLowerCase().includes(q),
+  )
+})
+
 const rows = computed(() =>
-  abrege.qaItems.map(item => [
+  filteredItems.value.map(item => [
     item.question,
     item.answer,
     item.page != null ? String(item.page) : '—',
@@ -30,7 +46,7 @@ const rows = computed(() =>
 const pageCount = computed(() => Math.max(1, Math.ceil(abrege.qaItemsTotal / abrege.qaItemsPageSize)))
 
 function loadPage (page: number) {
-  abrege.fetchQAItems(props.taskId, page, abrege.qaItemsPageSize)
+  abrege.fetchQAItems(props.taskId, page, PAGE_SIZE)
 }
 
 function close () {
@@ -40,7 +56,10 @@ function close () {
 watch(
   () => props.opened,
   (opened) => {
-    if (opened) { loadPage(1) }
+    if (opened) {
+      searchQuery.value = ''
+      loadPage(1)
+    }
   },
 )
 </script>
@@ -80,7 +99,21 @@ watch(
     </div>
 
     <template v-else>
+      <DsfrSearchBar
+        v-model="searchQuery"
+        label="Rechercher dans les questions/réponses"
+        placeholder="Rechercher une question, une réponse, un texte source…"
+        class="fr-mt-2w"
+      />
+
+      <p
+        v-if="rows.length === 0"
+        class="fr-text--sm fr-text-mention--grey fr-mt-2w"
+      >
+        Aucun résultat pour « {{ searchQuery }} ».
+      </p>
       <DsfrTable
+        v-else
         title="Questions et réponses extraites"
         :headers="headers"
         :rows="rows"
