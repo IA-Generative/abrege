@@ -210,6 +210,18 @@
 - clean code
 - clean code
 
+## [3.4.0-rc.13](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.12...v3.4.0-rc.13) (2026-09-11)
+
+
+### Features
+
+* **sdk:** expose Q&A/entities/relationships/topics/chunks retrieval ([ca65466](https://github.com/IA-Generative/abrege/commit/ca654667488f85d6d52cfd642483475d5f551fca))
+
+
+### Bug Fixes
+
+* **sdk:** add the optional extraction parameters to SummaryParameters ([293131b](https://github.com/IA-Generative/abrege/commit/293131bcb316829fa239ef69ceed5be4fa2ddd6c))
+
 ## [3.4.0-rc.12](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.11...v3.4.0-rc.12) (2026-09-11)
 
 
