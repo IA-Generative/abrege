@@ -111,6 +111,27 @@ client.cancel_task(task.id)
 client.delete_task(task.id)
 ```
 
+### Optional side extractions
+
+Beyond the summary, four extra extractions can each be requested independently - all `False`
+by default, so a summary costs nothing extra unless asked for:
+
+```python
+task = client.summarize_text(Input(
+    content=TextContent(text="..."),
+    parameters=SummaryParameters(
+        extract_qa=True,        # question/answer pairs grounded in the source text
+        extract_entities=True,  # entities and their relationships
+        extract_chunks=True,    # the semantic sub-chunks the summary was built from
+        classify_topics=True,   # free-form topic classification of the final summary
+    ),
+))
+```
+
+Each runs decoupled from the summary itself (see
+[docs/document-insights.md](../../docs/document-insights.md)), and only what was requested is
+persisted - `task.parameters` on the response tells you which.
+
 ## Error handling
 
 All SDK-raised errors subclass `AbregeSDKError` (`abrege_sdk.exceptions`):

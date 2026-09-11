@@ -28,15 +28,34 @@ Each of these can be pinned to its own model, independently of the summary's —
 `CHUNK_MODEL_NAME` or `TOPIC_MODEL_NAME`. Left unset (the default), a feature simply reuses
 the summary's own model (`OPENAI_API_MODEL`).
 
+## Opt-in per task
+
+None of this runs unless asked for. Each feature has its own boolean on `SummaryParameters`,
+all `false` by default — a summary costs nothing extra unless a caller explicitly requests it:
+
+| Parameter | Feature |
+|---|---|
+| `extract_qa` (+ `qa_per_chunk`, default `3`) | Q&A |
+| `extract_entities` | Entities & relationships |
+| `extract_chunks` | Chunks |
+| `classify_topics` | Topics |
+
+The frontend's "Plus de paramètres" panel exposes all four as toggles (off by default) when
+creating a task. Only what was requested for a given task shows up on its detail page — see
+below.
+
 ## Where to find it
 
-On the task detail page, once a summary is `completed`:
+On the task detail page, once a summary is `completed`, only the features that were requested
+for that task (see above) appear at all:
 
-- **Topics** are shown directly as badges — no click needed. Only the first few are shown,
-  with a `+N autres` toggle for the rest, and a status badge next to them so you can tell
-  classification is done (or still running) without opening anything.
-- **Q&A**, **Entities & relations** and **Chunks** are one click away, grouped behind a
-  single **Détails** button so the page stays uncluttered.
+- **Topics**, if `classify_topics` was set, are shown directly as badges — no click needed.
+  Only the first few are shown, with a `+N autres` toggle for the rest, and a status badge
+  next to them so you can tell classification is done (or still running) without opening
+  anything. Not requested → no topics section, no badge.
+- **Q&A**, **Entities & relations** and **Chunks**, for whichever were requested, are one
+  click away behind a single **Analyse du document** button — it only lists the button(s) for
+  what was actually extracted, and disappears entirely if none of the three were requested.
 
 | Topics (collapsed) | Topics (expanded) | Details menu |
 |:---:|:---:|:---:|
@@ -72,9 +91,9 @@ running. Every task carries three independent status columns, alongside its own 
 
 | Column | Values | Set when |
 |---|---|---|
-| `qa_entities_status` | `in_progress` → `completed` \| `failed` | Q&A, entities and chunks are extracted together, per chunk; the last chunk to finish flips this to `completed` |
-| `relationships_status` | `pending` → `completed` \| `failed` | the global relationships pass, which only starts once `qa_entities_status` is `completed` |
-| `topics_status` | `pending` → `completed` \| `failed` | topic classification, fired right after the summary is ready |
+| `qa_entities_status` | `in_progress` → `completed` \| `failed` | whichever of Q&A/entities/chunks was requested (`extract_qa`/`extract_entities`/`extract_chunks`), dispatched together per chunk; the last chunk to finish flips this to `completed`. Stays `null` if none of the three were requested |
+| `relationships_status` | `pending` → `completed` \| `failed` | the global relationships pass, only dispatched if `extract_entities` was requested, once `qa_entities_status` is `completed` |
+| `topics_status` | `pending` → `completed` \| `failed` | topic classification, only dispatched if `classify_topics` was requested, fired right after the summary is ready |
 
 Each column is written from exactly one place in the pipeline, so concurrent chunk workers
 never race on the same field. These statuses are part of the regular `GET /task/{id}`
@@ -88,11 +107,14 @@ lightly (every 3s) while anything is still pending, so the indicator updates on 
 
 ```
 worker.tasks.abrege (main summarize task)
-  └─ map step, per chunk ──► worker.tasks.extract_chunk_details  (Q&A + entities + chunks, in parallel)
-                                   └─ last chunk done ──► worker.tasks.compute_global_relationships
-  └─ once summary is ready ──► worker.tasks.classify_topics
+  └─ map step, per chunk ──► worker.tasks.extract_chunk_details  (whichever of Q&A/entities/chunks was requested, in parallel)
+                                   └─ last chunk done, if extract_entities ──► worker.tasks.compute_global_relationships
+  └─ once summary is ready, if classify_topics ──► worker.tasks.classify_topics
 ```
 
+- Not dispatched at all if none of `extract_qa`/`extract_entities`/`extract_chunks` were
+  requested; within a dispatched `extract_chunk_details`, only the requested LLM calls run
+  and only the corresponding rows are saved.
 - Every extraction task is dispatched with `celery_app.send_task(...)` — a genuinely
   separate message, picked up by any available worker, as opposed to `asyncio.gather`
   which only parallelizes work *inside* the task that's already running.
@@ -116,8 +138,9 @@ list, and scoped to the task's owner:
 | Topics | `GET /topics`, `GET /topics/{id}` | `POST /topics`, `DELETE /topics/{id}` |
 | Chunks | `GET /chunks`, `GET /chunks/{id}` | `POST /chunks`, `DELETE /chunks/{id}` |
 
-A task that was summarized before this feature existed (or with `extract_qa=False`) can
-still get Q&A/entities/chunks after the fact:
+A task summarized without `extract_qa`/`extract_entities`/`extract_chunks` (the default, or an
+explicit choice) can still get Q&A/entities/chunks after the fact - this re-triggers all three
+regardless of what was originally requested:
 
 ```
 POST /task/{id}/extract-details
