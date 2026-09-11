@@ -130,7 +130,27 @@ task = client.summarize_text(Input(
 
 Each runs decoupled from the summary itself (see
 [docs/document-insights.md](../../docs/document-insights.md)), and only what was requested is
-persisted - `task.parameters` on the response tells you which.
+persisted - `task.parameters` on the response tells you which. Each has its own status on the
+task (`None` if not requested): `task.qa_entities_status`, `task.relationships_status`,
+`task.topics_status`.
+
+Once extraction is `completed`, read the results back (paginated, `offset`/`limit`-style
+`page`/`page_size` args - same convention as `get_user_tasks`):
+
+```python
+qa_page = client.get_task_qa_items(task.id, page=1, page_size=20)
+entities_page = client.get_task_entities(task.id)
+relationships_page = client.get_task_relationships(task.id)   # chunk_index=None -> cross-chunk
+topics_page = client.get_task_topics(task.id)                 # sorted by confidence, desc
+chunks_page = client.get_task_chunks(task.id)
+
+qa_item = client.get_task_qa_item(task.id, qa_page.items[0].id)
+client.delete_task_qa_item(task.id, qa_page.items[0].id)      # same delete_task_* per resource
+
+# A task summarized without extract_qa/extract_entities/extract_chunks can still get them
+# after the fact (re-triggers all three, regardless of what was originally requested):
+client.extract_task_details(task.id)
+```
 
 ## Error handling
 
