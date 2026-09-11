@@ -1,59 +1,31 @@
-import type { AxiosError, AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
+import type { AxiosError, AxiosInstance } from 'axios'
 import axios from 'axios'
 
-import { getKeycloak } from '@/utils/keycloak'
-
-interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
-  _retry?: boolean
-}
+import { login } from '@/utils/auth'
 
 function createHttpClient (baseURL: string): AxiosInstance {
   const httpClient = axios.create({
     baseURL,
-    withCredentials: false,
+    // BFF : le navigateur ne détient aucun jeton, seulement le cookie de session
+    // `httpOnly` posé par `/api/auth/callback`. Il doit être envoyé sur chaque appel.
+    withCredentials: true,
     headers: {
       Accept: 'application/json',
     },
   })
 
-  // Intercepteur pour ajouter le token à chaque requête
-  httpClient.interceptors.request.use(
-    (config: CustomAxiosRequestConfig): CustomAxiosRequestConfig => {
-      const keycloak = getKeycloak()
-      if (keycloak.authenticated && keycloak.token) {
-        if (config.headers && typeof config.headers.set === 'function') {
-          config.headers.set('Authorization', `${keycloak.tokenParsed?.typ || 'Bearer'} ${keycloak.token}`)
-        }
-      }
-      return config
-    },
-    (error: AxiosError) => Promise.reject(error)
-  )
-
-  // Intercepteur pour gérer les erreurs 401 (token expiré)
+  // Le rafraîchissement du token se fait désormais côté backend (SessionStore), de façon
+  // transparente. Un 401 ici signifie que la session backend elle-même n'est plus valide
+  // (jamais authentifié, ou refresh token Keycloak expiré) : il n'y a rien à rejouer,
+  // seule une nouvelle connexion peut résoudre la situation.
   httpClient.interceptors.response.use(
-    (response: AxiosResponse) => response,
-    async (error: AxiosError) => {
-      const originalRequest = error.config as CustomAxiosRequestConfig
-      if (originalRequest && error.response?.status === 401 && !originalRequest._retry) {
-        originalRequest._retry = true
-        const keycloak = getKeycloak()
-        try {
-          const refreshed = await keycloak.updateToken(30)
-          if (refreshed) {
-            if (originalRequest.headers && typeof originalRequest.headers.set === 'function') {
-              originalRequest.headers.set('Authorization', `Bearer ${keycloak.token}`)
-            }
-            return httpClient(originalRequest)
-          }
-        }
-        catch (refreshError) {
-          console.error('Echec du rafraîchissement du token :', refreshError)
-          await keycloak.login()
-        }
+    response => response,
+    (error: AxiosError) => {
+      if (error.response?.status === 401) {
+        login()
       }
       return Promise.reject(error)
-    }
+    },
   )
 
   return httpClient

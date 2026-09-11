@@ -49,7 +49,7 @@ lint: ## Lint le code du dépôt
 		uv run ruff check .
 
 lint-sdk: ## Lint le code du dépôt
-	cd sdk/ && \
+	cd sdk/python && \
 		uv run ruff check --exclude '**/*.ipynb' . && \
 		uv run ruff check .
 
@@ -131,6 +131,6 @@ test-abrege-service: ## Lance les tests du service abrege dans un environnement 
 	docker compose -f docker-compose.test.yaml down -v
 
 
-test-sdk-python:
-	cd sdk && \
+test-sdk-python: install-uv
+	cd sdk/python && \
 		uv run pytest -s --cov=./abrege_sdk --cov-report=term-missing tests/ -ra -v --maxfail=0

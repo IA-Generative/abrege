@@ -1,0 +1,43 @@
+{
+  "realm": "mirai",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "clients": [
+    {
+      "clientId": "abrege",
+      "name": "Abrège backend (BFF)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "dev-only-secret-not-for-prod",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["http://localhost:5000/api/auth/callback"],
+      "webOrigins": ["http://localhost:8082"],
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:8082"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "test@gouv.fr",
+      "email": "test@gouv.fr",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Test",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "qJ\"jZ>>_:B5u$BG",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}

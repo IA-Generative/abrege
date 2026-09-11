@@ -1,0 +1,14 @@
+{{- if .Values.enabled }}
+{{- if and .Values.worker.kedaAutoscaler.enabled .Values.worker.kedaAutoscaler.redis.secretRef .Values.worker.kedaAutoscaler.redis.secretKey }}
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: {{ .Values.worker.kedaAutoscaler.redis.authenticationRef | default "abrege-worker" }}
+  labels: {{- (include "helper.labels" (dict "root" . "componentName" "worker")) | nindent 4 }}
+spec:
+  secretTargetRef:
+  - parameter: "password"
+    name: {{ tpl .Values.worker.kedaAutoscaler.redis.secretRef . | quote }}
+    key: {{ .Values.worker.kedaAutoscaler.redis.secretKey | quote }}
+{{- end }}
+{{- end }}

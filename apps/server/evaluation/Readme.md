@@ -94,7 +94,7 @@ BERTScore évalue la similarité entre un résumé généré et une référence 
 ```python
 from rouge_score import rouge_scorer
 
-scorer = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL'], use_stemmer=True)
+scorer = rouge_scorer.RougeScorer(["rouge1", "rouge2", "rougeL"], use_stemmer=True)
 scores = scorer.score("Le chat est sur le tapis.", "Un chat repose sur le tapis.")
 print(scores)
 ```

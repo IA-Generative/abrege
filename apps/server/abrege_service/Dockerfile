@@ -1,8 +1,7 @@
-FROM python:3.11-slim AS builder
+FROM python:3.11-slim AS deps
 
-# Copier les binaires uv
+# Copier les binaires uv - only needed to build the venv, not to run the app afterwards.
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
-COPY --from=pandoc/minimal:2.19.2 /pandoc /usr/bin/pandoc
 
 # Réduction des interactions lors de l'installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -14,11 +13,8 @@ WORKDIR /app
 RUN apt-get update -y && \
     apt-get install -y --no-install-recommends \
         libmagic1 \
-        ffmpeg \
         libsm6 \
         libxext6 \
-        curl \
-        unzip \
         poppler-utils \
         libicu-dev \
         libatomic1 && \
@@ -28,27 +24,75 @@ RUN apt-get update -y && \
 ENV UV_CACHE_DIR=/app/.cache
 ENV CACHE_FOLDER=/app/.cache
 
-COPY apps/server/pyproject.toml apps/server/uv.lock ./
+# OpenShift's restricted-v2 SCC ignores the image's USER and runs the container as an
+# arbitrary UID from the namespace's range, always with GID 0. Creating the user with
+# GID 0 as its *primary* group - before installing anything - means every file created
+# from here on (venv, source, cache) already gets group 0 for free: no `chown -R` needed
+# at the end, which used to double the size of every layer it touched (it rewrites every
+# file's metadata, so Docker stores a full extra copy of the tree as a new layer).
+RUN useradd --uid 10001 --gid 0 --no-create-home --home-dir /app --shell /usr/sbin/nologin appuser \
+    && chown 10001:0 /app \
+    && chmod g=u /app
+
+COPY --chown=10001:0 apps/server/pyproject.toml apps/server/uv.lock ./
+
+# Numeric, not `appuser`: with `runAsNonRoot: true` and no explicit `runAsUser`, the
+# kubelet cannot resolve a named user and refuses to start the container. GID 0 so
+# everything this user creates from here on matches the primary group set above.
+USER 10001:0
 
 RUN uv sync --no-cache --group abrege-service
 
-RUN mkdir -p /app/data/models && \
-    curl -L -o vosk-model-small-fr-0.22.zip https://alphacephei.com/vosk/models/vosk-model-small-fr-0.22.zip && \
-    unzip vosk-model-small-fr-0.22.zip -d /app/data/models && \
-    rm vosk-model-small-fr-0.22.zip
 
-COPY apps/server/abrege_service /app/abrege_service
-COPY apps/server/src /app/src
-COPY apps/server/config /app/config
+FROM python:3.11-slim AS builder
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV UV_COMPILE_BYTECODE=1
+
+WORKDIR /app
+
+# Same runtime libs as the deps stage (libmagic/pdf2image/etc need their .so at runtime,
+# not just at install time) - no uv, no build-only packages: this is what actually ships.
+RUN apt-get update -y && \
+    apt-get install -y --no-install-recommends \
+        libmagic1 \
+        libsm6 \
+        libxext6 \
+        poppler-utils \
+        libicu-dev \
+        libatomic1 && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV CACHE_FOLDER=/app/.cache
+
+RUN useradd --uid 10001 --gid 0 --no-create-home --home-dir /app --shell /usr/sbin/nologin appuser \
+    && chown 10001:0 /app \
+    && chmod g=u /app
+
+USER 10001:0
+
+COPY --from=deps --chown=10001:0 /app/.venv /app/.venv
+COPY --chown=10001:0 apps/server/abrege_service /app/abrege_service
+COPY --chown=10001:0 apps/server/src /app/src
+COPY --chown=10001:0 apps/server/config /app/config
 
 ENV PYTHONPATH=/app
 ENV PATH="/app/.venv/bin:$PATH"
 
-CMD ["uv", "run", "abrege_service/main.py"]
+# Direct venv interpreter, not `uv run`: the latter re-checks the lockfile against the
+# environment on every invocation (network/index access, mutable at runtime) - pointless
+# and fragile for an image whose venv is already locked and baked in at build time.
+CMD ["python", "abrege_service/main.py"]
 
 
-FROM builder AS test
+FROM deps AS test
 WORKDIR /app
 RUN uv sync --no-cache --group test --group abrege-service
-COPY apps/server/tests tests
-CMD ["uv", "run", "abrege_service/main.py"]
+COPY --chown=10001:0 apps/server/abrege_service /app/abrege_service
+COPY --chown=10001:0 apps/server/src /app/src
+COPY --chown=10001:0 apps/server/config /app/config
+COPY --chown=10001:0 apps/server/tests tests
+ENV PYTHONPATH=/app
+ENV PATH="/app/.venv/bin:$PATH"
+CMD ["python", "abrege_service/main.py"]

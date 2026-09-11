@@ -1,12 +1,13 @@
-name: CI/CD Workflow
+name: Unit Tests
 
 on:
   workflow_call:
     inputs:
       PYTHON_VERSION:
         description: Python version used to run tests
-        required: true
+        required: false
         type: string
+        default: "3.13"
       run-backend:
         description: Run backend tests
         required: false
@@ -17,13 +18,18 @@ on:
         required: false
         type: boolean
         default: true
-  push:
-    branches:
-      - "**"
+  workflow_dispatch:
+    inputs:
+      PYTHON_VERSION:
+        description: Python version used to run tests
+        required: false
+        type: string
+        default: "3.13"
 
 jobs:
   run-test-src:
-    runs-on: actions-runner-controller
+    name: Server (src)
+    runs-on: ubuntu-latest
     if: inputs.run-backend == true || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
@@ -31,19 +37,27 @@ jobs:
       COMPOSE_PROJECT_NAME: abrege-${{ github.run_id }}-${{ github.run_attempt }}-src
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
         with:
-          python-version: 3.x
+          python-version: ${{ inputs.PYTHON_VERSION }}
 
       - name: Install dependencies and run tests
         run: |
           make test-src
 
+      - name: Tear down containers
+        if: ${{ always() }}
+        # `make test-src` already calls `make down-services` on success; this catches
+        # the failure path, so a failed run still exits with the compose stack
+        # stopped instead of leaking it to the runner's teardown.
+        run: make down-services
+
   run-test-abrege-api:
-    runs-on: actions-runner-controller
+    name: Server (abrege-api)
+    runs-on: ubuntu-latest
     if: inputs.run-backend == true || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
@@ -51,36 +65,43 @@ jobs:
       COMPOSE_PROJECT_NAME: abrege-${{ github.run_id }}-${{ github.run_attempt }}-api
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
         with:
-          python-version: 3.x
+          python-version: ${{ inputs.PYTHON_VERSION }}
 
       - name: Install dependencies and run abrege api tests
         run: |
           make test-abrege-api
+
+      - name: Tear down containers
+        if: ${{ always() }}
+        run: make down-services
+
   run-test-sdk:
-    runs-on: actions-runner-controller
+    name: SDK
+    runs-on: ubuntu-latest
     if: inputs.run-sdk == true || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
         with:
-          python-version: 3.x
+          python-version: ${{ inputs.PYTHON_VERSION }}
 
       - name: Install dependencies and run abrege sdk tests
         run: |
           make test-sdk-python
 
   run-test-abrege-service:
-    runs-on: actions-runner-controller
+    name: Worker (abrege-service)
+    runs-on: ubuntu-latest
     if: inputs.run-backend == true || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
@@ -88,12 +109,12 @@ jobs:
       COMPOSE_PROJECT_NAME: abrege-${{ github.run_id }}-${{ github.run_attempt }}-service
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
         with:
-          python-version: 3.x
+          python-version: ${{ inputs.PYTHON_VERSION }}
 
       - name: Générer le .env
         run: |
@@ -107,11 +128,13 @@ jobs:
           AWS_DEFAULT_REGION=us-east-1
           DATABASE_URL=postgresql://postgres:secret@db:5432/example_db
           OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY || 'sk-test-placeholder' }}
-          OPENAI_API_BASE=${{ secrets.OPENAI_API_BASE || 'https://api.openai.com/v1' }}
+          OPENAI_API_BASE_URL=${{ secrets.OPENAI_API_BASE_URL || secrets.OPENAI_API_BASE || 'http://test-placeholder.invalid/v1' }}
           OPENAI_API_MODEL=${{ vars.OPENAI_API_MODEL }}
-          TOKENIZER_MODEL_NAME=gpt-4
           LLM_GUARD_API_KEY=${{ secrets.LLM_GUARD_API_KEY }}
           LLM_GUARD_URL=http://llm_guard_api:8000
+          OCR_API_KEY=${{ secrets.OCR_API_KEY || 'ocr-test-placeholder' }}
+          INTERNAL_SERVICE_TOKEN=test-internal-token
+          ABREGE_API_BASE_URL=http://abrege_api:5000
           MAX_CONCURRENCY_LLM_CALL=5
           MAX_MODEL_TOKEN=16384
           PYPANDOC_PANDOC_FOLDER=/app/pandoc
@@ -120,3 +143,7 @@ jobs:
       - name: Install dependencies and run abrege service tests
         run: |
           make test-abrege-service
+
+      - name: Tear down containers
+        if: ${{ always() }}
+        run: docker compose -f docker-compose.test.yaml down -v || true

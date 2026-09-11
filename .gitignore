@@ -10,7 +10,7 @@ notebook/*
 kubeconfig
 .coverage
 *.db
-abrege_service/data/models/vosk-model-small-fr-0.22
+
 tests/data/*.md
 tests/data/nltk
 tests/data/text
@@ -18,3 +18,6 @@ tests/data/text
 .DS_Store
 *.env
 node_modules/
+apps/server/abrege_service/data/models/**
+apps/server/data/models/**
+apps/server/tokenizer/**

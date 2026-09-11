@@ -4,9 +4,7 @@ import boto3
 import pytest
 from src.connector.s3_connector import S3Connector
 from src.config.s3 import S3Settings
-from src.config.connector import ConnectorSettings
 
-connector_settings = ConnectorSettings()
 settings = S3Settings()
 
 

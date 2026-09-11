@@ -210,6 +210,170 @@
 - clean code
 - clean code
 
+## [3.4.0-rc.13](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.12...v3.4.0-rc.13) (2026-09-11)
+
+
+### Features
+
+* **sdk:** expose Q&A/entities/relationships/topics/chunks retrieval ([ca65466](https://github.com/IA-Generative/abrege/commit/ca654667488f85d6d52cfd642483475d5f551fca))
+
+
+### Bug Fixes
+
+* **sdk:** add the optional extraction parameters to SummaryParameters ([293131b](https://github.com/IA-Generative/abrege/commit/293131bcb316829fa239ef69ceed5be4fa2ddd6c))
+
+## [3.4.0-rc.12](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.11...v3.4.0-rc.12) (2026-09-11)
+
+
+### Features
+
+* add search functionality to TaskChunksModal, TaskEntitiesModal, and TaskQAModal components ([812ab10](https://github.com/IA-Generative/abrege/commit/812ab1036a8ecde7d16a23e218f79afc88156ea2))
+* implement pagination for task-related data retrieval and enhance testing coverage ([ab4a610](https://github.com/IA-Generative/abrege/commit/ab4a6103beac0eb177b96c207dfd474b59d39a44))
+* make Q&A, entities, chunking and topic extraction opt-in ([885ce60](https://github.com/IA-Generative/abrege/commit/885ce60466b48aafd1de6e46e1ff9ce0a7e631a5))
+* qa and entities ([fd9abde](https://github.com/IA-Generative/abrege/commit/fd9abde606a38512759616bb911690720c8ca43f))
+
+
+### Bug Fixes
+
+* **client:** remove duplicate entities/relations/QA display in ResumeResult ([5396213](https://github.com/IA-Generative/abrege/commit/5396213da8d395e4e88b1ca691111a9dc8e70eac))
+* remove TOKENIZER_MODEL_NAME and HF_TOKEN from documentation and Helm values.yaml ([857cd6b](https://github.com/IA-Generative/abrege/commit/857cd6b002a281e32102a0d04d00dd95eb817e2f))
+* resolve CI failures across worker tests, FK constraints and frontend lint ([8bbb018](https://github.com/IA-Generative/abrege/commit/8bbb018ecb99f5bcfb6872890f18de0fd74a01d1))
+* seed a real Task row in remaining worker test helpers ([7559cf1](https://github.com/IA-Generative/abrege/commit/7559cf1de61e84b026e79cfcd7d6d773dee40f92))
+
+
+### Code Refactoring
+
+* dependencies and remove unused tests ([3a5e3b2](https://github.com/IA-Generative/abrege/commit/3a5e3b2f55fbae862364a3c62fde87b0c37b6476))
+* refactor audio and video transcription services; remove unused dependencies ([b859cbf](https://github.com/IA-Generative/abrege/commit/b859cbfaf485b51261cb268437edf1184d72568b))
+* remove mock data and SSO bypass logic from Abrege store ([5414b95](https://github.com/IA-Generative/abrege/commit/5414b950c9884146ac75319d7a08e0ec3dc1a02b))
+
+## [3.4.0-rc.11](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.10...v3.4.0-rc.11) (2026-09-11)
+
+
+### Bug Fixes
+
+* **client:** match ocr-api's footer instead of the DsfrFooter component ([2d37f9f](https://github.com/IA-Generative/abrege/commit/2d37f9f198c35563a5f4ec4fec8eeeacff970de7))
+
+## [3.4.0-rc.10](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.9...v3.4.0-rc.10) (2026-09-11)
+
+
+### Features
+
+* add AppFooter component and API routes documentation ([44c2db2](https://github.com/IA-Generative/abrege/commit/44c2db28f8a4db6dca065d814d9945df6112fa67))
+* add refresh token support and auto-refresh mechanism for access tokens ([4d253bf](https://github.com/IA-Generative/abrege/commit/4d253bfdd7f80da2edc56ce12a120be1de2809bf))
+* sdk username/password auth and full task-route coverage ([a90fc27](https://github.com/IA-Generative/abrege/commit/a90fc27098336d3c8b392197e7c9b53ad36dc678)), closes [#388](https://github.com/IA-Generative/abrege/issues/388)
+
+
+### Bug Fixes
+
+* update paths in configuration and documentation for Python SDK ([1334a6f](https://github.com/IA-Generative/abrege/commit/1334a6f050737c35d05a4edfd1a240e8d6521bb1))
+
+
+### Code Refactoring
+
+* code structure for improved readability and maintainability ([6e174ba](https://github.com/IA-Generative/abrege/commit/6e174bae7ea1702bae6346babe9966e70cb8d84f))
+
+## [3.4.0-rc.9](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.8...v3.4.0-rc.9) (2026-09-10)
+
+
+### Features
+
+* add AppFooter component and integrate app version management ([29ce9e4](https://github.com/IA-Generative/abrege/commit/29ce9e45c578fb0ca3624a7456623066ef6c1385))
+
+## [3.4.0-rc.8](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.7...v3.4.0-rc.8) (2026-09-09)
+
+
+### Bug Fixes
+
+* delete OCR sub-tasks only once the whole document is done ([5ba442d](https://github.com/IA-Generative/abrege/commit/5ba442dfbab34b14a1134d110d86674eb25d42f5))
+
+## [3.4.0-rc.7](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.6...v3.4.0-rc.7) (2026-09-09)
+
+
+### Bug Fixes
+
+* enhance OCR client authentication handling and update tests for availability checks ([ac7f064](https://github.com/IA-Generative/abrege/commit/ac7f06401284d7bd22f2516931feb77a14e1bf09))
+* improve OCR client initialization and error handling for missing backend URL ([b922084](https://github.com/IA-Generative/abrege/commit/b922084df6219013938463dfca96cbfb9289d2f2))
+
+## [3.4.0-rc.6](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.5...v3.4.0-rc.6) (2026-09-09)
+
+
+### Features
+
+* mettre en place l'authentification BFF avec cookie de session httpOnly ([5b6e417](https://github.com/IA-Generative/abrege/commit/5b6e4179b7e4991b462656d7fecf67a4f10a98cd))
+
+
+### Bug Fixes
+
+* correct formatting in logout function's try-catch block ([62ab6aa](https://github.com/IA-Generative/abrege/commit/62ab6aac6e7e561791cb45e4154ec53e239571fd))
+* delete bypass and update packages ([1252dae](https://github.com/IA-Generative/abrege/commit/1252dae02586168e280787ff97e54dc0ca4b6b04))
+* revert incidental dependency version bumps in pyproject.toml/uv.lock ([0fff6dd](https://github.com/IA-Generative/abrege/commit/0fff6dd4b690882033e2aeaa557c2f2fa2750335))
+* update all Python dependencies except ruff ([75e1b0b](https://github.com/IA-Generative/abrege/commit/75e1b0bd7ffbc917feb5b88b6da5cb569056673b))
+
+## [3.4.0-rc.5](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.4...v3.4.0-rc.5) (2026-09-08)
+
+
+### Bug Fixes
+
+* run all Docker images as non-root ([6bcc44d](https://github.com/IA-Generative/abrege/commit/6bcc44d412dc211b711961df430068af35b89d03)), closes [#378](https://github.com/IA-Generative/abrege/issues/378)
+
+## [3.4.0-rc.4](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.3...v3.4.0-rc.4) (2026-09-08)
+
+
+### Bug Fixes
+
+* **ci:** tag Harbor images with the chart appVersion ([de2b940](https://github.com/IA-Generative/abrege/commit/de2b9403fc75c7feedefd0fa3dda18ef7f7c50bd))
+
+## [3.4.0-rc.3](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.2...v3.4.0-rc.3) (2026-09-08)
+
+
+### Bug Fixes
+
+* **ci:** configure gitleaks allowlist and fix SDK test regression ([4ca1b5d](https://github.com/IA-Generative/abrege/commit/4ca1b5d108d3e6141ac4f17247debb423ab1bbb2))
+* **ci:** rename lint-python job to lint ([3540a62](https://github.com/IA-Generative/abrege/commit/3540a622161eb6d217a653180a2dacd05f46814f))
+* **client:** resolve frontend lint violations ([664ec04](https://github.com/IA-Generative/abrege/commit/664ec04037bcf8f6f4e00b45eb2a414142a511f4))
+* **helm:** pin chart appVersion to the current dev prerelease ([d731ff8](https://github.com/IA-Generative/abrege/commit/d731ff87f522acd90ea3fbc94ec0d8bcccd21a43))
+* **helm:** satisfy yamllint's comment-spacing rule in values.yaml ([dbe6239](https://github.com/IA-Generative/abrege/commit/dbe6239a47002bb674c064f207503be6c9f3f263))
+* **images:** repo-scope ghcr.io image names to match ocr-api ([533a821](https://github.com/IA-Generative/abrege/commit/533a8215a61532d574b2addbc55d413c092144b8))
+
+
+### Code Refactoring
+
+* **cd:** use release-app.yml, mirroring ocr-api's pipeline exactly ([8179f8e](https://github.com/IA-Generative/abrege/commit/8179f8e80a523794c70317b66e69d748766af1eb))
+* **helm:** move abrege chart into this repository ([0690900](https://github.com/IA-Generative/abrege/commit/0690900c5eb1cbb3d0a3897ddfaf5959950aebfa))
+
+## [3.4.0-rc.2](https://github.com/IA-Generative/abrege/compare/v3.3.3-rc.2...v3.4.0-rc.2) (2026-09-07)
+
+
+### Features
+
+* render the task list as tiles instead of a table ([aa985db](https://github.com/IA-Generative/abrege/commit/aa985db2bd346aa9a6746a059ef2ade5e8f4d66a)), closes [#377](https://github.com/IA-Generative/abrege/issues/377)
+
+## [3.3.3-rc.2](https://github.com/IA-Generative/abrege/compare/v3.3.3-rc.1...v3.3.3-rc.2) (2026-09-07)
+
+
+### Bug Fixes
+
+* update LLMGuard initialization to only create client when LLM_GUARD_URL is set ([e3e0292](https://github.com/IA-Generative/abrege/commit/e3e0292950cf04fdceaec5dd9ebbae122a9a203b))
+
+## [3.3.3-rc.1](https://github.com/IA-Generative/abrege/compare/v3.3.3-rc...v3.3.3-rc.1) (2026-09-07)
+
+
+### Bug Fixes
+
+* remove dead code and configuration related to external document loader and connector settings ([b553326](https://github.com/IA-Generative/abrege/commit/b553326005bdb0ea617661e9392d96c0e139849a))
+
+## [3.3.3-rc](https://github.com/IA-Generative/abrege/compare/v3.3.2...v3.3.3-rc) (2026-09-07)
+
+
+### Bug Fixes
+
+* harmonize environment variable names for OpenAI API and Redis Sentinel ([6523be3](https://github.com/IA-Generative/abrege/commit/6523be326a4fcce98572f0d8b81b1c3d17cba354))
+* **release:** resync dev prerelease manifest with main ([698144c](https://github.com/IA-Generative/abrege/commit/698144c55d847f8868c83c54905be6b63ff114d9))
+* **release:** use the prerelease versioning strategy on dev ([c2222bb](https://github.com/IA-Generative/abrege/commit/c2222bbc6956c66896224b83434c0f641157bcaf))
+* silence non-JSON log noise from transformers and Vosk, and configure Uvicorn logging ([10a1b92](https://github.com/IA-Generative/abrege/commit/10a1b9292a4b934e10560568ecf9af92240e9c2a))
+* update .gitignore to include additional model directories ([7f4f205](https://github.com/IA-Generative/abrege/commit/7f4f205fbbb07f8bc64b64e6890575fe6109998d))
+
 ## [3.3.2](https://github.com/IA-Generative/abrege/compare/v3.3.1...v3.3.2) (2026-07-18)
 
 

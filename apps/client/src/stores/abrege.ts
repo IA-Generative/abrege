@@ -30,6 +30,63 @@ import { ABREGE_API_URL } from '@/utils/constants'
 
 type TaskModel = components['schemas']['TaskModel']
 
+export interface QAItemRow {
+  id: string
+  task_id: string
+  chunk_index: number
+  page: number | null
+  source_text: string
+  question: string
+  answer: string
+  model_name: string | null
+  created_at: number
+}
+
+export interface EntityRow {
+  id: string
+  task_id: string
+  chunk_index: number
+  type: string
+  text: string
+  contexts: string[] | null
+  pages: number[] | null
+  model_name: string | null
+  created_at: number
+}
+
+export interface RelationshipRow {
+  id: string
+  task_id: string
+  chunk_index: number | null
+  source_entity_id: string
+  target_entity_id: string
+  relationship_type: string
+  description: string | null
+  model_name: string | null
+  created_at: number
+}
+
+export interface TopicRow {
+  id: string
+  task_id: string
+  topic: string
+  confidence: number
+  explanation: string | null
+  model_name: string | null
+  created_at: number
+}
+
+export interface ChunkRow {
+  id: string
+  task_id: string
+  chunk_index: number
+  position: number
+  page: number | null
+  text: string
+  model_name: string | null
+  created_at: number
+}
+
 const http = createHttpClient(ABREGE_API_URL)
 
 const { addErrorMessage, addSuccessMessage } = useToaster()
@@ -64,7 +121,10 @@ export const useAbregeStore = defineStore('abrege', () => {
     selectOptionSelected: 'French',
     selectOptionText: 'Français (par défaut)',
     customPrompt: null,
-    extractQa: true,
+    extractQa: false,
+    extractEntities: false,
+    extractChunks: false,
+    classifyTopics: false,
   }
   const paramsValue = ref(paramsInitialValue)
 
@@ -75,8 +135,7 @@ export const useAbregeStore = defineStore('abrege', () => {
         throw new Error(`Statut inattendu: ${data.status}`)
       }
       return true
-    }
-    catch (err: any) {
+    } catch (err: any) {
       error.value = err.message ?? 'Erreur inconnue lors du health check.'
       return false
     }
@@ -86,8 +145,7 @@ export const useAbregeStore = defineStore('abrege', () => {
     try {
       const { data } = await http.get<TaskModel>(`/task/${taskId}`)
       return data
-    }
-    catch (err: any) {
+    } catch (err: any) {
       addErrorMessage({
         title: 'Erreur :',
         description: `Erreur lors de la récupération de la tâche ${taskId}: ${err}`,
@@ -164,8 +222,7 @@ export const useAbregeStore = defineStore('abrege', () => {
         await check()
       }
       await check()
-    }
-    catch (err: any) {
+    } catch (err: any) {
       error.value = err.message ?? 'Erreur inconnue lors du polling.'
       isPolling.value = false
     }
@@ -217,6 +274,9 @@ export const useAbregeStore = defineStore('abrege', () => {
         size: Number(paramsValue.value.inputValue),
         custom_prompt: paramsValue.value.customPrompt,
         extract_qa: paramsValue.value.extractQa,
+        extract_entities: paramsValue.value.extractEntities,
+        extract_chunks: paramsValue.value.extractChunks,
+        classify_topics: paramsValue.value.classifyTopics,
       },
     }
 
@@ -231,8 +291,7 @@ export const useAbregeStore = defineStore('abrege', () => {
       }
 
       await pollTask(task.id)
-    }
-    catch (err: any) {
+    } catch (err: any) {
       error.value = err.message || 'Erreur lors de l\'envoi du contenu.'
       isPolling.value = false
       throw error
@@ -264,6 +323,9 @@ export const useAbregeStore = defineStore('abrege', () => {
         size: Number(paramsValue.value.inputValue),
         custom_prompt: paramsValue.value.customPrompt,
         extract_qa: paramsValue.value.extractQa,
+        extract_entities: paramsValue.value.extractEntities,
+        extract_chunks: paramsValue.value.extractChunks,
+        classify_topics: paramsValue.value.classifyTopics,
       }))
 
       const { data: task } = await http.post<TaskModel>(
@@ -281,22 +343,18 @@ export const useAbregeStore = defineStore('abrege', () => {
       }
 
       await pollTask(task.id)
-    }
-    catch (err: any) {
+    } catch (err: any) {
       let errorMessage = 'Erreur lors de l\'envoi du fichier.'
       if (err.response) {
         const status = err.response.status
         if (status === 413) {
           errorMessage = 'Fichier trop volumineux pour le serveur'
-        }
-        else if (status === 415) {
+        } else if (status === 415) {
           errorMessage = 'Type de fichier non supporté'
-        }
-        else if (err.response.data?.message) {
+        } else if (err.response.data?.message) {
           errorMessage = err.response.data.message
         }
-      }
-      else if (err.message) {
+      } else if (err.message) {
         errorMessage = err.message
       }
       error.value = errorMessage
@@ -314,8 +372,7 @@ export const useAbregeStore = defineStore('abrege', () => {
       )
       const data = response.data
       return data
-    }
-    catch (error) {
+    } catch (error) {
       addErrorMessage({
         title: 'Erreur :',
         description: `Erreur lors de la récupération du texte résumé : ${error}.`,
@@ -332,56 +389,125 @@ export const useAbregeStore = defineStore('abrege', () => {
     items: [] as TaskModel[],
   })
 
-  const SSO_BYPASS = import.meta.env.VITE_SSO_BYPASS === 'true'
-
-  const MOCK_TASKS: TaskModel[] = [
-    {
-      id: 'mock-1', user_id: 'dev', type: 'text-url', status: 'completed', percentage: 1,
-      created_at: Date.now() / 1000 - 3600, updated_at: Date.now() / 1000 - 3500,
-      input: { url: 'https://example.com/article' } as any,
-      output: { type: 'summary', summary: 'Ceci est un résumé généré automatiquement pour tester l\'affichage de la modale.', word_count: 12, created_at: 0, model_name: 'mock', model_version: '1', texts_found: [], percentage: 1, nb_llm_calls: 1, partial_summaries: [] },
-      parameters: null,
-    },
-    {
-      id: 'mock-2', user_id: 'dev', type: 'document', status: 'completed', percentage: 1,
-      created_at: Date.now() / 1000 - 7200, updated_at: Date.now() / 1000 - 7100,
-      input: { raw_filename: 'rapport_annuel.pdf' } as any,
-      output: { type: 'summary', summary: 'Résumé du rapport annuel : les indicateurs sont en hausse de 12% sur l\'année.', word_count: 15, created_at: 0, model_name: 'mock', model_version: '1', texts_found: [], percentage: 1, nb_llm_calls: 2, partial_summaries: [] },
-      parameters: null,
-    },
-    {
-      id: 'mock-3', user_id: 'dev', type: 'text-url', status: 'in_progress', percentage: 0.6,
-      created_at: Date.now() / 1000 - 120, updated_at: Date.now() / 1000 - 60,
-      input: { text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.' } as any,
-      output: null,
-      parameters: null,
-    },
-    {
-      id: 'mock-4', user_id: 'dev', type: 'text-url', status: 'failed', percentage: 0,
-      created_at: Date.now() / 1000 - 86400, updated_at: Date.now() / 1000 - 86300,
-      input: { url: 'https://example.com/broken' } as any,
-      output: null,
-      parameters: null,
-    },
-  ]
-
   async function fetchUserTasks (page = 1, page_size = 100) {
-    if (SSO_BYPASS) {
-      userTasksPaginated.value.total = MOCK_TASKS.length
-      userTasksPaginated.value.page = page
-      userTasksPaginated.value.page_size = page_size
-      userTasksPaginated.value.items = MOCK_TASKS
-      return
-    }
     try {
       const { data } = await http.get(`/task/user/`, { params: { offset: page, limit: page_size } })
       userTasksPaginated.value.total = data.total ?? 0
       userTasksPaginated.value.page = data.page ?? page
       userTasksPaginated.value.page_size = data.page_size ?? page_size
       userTasksPaginated.value.items = data.items ?? []
-    }
-    catch (err: any) {
+    } catch (err: any) {
       addErrorMessage({ title: 'Erreur', description: `Impossible de récupérer les tâches: ${err?.message ?? err}` })
+    }
+  }
+
+  // ----- QA ITEMS (per task) -----
+  const qaItems = ref<QAItemRow[]>([])
+  const qaItemsLoading = ref(false)
+
+  const qaItemsTotal = ref(0)
+  const qaItemsPage = ref(1)
+  const qaItemsPageSize = ref(20)
+
+  async function fetchQAItems (taskId: string, page = 1, pageSize = 20) {
+    qaItemsLoading.value = true
+    try {
+      // Backend response is paginated: { total, page, page_size, items }
+      const { data } = await http.get<{ total: number, page: number, page_size: number, items: QAItemRow[] }>(
+        `/task/${taskId}/qa`,
+        { params: { offset: page, limit: pageSize } },
+      )
+      qaItems.value = data.items ?? []
+      qaItemsTotal.value = data.total ?? 0
+      qaItemsPage.value = data.page ?? page
+      qaItemsPageSize.value = data.page_size ?? pageSize
+    } catch (err: any) {
+      addErrorMessage({ title: 'Erreur', description: `Impossible de récupérer les questions/réponses: ${err?.message ?? err}` })
+      qaItems.value = []
+      qaItemsTotal.value = 0
+    } finally {
+      qaItemsLoading.value = false
+    }
+  }
+
+  // ----- ENTITIES & RELATIONSHIPS (per task) -----
+  const entities = ref<EntityRow[]>([])
+  const relationships = ref<RelationshipRow[]>([])
+  const entitiesLoading = ref(false)
+
+  async function fetchEntitiesAndRelationships (taskId: string) {
+    entitiesLoading.value = true
+    try {
+      const [entitiesRes, relationshipsRes] = await Promise.all([
+        http.get<{ items: EntityRow[] }>(`/task/${taskId}/entities`, { params: { offset: 1, limit: 200 } }),
+        http.get<{ items: RelationshipRow[] }>(`/task/${taskId}/relationships`, { params: { offset: 1, limit: 200 } }),
+      ])
+      entities.value = entitiesRes.data.items ?? []
+      relationships.value = relationshipsRes.data.items ?? []
+    } catch (err: any) {
+      addErrorMessage({ title: 'Erreur', description: `Impossible de récupérer les entités/relations: ${err?.message ?? err}` })
+      entities.value = []
+      relationships.value = []
+    } finally {
+      entitiesLoading.value = false
+    }
+  }
+
+  // ----- TOPICS (per task) -----
+  const topics = ref<TopicRow[]>([])
+  const topicsLoading = ref(false)
+
+  async function fetchTopics (taskId: string) {
+    topicsLoading.value = true
+    try {
+      // No cap on the number of topics: page through the whole (paginated) backend result.
+      const pageSize = 50
+      const all: TopicRow[] = []
+      let page = 1
+      let total = Infinity
+      while (all.length < total) {
+        const { data } = await http.get<{ total: number, items: TopicRow[] }>(
+          `/task/${taskId}/topics`,
+          { params: { offset: page, limit: pageSize } },
+        )
+        total = data.total ?? 0
+        all.push(...(data.items ?? []))
+        if (!data.items || data.items.length === 0) { break }
+        page += 1
+      }
+      topics.value = all
+    } catch (err: any) {
+      addErrorMessage({ title: 'Erreur', description: `Impossible de récupérer les sujets: ${err?.message ?? err}` })
+      topics.value = []
+    } finally {
+      topicsLoading.value = false
+    }
+  }
+
+  // ----- CHUNKS (per task) — semantic chunking, done LLM-side at map time -----
+  const chunks = ref<ChunkRow[]>([])
+  const chunksLoading = ref(false)
+  const chunksTotal = ref(0)
+  const chunksPage = ref(1)
+  const chunksPageSize = ref(20)
+
+  async function fetchChunks (taskId: string, page = 1, pageSize = 20) {
+    chunksLoading.value = true
+    try {
+      const { data } = await http.get<{ total: number, page: number, page_size: number, items: ChunkRow[] }>(
+        `/task/${taskId}/chunks`,
+        { params: { offset: page, limit: pageSize } },
+      )
+      chunks.value = data.items ?? []
+      chunksTotal.value = data.total ?? 0
+      chunksPage.value = data.page ?? page
+      chunksPageSize.value = data.page_size ?? pageSize
+    } catch (err: any) {
+      addErrorMessage({ title: 'Erreur', description: `Impossible de récupérer les chunks: ${err?.message ?? err}` })
+      chunks.value = []
+      chunksTotal.value = 0
+    } finally {
+      chunksLoading.value = false
     }
   }
 
@@ -397,11 +523,10 @@ export const useAbregeStore = defineStore('abrege', () => {
     try {
       const { data } = await http.post<TaskModel>(`/task/${taskId}/cancel`)
       const idx = userTasksPaginated.value.items.findIndex(t => t.id === taskId)
-      if (idx !== -1) userTasksPaginated.value.items[idx] = data
+      if (idx !== -1) { userTasksPaginated.value.items[idx] = data }
       addSuccessMessage({ title: 'Tâche annulée', description: 'La tâche a été annulée avec succès.' })
       return data
-    }
-    catch (err: any) {
+    } catch (err: any) {
       addErrorMessage({ title: 'Annulation impossible', description: `Erreur lors de l'annulation: ${err?.message ?? err}` })
       throw err
     }
@@ -414,8 +539,7 @@ export const useAbregeStore = defineStore('abrege', () => {
       userTasksPaginated.value.items = userTasksPaginated.value.items.filter(t => t.id !== taskId)
       userTasksPaginated.value.total = Math.max(0, userTasksPaginated.value.total - 1)
       addSuccessMessage({ title: 'Tâche supprimée', description: 'La tâche a été supprimée avec succès.' })
-    }
-    catch (err: any) {
+    } catch (err: any) {
       addErrorMessage({ title: 'Suppression impossible', description: `Erreur lors de la suppression: ${err?.message ?? err}` })
       throw err
     }
@@ -454,5 +578,28 @@ export const useAbregeStore = defineStore('abrege', () => {
     stopPollingUserTasks,
     cancelTask,
     deleteTask,
+    // qa items
+    qaItems,
+    qaItemsLoading,
+    qaItemsTotal,
+    qaItemsPage,
+    qaItemsPageSize,
+    fetchQAItems,
+    // entities & relationships
+    entities,
+    relationships,
+    entitiesLoading,
+    fetchEntitiesAndRelationships,
+    // topics
+    topics,
+    topicsLoading,
+    fetchTopics,
+    // chunks
+    chunks,
+    chunksLoading,
+    chunksTotal,
+    chunksPage,
+    chunksPageSize,
+    fetchChunks,
   }
 })

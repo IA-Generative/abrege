@@ -1,25 +1,38 @@
 import os
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 
 from api.core.security.token import RequestContext
 from api.core.security.factory import TokenVerifier
+from api.core.security.internal import verify_internal_service
 
 from src.schemas.task import task_table, TaskModel, TaskUpdateForm, TaskStatus
 from src.schemas.pagination import Pagination
 from src.schemas.code_error import TASK_STATUS_TO_HTTP
+from src.schemas.qa_item import qa_item_table, QAItemRowModel
+from src.schemas.entity import entity_table, EntityRowModel, RelationshipRowModel
+from src.schemas.topic import topic_table, TopicRowModel
+from src.schemas.chunk import chunk_table, ChunkRowModel
+from src.schemas.result import EntityModel, QAItem, RelationshipModel, TopicModel
 from src.clients import file_connector, celery_app
 from src.clients.ocr_client import OCRClient
 from src.utils.logger import logger_abrege
 
-ocr_client = OCRClient(
-    url=os.getenv(
-        "OCR_BACKEND_URL",
-        "https://mirai-ocr-staging.sdid-app.cpin.numerique-interieur.com/1",
-    )
-)
+# Optional: only used to propagate task cancellation to the OCR service (below). Building
+# it can now raise (see src.clients.ocr_client.build_token_manager, abrege#354) when OCR
+# delegation has no usable auth configured, or when OCR_BACKEND_URL isn't set - that must
+# not block the whole API from booting over what only the cancellation path needs.
+try:
+    ocr_backend_url = os.getenv("OCR_BACKEND_URL")
+    if not ocr_backend_url:
+        raise RuntimeError("OCR_BACKEND_URL is not set")
+    ocr_client = OCRClient(url=ocr_backend_url)
+except RuntimeError as e:
+    logger_abrege.warning(f"OCR client not configured, task cancellation will not propagate to it: {e}")
+    ocr_client = None
 
 router = APIRouter(tags=["Tasks"])
 
@@ -129,7 +142,7 @@ async def delete_task(
             logger_abrege.exception(e, extra={"task_id": task.id, "user_id": task.user_id})
 
     ocr_task_ids = (task.output.extras or {}).get("task_ocr_id", []) if task.output is not None else []
-    for ocr_task_id in ocr_task_ids:
+    for ocr_task_id in ocr_task_ids if ocr_client is not None else []:
         try:
             ocr_client.delete_task(task_id=ocr_task_id)
         except Exception as e:
@@ -144,3 +157,351 @@ async def delete_task(
     )
 
     return task
+
+
+def _get_owned_task(task_id: str, ctx: RequestContext) -> TaskModel:
+    task = task_table.get_task_by_id(task_id=task_id)
+    if task is None or task.user_id != ctx.user_id:
+        raise HTTPException(404, detail=f"{task_id} not found")
+    return task
+
+
+def _get_task_or_404(task_id: str) -> TaskModel:
+    """Existence check only, no ownership check — used by the internal (worker) endpoints,
+    which act on behalf of the system rather than a specific end user."""
+    task = task_table.get_task_by_id(task_id=task_id)
+    if task is None:
+        raise HTTPException(404, detail=f"{task_id} not found")
+    return task
+
+
+# ---------------------------------------------------------------------------
+# Q&A items
+# ---------------------------------------------------------------------------
+
+
+class QAItemsChunkCreate(BaseModel):
+    chunk_index: int
+    qa_items: List[QAItem]
+    model_name: Optional[str] = None
+
+
+@router.get("/task/{id}/qa", response_model=Pagination[QAItemRowModel])
+async def get_task_qa_items(
+    id: str,
+    offset: int = 1,
+    limit: int = 20,
+    ctx: RequestContext = Depends(TokenVerifier),
+) -> Pagination[QAItemRowModel]:
+    _get_owned_task(task_id=id, ctx=ctx)
+    rows = qa_item_table.get_qa_items_by_task_paginated(task_id=id, page=offset, page_size=limit)
+    total = qa_item_table.count_qa_items_by_task(task_id=id)
+    return Pagination[QAItemRowModel](
+        total=total, page=offset, page_size=limit, items=[QAItemRowModel.model_validate(row) for row in rows]
+    )
+
+
+@router.get("/task/{id}/qa/{qa_item_id}", response_model=QAItemRowModel)
+async def get_task_qa_item(
+    id: str,
+    qa_item_id: str,
+    ctx: RequestContext = Depends(TokenVerifier),
+) -> QAItemRowModel:
+    _get_owned_task(task_id=id, ctx=ctx)
+    row = qa_item_table.get_qa_item_by_id(task_id=id, qa_item_id=qa_item_id)
+    if row is None:
+        raise HTTPException(404, detail=f"{qa_item_id} not found")
+    return QAItemRowModel.model_validate(row)
+
+
+@router.post("/task/{id}/qa", status_code=201, dependencies=[Depends(verify_internal_service)])
+async def create_task_qa_items(id: str, body: QAItemsChunkCreate):
+    """Replace a chunk's Q&A items. Internal-only: called by the extraction worker, not end users."""
+    _get_task_or_404(task_id=id)
+    qa_item_table.save_chunk_qa_items(
+        task_id=id, chunk_index=body.chunk_index, qa_items=body.qa_items, model_name=body.model_name
+    )
+    return {"task_id": id, "chunk_index": body.chunk_index, "status": "saved"}
+
+
+@router.delete("/task/{id}/qa/{qa_item_id}")
+async def delete_task_qa_item(
+    id: str,
+    qa_item_id: str,
+    ctx: RequestContext = Depends(TokenVerifier),
+):
+    _get_owned_task(task_id=id, ctx=ctx)
+    deleted = qa_item_table.delete_qa_item_by_id(task_id=id, qa_item_id=qa_item_id)
+    if not deleted:
+        raise HTTPException(404, detail=f"{qa_item_id} not found")
+    return {"id": qa_item_id, "status": "deleted"}
+
+
+# ---------------------------------------------------------------------------
+# Entities
+# ---------------------------------------------------------------------------
+
+
+class EntitiesChunkCreate(BaseModel):
+    chunk_index: int
+    entities: List[EntityModel]
+    relationships: List[RelationshipModel] = []
+    model_name: Optional[str] = None
+
+
+@router.get("/task/{id}/entities", response_model=Pagination[EntityRowModel])
+async def get_task_entities(
+    id: str,
+    offset: int = 1,
+    limit: int = 20,
+    ctx: RequestContext = Depends(TokenVerifier),
+) -> Pagination[EntityRowModel]:
+    _get_owned_task(task_id=id, ctx=ctx)
+    rows = entity_table.get_entities_by_task_paginated(task_id=id, page=offset, page_size=limit)
+    total = entity_table.count_entities_by_task(task_id=id)
+    return Pagination[EntityRowModel](
+        total=total, page=offset, page_size=limit, items=[EntityRowModel.model_validate(row) for row in rows]
+    )
+
+
+@router.get("/task/{id}/entities/{entity_id}", response_model=EntityRowModel)
+async def get_task_entity(
+    id: str,
+    entity_id: str,
+    ctx: RequestContext = Depends(TokenVerifier),
+) -> EntityRowModel:
+    _get_owned_task(task_id=id, ctx=ctx)
+    row = entity_table.get_entity_by_id(task_id=id, entity_id=entity_id)
+    if row is None:
+        raise HTTPException(404, detail=f"{entity_id} not found")
+    return EntityRowModel.model_validate(row)
+
+
+@router.post("/task/{id}/entities", status_code=201, dependencies=[Depends(verify_internal_service)])
+async def create_task_entities(id: str, body: EntitiesChunkCreate):
+    """Replace a chunk's entities and their local relationships (source_index/target_index
+    resolved server-side against `entities`, in the same order). Internal-only."""
+    _get_task_or_404(task_id=id)
+    entity_table.save_chunk_entities(
+        task_id=id,
+        chunk_index=body.chunk_index,
+        entities=body.entities,
+        relationships=body.relationships,
+        model_name=body.model_name,
+    )
+    return {"task_id": id, "chunk_index": body.chunk_index, "status": "saved"}
+
+
+@router.delete("/task/{id}/entities/{entity_id}")
+async def delete_task_entity(
+    id: str,
+    entity_id: str,
+    ctx: RequestContext = Depends(TokenVerifier),
+):
+    _get_owned_task(task_id=id, ctx=ctx)
+    deleted = entity_table.delete_entity_by_id(task_id=id, entity_id=entity_id)
+    if not deleted:
+        raise HTTPException(404, detail=f"{entity_id} not found")
+    return {"id": entity_id, "status": "deleted"}
+
+
+# ---------------------------------------------------------------------------
+# Relationships
+# ---------------------------------------------------------------------------
+
+
+class GlobalRelationshipsCreate(BaseModel):
+    entity_ids_in_order: List[str]
+    relationships: List[RelationshipModel]
+    model_name: Optional[str] = None
+
+
+@router.get("/task/{id}/relationships", response_model=Pagination[RelationshipRowModel])
+async def get_task_relationships(
+    id: str,
+    offset: int = 1,
+    limit: int = 20,
+    ctx: RequestContext = Depends(TokenVerifier),
+) -> Pagination[RelationshipRowModel]:
+    _get_owned_task(task_id=id, ctx=ctx)
+    rows = entity_table.get_relationships_by_task_paginated(task_id=id, page=offset, page_size=limit)
+    total = entity_table.count_relationships_by_task(task_id=id)
+    return Pagination[RelationshipRowModel](
+        total=total, page=offset, page_size=limit, items=[RelationshipRowModel.model_validate(row) for row in rows]
+    )
+
+
+@router.get("/task/{id}/relationships/{relationship_id}", response_model=RelationshipRowModel)
+async def get_task_relationship(
+    id: str,
+    relationship_id: str,
+    ctx: RequestContext = Depends(TokenVerifier),
+) -> RelationshipRowModel:
+    _get_owned_task(task_id=id, ctx=ctx)
+    row = entity_table.get_relationship_by_id(task_id=id, relationship_id=relationship_id)
+    if row is None:
+        raise HTTPException(404, detail=f"{relationship_id} not found")
+    return RelationshipRowModel.model_validate(row)
+
+
+@router.post("/task/{id}/relationships/global", status_code=201, dependencies=[Depends(verify_internal_service)])
+async def create_task_global_relationships(id: str, body: GlobalRelationshipsCreate):
+    """Replace the task's cross-chunk ("global") relationships — `source_index`/`target_index`
+    resolved against `entity_ids_in_order`. Internal-only."""
+    _get_task_or_404(task_id=id)
+    entity_table.save_global_relationships(
+        task_id=id,
+        entity_ids_in_order=body.entity_ids_in_order,
+        relationships=body.relationships,
+        model_name=body.model_name,
+    )
+    return {"task_id": id, "status": "saved"}
+
+
+@router.delete("/task/{id}/relationships/{relationship_id}")
+async def delete_task_relationship(
+    id: str,
+    relationship_id: str,
+    ctx: RequestContext = Depends(TokenVerifier),
+):
+    _get_owned_task(task_id=id, ctx=ctx)
+    deleted = entity_table.delete_relationship_by_id(task_id=id, relationship_id=relationship_id)
+    if not deleted:
+        raise HTTPException(404, detail=f"{relationship_id} not found")
+    return {"id": relationship_id, "status": "deleted"}
+
+
+# ---------------------------------------------------------------------------
+# Topics (free-form classification of the final summary)
+# ---------------------------------------------------------------------------
+
+
+class TopicsCreate(BaseModel):
+    topics: List[TopicModel]
+    model_name: Optional[str] = None
+
+
+@router.get("/task/{id}/topics", response_model=Pagination[TopicRowModel])
+async def get_task_topics(
+    id: str,
+    offset: int = 1,
+    limit: int = 20,
+    ctx: RequestContext = Depends(TokenVerifier),
+) -> Pagination[TopicRowModel]:
+    _get_owned_task(task_id=id, ctx=ctx)
+    rows = topic_table.get_topics_by_task_paginated(task_id=id, page=offset, page_size=limit)
+    total = topic_table.count_topics_by_task(task_id=id)
+    return Pagination[TopicRowModel](
+        total=total, page=offset, page_size=limit, items=[TopicRowModel.model_validate(row) for row in rows]
+    )
+
+
+@router.post("/task/{id}/topics", status_code=201, dependencies=[Depends(verify_internal_service)])
+async def create_task_topics(id: str, body: TopicsCreate):
+    """Replace every topic for the task. Internal-only: called by the classification worker."""
+    _get_task_or_404(task_id=id)
+    topic_table.save_topics(task_id=id, topics=body.topics, model_name=body.model_name)
+    return {"task_id": id, "status": "saved"}
+
+
+@router.delete("/task/{id}/topics/{topic_id}")
+async def delete_task_topic(
+    id: str,
+    topic_id: str,
+    ctx: RequestContext = Depends(TokenVerifier),
+):
+    _get_owned_task(task_id=id, ctx=ctx)
+    deleted = topic_table.delete_topic_by_id(task_id=id, topic_id=topic_id)
+    if not deleted:
+        raise HTTPException(404, detail=f"{topic_id} not found")
+    return {"id": topic_id, "status": "deleted"}
+
+
+# ---------------------------------------------------------------------------
+# Chunks (semantic chunking of the source text, done LLM-side at map time)
+# ---------------------------------------------------------------------------
+
+
+class ChunksCreate(BaseModel):
+    chunk_index: int
+    page: Optional[int] = None
+    chunks: List[str]
+    model_name: Optional[str] = None
+
+
+@router.get("/task/{id}/chunks", response_model=Pagination[ChunkRowModel])
+async def get_task_chunks(
+    id: str,
+    offset: int = 1,
+    limit: int = 20,
+    ctx: RequestContext = Depends(TokenVerifier),
+) -> Pagination[ChunkRowModel]:
+    _get_owned_task(task_id=id, ctx=ctx)
+    rows = chunk_table.get_chunks_by_task_paginated(task_id=id, page=offset, page_size=limit)
+    total = chunk_table.count_chunks_by_task(task_id=id)
+    return Pagination[ChunkRowModel](
+        total=total, page=offset, page_size=limit, items=[ChunkRowModel.model_validate(row) for row in rows]
+    )
+
+
+@router.get("/task/{id}/chunks/{chunk_id}", response_model=ChunkRowModel)
+async def get_task_chunk(
+    id: str,
+    chunk_id: str,
+    ctx: RequestContext = Depends(TokenVerifier),
+) -> ChunkRowModel:
+    _get_owned_task(task_id=id, ctx=ctx)
+    row = chunk_table.get_chunk_by_id(task_id=id, chunk_id=chunk_id)
+    if row is None:
+        raise HTTPException(404, detail=f"{chunk_id} not found")
+    return ChunkRowModel.model_validate(row)
+
+
+@router.post("/task/{id}/chunks", status_code=201, dependencies=[Depends(verify_internal_service)])
+async def create_task_chunks(id: str, body: ChunksCreate):
+    """Replace the semantic sub-chunks for one map-step window. Internal-only: called by the
+    extraction worker right as it sends that window's text to the chunking model."""
+    _get_task_or_404(task_id=id)
+    chunk_table.save_chunk_group(
+        task_id=id, chunk_index=body.chunk_index, page=body.page, chunks=body.chunks, model_name=body.model_name
+    )
+    return {"task_id": id, "chunk_index": body.chunk_index, "status": "saved"}
+
+
+@router.delete("/task/{id}/chunks/{chunk_id}")
+async def delete_task_chunk(
+    id: str,
+    chunk_id: str,
+    ctx: RequestContext = Depends(TokenVerifier),
+):
+    _get_owned_task(task_id=id, ctx=ctx)
+    deleted = chunk_table.delete_chunk_by_id(task_id=id, chunk_id=chunk_id)
+    if not deleted:
+        raise HTTPException(404, detail=f"{chunk_id} not found")
+    return {"id": chunk_id, "status": "deleted"}
+
+
+# ---------------------------------------------------------------------------
+# Extraction trigger
+# ---------------------------------------------------------------------------
+
+
+@router.post("/task/{id}/extract-details", status_code=202)
+async def extract_task_details(
+    id: str,
+    ctx: RequestContext = Depends(TokenVerifier),
+):
+    """Trigger (or retrigger) Q&A/entities/relationships extraction for a task, e.g. for
+    tasks summarized before this feature existed or with `extract_qa=False` at the time."""
+    task = _get_owned_task(task_id=id, ctx=ctx)
+    if task.status != TaskStatus.COMPLETED:
+        raise HTTPException(400, detail=f"{id} is not completed yet (status: {task.status})")
+    if task.output is None or not task.output.texts_found:
+        raise HTTPException(400, detail=f"{id} has no source text to extract details from")
+
+    celery_app.send_task("worker.tasks.extract_task_details", args=[id])
+    logger_abrege.info(
+        f"[Extraction (re)triggered for task id : {id}][user id: {ctx.user_id}]",
+        extra={"task_id": id, "user_id": ctx.user_id},
+    )
+    return {"task_id": id, "status": "extraction_queued"}

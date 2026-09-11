@@ -1,7 +1,7 @@
 {
   "name": "frontend",
   "type": "module",
-  "version": "3.3.2",
+  "version": "3.4.0-rc.13",
   "private": true,
   "packageManager": "pnpm@10.17.1",
   "scripts": {
@@ -31,10 +31,11 @@
     "dompurify": "^3.4.11",
     "focus-trap": "^7.8.0",
     "focus-trap-vue": "^4.1.0",
+    "graphology": "^0.26.0",
     "husky": "^9.1.7",
-    "keycloak-js": "^26.2.4",
     "marked": "^16.4.2",
     "pinia": "^3.0.4",
+    "sigma": "^3.0.3",
     "tailwindcss": "^4.3.2",
     "vee-validate": "^4.15.1",
     "vue": "^3.5.39",
@@ -43,9 +44,8 @@
     "yup": "^1.7.1"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^5.4.1",
+    "@antfu/eslint-config": "^9.3.0",
     "@playwright/test": "^1.61.1",
-    "@rushstack/eslint-patch": "^1.16.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/vue": "^8.1.0",
     "@tsconfig/node20": "^20.1.9",
@@ -56,8 +56,8 @@
     "@vue/test-utils": "^2.4.11",
     "@vue/tsconfig": "^0.8.1",
     "dotenv": "^17.4.2",
-    "eslint": "^9.39.4",
-    "eslint-plugin-playwright": "^2.10.4",
+    "eslint": "^10.9.1",
+    "eslint-plugin-playwright": "^2.11.0",
     "jsdom": "^27.4.0",
     "npm-run-all2": "^8.0.4",
     "openapi-typescript": "^7.13.0",
@@ -71,10 +71,5 @@
     "vitest": "^3.2.6",
     "vue-tsc": "^3.3.5",
     "workbox-window": "^7.4.1"
-  },
-  "pnpm": {
-    "overrides": {
-      "serialize-javascript": "^7.0.5"
-    }
   }
 }

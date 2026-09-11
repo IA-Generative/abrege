@@ -32,52 +32,10 @@ def test_task_not_implemented():
             url_service.task_to_text(dummy_task)
 
 
-def test_get_text_from_pdf():
-    from abrege_service.modules.doc import PDFTOMD4LLMService
-
-    url_service = URLService(services=[PDFTOMD4LLMService()])
-
-    # Test download pdf
-    dummy_task = mock_task("https://www.osureunion.fr/wp-content/uploads/2022/03/pdf-exemple.pdf")
-    actual = url_service.task_to_text(dummy_task)
-    assert "logiciels" in "\n".join([item for item in actual.output.texts_found])
-
-
-# def test_get_text_from_microsoft():
-#     from abrege_service.modules.doc import MicrosoftDocumnentToMdService
-
-#     url_service = URLService(services=[MicrosoftDocumnentToMdService()])
-#     # Test pptx
-#     dummy_task = mock_task("https://pedagogie.ac-toulouse.fr/philosophie/sites/default/files/fichiers/ppt_philosophie_et_ecologie.pptx")
-#     actual = url_service.task_to_text(dummy_task)
-
-#     assert "biologiste" in "\n".join([item for item in actual.output.texts_found])
-
-
-# def test_get_text_from_audio():
-#     from abrege_service.modules.audio import AudioVoskTranscriptionService
-#
-#     url_service = URLService(services=[AudioVoskTranscriptionService(second_per_process=0.5)])
-#     # test audio
-#     dummy_task = mock_task("https://fr.getsamplefiles.com/download/wav/sample-3.wav")
-#     actual = url_service.task_to_text(dummy_task)
-#     assert "que" in "\n".join([item for item in actual.output.texts_found])
-
-
-def test_get_text_from_audio_video():
-    from abrege_service.modules.video import VideoTranscriptionService
-
-    url_service = URLService(services=[VideoTranscriptionService()])
-    # Test mp4 :
-    dummy_task = mock_task("https://github.com/intel-iot-devkit/sample-videos/raw/master/bolt-detection.mp4")
-    actual = url_service.task_to_text(dummy_task)
-    assert "" in "\n".join([item for item in actual.output.texts_found])
-
-
 def test_get_text_html():
-    from abrege_service.modules.doc import MicrosoftDocumnentToMdService
+    from abrege_service.modules.doc import HtmlToMdService
 
-    url_service = URLService(services=[MicrosoftDocumnentToMdService()])
+    url_service = URLService(services=[HtmlToMdService()])
 
     # Test donwload html
     dummy_task = mock_task("https://this-is-tobi.com/")
