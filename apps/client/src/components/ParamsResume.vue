@@ -47,6 +47,33 @@ const extractQaValue = computed({
     paramsValue.extractQa = value
   },
 })
+
+const extractEntitiesLabel = 'Extraire les entités et relations'
+const extractEntitiesHint = 'Identifie les personnes, organisations, lieux… et les relations entre elles'
+const extractEntitiesValue = computed({
+  get: () => paramsValue.extractEntities,
+  set: (value) => {
+    paramsValue.extractEntities = value
+  },
+})
+
+const extractChunksLabel = 'Conserver les chunks sémantiques'
+const extractChunksHint = 'Persiste les sous-découpages sémantiques utilisés pendant le résumé'
+const extractChunksValue = computed({
+  get: () => paramsValue.extractChunks,
+  set: (value) => {
+    paramsValue.extractChunks = value
+  },
+})
+
+const classifyTopicsLabel = 'Classifier les sujets abordés'
+const classifyTopicsHint = 'Détecte les grands thèmes du résumé, avec un score de confiance'
+const classifyTopicsValue = computed({
+  get: () => paramsValue.classifyTopics,
+  set: (value) => {
+    paramsValue.classifyTopics = value
+  },
+})
 </script>
 
 <template>
@@ -90,6 +117,27 @@ const extractQaValue = computed({
             v-model="extractQaValue"
             :label="extractQaLabel"
             :hint="extractQaHint"
+          />
+        </div>
+        <div class="input-bloc">
+          <DsfrToggleSwitch
+            v-model="extractEntitiesValue"
+            :label="extractEntitiesLabel"
+            :hint="extractEntitiesHint"
+          />
+        </div>
+        <div class="input-bloc">
+          <DsfrToggleSwitch
+            v-model="extractChunksValue"
+            :label="extractChunksLabel"
+            :hint="extractChunksHint"
+          />
+        </div>
+        <div class="input-bloc">
+          <DsfrToggleSwitch
+            v-model="classifyTopicsValue"
+            :label="classifyTopicsLabel"
+            :hint="classifyTopicsHint"
           />
         </div>
       </div>

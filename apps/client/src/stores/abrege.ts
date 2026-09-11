@@ -121,7 +121,10 @@ export const useAbregeStore = defineStore('abrege', () => {
     selectOptionSelected: 'French',
     selectOptionText: 'Français (par défaut)',
     customPrompt: null,
-    extractQa: true,
+    extractQa: false,
+    extractEntities: false,
+    extractChunks: false,
+    classifyTopics: false,
   }
   const paramsValue = ref(paramsInitialValue)
 
@@ -271,6 +274,9 @@ export const useAbregeStore = defineStore('abrege', () => {
         size: Number(paramsValue.value.inputValue),
         custom_prompt: paramsValue.value.customPrompt,
         extract_qa: paramsValue.value.extractQa,
+        extract_entities: paramsValue.value.extractEntities,
+        extract_chunks: paramsValue.value.extractChunks,
+        classify_topics: paramsValue.value.classifyTopics,
       },
     }
 
@@ -317,6 +323,9 @@ export const useAbregeStore = defineStore('abrege', () => {
         size: Number(paramsValue.value.inputValue),
         custom_prompt: paramsValue.value.customPrompt,
         extract_qa: paramsValue.value.extractQa,
+        extract_entities: paramsValue.value.extractEntities,
+        extract_chunks: paramsValue.value.extractChunks,
+        classify_topics: paramsValue.value.classifyTopics,
       }))
 
       const { data: task } = await http.post<TaskModel>(

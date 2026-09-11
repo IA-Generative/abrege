@@ -79,7 +79,9 @@ onMounted(async () => {
   try {
     task.value = await abrege.getTask(taskId.value) as TaskModel
     if (task.value?.status === 'completed') {
-      abrege.fetchTopics(taskId.value)
+      if (task.value.parameters?.classify_topics) {
+        abrege.fetchTopics(taskId.value)
+      }
       if (isStillPending()) { startStatusPolling() }
     }
   } catch (e: any) {
@@ -144,7 +146,7 @@ onMounted(async () => {
 
       <div v-if="task.status === 'completed' && task.output">
         <div
-          v-if="!abrege.topicsLoading && (abrege.topics.length > 0 || task.topics_status)"
+          v-if="task.parameters?.classify_topics && !abrege.topicsLoading && (abrege.topics.length > 0 || task.topics_status)"
           class="task-detail-topics fr-mb-3w"
         >
           <span class="fr-text--sm task-detail-topics-label">Sujets détectés :</span>

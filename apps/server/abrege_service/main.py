@@ -201,57 +201,68 @@ def launch(self, task: str):
         raise e
 
 
+async def _none():
+    return None
+
+
 @celery_app.task(name="worker.tasks.extract_chunk_details", bind=True)
 def extract_chunk_details(self, payload: str):
-    """Extract Q&A, entities/local relationships and semantic sub-chunks for a single map-step
-    window, and persist them all.
+    """Extract Q&A, entities/local relationships and/or semantic sub-chunks for a single
+    map-step window, and persist whichever of the three was requested.
 
     Runs as its own Celery message, fully decoupled from the parent summarize task, so it
     never adds latency to `worker.tasks.abrege`. The last chunk of a task to finish triggers
-    the follow-up global-relationships pass (see `dispatch_all_chunks`).
+    the follow-up global-relationships pass (see `dispatch_all_chunks`), if entities were
+    requested for this task.
     """
     data = json.loads(payload)
     task_id = data["task_id"]
     chunk_index = data["chunk_index"]
     page = data["page"]
+    want_qa = data.get("extract_qa", True)
+    want_entities = data.get("extract_entities", True)
+    want_chunks = data.get("extract_chunks", True)
     extra_log = {"task_id": task_id, "chunk_index": chunk_index}
     try:
 
         async def run():
             return await asyncio.gather(
-                qa_runnable.ainvoke({"text": data["text"], "language": data["language"], "qa_per_chunk": data["qa_per_chunk"]}),
-                entity_runnable.ainvoke({"text": data["text"], "language": data["language"]}),
-                chunk_runnable.ainvoke({"text": data["text"]}),
+                qa_runnable.ainvoke({"text": data["text"], "language": data["language"], "qa_per_chunk": data["qa_per_chunk"]}) if want_qa else _none(),
+                entity_runnable.ainvoke({"text": data["text"], "language": data["language"]}) if want_entities else _none(),
+                chunk_runnable.ainvoke({"text": data["text"]}) if want_chunks else _none(),
             )
 
         qa_output, entity_output, chunk_output = asyncio.run(run())
 
-        internal_api_client.save_chunk_qa_items(
-            task_id=task_id,
-            chunk_index=chunk_index,
-            qa_items=[
-                {"page": page, "source_text": data["text"], "question": item.question, "answer": item.answer}
-                for item in qa_output.items
-            ],
-            model_name=qa_llm.model_name,
-        )
-        internal_api_client.save_chunk_entities(
-            task_id=task_id,
-            chunk_index=chunk_index,
-            entities=[
-                {"type": e.type, "text": e.text, "contexts": e.contexts, "pages": [page] if page is not None else []}
-                for e in entity_output.entities
-            ],
-            relationships=[r.model_dump() for r in entity_output.relationships],
-            model_name=entity_llm.model_name,
-        )
-        internal_api_client.save_chunks(
-            task_id=task_id,
-            chunk_index=chunk_index,
-            page=page,
-            chunks=chunk_output.chunks or [data["text"]],
-            model_name=chunk_llm.model_name,
-        )
+        if want_qa:
+            internal_api_client.save_chunk_qa_items(
+                task_id=task_id,
+                chunk_index=chunk_index,
+                qa_items=[
+                    {"page": page, "source_text": data["text"], "question": item.question, "answer": item.answer}
+                    for item in qa_output.items
+                ],
+                model_name=qa_llm.model_name,
+            )
+        if want_entities:
+            internal_api_client.save_chunk_entities(
+                task_id=task_id,
+                chunk_index=chunk_index,
+                entities=[
+                    {"type": e.type, "text": e.text, "contexts": e.contexts, "pages": [page] if page is not None else []}
+                    for e in entity_output.entities
+                ],
+                relationships=[r.model_dump() for r in entity_output.relationships],
+                model_name=entity_llm.model_name,
+            )
+        if want_chunks:
+            internal_api_client.save_chunks(
+                task_id=task_id,
+                chunk_index=chunk_index,
+                page=page,
+                chunks=chunk_output.chunks or [data["text"]],
+                model_name=chunk_llm.model_name,
+            )
     except Exception as e:
         logger_abrege.error(f"Chunk details extraction failed: {e} - {traceback.format_exc()}", extra=extra_log)
         task_table.update_task(task_id=task_id, form_data=TaskUpdateForm(qa_entities_status="failed"))
@@ -260,14 +271,17 @@ def extract_chunk_details(self, payload: str):
     remaining = redis_client.decr(f"chunk_pending:{task_id}")
     if remaining <= 0:
         redis_client.delete(f"chunk_pending:{task_id}")
-        task_table.update_task(
-            task_id=task_id, form_data=TaskUpdateForm(qa_entities_status="completed", relationships_status="pending")
-        )
-        celery_app.send_task(
-            "worker.tasks.compute_global_relationships",
-            args=[json.dumps({"task_id": task_id})],
-            task_id=f"{task_id}:global-relationships",
-        )
+        if want_entities:
+            task_table.update_task(
+                task_id=task_id, form_data=TaskUpdateForm(qa_entities_status="completed", relationships_status="pending")
+            )
+            celery_app.send_task(
+                "worker.tasks.compute_global_relationships",
+                args=[json.dumps({"task_id": task_id})],
+                task_id=f"{task_id}:global-relationships",
+            )
+        else:
+            task_table.update_task(task_id=task_id, form_data=TaskUpdateForm(qa_entities_status="completed"))
 
 
 @celery_app.task(name="worker.tasks.compute_global_relationships", bind=True)

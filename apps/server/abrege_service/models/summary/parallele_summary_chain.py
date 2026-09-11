@@ -150,8 +150,19 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
             max_token = min(self.max_token, self.llm.max_tokens)
         return split_texts_by_token_limit(texts=current_text, max_tokens=max_token)
 
-    def dispatch_chunk_extraction(self, task_id: str, chunk_index: int, text: str, language: str, qa_per_chunk: int) -> None:
-        """Fire-and-forget a Celery task extracting Q&A/entities/relationships for one chunk.
+    def dispatch_chunk_extraction(
+        self,
+        task_id: str,
+        chunk_index: int,
+        text: str,
+        language: str,
+        qa_per_chunk: int,
+        extract_qa: bool = True,
+        extract_entities: bool = True,
+        extract_chunks: bool = True,
+    ) -> None:
+        """Fire-and-forget a Celery task extracting Q&A/entities/relationships/semantic chunks
+        for one chunk - only the pieces requested via `extract_qa`/`extract_entities`/`extract_chunks`.
 
         Runs fully decoupled from the summarize flow (own Celery message, own worker slot)
         so it never adds latency to the summary itself.
@@ -168,13 +179,25 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
                         "text": text,
                         "language": language,
                         "qa_per_chunk": qa_per_chunk,
+                        "extract_qa": extract_qa,
+                        "extract_entities": extract_entities,
+                        "extract_chunks": extract_chunks,
                     }
                 )
             ],
             task_id=f"{task_id}:chunk:{chunk_index}",
         )
 
-    def dispatch_all_chunks(self, task_id: str, texts: list[str], language: str, qa_per_chunk: int) -> None:
+    def dispatch_all_chunks(
+        self,
+        task_id: str,
+        texts: list[str],
+        language: str,
+        qa_per_chunk: int,
+        extract_qa: bool = True,
+        extract_entities: bool = True,
+        extract_chunks: bool = True,
+    ) -> None:
         """Initialize the completion counter and dispatch one extraction task per chunk.
 
         The Redis counter (rather than a Celery chord) tracks when the last chunk finishes,
@@ -182,7 +205,16 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
         """
         redis_client.set(f"chunk_pending:{task_id}", len(texts))
         for index, text in enumerate(texts):
-            self.dispatch_chunk_extraction(task_id=task_id, chunk_index=index, text=text, language=language, qa_per_chunk=qa_per_chunk)
+            self.dispatch_chunk_extraction(
+                task_id=task_id,
+                chunk_index=index,
+                text=text,
+                language=language,
+                qa_per_chunk=qa_per_chunk,
+                extract_qa=extract_qa,
+                extract_entities=extract_entities,
+                extract_chunks=extract_chunks,
+            )
 
     def dispatch_topic_classification(self, task_id: str, summary: str, language: str) -> None:
         """Fire-and-forget the free-form topic/subject classification of the final summary.
@@ -204,6 +236,8 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
         custom_prompt: str = "",
         extract_qa: bool = False,
         qa_per_chunk: int = 3,
+        extract_entities: bool = False,
+        extract_chunks: bool = False,
     ) -> list[Document]:
         extra_log = {"task.id": task.id, "user_id": task.user_id}
         semaphore = asyncio.Semaphore(self.max_concurrency)
@@ -231,9 +265,18 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
         )
         percentage_left = 1 - current_percentage
 
-        if extract_qa and qa_per_chunk > 0:
+        wants_chunk_details = (extract_qa and qa_per_chunk > 0) or extract_entities or extract_chunks
+        if wants_chunk_details:
             task_table.update_task(task_id=task.id, form_data=TaskUpdateForm(qa_entities_status="in_progress"))
-            self.dispatch_all_chunks(task_id=task.id, texts=transform_texts, language=language, qa_per_chunk=qa_per_chunk)
+            self.dispatch_all_chunks(
+                task_id=task.id,
+                texts=transform_texts,
+                language=language,
+                qa_per_chunk=qa_per_chunk,
+                extract_qa=extract_qa and qa_per_chunk > 0,
+                extract_entities=extract_entities,
+                extract_chunks=extract_chunks,
+            )
 
         async def map_one_document(doc: Document) -> Document:
             nonlocal counter
@@ -413,6 +456,8 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
             custom_prompt=custom_prompt,
             extract_qa=params.extract_qa,
             qa_per_chunk=params.qa_per_chunk,
+            extract_entities=params.extract_entities,
+            extract_chunks=params.extract_chunks,
         )
         texts = [doc.page_content for doc in mapped_docs]
         total_words = sum_words(texts=texts)
@@ -482,12 +527,13 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
             )
 
             params = task.parameters or SummaryParameters()
-            task_table.update_task(task_id=task.id, form_data=TaskUpdateForm(topics_status="pending"))
-            self.dispatch_topic_classification(
-                task_id=task.id,
-                summary=task.output.summary,
-                language=params.language if params.language else "French",
-            )
+            if params.classify_topics:
+                task_table.update_task(task_id=task.id, form_data=TaskUpdateForm(topics_status="pending"))
+                self.dispatch_topic_classification(
+                    task_id=task.id,
+                    summary=task.output.summary,
+                    language=params.language if params.language else "French",
+                )
 
             task = self.update_result_task(
                 task,
