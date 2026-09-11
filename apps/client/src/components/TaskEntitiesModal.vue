@@ -25,11 +25,10 @@ const tabsData = [
   { label: 'Graphe', slot: 'graph' },
 ]
 
+const searchQuery = ref('')
+
 // ----- Onglet liste -----
 const entityHeaders = ['Type', 'Texte', 'Pages', 'Chunk', 'Modèle']
-const entityRows = computed(() =>
-  abrege.entities.map(e => [e.type, e.text, (e.pages ?? []).join(', ') || '—', String(e.chunk_index), e.model_name ?? '—']),
-)
 
 const entityLabelById = computed(() => {
   const map = new Map<string, string>()
@@ -37,9 +36,34 @@ const entityLabelById = computed(() => {
   return map
 })
 
+const filteredEntities = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase()
+  if (!q) { return abrege.entities }
+  return abrege.entities.filter(e =>
+    e.type.toLowerCase().includes(q)
+    || e.text.toLowerCase().includes(q)
+    || (e.contexts ?? []).some(c => c.toLowerCase().includes(q)),
+  )
+})
+
+const filteredRelationships = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase()
+  if (!q) { return abrege.relationships }
+  return abrege.relationships.filter(r =>
+    r.relationship_type.toLowerCase().includes(q)
+    || (r.description ?? '').toLowerCase().includes(q)
+    || (entityLabelById.value.get(r.source_entity_id) ?? '').toLowerCase().includes(q)
+    || (entityLabelById.value.get(r.target_entity_id) ?? '').toLowerCase().includes(q),
+  )
+})
+
+const entityRows = computed(() =>
+  filteredEntities.value.map(e => [e.type, e.text, (e.pages ?? []).join(', ') || '—', String(e.chunk_index), e.model_name ?? '—']),
+)
+
 const relationshipHeaders = ['Source', 'Relation', 'Cible', 'Description', 'Portée', 'Modèle']
 const relationshipRows = computed(() =>
-  abrege.relationships.map(r => [
+  filteredRelationships.value.map(r => [
     entityLabelById.value.get(r.source_entity_id) ?? r.source_entity_id,
     r.relationship_type,
     entityLabelById.value.get(r.target_entity_id) ?? r.target_entity_id,
@@ -69,7 +93,7 @@ function colorForType (type: string): string {
 }
 
 const legendTypes = computed(() => {
-  const types = new Set(abrege.entities.map(e => e.type.toUpperCase()))
+  const types = new Set(filteredEntities.value.map(e => e.type.toUpperCase()))
   return [...types]
 })
 
@@ -116,7 +140,7 @@ async function renderGraph () {
   await nextTick()
   if (!graphContainer.value) { return }
   destroyGraph()
-  const graph = buildGraph(abrege.entities, abrege.relationships)
+  const graph = buildGraph(filteredEntities.value, filteredRelationships.value)
   renderer = new Sigma(graph, graphContainer.value, {
     renderEdgeLabels: true,
     defaultEdgeType: 'arrow',
@@ -127,6 +151,10 @@ watch(activeTab, (tab) => {
   if (tab === 1) { renderGraph() }
 })
 
+watch(searchQuery, () => {
+  if (activeTab.value === 1) { renderGraph() }
+})
+
 watch(
   () => props.opened,
   async (opened) => {
@@ -135,6 +163,7 @@ watch(
       activeTab.value = 0
       return
     }
+    searchQuery.value = ''
     await abrege.fetchEntitiesAndRelationships(props.taskId)
     if (activeTab.value === 1) { renderGraph() }
   },
@@ -180,80 +209,101 @@ function close () {
       </p>
     </div>
 
-    <CustomTabs
-      v-else
-      v-model="activeTab"
-      :tabs-data="tabsData"
-    >
-      <template #list>
-        <div
-          v-if="abrege.entities.length === 0"
-          class="fr-alert fr-alert--info"
-        >
-          <p>Aucune entité disponible pour cette tâche.</p>
-        </div>
-        <div
-          v-else
-          class="entities-list-columns"
-        >
-          <div class="entities-list-column">
-            <h4 class="fr-h6">
-              Entités
-            </h4>
-            <DsfrTable
-              title="Entités extraites"
-              :headers="entityHeaders"
-              :rows="entityRows"
-            />
-          </div>
+    <template v-else>
+      <DsfrSearchBar
+        v-if="abrege.entities.length > 0"
+        v-model="searchQuery"
+        label="Rechercher dans les entités et relations"
+        placeholder="Rechercher un type, un texte, une relation…"
+        class="fr-mt-2w"
+      />
 
-          <div class="entities-list-column">
-            <h4 class="fr-h6">
-              Relations
-            </h4>
-            <DsfrTable
-              v-if="relationshipRows.length > 0"
-              title="Relations extraites"
-              :headers="relationshipHeaders"
-              :rows="relationshipRows"
-            />
-            <p
-              v-else
-              class="fr-text--sm fr-text-mention--grey"
-            >
-              Aucune relation détectée.
-            </p>
+      <CustomTabs
+        v-model="activeTab"
+        :tabs-data="tabsData"
+      >
+        <template #list>
+          <div
+            v-if="abrege.entities.length === 0"
+            class="fr-alert fr-alert--info"
+          >
+            <p>Aucune entité disponible pour cette tâche.</p>
           </div>
-        </div>
-      </template>
+          <p
+            v-else-if="entityRows.length === 0"
+            class="fr-text--sm fr-text-mention--grey"
+          >
+            Aucun résultat pour « {{ searchQuery }} ».
+          </p>
+          <div
+            v-else
+            class="entities-list-columns"
+          >
+            <div class="entities-list-column">
+              <h4 class="fr-h6">
+                Entités
+              </h4>
+              <DsfrTable
+                title="Entités extraites"
+                :headers="entityHeaders"
+                :rows="entityRows"
+              />
+            </div>
 
-      <template #graph>
-        <div
-          v-if="legendTypes.length > 0"
-          class="entities-graph-legend"
-        >
-          <span
-            v-for="type in legendTypes"
-            :key="type"
-            class="entities-graph-legend__item"
+            <div class="entities-list-column">
+              <h4 class="fr-h6">
+                Relations
+              </h4>
+              <DsfrTable
+                v-if="relationshipRows.length > 0"
+                title="Relations extraites"
+                :headers="relationshipHeaders"
+                :rows="relationshipRows"
+              />
+              <p
+                v-else
+                class="fr-text--sm fr-text-mention--grey"
+              >
+                Aucune relation détectée.
+              </p>
+            </div>
+          </div>
+        </template>
+
+        <template #graph>
+          <div
+            v-if="legendTypes.length > 0"
+            class="entities-graph-legend"
           >
             <span
-              class="entities-graph-legend__dot"
-              :style="{ backgroundColor: colorForType(type) }"
-            />
-            {{ type }}
-          </span>
-          <span class="entities-graph-legend__item">
-            <span class="entities-graph-legend__line" />
-            Relation
-          </span>
-        </div>
-        <div
-          ref="graphContainer"
-          class="entities-graph-container"
-        />
-      </template>
-    </CustomTabs>
+              v-for="type in legendTypes"
+              :key="type"
+              class="entities-graph-legend__item"
+            >
+              <span
+                class="entities-graph-legend__dot"
+                :style="{ backgroundColor: colorForType(type) }"
+              />
+              {{ type }}
+            </span>
+            <span class="entities-graph-legend__item">
+              <span class="entities-graph-legend__line" />
+              Relation
+            </span>
+          </div>
+          <p
+            v-else-if="searchQuery"
+            class="fr-text--sm fr-text-mention--grey"
+          >
+            Aucun résultat pour « {{ searchQuery }} ».
+          </p>
+          <div
+            ref="graphContainer"
+            class="entities-graph-container"
+          />
+        </template>
+      </CustomTabs>
+    </template>
   </DsfrModal>
 </template>
 
