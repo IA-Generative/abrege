@@ -25,6 +25,12 @@ class TaskModel(BaseModel):
     extras: Optional[Dict[str, Any]] = None
     content_hash: Optional[str] = None
 
+    # Set only when the matching SummaryParameters flag was requested - see
+    # docs/document-insights.md. None means "not requested" (not "still running").
+    qa_entities_status: Optional[str] = None
+    relationships_status: Optional[str] = None
+    topics_status: Optional[str] = None
+
 
 class TaskForm(BaseModel):
     model_config = ConfigDict(from_attributes=True)
