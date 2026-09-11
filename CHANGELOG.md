@@ -210,6 +210,31 @@
 - clean code
 - clean code
 
+## [3.4.0-rc.12](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.11...v3.4.0-rc.12) (2026-09-11)
+
+
+### Features
+
+* add search functionality to TaskChunksModal, TaskEntitiesModal, and TaskQAModal components ([812ab10](https://github.com/IA-Generative/abrege/commit/812ab1036a8ecde7d16a23e218f79afc88156ea2))
+* implement pagination for task-related data retrieval and enhance testing coverage ([ab4a610](https://github.com/IA-Generative/abrege/commit/ab4a6103beac0eb177b96c207dfd474b59d39a44))
+* make Q&A, entities, chunking and topic extraction opt-in ([885ce60](https://github.com/IA-Generative/abrege/commit/885ce60466b48aafd1de6e46e1ff9ce0a7e631a5))
+* qa and entities ([fd9abde](https://github.com/IA-Generative/abrege/commit/fd9abde606a38512759616bb911690720c8ca43f))
+
+
+### Bug Fixes
+
+* **client:** remove duplicate entities/relations/QA display in ResumeResult ([5396213](https://github.com/IA-Generative/abrege/commit/5396213da8d395e4e88b1ca691111a9dc8e70eac))
+* remove TOKENIZER_MODEL_NAME and HF_TOKEN from documentation and Helm values.yaml ([857cd6b](https://github.com/IA-Generative/abrege/commit/857cd6b002a281e32102a0d04d00dd95eb817e2f))
+* resolve CI failures across worker tests, FK constraints and frontend lint ([8bbb018](https://github.com/IA-Generative/abrege/commit/8bbb018ecb99f5bcfb6872890f18de0fd74a01d1))
+* seed a real Task row in remaining worker test helpers ([7559cf1](https://github.com/IA-Generative/abrege/commit/7559cf1de61e84b026e79cfcd7d6d773dee40f92))
+
+
+### Code Refactoring
+
+* dependencies and remove unused tests ([3a5e3b2](https://github.com/IA-Generative/abrege/commit/3a5e3b2f55fbae862364a3c62fde87b0c37b6476))
+* refactor audio and video transcription services; remove unused dependencies ([b859cbf](https://github.com/IA-Generative/abrege/commit/b859cbfaf485b51261cb268437edf1184d72568b))
+* remove mock data and SSO bypass logic from Abrege store ([5414b95](https://github.com/IA-Generative/abrege/commit/5414b950c9884146ac75319d7a08e0ec3dc1a02b))
+
 ## [3.4.0-rc.11](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.10...v3.4.0-rc.11) (2026-09-11)
 
 
