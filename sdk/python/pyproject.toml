@@ -61,9 +61,9 @@ exclude = [
 line-length = 120
 indent-width = 4
 target-version = "py313"
-src = ["apps/server", "sdk/"]
+src = ["abrege_sdk", "tests"]
 
 [tool.isort]
-src_paths = ["apps/server", "sdk/"]
+src_paths = ["abrege_sdk", "tests"]
 
 

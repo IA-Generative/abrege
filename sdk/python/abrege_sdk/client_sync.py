@@ -1,13 +1,15 @@
 """Sync client for Abrège API.
 
 Example (static API key, e.g. a Keycloak service-account token):
-    >>> with SyncAbregeClient("http://localhost:5000", api_key="...") as client:
-    ...     task = client.summarize_text(Input(text="..."))
+    >>> with SyncAbregeClient("http://localhost:5000/api", api_key="...") as client:
+    ...     task = client.summarize_text(Input(content=TextContent(text="...")))
 
 Example (Keycloak username/password - real user identity):
-    >>> with SyncAbregeClient("http://localhost:5000") as client:
+    >>> with SyncAbregeClient("http://localhost:5000/api") as client:
     ...     client.login("user@example.com", "hunter2")
-    ...     task = client.summarize_text(Input(text="..."))
+    ...     task = client.summarize_text(Input(content=TextContent(text="...")))
+
+See ../README.md for a fuller quickstart.
 """
 
 from pathlib import Path

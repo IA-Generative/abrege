@@ -1,13 +1,15 @@
 """Async client for Abrège API.
 
 Example (static API key, e.g. a Keycloak service-account token):
-    >>> async with AsyncAbregeClient("http://localhost:5000", api_key="...") as client:
-    ...     task = await client.summarize_text(Input(text="..."))
+    >>> async with AsyncAbregeClient("http://localhost:5000/api", api_key="...") as client:
+    ...     task = await client.summarize_text(Input(content=TextContent(text="...")))
 
 Example (Keycloak username/password - real user identity):
-    >>> async with AsyncAbregeClient("http://localhost:5000") as client:
+    >>> async with AsyncAbregeClient("http://localhost:5000/api") as client:
     ...     await client.login("user@example.com", "hunter2")
-    ...     task = await client.summarize_text(Input(text="..."))
+    ...     task = await client.summarize_text(Input(content=TextContent(text="...")))
+
+See ../README.md for a fuller quickstart.
 """
 
 from pathlib import Path
