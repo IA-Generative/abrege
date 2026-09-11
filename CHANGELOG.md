@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [3.4.0-rc.11](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.10...v3.4.0-rc.11) (2026-09-11)
+
+
+### Bug Fixes
+
+* **client:** match ocr-api's footer instead of the DsfrFooter component ([2d37f9f](https://github.com/IA-Generative/abrege/commit/2d37f9f198c35563a5f4ec4fec8eeeacff970de7))
+
 ## [3.4.0-rc.10](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.9...v3.4.0-rc.10) (2026-09-11)
 
 
