@@ -24,6 +24,10 @@ from abrege_sdk.schemas.pagination import Pagination
 from abrege_sdk.schemas.task import TaskModel, TaskStatus
 from abrege_sdk.schemas.content import Input
 from abrege_sdk.schemas.parameters import SummaryParameters
+from abrege_sdk.schemas.qa_item import QAItemRow
+from abrege_sdk.schemas.entity import EntityRow, RelationshipRow
+from abrege_sdk.schemas.topic import TopicRow
+from abrege_sdk.schemas.chunk import ChunkRow
 from abrege_sdk.exceptions import AbregeAPIError, AbregeAuthenticationError, AbregeTimeoutError
 
 # Refresh proactively before actual expiry, so a request never races a token that
@@ -282,6 +286,80 @@ class AsyncAbregeClient:
             task_id: Task ID
         """
         await self._request("DELETE", f"/api/task/{task_id}")
+
+    async def extract_task_details(self, task_id: str) -> dict:
+        """(Re)trigger Q&A/entities/chunks extraction for an already-completed task - e.g. one
+        summarized with `extract_qa`/`extract_entities`/`extract_chunks` left `False`. Runs all
+        three regardless of what the task originally requested. Fire-and-forget: poll
+        `get_task(task_id).qa_entities_status` for completion.
+
+        Args:
+            task_id: Task ID (must be ``completed``)
+
+        Returns:
+            ``{"task_id": ..., "status": "extraction_queued"}``
+        """
+        response = await self._request("POST", f"/api/task/{task_id}/extract-details")
+        return response.json()
+
+    async def get_task_qa_items(self, task_id: str, page: int = 1, page_size: int = 20) -> Pagination[QAItemRow]:
+        """Get a page of Q&A pairs extracted for a task (only if `extract_qa` was requested)."""
+        response = await self._request("GET", f"/api/task/{task_id}/qa", params={"offset": page, "limit": page_size})
+        return Pagination[QAItemRow](**response.json())
+
+    async def get_task_qa_item(self, task_id: str, qa_item_id: str) -> QAItemRow:
+        response = await self._request("GET", f"/api/task/{task_id}/qa/{qa_item_id}")
+        return QAItemRow(**response.json())
+
+    async def delete_task_qa_item(self, task_id: str, qa_item_id: str) -> None:
+        await self._request("DELETE", f"/api/task/{task_id}/qa/{qa_item_id}")
+
+    async def get_task_entities(self, task_id: str, page: int = 1, page_size: int = 20) -> Pagination[EntityRow]:
+        """Get a page of entities extracted for a task (only if `extract_entities` was requested)."""
+        response = await self._request("GET", f"/api/task/{task_id}/entities", params={"offset": page, "limit": page_size})
+        return Pagination[EntityRow](**response.json())
+
+    async def get_task_entity(self, task_id: str, entity_id: str) -> EntityRow:
+        response = await self._request("GET", f"/api/task/{task_id}/entities/{entity_id}")
+        return EntityRow(**response.json())
+
+    async def delete_task_entity(self, task_id: str, entity_id: str) -> None:
+        await self._request("DELETE", f"/api/task/{task_id}/entities/{entity_id}")
+
+    async def get_task_relationships(self, task_id: str, page: int = 1, page_size: int = 20) -> Pagination[RelationshipRow]:
+        """Get a page of relationships between entities (local + cross-chunk "global" ones,
+        the latter with `chunk_index=None`) - only if `extract_entities` was requested."""
+        response = await self._request("GET", f"/api/task/{task_id}/relationships", params={"offset": page, "limit": page_size})
+        return Pagination[RelationshipRow](**response.json())
+
+    async def get_task_relationship(self, task_id: str, relationship_id: str) -> RelationshipRow:
+        response = await self._request("GET", f"/api/task/{task_id}/relationships/{relationship_id}")
+        return RelationshipRow(**response.json())
+
+    async def delete_task_relationship(self, task_id: str, relationship_id: str) -> None:
+        await self._request("DELETE", f"/api/task/{task_id}/relationships/{relationship_id}")
+
+    async def get_task_topics(self, task_id: str, page: int = 1, page_size: int = 20) -> Pagination[TopicRow]:
+        """Get a page of free-form topics classified for a task (only if `classify_topics` was
+        requested), ordered by descending confidence."""
+        response = await self._request("GET", f"/api/task/{task_id}/topics", params={"offset": page, "limit": page_size})
+        return Pagination[TopicRow](**response.json())
+
+    async def delete_task_topic(self, task_id: str, topic_id: str) -> None:
+        await self._request("DELETE", f"/api/task/{task_id}/topics/{topic_id}")
+
+    async def get_task_chunks(self, task_id: str, page: int = 1, page_size: int = 20) -> Pagination[ChunkRow]:
+        """Get a page of semantic sub-chunks a task was summarized from (only if
+        `extract_chunks` was requested)."""
+        response = await self._request("GET", f"/api/task/{task_id}/chunks", params={"offset": page, "limit": page_size})
+        return Pagination[ChunkRow](**response.json())
+
+    async def get_task_chunk(self, task_id: str, chunk_id: str) -> ChunkRow:
+        response = await self._request("GET", f"/api/task/{task_id}/chunks/{chunk_id}")
+        return ChunkRow(**response.json())
+
+    async def delete_task_chunk(self, task_id: str, chunk_id: str) -> None:
+        await self._request("DELETE", f"/api/task/{task_id}/chunks/{chunk_id}")
 
     async def wait_for_task(
         self,

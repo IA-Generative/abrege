@@ -6,6 +6,10 @@ from abrege_sdk.schemas.pagination import Pagination
 from abrege_sdk.schemas.task import TaskModel, TaskStatus
 from abrege_sdk.schemas.health import Health
 from abrege_sdk.schemas.parameters import SummaryParameters
+from abrege_sdk.schemas.qa_item import QAItemRow
+from abrege_sdk.schemas.entity import EntityRow, RelationshipRow
+from abrege_sdk.schemas.topic import TopicRow
+from abrege_sdk.schemas.chunk import ChunkRow
 from abrege_sdk.exceptions import AbregeAPIError, AbregeAuthenticationError, AbregeTimeoutError
 from unittest.mock import Mock, patch
 
@@ -272,6 +276,202 @@ def test_delete_task():
         with SyncAbregeClient(BASE_URL, API_KEY) as client:
             client.delete_task("tid")
             mock_instance.request.assert_called_once_with("DELETE", "/api/task/tid")
+
+
+def test_extract_task_details():
+    with patch("abrege_sdk.client_sync.httpx.Client") as mock_client:
+        mock_instance = mock_client.return_value
+        mock_instance.request.return_value.json.return_value = {"task_id": "tid", "status": "extraction_queued"}
+        mock_instance.request.return_value.raise_for_status = lambda: None
+        with SyncAbregeClient(BASE_URL, API_KEY) as client:
+            result = client.extract_task_details("tid")
+            assert result == {"task_id": "tid", "status": "extraction_queued"}
+            mock_instance.request.assert_called_once_with("POST", "/api/task/tid/extract-details")
+
+
+def test_get_task_qa_items():
+    page_data = {
+        "total": 1, "page": 1, "page_size": 20,
+        "items": [{
+            "id": "qa1", "task_id": "tid", "chunk_index": 0, "page": 1,
+            "source_text": "src", "question": "Q?", "answer": "A.",
+            "model_name": "gpt-4", "created_at": 0,
+        }],
+    }
+    with patch("abrege_sdk.client_sync.httpx.Client") as mock_client:
+        mock_instance = mock_client.return_value
+        mock_instance.request.return_value.json.return_value = page_data
+        mock_instance.request.return_value.raise_for_status = lambda: None
+        with SyncAbregeClient(BASE_URL, API_KEY) as client:
+            result = client.get_task_qa_items("tid", page=2, page_size=5)
+            assert isinstance(result, Pagination)
+            assert isinstance(result.items[0], QAItemRow)
+            assert result.items[0].question == "Q?"
+            mock_instance.request.assert_called_once_with(
+                "GET", "/api/task/tid/qa", params={"offset": 2, "limit": 5}
+            )
+
+
+def test_get_task_qa_item():
+    item_data = {
+        "id": "qa1", "task_id": "tid", "chunk_index": 0, "page": None,
+        "source_text": "src", "question": "Q?", "answer": "A.",
+        "model_name": None, "created_at": 0,
+    }
+    with patch("abrege_sdk.client_sync.httpx.Client") as mock_client:
+        mock_instance = mock_client.return_value
+        mock_instance.request.return_value.json.return_value = item_data
+        mock_instance.request.return_value.raise_for_status = lambda: None
+        with SyncAbregeClient(BASE_URL, API_KEY) as client:
+            result = client.get_task_qa_item("tid", "qa1")
+            assert isinstance(result, QAItemRow)
+            mock_instance.request.assert_called_once_with("GET", "/api/task/tid/qa/qa1")
+
+
+def test_delete_task_qa_item():
+    with patch("abrege_sdk.client_sync.httpx.Client") as mock_client:
+        mock_instance = mock_client.return_value
+        mock_instance.request.return_value.raise_for_status = lambda: None
+        with SyncAbregeClient(BASE_URL, API_KEY) as client:
+            client.delete_task_qa_item("tid", "qa1")
+            mock_instance.request.assert_called_once_with("DELETE", "/api/task/tid/qa/qa1")
+
+
+def test_get_task_entities():
+    page_data = {
+        "total": 1, "page": 1, "page_size": 20,
+        "items": [{
+            "id": "e1", "task_id": "tid", "chunk_index": 0, "type": "PERSON", "text": "Alice",
+            "contexts": ["ctx"], "pages": [1], "model_name": "gpt-4", "created_at": 0,
+        }],
+    }
+    with patch("abrege_sdk.client_sync.httpx.Client") as mock_client:
+        mock_instance = mock_client.return_value
+        mock_instance.request.return_value.json.return_value = page_data
+        mock_instance.request.return_value.raise_for_status = lambda: None
+        with SyncAbregeClient(BASE_URL, API_KEY) as client:
+            result = client.get_task_entities("tid")
+            assert isinstance(result.items[0], EntityRow)
+            assert result.items[0].text == "Alice"
+            mock_instance.request.assert_called_once_with(
+                "GET", "/api/task/tid/entities", params={"offset": 1, "limit": 20}
+            )
+
+
+def test_delete_task_entity():
+    with patch("abrege_sdk.client_sync.httpx.Client") as mock_client:
+        mock_instance = mock_client.return_value
+        mock_instance.request.return_value.raise_for_status = lambda: None
+        with SyncAbregeClient(BASE_URL, API_KEY) as client:
+            client.delete_task_entity("tid", "e1")
+            mock_instance.request.assert_called_once_with("DELETE", "/api/task/tid/entities/e1")
+
+
+def test_get_task_relationships():
+    page_data = {
+        "total": 1, "page": 1, "page_size": 20,
+        "items": [{
+            "id": "r1", "task_id": "tid", "chunk_index": None,
+            "source_entity_id": "e1", "target_entity_id": "e2",
+            "relationship_type": "WORKS_AT", "description": "link",
+            "model_name": "gpt-4", "created_at": 0,
+        }],
+    }
+    with patch("abrege_sdk.client_sync.httpx.Client") as mock_client:
+        mock_instance = mock_client.return_value
+        mock_instance.request.return_value.json.return_value = page_data
+        mock_instance.request.return_value.raise_for_status = lambda: None
+        with SyncAbregeClient(BASE_URL, API_KEY) as client:
+            result = client.get_task_relationships("tid")
+            assert isinstance(result.items[0], RelationshipRow)
+            assert result.items[0].chunk_index is None
+            mock_instance.request.assert_called_once_with(
+                "GET", "/api/task/tid/relationships", params={"offset": 1, "limit": 20}
+            )
+
+
+def test_delete_task_relationship():
+    with patch("abrege_sdk.client_sync.httpx.Client") as mock_client:
+        mock_instance = mock_client.return_value
+        mock_instance.request.return_value.raise_for_status = lambda: None
+        with SyncAbregeClient(BASE_URL, API_KEY) as client:
+            client.delete_task_relationship("tid", "r1")
+            mock_instance.request.assert_called_once_with("DELETE", "/api/task/tid/relationships/r1")
+
+
+def test_get_task_topics():
+    page_data = {
+        "total": 1, "page": 1, "page_size": 20,
+        "items": [{
+            "id": "t1", "task_id": "tid", "topic": "finance", "confidence": 0.9,
+            "explanation": "exp", "model_name": "gpt-4", "created_at": 0,
+        }],
+    }
+    with patch("abrege_sdk.client_sync.httpx.Client") as mock_client:
+        mock_instance = mock_client.return_value
+        mock_instance.request.return_value.json.return_value = page_data
+        mock_instance.request.return_value.raise_for_status = lambda: None
+        with SyncAbregeClient(BASE_URL, API_KEY) as client:
+            result = client.get_task_topics("tid")
+            assert isinstance(result.items[0], TopicRow)
+            assert result.items[0].confidence == 0.9
+            mock_instance.request.assert_called_once_with(
+                "GET", "/api/task/tid/topics", params={"offset": 1, "limit": 20}
+            )
+
+
+def test_delete_task_topic():
+    with patch("abrege_sdk.client_sync.httpx.Client") as mock_client:
+        mock_instance = mock_client.return_value
+        mock_instance.request.return_value.raise_for_status = lambda: None
+        with SyncAbregeClient(BASE_URL, API_KEY) as client:
+            client.delete_task_topic("tid", "t1")
+            mock_instance.request.assert_called_once_with("DELETE", "/api/task/tid/topics/t1")
+
+
+def test_get_task_chunks():
+    page_data = {
+        "total": 1, "page": 1, "page_size": 20,
+        "items": [{
+            "id": "c1", "task_id": "tid", "chunk_index": 0, "position": 0, "page": 1,
+            "text": "chunk text", "model_name": "gpt-4", "created_at": 0,
+        }],
+    }
+    with patch("abrege_sdk.client_sync.httpx.Client") as mock_client:
+        mock_instance = mock_client.return_value
+        mock_instance.request.return_value.json.return_value = page_data
+        mock_instance.request.return_value.raise_for_status = lambda: None
+        with SyncAbregeClient(BASE_URL, API_KEY) as client:
+            result = client.get_task_chunks("tid")
+            assert isinstance(result.items[0], ChunkRow)
+            assert result.items[0].text == "chunk text"
+            mock_instance.request.assert_called_once_with(
+                "GET", "/api/task/tid/chunks", params={"offset": 1, "limit": 20}
+            )
+
+
+def test_get_task_chunk():
+    chunk_data = {
+        "id": "c1", "task_id": "tid", "chunk_index": 0, "position": 0, "page": None,
+        "text": "chunk text", "model_name": None, "created_at": 0,
+    }
+    with patch("abrege_sdk.client_sync.httpx.Client") as mock_client:
+        mock_instance = mock_client.return_value
+        mock_instance.request.return_value.json.return_value = chunk_data
+        mock_instance.request.return_value.raise_for_status = lambda: None
+        with SyncAbregeClient(BASE_URL, API_KEY) as client:
+            result = client.get_task_chunk("tid", "c1")
+            assert isinstance(result, ChunkRow)
+            mock_instance.request.assert_called_once_with("GET", "/api/task/tid/chunks/c1")
+
+
+def test_delete_task_chunk():
+    with patch("abrege_sdk.client_sync.httpx.Client") as mock_client:
+        mock_instance = mock_client.return_value
+        mock_instance.request.return_value.raise_for_status = lambda: None
+        with SyncAbregeClient(BASE_URL, API_KEY) as client:
+            client.delete_task_chunk("tid", "c1")
+            mock_instance.request.assert_called_once_with("DELETE", "/api/task/tid/chunks/c1")
 
 
 def test_login_success_sets_api_key_and_auth_header():
