@@ -17,7 +17,7 @@ overrides = [{ name = "pillow", specifier = ">=12.2.0" }]
 
 [[package]]
 name = "abrege"
-version = "3.4.0-rc.9"
+version = "3.4.0-rc.10"
 source = { virtual = "." }
 dependencies = [
     { name = "boto3" },
