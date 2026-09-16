@@ -12,12 +12,14 @@ qa_template = """The following is a text extract:
 Generate at most {qa_per_chunk} question-answer pairs strictly based on this text extract.
 Each answer must be directly supported by the text — do not invent or infer facts that are not present.
 If the text does not contain enough substantive content to generate meaningful questions, return fewer pairs (or none).
+{instructions}
 Respond ONLY with a valid JSON object matching this schema: {{"items": [{{"question": "...", "answer": "..."}}]}}
 Questions and answers in {language}:"""
 
 QA_PROMPT = PromptTemplate(
     template=qa_template,
     input_variables=["text", "language", "qa_per_chunk"],
+    partial_variables={"instructions": ""},
 )
 
 

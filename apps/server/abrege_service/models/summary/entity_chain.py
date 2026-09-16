@@ -8,18 +8,22 @@ entity_template = """The following is a text extract:
 {text}
 1. Extract the most important named entities: people, dates, organizations, locations, amounts, events.
 2. Based on their contexts within this extract only, infer relationships between pairs of entities (0-based indices into the entities list). Only include relationships clearly supported by the text.
+{instructions}
 Respond ONLY with a valid JSON object matching this schema: {{"entities": [{{"type": "<the category you deem most appropriate, e.g. PERSON, DATE, ORGANIZATION, LOCATION, AMOUNT, EVENT, or any other relevant category>", "text": "...", "contexts": ["..."]}}], "relationships": [{{"source_index": 0, "target_index": 1, "relationship_type": "...", "description": "..."}}]}}
 Answer in {language}:"""
 
-ENTITY_PROMPT = PromptTemplate(template=entity_template, input_variables=["text", "language"])
+ENTITY_PROMPT = PromptTemplate(template=entity_template, input_variables=["text", "language"], partial_variables={"instructions": ""})
 
 # Prompt pour la passe finale de relations "globales", entre toutes les entités déjà extraites (cross-chunk).
 global_relationship_template = """The following is a list of entities extracted from a document (index: type - text - pages):
 {entities_list}
 Based on their types, names and the pages where they appear, infer relationships between pairs of entities (0-based indices). Only include relationships clearly supported or plausible given the entities themselves. Aim to surface real, meaningful links across the whole document, not just within a single passage.
+{instructions}
 Respond ONLY with a valid JSON object matching this schema: {{"relationships": [{{"source_index": 0, "target_index": 1, "relationship_type": "...", "description": "..."}}]}}"""
 
-GLOBAL_RELATIONSHIP_PROMPT = PromptTemplate(template=global_relationship_template, input_variables=["entities_list"])
+GLOBAL_RELATIONSHIP_PROMPT = PromptTemplate(
+    template=global_relationship_template, input_variables=["entities_list"], partial_variables={"instructions": ""}
+)
 
 
 class ChunkEntityOutput(BaseModel):
