@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [3.4.0-rc.14](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.13...v3.4.0-rc.14) (2026-09-16)
+
+
+### Bug Fixes
+
+* **dev:** replace MinIO with RustFS in local dev/test compose ([f2099bc](https://github.com/IA-Generative/abrege/commit/f2099bc92ae02f329ec8063b325232d65f6bc238))
+
 ## [3.4.0-rc.13](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.12...v3.4.0-rc.13) (2026-09-11)
 
 
