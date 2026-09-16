@@ -222,14 +222,23 @@ def extract_chunk_details(self, payload: str):
     want_qa = data.get("extract_qa", True)
     want_entities = data.get("extract_entities", True)
     want_chunks = data.get("extract_chunks", True)
+    qa_instructions = data.get("qa_instructions") or ""
+    entities_instructions = data.get("entities_instructions") or ""
+    chunks_instructions = data.get("chunks_instructions") or ""
     extra_log = {"task_id": task_id, "chunk_index": chunk_index}
     try:
 
         async def run():
             return await asyncio.gather(
-                qa_runnable.ainvoke({"text": data["text"], "language": data["language"], "qa_per_chunk": data["qa_per_chunk"]}) if want_qa else _none(),
-                entity_runnable.ainvoke({"text": data["text"], "language": data["language"]}) if want_entities else _none(),
-                chunk_runnable.ainvoke({"text": data["text"]}) if want_chunks else _none(),
+                qa_runnable.ainvoke(
+                    {"text": data["text"], "language": data["language"], "qa_per_chunk": data["qa_per_chunk"], "instructions": qa_instructions}
+                )
+                if want_qa
+                else _none(),
+                entity_runnable.ainvoke({"text": data["text"], "language": data["language"], "instructions": entities_instructions})
+                if want_entities
+                else _none(),
+                chunk_runnable.ainvoke({"text": data["text"], "instructions": chunks_instructions}) if want_chunks else _none(),
             )
 
         qa_output, entity_output, chunk_output = asyncio.run(run())
@@ -277,7 +286,7 @@ def extract_chunk_details(self, payload: str):
             )
             celery_app.send_task(
                 "worker.tasks.compute_global_relationships",
-                args=[json.dumps({"task_id": task_id})],
+                args=[json.dumps({"task_id": task_id, "entities_instructions": entities_instructions})],
                 task_id=f"{task_id}:global-relationships",
             )
         else:
@@ -290,13 +299,14 @@ def compute_global_relationships(self, payload: str):
     chunks are done, so entities found in different chunks can still be linked together."""
     data = json.loads(payload)
     task_id = data["task_id"]
+    entities_instructions = data.get("entities_instructions") or ""
     try:
         entity_rows = entity_table.get_entities_by_task(task_id)
         if len(entity_rows) < 2:
             task_table.update_task(task_id=task_id, form_data=TaskUpdateForm(relationships_status="completed"))
             return
         entities_list = "\n".join(f"{i}: {e.type} - {e.text} - pages {e.pages}" for i, e in enumerate(entity_rows))
-        output = asyncio.run(global_relationship_runnable.ainvoke({"entities_list": entities_list}))
+        output = asyncio.run(global_relationship_runnable.ainvoke({"entities_list": entities_list, "instructions": entities_instructions}))
         internal_api_client.save_global_relationships(
             task_id=task_id,
             entity_ids_in_order=[e.id for e in entity_rows],
@@ -325,7 +335,15 @@ def extract_task_details(self, task_id: str):
 
     texts = summary_service.split_task_texts(task)
     task_table.update_task(task_id=task.id, form_data=TaskUpdateForm(qa_entities_status="in_progress"))
-    summary_service.dispatch_all_chunks(task_id=task.id, texts=texts, language=language, qa_per_chunk=qa_per_chunk)
+    summary_service.dispatch_all_chunks(
+        task_id=task.id,
+        texts=texts,
+        language=language,
+        qa_per_chunk=qa_per_chunk,
+        qa_instructions=params.qa_instructions or "",
+        entities_instructions=params.entities_instructions or "",
+        chunks_instructions=params.chunks_instructions or "",
+    )
 
 
 @celery_app.task(name="worker.tasks.classify_topics", bind=True)
@@ -335,8 +353,9 @@ def classify_topics(self, payload: str):
     from `worker.tasks.abrege` — it never adds latency to the summary itself."""
     data = json.loads(payload)
     task_id = data["task_id"]
+    topics_instructions = data.get("topics_instructions") or ""
     try:
-        output = asyncio.run(topic_runnable.ainvoke({"text": data["summary"], "language": data["language"]}))
+        output = asyncio.run(topic_runnable.ainvoke({"text": data["summary"], "language": data["language"], "instructions": topics_instructions}))
         internal_api_client.save_topics(
             task_id=task_id,
             topics=[{"topic": t.topic, "confidence": t.confidence, "explanation": t.explanation} for t in output.topics],

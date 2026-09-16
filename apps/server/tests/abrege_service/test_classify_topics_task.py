@@ -31,7 +31,7 @@ def test_classify_topics_saves_through_the_internal_api(monkeypatch: pytest.Monk
     payload = json.dumps({"task_id": task_id, "summary": "Résumé du document.", "language": "French"})
     classify_topics.apply(args=[payload]).get()
 
-    mock_ainvoke.assert_called_once_with({"text": "Résumé du document.", "language": "French"})
+    mock_ainvoke.assert_called_once_with({"text": "Résumé du document.", "language": "French", "instructions": ""})
     internal_api_client.save_topics.assert_called_once_with(
         task_id=task_id,
         topics=[

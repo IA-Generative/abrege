@@ -8,9 +8,10 @@ from pydantic import BaseModel, Field
 chunk_template = """The following is a text extract:
 {text}
 Split this extract into semantically coherent chunks: group sentences or paragraphs that belong to the same idea or topic together, and start a new chunk whenever the topic clearly shifts. Preserve the original text exactly (do not summarize, translate or alter it) — only decide where to cut. If the whole extract is already about a single coherent topic, return it as a single chunk.
+{instructions}
 Respond ONLY with a valid JSON object matching this schema: {{"chunks": ["...", "..."]}}"""
 
-CHUNK_PROMPT = PromptTemplate(template=chunk_template, input_variables=["text"])
+CHUNK_PROMPT = PromptTemplate(template=chunk_template, input_variables=["text"], partial_variables={"instructions": ""})
 
 
 class ChunkingOutput(BaseModel):
