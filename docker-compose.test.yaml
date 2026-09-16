@@ -22,17 +22,22 @@ services:
       - "6380:6379"
     restart: unless-stopped
 
-  minio:
-    image: minio/minio:latest
+  rustfs:
+    # Matches the bundled RustFS subchart used in prod (helm/values.yaml `rustfs`) instead
+    # of MinIO, so the test suite exercises the same S3-compatible backend.
+    image: rustfs/rustfs:1.0.0-beta.1
     ports:
       - "9002:9000"
       - "9003:9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      RUSTFS_ACCESS_KEY: minioadmin
+      RUSTFS_SECRET_KEY: minioadmin
+      RUSTFS_VOLUMES: /data
+      RUSTFS_ADDRESS: 0.0.0.0:9000
+      RUSTFS_CONSOLE_ADDRESS: 0.0.0.0:9001
+      RUSTFS_CONSOLE_ENABLE: "true"
     volumes:
-      - minio_test_data:/data
-    command: server /data
+      - rustfs_test_data:/data
     restart: unless-stopped
 
   migration:
@@ -79,7 +84,7 @@ services:
         condition: service_completed_successfully
       redis:
         condition: service_started
-      minio:
+      rustfs:
         condition: service_started
     environment:
       OPENAI_API_KEY: ${OPENAI_API_KEY}
@@ -93,5 +98,5 @@ services:
 volumes:
   postgres_test_data:
     driver: local
-  minio_test_data:
+  rustfs_test_data:
     driver: local
