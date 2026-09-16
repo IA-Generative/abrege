@@ -153,17 +153,18 @@ docker-build-abrege-frontend:
 
 # Inlined copy of the catalogue's `.helm:build-push` (helm-ci.yml) with its chart
 # detection fixed, so the fix can be exercised here before it is proposed upstream.
-# Three bugs, all in the incremental branch:
-#   - the grep hardcoded `^charts/` instead of honouring CHARTS_DIR, so it never
-#     matched this repository's `helm/` chart;
-#   - a commit touching no chart left that grep exiting 1, which `set -eo pipefail`
-#     turned into a failed job instead of the intended clean skip;
-#   - CI_COMMIT_BEFORE_SHA being non-empty was taken as proof `git diff` against it
-#     would work. GitLab's shallow clone only fetches the last `git depth` commits
-#     (20 here, the platform default) - a before-SHA older than that, or one made
-#     unreachable by a rewritten history upstream (squash/rebase/force-push, e.g.
-#     from the DSO mirror sync), isn't actually present locally and `git diff`
-#     fails with "fatal: bad object" instead of the intended incremental diff.
+#   - the changed-files grep matches `${CHARTS_PREFIX}/`, derived from CHARTS_DIR,
+#     instead of a hardcoded `charts/` - this repository's chart lives at `helm/`;
+#   - that grep is followed by `|| true` so a commit touching no chart (grep exits
+#     1 on no match) results in a clean "nothing to package" skip rather than
+#     tripping `set -eo pipefail` into a failed job;
+#   - CI_COMMIT_BEFORE_SHA is only used for `git diff` once `git cat-file -e`
+#     confirms the commit it names is present locally: the runner's clone is
+#     shallow (only the last `git depth` commits are fetched), so a before-SHA
+#     further back than that isn't resolvable, and diffing against a missing
+#     object fails outright instead of producing a diff - falling back to
+#     packaging every chart is the same safe default already used when there is
+#     no previous commit at all (a first push to a branch).
 helm-package-push:
   stage: helm-package
   only:
