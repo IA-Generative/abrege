@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [3.4.0-rc.15](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.14...v3.4.0-rc.15) (2026-09-16)
+
+
+### Features
+
+* **insights:** per-feature instructions for QA/entities/chunks/topics ([8a16667](https://github.com/IA-Generative/abrege/commit/8a1666728956ec2c2079d59c0d78c6f10aa11f73))
+
 ## [3.4.0-rc.14](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.13...v3.4.0-rc.14) (2026-09-16)
 
 
