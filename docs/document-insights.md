@@ -40,9 +40,15 @@ all `false` by default — a summary costs nothing extra unless a caller explici
 | `extract_chunks` | Chunks |
 | `classify_topics` | Topics |
 
+Each of these also has its own optional free-text instruction — `qa_instructions`,
+`entities_instructions`, `chunks_instructions`, `topics_instructions` — appended to that
+feature's own prompt only, independently of the summary's `custom_prompt`. Unset (the
+default), the feature runs with no extra instruction. `entities_instructions` applies to
+both the per-chunk entity extraction and the global cross-chunk relationships pass.
+
 The frontend's "Plus de paramètres" panel exposes all four as toggles (off by default) when
-creating a task. Only what was requested for a given task shows up on its detail page — see
-below.
+creating a task, each revealing its own instruction field once switched on. Only what was
+requested for a given task shows up on its detail page — see below.
 
 ## Where to find it
 

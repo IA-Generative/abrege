@@ -8,10 +8,11 @@ topic_template = """The following is the summary of a document:
 {text}
 Identify the main topics/subjects this document is about. Topics are freely chosen — not restricted to a fixed list, and not entity names (no people, dates or organizations) but general subject areas or domains (e.g. "finance", "santé publique", "droit du travail"). There can be one or several topics; only include ones clearly supported by the summary.
 For each topic, give a confidence score between 0 and 1 (how confident you are this is genuinely a topic of the document) and a short explanation grounded in the summary, justifying the classification.
+{instructions}
 Respond ONLY with a valid JSON object matching this schema: {{"topics": [{{"topic": "...", "confidence": 0.0, "explanation": "..."}}]}}
 Answer in {language}:"""
 
-TOPIC_PROMPT = PromptTemplate(template=topic_template, input_variables=["text", "language"])
+TOPIC_PROMPT = PromptTemplate(template=topic_template, input_variables=["text", "language"], partial_variables={"instructions": ""})
 
 
 class TopicOutput(BaseModel):

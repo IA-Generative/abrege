@@ -240,4 +240,4 @@ def test_dispatch_topic_classification_sends_one_celery_task(monkeypatch: pytest
     assert name == "worker.tasks.classify_topics"
     assert task_id == "task-abc:topics"
     payload = json.loads(args[0])
-    assert payload == {"task_id": "task-abc", "summary": "Un résumé.", "language": "French"}
+    assert payload == {"task_id": "task-abc", "summary": "Un résumé.", "language": "French", "topics_instructions": ""}

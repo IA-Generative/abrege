@@ -160,6 +160,9 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
         extract_qa: bool = True,
         extract_entities: bool = True,
         extract_chunks: bool = True,
+        qa_instructions: str = "",
+        entities_instructions: str = "",
+        chunks_instructions: str = "",
     ) -> None:
         """Fire-and-forget a Celery task extracting Q&A/entities/relationships/semantic chunks
         for one chunk - only the pieces requested via `extract_qa`/`extract_entities`/`extract_chunks`.
@@ -182,6 +185,9 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
                         "extract_qa": extract_qa,
                         "extract_entities": extract_entities,
                         "extract_chunks": extract_chunks,
+                        "qa_instructions": qa_instructions,
+                        "entities_instructions": entities_instructions,
+                        "chunks_instructions": chunks_instructions,
                     }
                 )
             ],
@@ -197,6 +203,9 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
         extract_qa: bool = True,
         extract_entities: bool = True,
         extract_chunks: bool = True,
+        qa_instructions: str = "",
+        entities_instructions: str = "",
+        chunks_instructions: str = "",
     ) -> None:
         """Initialize the completion counter and dispatch one extraction task per chunk.
 
@@ -214,9 +223,12 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
                 extract_qa=extract_qa,
                 extract_entities=extract_entities,
                 extract_chunks=extract_chunks,
+                qa_instructions=qa_instructions,
+                entities_instructions=entities_instructions,
+                chunks_instructions=chunks_instructions,
             )
 
-    def dispatch_topic_classification(self, task_id: str, summary: str, language: str) -> None:
+    def dispatch_topic_classification(self, task_id: str, summary: str, language: str, instructions: str = "") -> None:
         """Fire-and-forget the free-form topic/subject classification of the final summary.
 
         Runs as its own Celery message once the summary is ready, so it never adds latency
@@ -224,7 +236,7 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
         """
         celery_app.send_task(
             "worker.tasks.classify_topics",
-            args=[json.dumps({"task_id": task_id, "summary": summary, "language": language})],
+            args=[json.dumps({"task_id": task_id, "summary": summary, "language": language, "topics_instructions": instructions})],
             task_id=f"{task_id}:topics",
         )
 
@@ -238,6 +250,9 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
         qa_per_chunk: int = 3,
         extract_entities: bool = False,
         extract_chunks: bool = False,
+        qa_instructions: str = "",
+        entities_instructions: str = "",
+        chunks_instructions: str = "",
     ) -> list[Document]:
         extra_log = {"task.id": task.id, "user_id": task.user_id}
         semaphore = asyncio.Semaphore(self.max_concurrency)
@@ -276,6 +291,9 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
                 extract_qa=extract_qa and qa_per_chunk > 0,
                 extract_entities=extract_entities,
                 extract_chunks=extract_chunks,
+                qa_instructions=qa_instructions,
+                entities_instructions=entities_instructions,
+                chunks_instructions=chunks_instructions,
             )
 
         async def map_one_document(doc: Document) -> Document:
@@ -458,6 +476,9 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
             qa_per_chunk=params.qa_per_chunk,
             extract_entities=params.extract_entities,
             extract_chunks=params.extract_chunks,
+            qa_instructions=params.qa_instructions or "",
+            entities_instructions=params.entities_instructions or "",
+            chunks_instructions=params.chunks_instructions or "",
         )
         texts = [doc.page_content for doc in mapped_docs]
         total_words = sum_words(texts=texts)
@@ -533,6 +554,7 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
                     task_id=task.id,
                     summary=task.output.summary,
                     language=params.language if params.language else "French",
+                    instructions=params.topics_instructions or "",
                 )
 
             task = self.update_result_task(

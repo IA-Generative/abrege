@@ -210,7 +210,7 @@ def test_extract_task_details_dispatches_chunks_for_a_completed_task(monkeypatch
     monkeypatch.setattr(
         summary_service,
         "dispatch_all_chunks",
-        lambda task_id, texts, language, qa_per_chunk: dispatched.append((task_id, texts, language, qa_per_chunk)),
+        lambda task_id, texts, language, qa_per_chunk, **kwargs: dispatched.append((task_id, texts, language, qa_per_chunk)),
     )
 
     extract_task_details.apply(args=[task.id]).get()

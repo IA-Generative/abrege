@@ -122,9 +122,13 @@ export const useAbregeStore = defineStore('abrege', () => {
     selectOptionText: 'Français (par défaut)',
     customPrompt: null,
     extractQa: false,
+    qaInstructions: null,
     extractEntities: false,
+    entitiesInstructions: null,
     extractChunks: false,
+    chunksInstructions: null,
     classifyTopics: false,
+    topicsInstructions: null,
   }
   const paramsValue = ref(paramsInitialValue)
 
@@ -274,9 +278,13 @@ export const useAbregeStore = defineStore('abrege', () => {
         size: Number(paramsValue.value.inputValue),
         custom_prompt: paramsValue.value.customPrompt,
         extract_qa: paramsValue.value.extractQa,
+        qa_instructions: paramsValue.value.qaInstructions,
         extract_entities: paramsValue.value.extractEntities,
+        entities_instructions: paramsValue.value.entitiesInstructions,
         extract_chunks: paramsValue.value.extractChunks,
+        chunks_instructions: paramsValue.value.chunksInstructions,
         classify_topics: paramsValue.value.classifyTopics,
+        topics_instructions: paramsValue.value.topicsInstructions,
       },
     }
 
@@ -323,9 +331,13 @@ export const useAbregeStore = defineStore('abrege', () => {
         size: Number(paramsValue.value.inputValue),
         custom_prompt: paramsValue.value.customPrompt,
         extract_qa: paramsValue.value.extractQa,
+        qa_instructions: paramsValue.value.qaInstructions,
         extract_entities: paramsValue.value.extractEntities,
+        entities_instructions: paramsValue.value.entitiesInstructions,
         extract_chunks: paramsValue.value.extractChunks,
+        chunks_instructions: paramsValue.value.chunksInstructions,
         classify_topics: paramsValue.value.classifyTopics,
+        topics_instructions: paramsValue.value.topicsInstructions,
       }))
 
       const { data: task } = await http.post<TaskModel>(
