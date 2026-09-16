@@ -1,15 +1,20 @@
 services:
-  minio:
-    image: minio/minio:latest
+  rustfs:
+    # Matches the bundled RustFS subchart used in prod (helm/values.yaml `rustfs`) instead
+    # of MinIO, so local dev exercises the same S3-compatible backend.
+    image: rustfs/rustfs:1.0.0-beta.1
     ports:
       - "9000:9000"
       - "9001:9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      RUSTFS_ACCESS_KEY: minioadmin
+      RUSTFS_SECRET_KEY: minioadmin
+      RUSTFS_VOLUMES: /data
+      RUSTFS_ADDRESS: 0.0.0.0:9000
+      RUSTFS_CONSOLE_ADDRESS: 0.0.0.0:9001
+      RUSTFS_CONSOLE_ENABLE: "true"
     volumes:
-      - minio_data:/data
-    command: server /data
+      - rustfs_data:/data
     restart: unless-stopped
 
   redis:
@@ -89,7 +94,7 @@ services:
       INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
     depends_on:
       - redis
-      - minio
+      - rustfs
       - db
       - keycloak
     env_file:
@@ -188,7 +193,7 @@ services:
   #     - ./apps/server/llm-guard/config/scanners.yml:/home/user/app/config/scanners.yml
 
 volumes:
-  minio_data:
+  rustfs_data:
     driver: local
 
   postgres_data:

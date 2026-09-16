@@ -49,17 +49,17 @@ besoin d'être en lockstep avec la release.
 
 ---
 
-### Stockage objet (S3-compatible, ex. MinIO)
+### Stockage objet (S3-compatible, ex. RustFS)
 
 Le client S3 (`boto3`) est construit inconditionnellement — il n'y a pas de bascule
-MinIO/S3 séparée : pointer `AWS_ENDPOINT_URL` vers une instance MinIO fait exactement la
-même chose.
+RustFS/S3 séparée : pointer `AWS_ENDPOINT_URL` vers une instance RustFS (ou toute autre
+implémentation S3-compatible) fait exactement la même chose.
 
 | Variable | Obligatoire | Description | Valeur par défaut |
 |---|---|---|---|
 | `AWS_ACCESS_KEY_ID` | ✅ | Clé d'accès | `minioadmin` |
 | `AWS_SECRET_ACCESS_KEY` | ✅ | Clé secrète | `minioadmin` |
-| `AWS_ENDPOINT_URL` | | URL du endpoint S3/MinIO | `http://localhost:9000` |
+| `AWS_ENDPOINT_URL` | | URL du endpoint S3/RustFS | `http://localhost:9000` |
 | `AWS_DEFAULT_REGION` | | Région AWS | `us-east-1` |
 | `AWS_BUCKET_NAME` | | Nom du bucket | `test` |
 
@@ -163,7 +163,7 @@ Toutes les variables peuvent être définies dans un fichier `.env` à la racine
 | Volume | Service | Chemin dans le conteneur | Description |
 |---|---|---|---|
 | `postgres_data` | `db` | `/var/lib/postgresql/data` | Données PostgreSQL persistantes |
-| `minio_data` | `minio` | `/data` | Données MinIO persistantes |
+| `rustfs_data` | `rustfs` | `/data` | Données RustFS persistantes |
 | `./apps/server/abrege_service/` | `abrege_service` | `/app/abrege_service/` | Code source du worker (hot-reload) |
 | `./apps/server/src/` | `abrege_service`, `abrege_api`, `migration` | `/app/src/` | Bibliothèque partagée (hot-reload) |
 | `./apps/server/tests/` | `abrege_service`, `abrege_api` | `/app/tests/` | Tests (hot-reload) |

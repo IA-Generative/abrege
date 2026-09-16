@@ -107,7 +107,7 @@ down-services:
 	docker compose down --remove-orphans || true
 
 init-db:
-	docker compose up -d redis db minio migration
+	docker compose up -d redis db rustfs migration
 	sleep 2
 	docker compose run migration uv run alembic upgrade head
 	sleep 2
