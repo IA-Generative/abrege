@@ -47,8 +47,12 @@ default), the feature runs with no extra instruction. `entities_instructions` ap
 both the per-chunk entity extraction and the global cross-chunk relationships pass.
 
 The frontend's "Plus de paramètres" panel exposes all four as toggles (off by default) when
-creating a task, each revealing its own instruction field once switched on. Only what was
-requested for a given task shows up on its detail page — see below.
+creating a task, each revealing its own instruction field once switched on (below, Q&A,
+Entities and Topics are on — Chunks stays off with no field):
+
+![Per-feature instruction fields](images/document-insights/10-instructions-fields.png)
+
+Only what was requested for a given task shows up on its detail page — see below.
 
 ## Where to find it
 
