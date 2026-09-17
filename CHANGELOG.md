@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [3.4.0-rc.16](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.15...v3.4.0-rc.16) (2026-09-17)
+
+
+### Bug Fixes
+
+* **dso:** fall back to full chart package when before-SHA is unreachable ([a10f6e4](https://github.com/IA-Generative/abrege/commit/a10f6e49364e54bf5eeae6b1e812e685d785f783))
+
 ## [3.4.0-rc.15](https://github.com/IA-Generative/abrege/compare/v3.4.0-rc.14...v3.4.0-rc.15) (2026-09-16)
 
 
