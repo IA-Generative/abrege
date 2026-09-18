@@ -1,8 +1,11 @@
-from typing import List, Union
-import tiktoken
-from transformers import AutoTokenizer
-from .tokenizer import get_tokenizer_model
-from src.utils.logger import logger_abrege
+from typing import List
+
+# Commonly-cited average for BPE tokenizers (OpenAI's own docs use it): about 0.75 words
+# per token, i.e. ~4 characters per token for English/French-ish text. Used instead of an
+# exact tokenizer (tiktoken/transformers) so chunking doesn't need a model-specific
+# encoding as a dependency - an estimate is enough since chunk boundaries only need to
+# roughly respect the model's context limit, not hit it exactly.
+WORDS_PER_TOKEN = 0.75
 
 
 def split_texts_by_word_limit(texts: List[str], max_words: int) -> List[str]:
@@ -25,31 +28,9 @@ def split_texts_by_word_limit(texts: List[str], max_words: int) -> List[str]:
     return all_chunks
 
 
-def split_texts_by_token_limit(texts: List[str], max_tokens: int, model: str = "gpt-4", cache_dir: str = None) -> List[str]:
-    encoding: Union[tiktoken.Encoding, AutoTokenizer] = get_tokenizer_model(model, cache_dir=cache_dir)
-    all_chunks = []
-    chunk_token_id = []
-    for i, text in enumerate(texts):
-        prefix = f"Page{i + 1}: "
-
-        full_text = prefix + text
-        tokens = encoding.encode(full_text)
-        logger_abrege.info(prefix + f"input token size {len(tokens)}")
-
-        for token in tokens:
-            chunk_token_id.append(token)
-            if len(chunk_token_id) >= max_tokens:
-                chunk_text = encoding.decode(chunk_token_id)
-                logger_abrege.info(f"output {len(chunk_token_id)}")
-                all_chunks.append(chunk_text)
-                chunk_token_id = encoding.encode(" " + prefix)
-
-    if chunk_token_id != [encoding.encode(prefix)]:
-        chunk_text = encoding.decode(chunk_token_id)
-        all_chunks.append(chunk_text)
-        logger_abrege.info(f"output {len(chunk_token_id)} ")
-
-    return all_chunks
+def split_texts_by_token_limit(texts: List[str], max_tokens: int) -> List[str]:
+    max_words = max(1, int(max_tokens * WORDS_PER_TOKEN))
+    return split_texts_by_word_limit(texts, max_words)
 
 
 def sum_words(texts: List[str]) -> int:

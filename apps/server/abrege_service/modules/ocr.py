@@ -5,7 +5,17 @@ import tempfile
 from PIL import Image
 
 from src.clients.ocr_client import OCRClient, sort_reader, OCRResult
-from abrege_service.schemas import IMAGE_CONTENT_TYPES, PDF_CONTENT_TYPES
+from abrege_service.schemas import (
+    AUDIO_CONTENT_TYPES,
+    IMAGE_CONTENT_TYPES,
+    LIBRE_OFFICE_CONTENT_TYPES,
+    LIBRE_OFFICE_PRESENTATION_TYPES,
+    MICROSOFT_PRESENTATION_CONTENT_TYPES,
+    MICROSOFT_SPREADSHEET_CONTENT_TYPES,
+    MICROSOFT_WORD_CONTENT_TYPES_DOCX,
+    PDF_CONTENT_TYPES,
+    VIDEO_CONTENT_TYPES,
+)
 from abrege_service.modules.base import BaseService
 from abrege_service.utils.lazy_pdf import LazyPdfImageList
 from src.schemas.task import TaskModel, TaskStatus
@@ -16,6 +26,20 @@ from src.utils.logger import logger_abrege as logger
 url = os.getenv(
     "OCR_BACKEND_URL",
     "https://mirai-ocr-staging.sdid-app.cpin.numerique-interieur.com/1",
+)
+
+# Everything here has no per-page structure of its own (unlike a PDF, which gets
+# rasterized into one image per page): the whole file is sent to the OCR backend as a
+# single job.
+SINGLE_FILE_CONTENT_TYPES = (
+    IMAGE_CONTENT_TYPES
+    + AUDIO_CONTENT_TYPES
+    + VIDEO_CONTENT_TYPES
+    + MICROSOFT_WORD_CONTENT_TYPES_DOCX
+    + MICROSOFT_SPREADSHEET_CONTENT_TYPES
+    + MICROSOFT_PRESENTATION_CONTENT_TYPES
+    + LIBRE_OFFICE_CONTENT_TYPES
+    + LIBRE_OFFICE_PRESENTATION_TYPES
 )
 
 
@@ -46,7 +70,7 @@ class OCRMIService(BaseService):
     def __init__(
         self,
         url_ocr: str = url,
-        content_type_allowed=IMAGE_CONTENT_TYPES + PDF_CONTENT_TYPES,
+        content_type_allowed=SINGLE_FILE_CONTENT_TYPES + PDF_CONTENT_TYPES,
     ):
         super().__init__(content_type_allowed)
         self.ocr_mi_client = OCRClient(url=url_ocr)
@@ -56,7 +80,7 @@ class OCRMIService(BaseService):
         user_id: str,
         file_path: str,
         task_id: str,
-        batch: list[Image.Image],
+        batch: "list[Image.Image | str]",
         headers: dict = None,
     ) -> list[str]:
         extra_log = {
@@ -64,18 +88,35 @@ class OCRMIService(BaseService):
             "file_path": file_path,
             "parent-task-id": task_id,
         }
-        logger.debug(f"{len(batch)} images", extra=extra_log)
+        logger.debug(f"{len(batch)} items", extra=extra_log)
         task_ids = []
-        for image in batch:
-            with temp_image_file(image) as tmp_path:
-                task_ocr = self.ocr_mi_client.send(file_path=tmp_path)
-                task_ocr_id = task_ocr["id"]
-                task_ids.append(task_ocr_id)
-                logger.debug(
-                    f"Send {len(task_ids)} / {len(batch)} images",
-                    extra=extra_log,
-                )
+        for item in batch:
+            # A PDF page comes in as a rasterized PIL Image and needs writing to a temp
+            # file first; a whole file (image/audio/video) is already a path on disk.
+            if isinstance(item, Image.Image):
+                with temp_image_file(item) as tmp_path:
+                    task_ocr = self.ocr_mi_client.send(file_path=tmp_path)
+            else:
+                task_ocr = self.ocr_mi_client.send(file_path=item)
+            task_ocr_id = task_ocr["id"]
+            task_ids.append(task_ocr_id)
+            logger.debug(
+                f"Send {len(task_ids)} / {len(batch)} items",
+                extra=extra_log,
+            )
         return task_ids
+
+    def _delete_ocr_tasks(self, task_ids_ocr: list[str], extra_log: dict) -> None:
+        """The OCR client authenticates as a shared/generic account (see abrege#354), not
+        as the end user - so nothing on the ocr side ties this document to anyone in
+        particular. Delete every OCR sub-task once the whole document is done (or has
+        failed) - not as each one individually finishes, since other sub-tasks in the same
+        batch are still being polled at that point and would 404 on an already-deleted id."""
+        for task_id_ocr in task_ids_ocr:
+            try:
+                self.ocr_mi_client.delete_task(task_id=task_id_ocr)
+            except Exception as e:
+                logger.warning(f"Failed to delete OCR task {task_id_ocr}: {e}", extra=extra_log)
 
     def task_to_text(self, task: TaskModel, **kwargs) -> TaskModel:
         extra_log = {
@@ -96,9 +137,9 @@ class OCRMIService(BaseService):
                 extras={},
             )
 
-        if task.input.content_type in IMAGE_CONTENT_TYPES:
-            logger.debug("Image file 1 image", extra=extra_log)
-            images = [self.ocr_mi_client.send(user_id=task.user_id, file_path=task.input.file_path)]
+        if task.input.content_type in SINGLE_FILE_CONTENT_TYPES:
+            logger.debug("Single file, 1 job", extra=extra_log)
+            images = [task.input.file_path]
         elif task.input.content_type in PDF_CONTENT_TYPES:
             images = LazyPdfImageList(pdf_path=task.input.file_path)
             logger.debug(f"Pdf file {len(images)} images", extra=extra_log)
@@ -157,6 +198,7 @@ class OCRMIService(BaseService):
                             logger.error(f"{task_id_tmp} is on error - {status}", extra=extra_log)
                             is_batch_processed = True
                             task = self.update_task(task=task, status=status, result=task.output)
+                            self._delete_ocr_tasks(task.output.extras["task_ocr_id"], extra_log)
                             return task
                         if status in task_status_finish:
                             text = ""
@@ -214,5 +256,7 @@ class OCRMIService(BaseService):
 
         if global_status in task_finish_on_error:
             task = self.update_task(task=task, status=global_status, result=task.output)
+
+        self._delete_ocr_tasks(task.output.extras["task_ocr_id"], extra_log)
 
         return task

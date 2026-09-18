@@ -105,6 +105,35 @@ def test_update_task():
     assert not_found_updated is None
 
 
+def test_update_task_details_status_columns_are_independent():
+    """Each of qa_entities_status/relationships_status/topics_status is written by a single
+    point in the pipeline (map-step dispatch, last chunk, global-relationships pass, topic
+    classification) — updating one must never clobber the others."""
+    table = TaskTable()
+    task = table.insert_new_task(user_id="user789", form_data=TaskForm(type="summary", status=TaskStatus.CREATED.value))
+
+    assert task.qa_entities_status is None
+    assert task.relationships_status is None
+    assert task.topics_status is None
+
+    table.update_task(task_id=task.id, form_data=TaskUpdateForm(qa_entities_status="in_progress"))
+    after_qa = table.get_task_by_id(task.id)
+    assert after_qa.qa_entities_status == "in_progress"
+    assert after_qa.relationships_status is None
+    assert after_qa.topics_status is None
+
+    table.update_task(task_id=task.id, form_data=TaskUpdateForm(topics_status="pending"))
+    after_topics = table.get_task_by_id(task.id)
+    assert after_topics.qa_entities_status == "in_progress"
+    assert after_topics.topics_status == "pending"
+
+    table.update_task(task_id=task.id, form_data=TaskUpdateForm(qa_entities_status="completed", relationships_status="pending"))
+    final = table.get_task_by_id(task.id)
+    assert final.qa_entities_status == "completed"
+    assert final.relationships_status == "pending"
+    assert final.topics_status == "pending"
+
+
 def test_get_task_by_id():
     table = TaskTable()
 

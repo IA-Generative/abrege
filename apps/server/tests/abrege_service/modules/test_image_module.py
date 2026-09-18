@@ -6,7 +6,7 @@ from abrege_service.modules.image import ImageFromVLM
 from openai import AsyncOpenAI
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-OPENAI_BASE_URL = os.environ.get("OPENAI_API_BASE")
+OPENAI_BASE_URL = os.environ.get("OPENAI_API_BASE_URL")
 VLM_MODEL_NAME = os.environ.get("OPENAI_API_MODEL")
 is_openai_set = all([OPENAI_API_KEY, OPENAI_BASE_URL, VLM_MODEL_NAME])
 

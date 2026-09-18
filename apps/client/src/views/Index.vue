@@ -8,9 +8,9 @@ import ResumeCard from '@/assets/resume-card.png'
 
 import CopiedTextTab from '@/components/CopiedTextTab.vue'
 import ResumeInfoBulle from '@/components/ResumeInfoBulle.vue'
+import TaskTab from '@/components/TaskTab.vue'
 import UploadDocumentTab from '@/components/UploadDocumentTab.vue'
 import UrlTab from '@/components/UrlTab.vue'
-import TaskTab from '@/components/TaskTab.vue'
 
 const TAB_ROUTES = ['text', 'url', 'document', 'tasks'] as const
 
@@ -73,7 +73,10 @@ const myOtherTools = ref([
         </h1>
       </div>
       <div>
-        <CustomTabs v-model="activeTab" :tabs-data="tabs">
+        <CustomTabs
+          v-model="activeTab"
+          :tabs-data="tabs"
+        >
           <template #tab-0-content>
             <ResumeInfoBulle />
             <CopiedTextTab />

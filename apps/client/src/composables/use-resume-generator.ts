@@ -48,8 +48,7 @@ export function useResumeGenerator (asyncFunction: (...args: any[]) => Promise<T
     try {
       const response = await asyncFunction(...args)
       result.value = response
-    }
-    catch (error: unknown) {
+    } catch (error: unknown) {
       if (!(error as AxiosError)?.response) {
         addMessage({
           type: 'error',
@@ -57,8 +56,7 @@ export function useResumeGenerator (asyncFunction: (...args: any[]) => Promise<T
           description: 'Impossible de se connecter à l\'API.',
           timeout: 3000,
         })
-      }
-      else {
+      } else {
         const errorMessage = isErrorWithDetail(error)
           ? error.response.data.detail
           : 'Problème serveur'
@@ -70,8 +68,7 @@ export function useResumeGenerator (asyncFunction: (...args: any[]) => Promise<T
           timeout: 3000,
         })
       }
-    }
-    finally {
+    } finally {
       clearInterval(interval)
       progress.value = 100
       setTimeout(() => {

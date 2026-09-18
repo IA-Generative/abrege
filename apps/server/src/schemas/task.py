@@ -37,6 +37,14 @@ class Task(Base):
     extras = Column(JSON, nullable=True)
     content_hash = Column(String, nullable=True, index=True, unique=False)
 
+    # Status of the fire-and-forget side extractions dispatched during/after summarize(),
+    # decoupled from `status` (which only tracks the summary itself). Each is written by a
+    # single point in the pipeline (see abrege_service/main.py), so concurrent chunk workers
+    # never race on the same column.
+    qa_entities_status = Column(String, nullable=True)  # None | in_progress | completed | failed
+    relationships_status = Column(String, nullable=True)  # None | pending | completed | failed
+    topics_status = Column(String, nullable=True)  # None | pending | completed | failed
+
 
 class TaskModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -55,6 +63,9 @@ class TaskModel(BaseModel):
     updated_at: int
     extras: Optional[Dict[str, Any]] = None
     content_hash: Optional[str] = None
+    qa_entities_status: Optional[str] = None
+    relationships_status: Optional[str] = None
+    topics_status: Optional[str] = None
 
 
 class TaskForm(BaseModel):
@@ -82,6 +93,9 @@ class TaskUpdateForm(BaseModel):
     updated_at: Optional[int] = None
     extras: Optional[Dict[str, Any]] = None
     content_hash: Optional[str] = None
+    qa_entities_status: Optional[str] = None
+    relationships_status: Optional[str] = None
+    topics_status: Optional[str] = None
 
 
 class TaskStatus(str, Enum):

@@ -1,0 +1,20 @@
+title = "abrege gitleaks config"
+
+# `targetRules` on a global allowlist needs v8.25.0; CI pins 8.30.1.
+minVersion = "v8.25.0"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+targetRules = ["kubernetes-secret-yaml"]
+description = "Chart test fixture exercising the `extraObjects` templating path."
+# The built-in rule matches on YAML shape (a `my-secret:`-like key holding a block
+# scalar with `kind: Secret` + `data:`), never on the block's actual values. It
+# fires on helm/test-values.yaml's `extraObjects.my-secret` fixture, which exists
+# solely to exercise the chart's `extraObjects` path during `ct install`/`ct lint`;
+# its "password" is the literal string "secretpassword" piped through `b64enc`, not
+# real secret material - confirmed by re-running gitleaks unredacted locally, where
+# the match highlights only the `my-secret: | / apiVersion` shape, never the
+# password line itself.
+paths = ['''^helm/test-values\.yaml$''']

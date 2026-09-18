@@ -1,0 +1,52 @@
+{{- if .Values.enabled }}
+{{- if .Values.worker.kedaAutoscaler.enabled }}
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ printf "%s-%s" (include "helper.fullname" .) "worker" }}
+  labels: {{- (include "helper.labels" (dict "root" . "componentName" "worker")) | nindent 4 }}
+spec:
+  scaleTargetRef:
+    name: {{ printf "%s-%s" (include "helper.fullname" .) "worker" }}
+    kind: {{ .Values.worker.kedaAutoscaler.scaleTargetKind | default .Values.worker.deploymentType }}
+    apiVersion: {{ default "apps/v1" .Values.worker.kedaAutoscaler.scaleTargetApiVersion }}
+  minReplicaCount: {{ .Values.worker.kedaAutoscaler.minReplicaCount }}
+  maxReplicaCount: {{ .Values.worker.kedaAutoscaler.maxReplicaCount }}
+{{- if .Values.worker.kedaAutoscaler.idleReplicaCount }}
+  idleReplicaCount: {{ .Values.worker.kedaAutoscaler.idleReplicaCount }}
+{{- end }}
+{{- if .Values.worker.kedaAutoscaler.pollingInterval }}
+  pollingInterval: {{ .Values.worker.kedaAutoscaler.pollingInterval }}
+{{- end }}
+{{- if .Values.worker.kedaAutoscaler.cooldownPeriod }}
+  cooldownPeriod: {{ .Values.worker.kedaAutoscaler.cooldownPeriod }}
+{{- end }}
+{{- if .Values.worker.kedaAutoscaler.fallback }}
+  fallback:
+    failureThreshold: {{ .Values.worker.kedaAutoscaler.fallback.failureThreshold }}
+    replicas: {{ .Values.worker.kedaAutoscaler.fallback.replicas }}
+{{- end }}
+{{- if .Values.worker.kedaAutoscaler.behavior }}
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+      {{- with .Values.worker.kedaAutoscaler.behavior }}
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+  {{- end }}
+  triggers:
+  - type: redis
+    metricType: AverageValue
+    metadata:
+      address: {{ tpl .Values.worker.kedaAutoscaler.redis.address . | default (printf "%s-master.%s:6379" .Values.redis.fullnameOverride .Release.Namespace) | quote }}
+      listName: {{ .Values.worker.kedaAutoscaler.redis.listName | quote }}
+      listLength: {{ .Values.worker.kedaAutoscaler.redis.listLength | quote }}
+      {{- if .Values.worker.kedaAutoscaler.redis.password }}
+      password: {{ .Values.worker.kedaAutoscaler.redis.password | quote }}
+      {{ end }}
+    {{- if and .Values.worker.kedaAutoscaler.redis.secretRef .Values.worker.kedaAutoscaler.redis.secretKey }}
+    authenticationRef:
+      name: {{ .Values.worker.kedaAutoscaler.redis.authenticationRef | default "abrege-worker" }}
+    {{- end }}
+{{- end }}
+{{- end }}

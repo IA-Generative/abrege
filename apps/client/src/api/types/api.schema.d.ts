@@ -511,7 +511,7 @@ export interface components {
       /**
        * Extract Qa
        * @description Also generate question/answer pairs per chunk while summarizing
-       * @default true
+       * @default false
        */
       extract_qa: boolean
       /**
@@ -520,6 +520,24 @@ export interface components {
        * @default 3
        */
       qa_per_chunk: number
+      /**
+       * Extract Entities
+       * @description Also extract entities and relationships (per chunk, then cross-chunk) while summarizing
+       * @default false
+       */
+      extract_entities: boolean
+      /**
+       * Extract Chunks
+       * @description Also persist the semantic sub-chunks produced while summarizing
+       * @default false
+       */
+      extract_chunks: boolean
+      /**
+       * Classify Topics
+       * @description Classify the final summary into free-form topics
+       * @default false
+       */
+      classify_topics: boolean
     }
     /** Pagination TaskModel */
     PaginationTaskModel: {

@@ -1,3 +1,10 @@
+minimumReleaseAgeExcludePrune: true
+trustPolicy: no-downgrade
+shellEmulator: true
+
+overrides:
+  serialize-javascript: ^7.0.5
+
 onlyBuiltDependencies:
   - '@tailwindcss/oxide'
   - esbuild

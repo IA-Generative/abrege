@@ -129,6 +129,14 @@ make test-abrege-service
 
 Runs comprehensive end-to-end tests via the test runner.
 
+### Python SDK Tests
+
+```bash
+make test-sdk-python
+```
+
+Tests the [Python SDK](sdk/python/README.md) client.
+
 ### 🧹 Development Tools
 
 ```bash
@@ -154,6 +162,11 @@ For a detailed sequence diagram of the document processing flow, see [docs/diagr
 
 For the full list of environment variables and Docker volumes, see [docs/variables.md](docs/variables.md).
 
+For a summary of the API routes, see [docs/routes.md](docs/routes.md) — the interactive Swagger docs are served by the running API itself at `/api/docs`.
+
+For Q&A, entities/relationships, topic classification and semantic chunking — extracted
+alongside the summary without slowing it down — see [docs/document-insights.md](docs/document-insights.md).
+
 ### Components
 
 * **API**: Accepts inputs and initiates the processing pipeline.
@@ -164,5 +177,11 @@ For the full list of environment variables and Docker volumes, see [docs/variabl
   * Summarize chunks in parallel
   * Merge partial summaries
 * **KEDA**: Automatically scales workers based on queue load.
+
+### Python SDK
+
+A Python client for the API - sync (`SyncAbregeClient`) and async (`AsyncAbregeClient`) - lives
+in [sdk/python/](sdk/python/README.md), with either a static API key or Keycloak username/password login
+(automatic access-token refresh included).
 
 ---

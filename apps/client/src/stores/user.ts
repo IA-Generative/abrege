@@ -1,54 +1,30 @@
 import type { IUser } from '@/interfaces/IUser.js'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { getKeycloak, getUserProfile, keycloakLogin, keycloakLogout, keycloakRegister } from '../utils/keycloak'
-
-const SSO_BYPASS = import.meta.env.VITE_SSO_BYPASS === 'true' || (globalThis as any).VITE_SSO_BYPASS === 'true'
-
-const MOCK_USER: IUser = {
-  id: 'dev',
-  email: 'dev@local.fr',
-  firstName: 'Dev',
-  lastName: 'Local',
-  groups: [],
-}
+import { fetchMe, login, logout } from '../utils/auth'
 
 export const useUserStore = defineStore('user', () => {
-  const isLoggedIn = ref<boolean>(SSO_BYPASS ? true : undefined as any)
-  const userProfile = ref<IUser | undefined>(SSO_BYPASS ? MOCK_USER : undefined)
+  const isLoggedIn = ref<boolean>()
+  const userProfile = ref<IUser>()
 
-  const setUserProfile = async () => {
-    userProfile.value = SSO_BYPASS ? MOCK_USER : getUserProfile()
-  }
-
-  const setIsLoggedIn = async () => {
-    if (SSO_BYPASS) {
-      isLoggedIn.value = true
-      userProfile.value = MOCK_USER
-      return
+  const checkAuth = async () => {
+    // Already confirmed by a previous check this session - skip the `/api/auth/me`
+    // round trip. A session that expires afterwards surfaces as a 401 on the next API
+    // call, which the http-client interceptor already sends through `login()`.
+    if (isLoggedIn.value) {
+      return true
     }
-    const keycloak = getKeycloak()
-    if (keycloak.authenticated !== isLoggedIn.value) {
-      isLoggedIn.value = keycloak.authenticated
-      if (isLoggedIn.value) {
-        await setUserProfile()
-      }
-    }
+    const profile = await fetchMe()
+    userProfile.value = profile ?? undefined
+    isLoggedIn.value = !!profile
+    return isLoggedIn.value
   }
-
-  const login = () => keycloakLogin()
-
-  const register = () => keycloakRegister()
-
-  const logout = () => keycloakLogout()
 
   return {
     isLoggedIn,
-    setIsLoggedIn,
     userProfile,
-    setUserProfile,
+    checkAuth,
     login,
-    register,
     logout,
   }
 })

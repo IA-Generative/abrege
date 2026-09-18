@@ -5,7 +5,6 @@ from redis.sentinel import Sentinel
 from src.connector.s3_connector import S3Connector
 from src.connector.redis_connector import RedisConnector
 from src.config.s3 import S3Settings
-from src.config.connector import ConnectorSettings
 from src.config.redis import RedisSettings
 from src.config.celery import CelerySettings
 
@@ -20,12 +19,12 @@ def _build_broker_url(settings: RedisSettings) -> tuple[str, dict]:
     Supports plain redis/rediss, and Sentinel (the actual master is resolved
     at connection time by Celery's own redis-sentinel transport).
     """
-    if settings.REDIS_SENTINEL_HOSTS:
+    if settings.sentinel_enabled:
         password = settings.REDIS_SENTINEL_PASSWORD or settings.REDIS_PASSWORD
         auth = f":{password}@" if password else ""
         urls = ";".join(f"sentinel://{auth}{host}:{port}/{settings.REDIS_DB}" for host, port in settings.sentinel_hosts())
         transport_options = {
-            "master_name": settings.REDIS_SENTINEL_SERVICE_NAME,
+            "master_name": settings.REDIS_SENTINEL_MASTER_NAME,
             "sentinel_kwargs": ({"password": password} if password else {}),
         }
         return urls, transport_options
@@ -36,7 +35,7 @@ def _build_broker_url(settings: RedisSettings) -> tuple[str, dict]:
 
 def _build_redis_client(settings: RedisSettings) -> redis.Redis:
     """Build a plain redis.Redis client, resolving the current master via Sentinel if enabled."""
-    if settings.REDIS_SENTINEL_HOSTS:
+    if settings.sentinel_enabled:
         sentinel_password = settings.REDIS_SENTINEL_PASSWORD or settings.REDIS_PASSWORD
         sentinel = Sentinel(
             settings.sentinel_hosts(),
@@ -47,7 +46,7 @@ def _build_redis_client(settings: RedisSettings) -> redis.Redis:
             },
         )
         return sentinel.master_for(
-            settings.REDIS_SENTINEL_SERVICE_NAME,
+            settings.REDIS_SENTINEL_MASTER_NAME,
             db=settings.REDIS_DB,
             password=settings.REDIS_PASSWORD,
             ssl=settings.REDIS_TLS,
@@ -79,8 +78,6 @@ if broker_transport_options:
 
 redis_client = _build_redis_client(redis_settings)
 redis_connector = RedisConnector(redis_client=redis_client)
-
-connector_settings = ConnectorSettings()
 
 try:
     settings = S3Settings()

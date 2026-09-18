@@ -45,15 +45,13 @@ const onSubmit = handleSubmit(async () => {
     await abregeStore.sendContentAndPoll('text')
     if (abregeStore.taskData && abregeStore.taskData.id) {
       resumeResult.value = await abregeStore.downloadContentSummary(abregeStore.taskData.id)
-    }
-    else {
+    } else {
       throw new Error('Aucune tâche valide trouvée pour le résumé.')
     }
     await (new Promise(resolve => setTimeout(resolve, 1000)))
     isGenerating.value = false
     abregeStore.reset()
-  }
-  catch (error) {
+  } catch (error) {
     addErrorMessage({
       title: 'Erreur lors de la génération de résumé :',
       description: `${error}`,

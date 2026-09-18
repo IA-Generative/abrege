@@ -24,6 +24,9 @@ repos:
 
 
   - repo: https://github.com/zricethezav/gitleaks
-    rev: v8.18.1
+    # Matches ci.yml's scan-gitleaks pin. .gitleaks.toml's `targetRules` on allowlists
+    # needs v8.25.0+ - below that, the pre-commit hook would silently ignore the
+    # scoping and only ever apply the allowlist repo-wide (or not at all).
+    rev: v8.30.1
     hooks:
       - id: gitleaks
