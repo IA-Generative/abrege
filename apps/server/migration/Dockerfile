@@ -5,6 +5,7 @@ WORKDIR /app
 COPY apps/server/migration/alembic.ini /app/
 COPY apps/server/migration /app/migration
 COPY apps/server/src/ /app/src/
+COPY apps/server/config /app/config
 COPY apps/server/pyproject.toml apps/server/uv.lock ./
 COPY apps/server/migration/alembic.ini /app/
 
