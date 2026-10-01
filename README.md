@@ -96,7 +96,7 @@ make build
 
 # Or build specific services
 make build-abrege-api
-make build-abrege-service
+make build-abrege-worker
 ```
 
 ---
