@@ -68,7 +68,7 @@ docker-build-abrege-api:
       export IMAGE_NAMES="$TAGS"
       echo "Building with tags: $IMAGE_NAMES"
 
-docker-build-abrege-service:
+docker-build-abrege-worker:
   stage: docker-build
   extends:
     - .kaniko:build-push
@@ -88,13 +88,13 @@ docker-build-abrege-service:
         echo "Error: Could not extract appVersion from helm/Chart.yaml"
         exit 1
       fi
-      TAGS="abrege-service:$SHORT_SHA"
-      TAGS="$TAGS abrege-service:$CI_COMMIT_REF_SLUG"
+      TAGS="abrege-worker:$SHORT_SHA"
+      TAGS="$TAGS abrege-worker:$CI_COMMIT_REF_SLUG"
       # Version tags from dev and main only, see docker-build-abrege-api.
       if [ "$CI_COMMIT_BRANCH" = "dev" ] || [ "$CI_COMMIT_BRANCH" = "main" ]; then
-        TAGS="$TAGS abrege-service:$APP_VERSION"
+        TAGS="$TAGS abrege-worker:$APP_VERSION"
         if echo "$APP_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-          TAGS="$TAGS abrege-service:latest"
+          TAGS="$TAGS abrege-worker:latest"
         fi
       fi
       export IMAGE_NAMES="$TAGS"
