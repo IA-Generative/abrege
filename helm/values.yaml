@@ -2524,7 +2524,7 @@ jobs:
       registry: "ghcr.io"
       # -- Repository to use for the migration job.
       # @section -- Jobs
-      repository: "ia-generative/abrege/api"
+      repository: "ia-generative/abrege/migration"
       # -- Image pull policy for the migration job.
       # @section -- Jobs
       pullPolicy: "IfNotPresent"
