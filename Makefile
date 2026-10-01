@@ -94,11 +94,11 @@ clean-front: ## Nettoyage du frontend
 build-abrege-api:
 	docker compose build abrege_api
 
-build-abrege-service:
+build-abrege-worker:
 	docker compose build abrege_service
 
 
-build: build-abrege-api build-abrege-service ## Lance la construction de toutes les images Docker
+build: build-abrege-api build-abrege-worker ## Lance la construction de toutes les images Docker
 
 
 ####################################################################
