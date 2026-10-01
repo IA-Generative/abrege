@@ -42,7 +42,7 @@ services:
         "--concurrency=1",
         "-E",
       ]
-    image: abrege-service
+    image: abrege-worker
     mem_limit: 1g
     volumes:
       - ./apps/server/abrege_service/:/app/abrege_service/
