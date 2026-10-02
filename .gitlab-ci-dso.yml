@@ -56,9 +56,14 @@ docker-build-abrege-api:
       fi
       TAGS="abrege-api:$SHORT_SHA"
       TAGS="$TAGS abrege-api:$CI_COMMIT_REF_SLUG"
-      TAGS="$TAGS abrege-api:$APP_VERSION"
-      if echo "$APP_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-        TAGS="$TAGS abrege-api:latest"
+      # Environments deploy the version tag (pulled with pullPolicy Always), so only
+      # the branches releases are cut from may write it: a pipeline on any other
+      # branch would replace a released image with unreleased code.
+      if [ "$CI_COMMIT_BRANCH" = "dev" ] || [ "$CI_COMMIT_BRANCH" = "main" ]; then
+        TAGS="$TAGS abrege-api:$APP_VERSION"
+        if echo "$APP_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+          TAGS="$TAGS abrege-api:latest"
+        fi
       fi
       export IMAGE_NAMES="$TAGS"
       echo "Building with tags: $IMAGE_NAMES"
@@ -85,9 +90,12 @@ docker-build-abrege-service:
       fi
       TAGS="abrege-service:$SHORT_SHA"
       TAGS="$TAGS abrege-service:$CI_COMMIT_REF_SLUG"
-      TAGS="$TAGS abrege-service:$APP_VERSION"
-      if echo "$APP_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-        TAGS="$TAGS abrege-service:latest"
+      # Version tags from dev and main only, see docker-build-abrege-api.
+      if [ "$CI_COMMIT_BRANCH" = "dev" ] || [ "$CI_COMMIT_BRANCH" = "main" ]; then
+        TAGS="$TAGS abrege-service:$APP_VERSION"
+        if echo "$APP_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+          TAGS="$TAGS abrege-service:latest"
+        fi
       fi
       export IMAGE_NAMES="$TAGS"
       echo "Building with tags: $IMAGE_NAMES"
@@ -114,9 +122,12 @@ docker-build-abrege-migration:
       fi
       TAGS="abrege-migration:$SHORT_SHA"
       TAGS="$TAGS abrege-migration:$CI_COMMIT_REF_SLUG"
-      TAGS="$TAGS abrege-migration:$APP_VERSION"
-      if echo "$APP_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-        TAGS="$TAGS abrege-migration:latest"
+      # Version tags from dev and main only, see docker-build-abrege-api.
+      if [ "$CI_COMMIT_BRANCH" = "dev" ] || [ "$CI_COMMIT_BRANCH" = "main" ]; then
+        TAGS="$TAGS abrege-migration:$APP_VERSION"
+        if echo "$APP_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+          TAGS="$TAGS abrege-migration:latest"
+        fi
       fi
       export IMAGE_NAMES="$TAGS"
       echo "Building with tags: $IMAGE_NAMES"
@@ -144,9 +155,12 @@ docker-build-abrege-frontend:
       fi
       TAGS="abrege-frontend:$SHORT_SHA"
       TAGS="$TAGS abrege-frontend:$CI_COMMIT_REF_SLUG"
-      TAGS="$TAGS abrege-frontend:$APP_VERSION"
-      if echo "$APP_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-        TAGS="$TAGS abrege-frontend:latest"
+      # Version tags from dev and main only, see docker-build-abrege-api.
+      if [ "$CI_COMMIT_BRANCH" = "dev" ] || [ "$CI_COMMIT_BRANCH" = "main" ]; then
+        TAGS="$TAGS abrege-frontend:$APP_VERSION"
+        if echo "$APP_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+          TAGS="$TAGS abrege-frontend:latest"
+        fi
       fi
       export IMAGE_NAMES="$TAGS"
       echo "Building with tags: $IMAGE_NAMES"
