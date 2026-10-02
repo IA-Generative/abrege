@@ -1,6 +1,6 @@
 # abrege
 
-![Version: 0.1.1](https://img.shields.io/badge/Version-0.1.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 3.4.0](https://img.shields.io/badge/AppVersion-3.4.0-informational?style=flat-square)
+![Version: 0.1.2](https://img.shields.io/badge/Version-0.1.2-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 3.4.0](https://img.shields.io/badge/AppVersion-3.4.0-informational?style=flat-square)
 
 A Helm chart to deploy abrege.
 
@@ -502,7 +502,7 @@ A Helm chart to deploy abrege.
 | jobs.migration.hostAliases | list | `[]` | List of host aliases to add to the migration job. |
 | jobs.migration.image.pullPolicy | string | `"IfNotPresent"` | Image pull policy for the migration job. |
 | jobs.migration.image.registry | string | `"ghcr.io"` | Registry to use for the migration job. |
-| jobs.migration.image.repository | string | `"ia-generative/abrege/api"` | Repository to use for the migration job. |
+| jobs.migration.image.repository | string | `"ia-generative/abrege/migration"` | Repository to use for the migration job. |
 | jobs.migration.image.tag | string | `""` | Tag to use for the migration job. Overrides the image tag whose default is the chart appVersion. |
 | jobs.migration.imagePullSecrets | list | `[]` | Image credentials configuration. |
 | jobs.migration.initContainers[0].command | list | `["sh","-c","until nc -z abrege-postgres 5432; do echo 'Waiting for PostgreSQL...'; sleep 2; done"]` | Init container command to wait for the bundled `postgres` (default database backend) to accept connections. Update/remove this (e.g. to target CNPG's own service instead) when switching `cnpg.enabled: true` for production. |

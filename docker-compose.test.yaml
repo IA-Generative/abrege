@@ -59,7 +59,7 @@ services:
         condition: service_healthy
 
   test_runner:
-    image: abrege-service
+    image: abrege-worker
     build:
       target: test
       context: .
