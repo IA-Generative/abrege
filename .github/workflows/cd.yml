@@ -247,3 +247,11 @@ jobs:
     with:
       RELEASE_BRANCH: ${{ needs.expose-vars.outputs.RELEASE_BRANCH }}
       PRERELEASE_BRANCH: ${{ needs.expose-vars.outputs.PRERELEASE_BRANCH }}
+    # dev's ruleset rejects GITHUB_TOKEN (no merge commit in the history, a pull
+    # request or required checks for every push) and only a GitHub App can be in
+    # its bypass list, so this job pushes as the App, like bump-chart. The push
+    # starts a CD run on dev, which finds nothing to release and stops at
+    # `release`.
+    secrets:
+      APP_CLIENT_ID: ${{ secrets.APP_CLIENT_ID }}
+      APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
