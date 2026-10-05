@@ -12,7 +12,15 @@ router = APIRouter(tags=["Health"])
 up_time = datetime.datetime.now().isoformat()
 
 
-@router.get("/health", response_model=Health)
+@router.get(
+    "/health",
+    response_model=Health,
+    summary="Health check",
+    description="""Report the service status and the state of its dependencies (task table, Redis). Public: no authentication needed.
+
+Answers `200` with `status: healthy`, or `503` with `status: unhealthy` when a dependency is down.""",
+    responses={503: {"model": Health, "description": "A dependency is unhealthy."}},
+)
 async def healthcheck():
     dependencies = []
     status = HealtStatus.HEALTHY.value

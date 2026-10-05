@@ -20,6 +20,7 @@ from api.clients.llm_guard import (
 )
 from api.core.security.token import RequestContext
 from api.core.security.factory import TokenVerifier
+from api.docs import USER_SECURITY, UNAUTHORIZED, ErrorResponse
 
 router = APIRouter(tags=["Text & Url"])
 
@@ -84,6 +85,19 @@ def summarize_content(input: InputModel):
     "/task/text-url",
     status_code=status.HTTP_201_CREATED,
     response_model=TaskModel,
+    summary="Summarize a text or a URL",
+    description="""Create a summarization task from a text or from a URL and queue it. The task is returned right away in `created`
+state: poll `GET /api/task/{id}` until it is `completed`.
+
+The body is JSON: `content` holds either `{"text": "..."}` or `{"url": "..."}`, and `parameters` the summary
+options (language, size, optional Q&A / entities / chunks / topics extractions, with their instructions and definitions).
+For a file, use `POST /api/task/document` instead.""",
+    responses={
+        400: {"model": ErrorResponse, "description": "The prompt was rejected by the guard (bad request)."},
+        422: {"model": ErrorResponse, "description": "Invalid body, unsupported content, or suspicious prompt."},
+        **UNAUTHORIZED,
+    },
+    openapi_extra={"security": USER_SECURITY},
 )
 async def new_summarize_content(
     input: Input,

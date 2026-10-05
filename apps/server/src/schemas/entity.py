@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import BigInteger, Column, ForeignKey, Integer, JSON, String, Text, func
 
 from src.internal.db import Base, get_db
@@ -39,28 +39,28 @@ class RelationshipRow(Base):
 
 class EntityRowModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    id: str
-    task_id: str
-    chunk_index: int
-    type: str
-    text: str
-    contexts: Optional[List[str]] = None
-    pages: Optional[List[int]] = None
-    model_name: Optional[str] = None
-    created_at: int
+    id: str = Field(description="Identifier of the entity")
+    task_id: str = Field(description="Task the entity was extracted for")
+    chunk_index: int = Field(description="Index of the source chunk the entity comes from")
+    type: str = Field(description="Category of the entity")
+    text: str = Field(description="Normalized value of the entity")
+    contexts: Optional[List[str]] = Field(None, description="Sentences or phrases where the entity was found")
+    pages: Optional[List[int]] = Field(None, description="Page numbers where the entity appears")
+    model_name: Optional[str] = Field(None, description="LLM that extracted the entity")
+    created_at: int = Field(description="Creation time, Unix timestamp (seconds)")
 
 
 class RelationshipRowModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    id: str
-    task_id: str
-    chunk_index: Optional[int] = None
-    source_entity_id: str
-    target_entity_id: str
-    relationship_type: str
-    description: Optional[str] = None
-    model_name: Optional[str] = None
-    created_at: int
+    id: str = Field(description="Identifier of the relationship")
+    task_id: str = Field(description="Task the relationship was extracted for")
+    chunk_index: Optional[int] = Field(None, description="Index of the source chunk, or `null` for a cross-chunk (global) relationship")
+    source_entity_id: str = Field(description="Identifier of the source entity")
+    target_entity_id: str = Field(description="Identifier of the target entity")
+    relationship_type: str = Field(description="Type of the relationship")
+    description: Optional[str] = Field(None, description="Description of the relationship, with its context")
+    model_name: Optional[str] = Field(None, description="LLM that inferred the relationship")
+    created_at: int = Field(description="Creation time, Unix timestamp (seconds)")
 
 
 class EntityTable:
