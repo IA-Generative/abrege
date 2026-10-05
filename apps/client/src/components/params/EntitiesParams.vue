@@ -2,6 +2,7 @@
 import { DsfrToggleSwitch } from '@gouvminint/vue-dsfr'
 import { computed } from 'vue'
 import { useAbregeStore } from '@/stores/abrege'
+import EntityDefinitionsEditor from './EntityDefinitionsEditor.vue'
 
 const { paramsValue } = useAbregeStore()
 
@@ -42,6 +43,7 @@ const instructions = computed({
         :label="instructionsLabel"
         :hint="instructionsHint"
       />
+      <EntityDefinitionsEditor />
     </div>
   </div>
 </template>
