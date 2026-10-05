@@ -40,7 +40,7 @@
       ]
     }, 
     {
-      "username": "test2@gouv.fr",
+      "username": "test",
       "email": "test2@gouv.fr",
       "emailVerified": true,
       "enabled": true,
