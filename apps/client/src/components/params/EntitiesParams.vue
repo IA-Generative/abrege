@@ -7,7 +7,6 @@ import DefinitionsEditor from './DefinitionsEditor.vue'
 const { paramsValue } = useAbregeStore()
 
 const toggleLabel = 'Extraire les entités et relations'
-const toggleHint = 'Identifie les personnes, organisations, lieux… et les relations entre elles'
 const enabled = computed({
   get: () => paramsValue.extractEntities,
   set: (value) => {
@@ -38,7 +37,6 @@ const instructions = computed({
     <DsfrToggleSwitch
       v-model="enabled"
       :label="toggleLabel"
-      :hint="toggleHint"
     />
     <div
       v-if="enabled"

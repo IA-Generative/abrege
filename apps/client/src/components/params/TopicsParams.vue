@@ -7,7 +7,6 @@ import DefinitionsEditor from './DefinitionsEditor.vue'
 const { paramsValue } = useAbregeStore()
 
 const toggleLabel = 'Classifier les sujets abordés'
-const toggleHint = 'Détecte les grands thèmes du résumé, avec un score de confiance'
 const enabled = computed({
   get: () => paramsValue.classifyTopics,
   set: (value) => {
@@ -30,7 +29,6 @@ const instructions = computed({
     <DsfrToggleSwitch
       v-model="enabled"
       :label="toggleLabel"
-      :hint="toggleHint"
     />
     <div
       v-if="enabled"

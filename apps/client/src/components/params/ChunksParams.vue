@@ -6,7 +6,6 @@ import { useAbregeStore } from '@/stores/abrege'
 const { paramsValue } = useAbregeStore()
 
 const toggleLabel = 'Conserver les chunks sémantiques'
-const toggleHint = 'Persiste les sous-découpages sémantiques utilisés pendant le résumé'
 const enabled = computed({
   get: () => paramsValue.extractChunks,
   set: (value) => {
@@ -29,7 +28,6 @@ const instructions = computed({
     <DsfrToggleSwitch
       v-model="enabled"
       :label="toggleLabel"
-      :hint="toggleHint"
     />
     <div
       v-if="enabled"

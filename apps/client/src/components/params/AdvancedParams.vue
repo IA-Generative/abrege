@@ -8,18 +8,22 @@ import TopicsParams from './TopicsParams.vue'
 const sections = [
   {
     title: 'Questions/réponses',
+    description: 'Génère automatiquement des questions qu\'un lecteur pourrait se poser sur le document, avec leur réponse tirée du texte. Pratique pour réviser un contenu long ou préparer une FAQ.',
     component: QaParams,
   },
   {
     title: 'Entités et relations',
+    description: 'Repère les éléments importants cités dans le document (personnes, organisations, lieux, dates…) et les liens entre eux. Vous pouvez décrire précisément ceux que vous cherchez.',
     component: EntitiesParams,
   },
   {
     title: 'Chunks sémantiques',
+    description: 'Découpe le document en passages cohérents par thème et les conserve, pour retrouver ensuite l\'endroit exact d\'où vient une information.',
     component: ChunksParams,
   },
   {
     title: 'Classification des sujets',
+    description: 'Rattache le document à un ou plusieurs sujets (ex : recrutement, finance) avec un score de confiance, pour mieux classer vos documents. Vous pouvez imposer vos propres sujets.',
     component: TopicsParams,
   },
 ]
@@ -30,6 +34,8 @@ const currentSection = computed(() => sections[current.value] as (typeof section
 const isFirst = computed(() => current.value === 0)
 const isLast = computed(() => current.value === sections.length - 1)
 const previousLabel = computed(() => isFirst.value ? 'Précédent' : `Précédent : ${sections[current.value - 1]?.title}`)
+const previousTooltip = computed(() => sections[current.value - 1]?.description)
+const nextTooltip = computed(() => sections[current.value + 1]?.description)
 const nextLabel = computed(() => isLast.value ? 'Suivant' : `Suivant : ${sections[current.value + 1]?.title}`)
 </script>
 
@@ -59,11 +65,15 @@ const nextLabel = computed(() => isLast.value ? 'Suivant' : `Suivant : ${section
           {{ currentSection.title }}
           <span class="advanced-card__counter">({{ current + 1 }}/{{ sections.length }})</span>
         </p>
+        <p class="advanced-card__description">
+          {{ currentSection.description }}
+        </p>
         <component :is="currentSection.component" />
       </div>
       <div class="advanced-nav">
         <DsfrButton
           :label="previousLabel"
+          :title="previousTooltip"
           secondary
           icon="ri-arrow-left-line"
           :disabled="isFirst"
@@ -71,6 +81,7 @@ const nextLabel = computed(() => isLast.value ? 'Suivant' : `Suivant : ${section
         />
         <DsfrButton
           :label="nextLabel"
+          :title="nextTooltip"
           secondary
           icon="ri-arrow-right-line"
           icon-right
@@ -127,6 +138,11 @@ const nextLabel = computed(() => isLast.value ? 'Suivant' : `Suivant : ${section
   }
   .advanced-card__title {
     margin: 0;
+  }
+  .advanced-card__description {
+    margin: 0.25rem 0 0;
+    color: var(--text-mention-grey);
+    font-size: 0.875rem;
   }
   .advanced-card__counter {
     font-weight: normal;
