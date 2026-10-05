@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import BigInteger, Column, ForeignKey, Integer, String, Text, func
 
 from src.internal.db import Base, get_db
@@ -23,14 +23,14 @@ class ChunkRow(Base):
 
 class ChunkRowModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    id: str
-    task_id: str
-    chunk_index: int
-    position: int
-    page: Optional[int] = None
-    text: str
-    model_name: Optional[str] = None
-    created_at: int
+    id: str = Field(description="Identifier of the chunk")
+    task_id: str = Field(description="Task the chunk belongs to")
+    chunk_index: int = Field(description="Index of the map-step window the chunk comes from")
+    position: int = Field(description="Position of the chunk inside its window")
+    page: Optional[int] = Field(None, description="Source page, when known")
+    text: str = Field(description="Text of the semantic chunk")
+    model_name: Optional[str] = Field(None, description="LLM that produced the chunking")
+    created_at: int = Field(description="Creation time, Unix timestamp (seconds)")
 
 
 class ChunkTable:
