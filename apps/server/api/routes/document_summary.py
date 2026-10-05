@@ -25,6 +25,7 @@ from api.clients.llm_guard import (
 )
 from api.core.security.token import RequestContext
 from api.core.security.factory import TokenVerifier
+from api.docs import USER_SECURITY, UNAUTHORIZED, ErrorResponse
 import tempfile
 import shutil
 
@@ -143,15 +144,32 @@ async def summarize_doc(
         )
 
 
-@doc_router.post("/task/document", status_code=status.HTTP_201_CREATED, response_model=TaskModel)
+@doc_router.post(
+    "/task/document",
+    status_code=status.HTTP_201_CREATED,
+    response_model=TaskModel,
+    summary="Summarize a document",
+    description="""Upload a document (PDF, Word, image…) and queue its summarization. Sent as `multipart/form-data`. The task is returned
+right away: poll `GET /api/task/{id}` until it is `completed`.
+
+`parameters` is a JSON string of the same summary options as `POST /api/task/text-url` (language, size, optional
+extractions with their instructions and definitions). `extras` is a JSON object stored with the task.""",
+    responses={
+        422: {"model": ErrorResponse, "description": "Invalid `parameters` or `extras` JSON, or suspicious prompt."},
+        500: {"model": ErrorResponse, "description": "The file could not be stored."},
+        **UNAUTHORIZED,
+    },
+    openapi_extra={"security": USER_SECURITY},
+)
 async def new_summarize_doc(
-    file: UploadFile = File(...),
-    prompt: Optional[str] = Form(None, description="Custom prompt for after summary"),
+    file: UploadFile = File(..., description="The document to summarize."),
+    prompt: Optional[str] = Form(None, description="Extra instruction appended after the summary request, e.g. \"use a formal tone\"."),
     parameters: Optional[str] = Form(
         default="",
-        description=f"Parameters {SummaryParameters().model_dump()}",
+        description="Summary options as a JSON string (language, size, extract_qa, extract_entities, entity_definitions, classify_topics, topic_definitions…). "
+        f"Defaults: {SummaryParameters().model_dump_json()}",
     ),
-    extras: Optional[str] = Form(default="", description="Extras json payload"),
+    extras: Optional[str] = Form(default="", description="Free-form extra information, as a JSON object string."),
     ctx: RequestContext = Depends(TokenVerifier),
 ):
     return await summarize_doc(
