@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [3.5.0-rc.1](https://github.com/IA-Generative/abrege/compare/v3.5.0-rc...v3.5.0-rc.1) (2026-10-05)
+
+
+### Bug Fixes
+
+* **chart:** wire the worker to the api service and document the required env ([2315983](https://github.com/IA-Generative/abrege/commit/2315983b2691060235fe34be6c5905f4210c2632))
+
 ## [3.5.0-rc](https://github.com/IA-Generative/abrege/compare/v3.4.0...v3.5.0-rc) (2026-10-05)
 
 
