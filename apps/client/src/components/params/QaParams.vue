@@ -6,7 +6,6 @@ import { useAbregeStore } from '@/stores/abrege'
 const { paramsValue } = useAbregeStore()
 
 const toggleLabel = 'Générer aussi des questions/réponses'
-const toggleHint = 'En plus du résumé, extrait des questions/réponses à partir du document'
 const enabled = computed({
   get: () => paramsValue.extractQa,
   set: (value) => {
@@ -29,7 +28,6 @@ const instructions = computed({
     <DsfrToggleSwitch
       v-model="enabled"
       :label="toggleLabel"
-      :hint="toggleHint"
     />
     <div
       v-if="enabled"
