@@ -2,7 +2,7 @@
 import { DsfrToggleSwitch } from '@gouvminint/vue-dsfr'
 import { computed } from 'vue'
 import { useAbregeStore } from '@/stores/abrege'
-import EntityDefinitionsEditor from './EntityDefinitionsEditor.vue'
+import DefinitionsEditor from './DefinitionsEditor.vue'
 
 const { paramsValue } = useAbregeStore()
 
@@ -14,6 +14,14 @@ const enabled = computed({
     paramsValue.extractEntities = value
   },
 })
+
+const typeOptions = [
+  { value: 'string', text: 'Texte' },
+  { value: 'number', text: 'Nombre' },
+  { value: 'date', text: 'Date' },
+  { value: 'boolean', text: 'Booléen (oui/non)' },
+  { value: 'enum', text: 'Liste de valeurs' },
+]
 
 const instructionsLabel = 'Instruction supplémentaire — Entités et relations'
 const instructionsHint = 'Ex : "concentre-toi sur les personnes et organisations, ignore les lieux"'
@@ -43,7 +51,18 @@ const instructions = computed({
         :label="instructionsLabel"
         :hint="instructionsHint"
       />
-      <EntityDefinitionsEditor />
+      <DefinitionsEditor
+        v-model="paramsValue.entityDefinitions"
+        title="Définition des entités à extraire"
+        hint="Optionnel. Décrivez les entités attendues pour guider l'extraction."
+        empty-text="Aucune entité définie : le modèle les détermine seul."
+        item-label="Entité"
+        add-label="Ajouter une entité"
+        name-hint="Ex : date_signature"
+        definition-hint="Ce que le modèle doit repérer, ex : « date à laquelle le contrat est signé »"
+        id-prefix="entity"
+        :type-options="typeOptions"
+      />
     </div>
   </div>
 </template>

@@ -1,65 +1,71 @@
 <script lang="ts" setup>
-import type { EntityDefinition, EntityDefinitionType } from '@/stores/abrege'
+import type { DefinitionBase } from '@/stores/abrege'
 import { computed, nextTick, ref } from 'vue'
-import { useAbregeStore } from '@/stores/abrege'
 
-const { paramsValue } = useAbregeStore()
+type Definition = DefinitionBase & { type?: string, enumValues?: string }
 
-const typeOptions: { value: EntityDefinitionType, text: string }[] = [
-  { value: 'string', text: 'Texte' },
-  { value: 'number', text: 'Nombre' },
-  { value: 'date', text: 'Date' },
-  { value: 'boolean', text: 'Booléen (oui/non)' },
-  { value: 'enum', text: 'Liste de valeurs' },
-]
-const typeLabels: Record<string, string> = Object.fromEntries(typeOptions.map(option => [option.value, option.text]))
+const props = defineProps<{
+  title: string
+  hint: string
+  emptyText: string
+  itemLabel: string
+  addLabel: string
+  nameHint: string
+  definitionHint: string
+  idPrefix: string
+  typeOptions?: { value: string, text: string }[]
+}>()
+
+const items = defineModel<Definition[]>({ required: true })
+
+const typeLabels = computed<Record<string, string>>(() =>
+  Object.fromEntries((props.typeOptions ?? []).map(option => [option.value, option.text])),
+)
 
 const editingId = ref<number | null>(null)
 const isEditing = computed(() => editingId.value !== null)
 
-function isDuplicate (entity: EntityDefinition) {
-  const name = entity.name.trim().toLowerCase()
-  return !!name && paramsValue.entityDefinitions.some(
-    other => other.id !== entity.id && other.name.trim().toLowerCase() === name,
+function isDuplicate (item: Definition) {
+  const name = item.name.trim().toLowerCase()
+  return !!name && items.value.some(
+    other => other.id !== item.id && other.name.trim().toLowerCase() === name,
   )
 }
 
-function canFinish (entity: EntityDefinition) {
-  return !!entity.name.trim() && !isDuplicate(entity)
+function canFinish (item: Definition) {
+  return !!item.name.trim() && !isDuplicate(item)
 }
 
 function addDefinition () {
-  const id = Math.max(-1, ...paramsValue.entityDefinitions.map(entity => entity.id)) + 1
-  paramsValue.entityDefinitions.push({
-    id,
-    name: '',
-    type: 'string',
-    definition: '',
-    examples: [],
-    enumValues: '',
-  })
+  const id = Math.max(-1, ...items.value.map(item => item.id)) + 1
+  const item: Definition = { id, name: '', definition: '', examples: [] }
+  if (props.typeOptions?.length) {
+    item.type = props.typeOptions[0]?.value
+    item.enumValues = ''
+  }
+  items.value.push(item)
   editingId.value = id
 }
 
-function exampleId (entity: EntityDefinition, index: number) {
-  return `example-${entity.id}-${index}`
-}
-
-async function addExample (entity: EntityDefinition) {
-  entity.examples.push('')
-  await nextTick()
-  document.getElementById(exampleId(entity, entity.examples.length - 1))?.focus()
-}
-
-function removeExample (entity: EntityDefinition, index: number) {
-  entity.examples.splice(index, 1)
-}
-
 function removeDefinition (id: number) {
-  paramsValue.entityDefinitions = paramsValue.entityDefinitions.filter(entity => entity.id !== id)
+  items.value = items.value.filter(item => item.id !== id)
   if (editingId.value === id) {
     editingId.value = null
   }
+}
+
+function exampleId (item: Definition, index: number) {
+  return `${props.idPrefix}-example-${item.id}-${index}`
+}
+
+async function addExample (item: Definition) {
+  item.examples.push('')
+  await nextTick()
+  document.getElementById(exampleId(item, item.examples.length - 1))?.focus()
+}
+
+function removeExample (item: Definition, index: number) {
+  item.examples.splice(index, 1)
 }
 </script>
 
@@ -67,18 +73,18 @@ function removeDefinition (id: number) {
   <section class="definitions">
     <header class="definitions__intro">
       <h4 class="fr-text--bold definitions__title">
-        Définition des entités à extraire
+        {{ title }}
       </h4>
       <p class="fr-hint-text">
-        Optionnel. Décrivez les entités attendues pour guider l'extraction.
+        {{ hint }}
       </p>
     </header>
 
     <p
-      v-if="!paramsValue.entityDefinitions.length"
+      v-if="!items.length"
       class="definitions__empty"
     >
-      Aucune entité définie : le modèle les détermine seul.
+      {{ emptyText }}
     </p>
 
     <ul
@@ -86,14 +92,14 @@ function removeDefinition (id: number) {
       class="definition-list"
     >
       <li
-        v-for="(entity, index) in paramsValue.entityDefinitions"
+        v-for="(entity, index) in items"
         :key="entity.id"
         class="definition-card"
         :class="{ 'definition-card--editing': editingId === entity.id }"
       >
         <template v-if="editingId === entity.id">
           <div class="definition-card__row">
-            <span class="fr-text--bold">Entité {{ index + 1 }}</span>
+            <span class="fr-text--bold">{{ itemLabel }} {{ index + 1 }}</span>
             <DsfrButton
               label="Supprimer"
               tertiary
@@ -109,9 +115,10 @@ function removeDefinition (id: number) {
               v-model="entity.name"
               label="Nom"
               label-visible
-              hint="Ex : date_signature"
+              :hint="nameHint"
             />
             <DsfrSelect
+              v-if="typeOptions"
               v-model="entity.type"
               label="Type"
               :options="typeOptions"
@@ -122,11 +129,11 @@ function removeDefinition (id: number) {
                 label="Définition"
                 label-visible
                 is-textarea
-                hint="Ce que le modèle doit repérer, ex : « date à laquelle le contrat est signé »"
+                :hint="definitionHint"
               />
             </div>
             <div
-              v-if="entity.type === 'enum'"
+              v-if="typeOptions && entity.type === 'enum'"
               class="definition-form__wide"
             >
               <DsfrInput
@@ -205,6 +212,7 @@ function removeDefinition (id: number) {
             <div class="definition-summary__head">
               <span class="fr-text--bold definition-summary__name">{{ entity.name || 'Sans nom' }}</span>
               <DsfrBadge
+                v-if="entity.type"
                 :label="typeLabels[entity.type] ?? entity.type"
                 type="info"
                 small
@@ -242,7 +250,7 @@ function removeDefinition (id: number) {
     </ul>
 
     <DsfrButton
-      label="Ajouter une entité"
+      :label="addLabel"
       secondary
       icon="ri-add-line"
       :disabled="isEditing"
