@@ -60,6 +60,7 @@ jobs:
           server:
             - 'apps/server/**'
             - 'Makefile'
+            - 'docker-compose.test.yaml'
           client:
             - 'apps/client/**'
           sdk:
@@ -180,6 +181,8 @@ jobs:
       contents: read
     with:
       PYTHON_VERSION: ${{ needs.expose-vars.outputs.PYTHON_VERSION }}
+      run-backend: ${{ needs.path-filter.outputs.server == 'true' || needs.path-filter.outputs.ci == 'true' }}
+      run-sdk: ${{ needs.path-filter.outputs.sdk == 'true' || needs.path-filter.outputs.ci == 'true' }}
 
   scan-gitleaks:
     uses: dnum-mi/fabnum-cicd/.github/workflows/scan-gitleaks.yml@v0
