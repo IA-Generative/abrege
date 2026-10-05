@@ -2,6 +2,7 @@
 import type { components } from '@/api/types/api.schema'
 import { storeToRefs } from 'pinia'
 
+import useExtractionFollow from '@/composables/use-extraction-follow'
 import useToaster from '@/composables/use-toaster'
 import { useAbregeStore } from '@/stores/abrege'
 import ParamsResume from './ParamsResume.vue'
@@ -27,6 +28,7 @@ const {
 } = storeToRefs(abregeStore)
 
 const resumeResult = ref<TaskModel>()
+const { follow } = useExtractionFollow(resumeResult)
 const percentage = computed(() => formattedPercentage.value)
 
 function handleFileChange (files: FileList | File[]) {
@@ -42,6 +44,7 @@ async function onSubmit () {
 
     if (taskData.value && taskData.value.id) {
       resumeResult.value = await abregeStore.downloadContentSummary(taskData.value.id)
+      void follow()
     } else if (storeError.value) {
       throw new Error(storeError.value)
     } else if (!taskData.value?.id) {
@@ -85,6 +88,7 @@ if (storeError.value) {
       v-if="resumeResult"
       :resume-result="resumeResult"
       @re-generate="newSearch"
+      @retry="follow(6)"
     />
     <DsfrFileUpload
       :label="uploadLabel"
