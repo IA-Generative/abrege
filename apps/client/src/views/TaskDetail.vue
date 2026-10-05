@@ -3,7 +3,6 @@ import type { components } from '@/api/types/api.schema'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ResumeResult from '@/components/ResumeResult.vue'
-import TopicsCard from '@/components/TopicsCard.vue'
 import { useAbregeStore } from '@/stores/abrege'
 
 // The generated schema doesn't yet know about these — the API already returns them.
@@ -79,9 +78,6 @@ onMounted(async () => {
   try {
     task.value = await abrege.getTask(taskId.value) as TaskModel
     if (task.value?.status === 'completed') {
-      if (task.value.parameters?.classify_topics) {
-        abrege.fetchTopics(taskId.value)
-      }
       if (isStillPending()) { startStatusPolling() }
     }
   } catch (e: any) {
@@ -145,13 +141,6 @@ onMounted(async () => {
       </div>
 
       <div v-if="task.status === 'completed' && task.output">
-        <TopicsCard
-          v-if="task.parameters?.classify_topics && !abrege.topicsLoading && (abrege.topics.length > 0 || task.topics_status)"
-          :topics="abrege.topics"
-          :status="task.topics_status"
-          class="fr-mb-3w"
-        />
-
         <ResumeResult
           :resume-result="task"
           @re-generate="router.push({ name: 'resume-tab', params: { tab: 'tasks' } })"
