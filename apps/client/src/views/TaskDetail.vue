@@ -3,7 +3,7 @@ import type { components } from '@/api/types/api.schema'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ResumeResult from '@/components/ResumeResult.vue'
-import TopicBadges from '@/components/TopicBadges.vue'
+import TopicsCard from '@/components/TopicsCard.vue'
 import { useAbregeStore } from '@/stores/abrege'
 
 // The generated schema doesn't yet know about these — the API already returns them.
@@ -145,20 +145,12 @@ onMounted(async () => {
       </div>
 
       <div v-if="task.status === 'completed' && task.output">
-        <div
+        <TopicsCard
           v-if="task.parameters?.classify_topics && !abrege.topicsLoading && (abrege.topics.length > 0 || task.topics_status)"
-          class="task-detail-topics fr-mb-3w"
-        >
-          <span class="fr-text--sm task-detail-topics-label">Sujets détectés :</span>
-          <TopicBadges
-            v-if="abrege.topics.length > 0"
-            :topics="abrege.topics"
-          />
-          <ExtractionStatusBadge
-            :status="task.topics_status"
-            label="Classification"
-          />
-        </div>
+          :topics="abrege.topics"
+          :status="task.topics_status"
+          class="fr-mb-3w"
+        />
 
         <ResumeResult
           :resume-result="task"
@@ -196,14 +188,5 @@ onMounted(async () => {
   color: var(--text-mention-grey);
   word-break: break-all;
   margin: 0;
-}
-.task-detail-topics {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-}
-.task-detail-topics-label {
-  color: var(--text-mention-grey);
 }
 </style>
