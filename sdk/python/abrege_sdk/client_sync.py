@@ -214,14 +214,10 @@ class SyncAbregeClient:
         self,
         input: Input,
     ) -> TaskModel:
-        data = {
-            "input": input.model_dump_json(),
-        }
-
         response = self._request(
             "POST",
             "/api/task/text-url",
-            data=data,
+            json=input.model_dump(mode="json"),
         )
         return TaskModel(**response.json())
 

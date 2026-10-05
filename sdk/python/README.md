@@ -128,6 +128,31 @@ task = client.summarize_text(Input(
 ))
 ```
 
+Each extraction accepts an optional free-text instruction (`qa_instructions`,
+`entities_instructions`, `chunks_instructions`, `topics_instructions`), and the entities and
+topics can be steered with your own definitions. When `entity_definitions` is given, extraction
+focuses on those entities only (and relationships only link extracted ones); `topic_definitions`
+steers the classification towards your own subjects:
+
+```python
+from abrege_sdk.schemas.parameters import EntityDefinition, TopicDefinition
+
+parameters = SummaryParameters(
+    extract_entities=True,
+    entity_definitions=[
+        EntityDefinition(name="date_signature", type="date", definition="Date de signature du contrat", examples=["12/03/2024"]),
+        EntityDefinition(name="statut", type="enum", enum_values=["ouvert", "fermé"]),
+    ],
+    classify_topics=True,
+    topic_definitions=[
+        TopicDefinition(name="recrutement", definition="Offres d'emploi et entretiens", examples=["CDI", "fiche de poste"]),
+    ],
+)
+```
+
+Names must be unique (case-insensitive), an `enum` entity needs `enum_values`, and `type` is one
+of `string`, `number`, `date`, `boolean` or `enum`.
+
 Each runs decoupled from the summary itself (see
 [docs/document-insights.md](../../docs/document-insights.md)), and only what was requested is
 persisted - `task.parameters` on the response tells you which. Each has its own status on the
