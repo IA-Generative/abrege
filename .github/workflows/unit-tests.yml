@@ -137,7 +137,6 @@ jobs:
           ABREGE_API_BASE_URL=http://abrege_api:5000
           MAX_CONCURRENCY_LLM_CALL=5
           MAX_MODEL_TOKEN=16384
-          PYPANDOC_PANDOC_FOLDER=/app/pandoc
           EOF
 
       - name: Install dependencies and run abrege service tests

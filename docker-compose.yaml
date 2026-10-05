@@ -75,7 +75,6 @@ services:
       - ./apps/server/src/:/app/src/
       - ./apps/server/tests/:/app/tests/
     environment:
-      DEV_MODE: "true"
       CELERY_APP_NAME: default
       VERIFY_TOKEN_MODEL: keycloak
       INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-change-me}
