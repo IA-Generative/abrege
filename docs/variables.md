@@ -20,7 +20,6 @@ besoin d'être en lockstep avec la release.
 | `OPENAI_API_BASE_URL` | ✅ | URL de base du hub LLM. Aucun repli sur l'API publique OpenAI : absente → échec explicite au démarrage. Ancien nom déprécié : `OPENAI_API_BASE` | — |
 | `OPENAI_API_MODEL` | | Modèle LLM texte. Repli sur l'alias générique du hub (`chat`), jamais un nom de moteur concret, sauf en parlant directement à un provider (ex. Ollama local) | `chat` |
 | `OPENAI_VLM_MODEL_NAME` | | Modèle VLM (utilisé quand `OCR_SERVICE_LLM=LLM`). Même logique d'alias générique | `chat` |
-| `MAX_CONTEXT_SIZE` | | Taille max du contexte en tokens | `128000` |
 
 ---
 
@@ -109,20 +108,6 @@ worker** avec un message explicite, plutôt qu'à la première tâche délégué
 
 ---
 
-### External Document Loader (OpenWebUI)
-
-Expose `PUT /api/process` : reçoit un fichier en bytes bruts, lance le pipeline de résumé, attend la fin (polling interne) et répond directement avec le résultat au format `[{page_content, metadata}, ...]` compatible avec l'`ExternalDocumentLoader` d'OpenWebUI. Un seul appel HTTP synchrone, sans polling côté client.
-
-| Variable | Obligatoire | Description | Valeur par défaut |
-|---|---|---|---|
-| `EXTERNAL_DOCUMENT_LOADER_API_KEY` | recommandé en production | Clé attendue dans `Authorization: Bearer <clé>`. Si vide, `/process` reste **non authentifié** | — |
-| `EXTERNAL_LOADER_POLL_INTERVAL_SECONDS` | | Intervalle (s) entre deux vérifications du statut de la tâche | `2` |
-| `EXTERNAL_LOADER_MAX_WAIT_SECONDS` | | Délai max (s) avant de répondre `504` si la tâche n'est pas terminée | `600` |
-
-Configuration côté OpenWebUI : `EXTERNAL_DOCUMENT_LOADER_URL=<URL de base de cette API>/api` et `EXTERNAL_DOCUMENT_LOADER_API_KEY=<valeur ci-dessus>`.
-
----
-
 ### Worker Celery
 
 | Variable | Obligatoire | Description | Valeur par défaut |
@@ -137,7 +122,6 @@ Configuration côté OpenWebUI : `EXTERNAL_DOCUMENT_LOADER_URL=<URL de base de c
 | Variable | Obligatoire | Description | Valeur par défaut |
 |---|---|---|---|
 | `CACHE_FOLDER` | | Dossier de cache (téléchargements, URLs…) | `/app/.cache` |
-| `PYPANDOC_PANDOC_FOLDER` | | Chemin vers le binaire `pandoc` (auto-détecté si vide) | — |
 
 ---
 
