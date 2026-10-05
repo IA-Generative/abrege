@@ -5,7 +5,9 @@ from fastapi import Header, HTTPException, status
 INTERNAL_SERVICE_TOKEN = os.environ.get("INTERNAL_SERVICE_TOKEN")
 
 
-def verify_internal_service(x_internal_token: str = Header(default=None)) -> None:
+def verify_internal_service(
+    x_internal_token: str = Header(default=None, description="Shared secret between the API and the worker (`INTERNAL_SERVICE_TOKEN`)."),
+) -> None:
     """Auth dependency for endpoints meant to be called by the Celery worker, not end users.
 
     Both sides share `INTERNAL_SERVICE_TOKEN`; if it isn't configured, access is refused

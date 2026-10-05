@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import BigInteger, Column, ForeignKey, Integer, String, Text, func
 
 from src.internal.db import Base, get_db
@@ -25,15 +25,15 @@ class QAItemRow(Base):
 
 class QAItemRowModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    id: str
-    task_id: str
-    chunk_index: int
-    page: Optional[int] = None
-    source_text: str
-    question: str
-    answer: str
-    model_name: Optional[str] = None
-    created_at: int
+    id: str = Field(description="Identifier of the question/answer pair")
+    task_id: str = Field(description="Task the pair was generated for")
+    chunk_index: int = Field(description="Index of the source chunk")
+    page: Optional[int] = Field(None, description="Source page, when known")
+    source_text: str = Field(description="Passage of the source the answer is taken from")
+    question: str = Field(description="Generated question")
+    answer: str = Field(description="Answer to the question")
+    model_name: Optional[str] = Field(None, description="LLM that generated the pair")
+    created_at: int = Field(description="Creation time, Unix timestamp (seconds)")
 
 
 class QAItemTable:
