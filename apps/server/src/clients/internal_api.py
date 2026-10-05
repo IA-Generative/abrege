@@ -13,9 +13,12 @@ class InternalApiClient:
     internal CRUD routes, instead of writing to the database directly."""
 
     def __init__(self, base_url: str = ABREGE_API_BASE_URL, token: str | None = INTERNAL_SERVICE_TOKEN, timeout: float = 30.0):
+        self._base_url = base_url
+        # A short connect timeout: when the api is unreachable (wrong URL/port, network policy), fail
+        # fast instead of blocking every chunk for the full request timeout.
         self._client = httpx.Client(
             base_url=base_url,
-            timeout=timeout,
+            timeout=httpx.Timeout(timeout, connect=5.0),
             headers={"X-Internal-Token": token} if token else {},
         )
 
@@ -55,7 +58,15 @@ class InternalApiClient:
         )
 
     def _post(self, path: str, json_body: dict) -> None:
-        response = self._client.post(path, json=json_body)
+        try:
+            response = self._client.post(path, json=json_body)
+        except httpx.TransportError as e:
+            logger_abrege.error(
+                f"Internal API unreachable: POST {self._base_url}{path} -> {type(e).__name__}. Check ABREGE_API_BASE_URL: it must "
+                "reach the api Service (on Kubernetes the Service port, e.g. http://abrege-api, not the container port 5000) "
+                "and no network policy may block worker -> api."
+            )
+            raise
         if response.status_code >= 400:
             logger_abrege.error(f"Internal API call failed: POST {path} -> {response.status_code} {response.text}")
         response.raise_for_status()
