@@ -451,6 +451,28 @@ api:
           key: "secret-key"
     AWS_BUCKET_NAME: "abrege"
     AWS_DEFAULT_REGION: "us-east-1"
+    # Authentication (see docs/variables.md, "Sécurité API"). The defaults below point at `localhost`
+    # and do NOT work in a cluster: set them for your Keycloak before exposing the api.
+    # VERIFY_TOKEN_MODEL: "keycloak"
+    # KEYCLOAK_URL: "https://keycloak.example.com"
+    # KEYCLOAK_REALM: "my-realm"
+    # KEYCLOAK_CLIENT_ID: "abrege"
+    # KEYCLOAK_CLIENT_SECRET:
+    #   valueFrom:
+    #     secretKeyRef:
+    #       name: "my-keycloak-secret"
+    #       key: "client-secret"
+    # Public URL of this api (builds the redirect_uri `{BACKEND_PUBLIC_URL}/api/auth/callback`, which
+    # must be registered on the Keycloak client) and of the frontend (CORS origin, post-login redirect).
+    # BACKEND_PUBLIC_URL: "https://abrege.example.com"
+    # FRONTEND_URL: "https://abrege.example.com"
+    # Same shared secret as `worker.env.INTERNAL_SERVICE_TOKEN`: authenticates the worker on the
+    # api's internal routes. Without it those routes answer 401.
+    # INTERNAL_SERVICE_TOKEN:
+    #   valueFrom:
+    #     secretKeyRef:
+    #       name: "my-internal-token"
+    #       key: "token"
   # A: "A"
   # B:
   #   valueFrom:
@@ -1151,6 +1173,14 @@ frontend:
   # flags, ...) reach it without a rebuild.
   # @section -- Frontend
   viteEnv: {}
+  # VITE_ABREGE_API_URL: "https://abrege.example.com/api"  # WITH the /api prefix
+  # VITE_PORTAIL_URL: "https://portail.example.com"
+  # VITE_USER_REVIEW_URL: ""
+  # VITE_TCHAP_CANAL_URL: ""
+  # VITE_MATOMO_SITE_URL: ""
+  # VITE_MATOMO_SITE_ID: ""
+  # VITE_SENTRY_FRONTEND_DSN: ""
+  # VITE_ENVIRONMENT: "production"
   # -- Frontend container env variables loaded from configmap or secret reference. List or map
   # (merged with `global.envFrom` above, global entries first); see `global.envFrom` for both forms.
   # @section -- Frontend
@@ -1953,23 +1983,40 @@ worker:
           key: "secret-key"
     AWS_BUCKET_NAME: "abrege"
     AWS_DEFAULT_REGION: "us-east-1"
-    # OpenAI-compatible client used by the worker for LLM/vision extraction (`OpenAISettings` in
-    # `abrege_service/config/openai.py`, consumed in `abrege_service/main.py`, origin/main). All of
-    # these have fallbacks baked into the settings class, so leaving them unset does NOT crash the
-    # worker - it just can't authenticate against a real endpoint until `OPENAI_API_KEY` is set
-    # (its own fallback, "sk-XXXXXXXXXXXXXXXX", exists purely to avoid a crash, not to
-    # authenticate). NOTE: abrege's variable names differ from ocr's - it's OPENAI_API_BASE (not
-    # OPENAI_API_BASE_URL) and OPENAI_VLM_MODEL_NAME (not VISION_MODEL_NAME).
-    # OPENAI_API_KEY: ""
-    # Matches the app's own fallback (OpenAI's public endpoint).
-    # OPENAI_API_BASE: "https://api.openai.com/v1"
-    # Chat/summarization model; the app's own fallback is "gemma3".
+    # OpenAI-compatible LLM used by the worker (`OpenAISettings` in `abrege_service/config/openai.py`).
+    # `OPENAI_API_BASE_URL` is REQUIRED: there is no fallback to the public OpenAI API (so the
+    # API key is never sent there by accident), and the worker refuses to start without it. The
+    # deprecated name `OPENAI_API_BASE` is still accepted, with a warning.
+    # OPENAI_API_BASE_URL: "https://my-llm-hub.example.com/v1"
+    # OPENAI_API_KEY:
+    #   valueFrom:
+    #     secretKeyRef:
+    #       name: "my-llm-secret"
+    #       key: "api-key"
+    # Chat/summarization model. Unset: the generic `chat` alias, which the LLM hub remaps to
+    # whichever concrete engine is live. Only set a concrete model name when talking directly to
+    # a provider.
     # OPENAI_API_MODEL: ""
     # Vision model, only consulted when OCR_SERVICE_LLM=LLM (otherwise image OCR is delegated to
-    # the external service at OCR_BACKEND_URL). The app's own fallback
-    # ("mistral-small-3.1-24b-instruct-2503") assumes a Mistral-compatible endpoint, not the
-    # OpenAI default above; set both together explicitly for a working combination.
+    # the external service at OCR_BACKEND_URL). Unset: the same generic `chat` alias.
     # OPENAI_VLM_MODEL_NAME: ""
+    # Optional per-feature models for the side extractions; each reuses OPENAI_API_MODEL when unset.
+    # QA_MODEL_NAME: ""
+    # ENTITY_MODEL_NAME: ""
+    # CHUNK_MODEL_NAME: ""
+    # TOPIC_MODEL_NAME: ""
+    # The worker stores the optional extractions (Q&A, entities, relationships, chunks, topics) by
+    # calling the api's internal routes. This is the chart's own api Service (release `abrege`,
+    # service port 80). The compose default (`http://abrege_api:5000`) does not exist in a cluster.
+    ABREGE_API_BASE_URL: "http://abrege-api"
+    # REQUIRED for those extractions: shared secret sent as `X-Internal-Token`. It MUST be the same
+    # value as `api.env.INTERNAL_SERVICE_TOKEN`; without it the api answers 401 to every internal
+    # call and the extractions fail. Provide it from a Secret you manage, e.g.:
+    # INTERNAL_SERVICE_TOKEN:
+    #   valueFrom:
+    #     secretKeyRef:
+    #       name: "my-internal-token"
+    #       key: "token"
   # A: "A"
   # B:
   #   valueFrom:
