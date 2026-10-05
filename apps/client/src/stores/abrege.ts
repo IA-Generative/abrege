@@ -30,6 +30,21 @@ import { ABREGE_API_URL } from '@/utils/constants'
 
 type TaskModel = components['schemas']['TaskModel']
 
+export type EntityDefinitionType = 'string' | 'number' | 'date' | 'boolean' | 'enum'
+
+export interface EntityDefinition {
+  id: number
+  name: string
+  type: EntityDefinitionType
+  definition: string
+  examples: string[]
+  enumValues: string
+}
+
+function splitLines (text: string): string[] {
+  return text.split('\n').map(line => line.trim()).filter(Boolean)
+}
+
 export interface QAItemRow {
   id: string
   task_id: string
@@ -125,12 +140,29 @@ export const useAbregeStore = defineStore('abrege', () => {
     qaInstructions: null,
     extractEntities: false,
     entitiesInstructions: null,
+    entityDefinitions: [] as EntityDefinition[],
     extractChunks: false,
     chunksInstructions: null,
     classifyTopics: false,
     topicsInstructions: null,
   }
   const paramsValue = ref(paramsInitialValue)
+
+  function buildEntityDefinitions () {
+    if (!paramsValue.value.extractEntities) {
+      return undefined
+    }
+    const definitions = paramsValue.value.entityDefinitions
+      .filter(entity => entity.name.trim())
+      .map(entity => ({
+        name: entity.name.trim(),
+        type: entity.type,
+        definition: entity.definition.trim() || null,
+        examples: entity.examples.map(example => example.trim()).filter(Boolean),
+        enum_values: entity.type === 'enum' ? splitLines(entity.enumValues) : [],
+      }))
+    return definitions.length > 0 ? definitions : undefined
+  }
 
   async function healthCheck (): Promise<boolean> {
     try {
@@ -281,6 +313,7 @@ export const useAbregeStore = defineStore('abrege', () => {
         qa_instructions: paramsValue.value.qaInstructions,
         extract_entities: paramsValue.value.extractEntities,
         entities_instructions: paramsValue.value.entitiesInstructions,
+        entity_definitions: buildEntityDefinitions(),
         extract_chunks: paramsValue.value.extractChunks,
         chunks_instructions: paramsValue.value.chunksInstructions,
         classify_topics: paramsValue.value.classifyTopics,
@@ -334,6 +367,7 @@ export const useAbregeStore = defineStore('abrege', () => {
         qa_instructions: paramsValue.value.qaInstructions,
         extract_entities: paramsValue.value.extractEntities,
         entities_instructions: paramsValue.value.entitiesInstructions,
+        entity_definitions: buildEntityDefinitions(),
         extract_chunks: paramsValue.value.extractChunks,
         chunks_instructions: paramsValue.value.chunksInstructions,
         classify_topics: paramsValue.value.classifyTopics,
