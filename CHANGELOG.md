@@ -210,22 +210,23 @@
 - clean code
 - clean code
 
-## [3.4.1](https://github.com/IA-Generative/abrege/compare/v3.4.0...v3.4.1) (2026-10-07)
+## [3.5.0-rc](https://github.com/IA-Generative/abrege/compare/v3.4.0...v3.5.0-rc) (2026-10-05)
 
 
-### Bug Fixes
+### Features
 
-* **migration:** ship the logging config in the migration image ([476e3b0](https://github.com/IA-Generative/abrege/commit/476e3b080081e2596b3d1a5375b2b87f62875cbb))
+* **api:** entity and topic definitions, and a per-call HTTP client for side extractions ([105f3d3](https://github.com/IA-Generative/abrege/commit/105f3d3fc4a904910926a8c253a4cb6b0db95c08))
+* **client:** add entity definitions editor to the entities params ([0858d12](https://github.com/IA-Generative/abrege/commit/0858d12e06fa32c94d04a730422246f1dbe1c579))
+* **client:** add topic definitions and make advanced params collapsible ([985fa15](https://github.com/IA-Generative/abrege/commit/985fa1502d65c49378f53c7d5bb9006542db6f18))
+* **client:** explain each advanced param in plain language ([69e0c1d](https://github.com/IA-Generative/abrege/commit/69e0c1d094c5c7d03f17c18b6bcc5fc2b9fa842d))
+* **client:** refresh the tasks list when its tab is shown and add a refresh button ([945c61c](https://github.com/IA-Generative/abrege/commit/945c61c045cd1afe48ec4f5db4d3f2119a0d5ad7))
+* **client:** results modal with carousel, new topics card, reusable carousel section ([9f2a1bd](https://github.com/IA-Generative/abrege/commit/9f2a1bdfd695184b5e69fab799a55a07e490a30e))
+* **sdk:** add instructions and entity/topic definitions, send text input as JSON ([b5d002a](https://github.com/IA-Generative/abrege/commit/b5d002a317a2c6cadcd2c5c54c4666fc1b2c1a16))
 
 
 ### Code Refactoring
 
-* **chart:** run migrations from the migration image ([f18ed40](https://github.com/IA-Generative/abrege/commit/f18ed401ad9694bc5f2db99869d73b1e4a1afa4b))
-
-
-### Dependencies
-
-* tag the local worker image as abrege-worker ([96e63d8](https://github.com/IA-Generative/abrege/commit/96e63d81f9ec8906ed39cabb6307aca11000f4c9))
+* **client:** split params into per-section components and add advanced params carousel ([d9005d4](https://github.com/IA-Generative/abrege/commit/d9005d407786f700d5e53df42bad5531d3880394))
 
 ## [3.4.0](https://github.com/IA-Generative/abrege/compare/v3.3.2...v3.4.0) (2026-10-01)
 
