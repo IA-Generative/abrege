@@ -5,7 +5,8 @@ from abrege_sdk.client_async import AsyncAbregeClient
 from abrege_sdk.schemas.pagination import Pagination
 from abrege_sdk.schemas.task import TaskModel, TaskStatus
 from abrege_sdk.schemas.health import Health
-from abrege_sdk.schemas.parameters import SummaryParameters
+from abrege_sdk.schemas.content import Input, TextContent
+from abrege_sdk.schemas.parameters import EntityDefinition, SummaryParameters, TopicDefinition
 from abrege_sdk.schemas.qa_item import QAItemRow
 from abrege_sdk.schemas.entity import EntityRow, RelationshipRow
 from abrege_sdk.schemas.topic import TopicRow
@@ -628,3 +629,44 @@ async def test_wait_for_task_timeout():
         async with AsyncAbregeClient(BASE_URL, API_KEY) as client:
             with pytest.raises(AbregeTimeoutError):
                 await client.wait_for_task("tid", poll_interval=0.01, max_wait_time=0.03)
+
+
+@pytest.mark.asyncio
+async def test_summarize_text_sends_a_json_body_with_the_definitions():
+    task_data = {
+        "id": "tid",
+        "status": TaskStatus.CREATED.value,
+        "extras": {},
+        "parameters": None,
+        "input": None,
+        "output": None,
+        "user_id": "u",
+        "created_at": 0,
+        "updated_at": 0,
+        "type": "summary",
+    }
+    with patch("abrege_sdk.client_async.httpx.AsyncClient") as mock_client:
+        mock_instance = mock_client.return_value
+        mock_instance.request = AsyncMock(return_value=MagicMock())
+        mock_instance.request.return_value.json.return_value = task_data
+        mock_instance.request.return_value.raise_for_status = lambda: None
+        mock_instance.aclose = AsyncMock()
+        async with AsyncAbregeClient(BASE_URL, API_KEY) as client:
+            await client.summarize_text(
+                Input(
+                    content=TextContent(text="Un texte."),
+                    parameters=SummaryParameters(
+                        extract_entities=True,
+                        entity_definitions=[EntityDefinition(name="montant", type="number")],
+                        classify_topics=True,
+                        topic_definitions=[TopicDefinition(name="finance")],
+                    ),
+                )
+            )
+
+    args, kwargs = mock_instance.request.call_args
+    assert args == ("POST", "/api/task/text-url")
+    assert "data" not in kwargs
+    assert kwargs["json"]["content"]["text"] == "Un texte."
+    assert kwargs["json"]["parameters"]["entity_definitions"][0]["name"] == "montant"
+    assert kwargs["json"]["parameters"]["topic_definitions"][0]["name"] == "finance"
