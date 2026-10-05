@@ -2,6 +2,7 @@
 import { DsfrToggleSwitch } from '@gouvminint/vue-dsfr'
 import { computed } from 'vue'
 import { useAbregeStore } from '@/stores/abrege'
+import DefinitionsEditor from './DefinitionsEditor.vue'
 
 const { paramsValue } = useAbregeStore()
 
@@ -41,6 +42,17 @@ const instructions = computed({
         :is-textarea="true"
         :label="instructionsLabel"
         :hint="instructionsHint"
+      />
+      <DefinitionsEditor
+        v-model="paramsValue.topicDefinitions"
+        title="Définition des sujets"
+        hint="Optionnel. Décrivez les sujets attendus pour guider la classification."
+        empty-text="Aucun sujet défini : le modèle les détermine seul."
+        item-label="Sujet"
+        add-label="Ajouter un sujet"
+        name-hint="Ex : recrutement"
+        definition-hint="Quand rattacher un document à ce sujet, ex : « offres d'emploi, entretiens, contrats d'embauche »"
+        id-prefix="topic"
       />
     </div>
   </div>

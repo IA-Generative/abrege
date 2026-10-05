@@ -32,14 +32,19 @@ type TaskModel = components['schemas']['TaskModel']
 
 export type EntityDefinitionType = 'string' | 'number' | 'date' | 'boolean' | 'enum'
 
-export interface EntityDefinition {
+export interface DefinitionBase {
   id: number
   name: string
-  type: EntityDefinitionType
   definition: string
   examples: string[]
+}
+
+export interface EntityDefinition extends DefinitionBase {
+  type: EntityDefinitionType
   enumValues: string
 }
+
+export type TopicDefinition = DefinitionBase
 
 function splitLines (text: string): string[] {
   return text.split('\n').map(line => line.trim()).filter(Boolean)
@@ -145,6 +150,7 @@ export const useAbregeStore = defineStore('abrege', () => {
     chunksInstructions: null,
     classifyTopics: false,
     topicsInstructions: null,
+    topicDefinitions: [] as TopicDefinition[],
   }
   const paramsValue = ref(paramsInitialValue)
 
@@ -160,6 +166,20 @@ export const useAbregeStore = defineStore('abrege', () => {
         definition: entity.definition.trim() || null,
         examples: entity.examples.map(example => example.trim()).filter(Boolean),
         enum_values: entity.type === 'enum' ? splitLines(entity.enumValues) : [],
+      }))
+    return definitions.length > 0 ? definitions : undefined
+  }
+
+  function buildTopicDefinitions () {
+    if (!paramsValue.value.classifyTopics) {
+      return undefined
+    }
+    const definitions = paramsValue.value.topicDefinitions
+      .filter(topic => topic.name.trim())
+      .map(topic => ({
+        name: topic.name.trim(),
+        definition: topic.definition.trim() || null,
+        examples: topic.examples.map(example => example.trim()).filter(Boolean),
       }))
     return definitions.length > 0 ? definitions : undefined
   }
@@ -318,6 +338,7 @@ export const useAbregeStore = defineStore('abrege', () => {
         chunks_instructions: paramsValue.value.chunksInstructions,
         classify_topics: paramsValue.value.classifyTopics,
         topics_instructions: paramsValue.value.topicsInstructions,
+        topic_definitions: buildTopicDefinitions(),
       },
     }
 
@@ -372,6 +393,7 @@ export const useAbregeStore = defineStore('abrege', () => {
         chunks_instructions: paramsValue.value.chunksInstructions,
         classify_topics: paramsValue.value.classifyTopics,
         topics_instructions: paramsValue.value.topicsInstructions,
+        topic_definitions: buildTopicDefinitions(),
       }))
 
       const { data: task } = await http.post<TaskModel>(
