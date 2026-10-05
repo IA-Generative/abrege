@@ -20,6 +20,12 @@ besoin d'être en lockstep avec la release.
 | `OPENAI_API_BASE_URL` | ✅ | URL de base du hub LLM. Aucun repli sur l'API publique OpenAI : absente → échec explicite au démarrage. Ancien nom déprécié : `OPENAI_API_BASE` | — |
 | `OPENAI_API_MODEL` | | Modèle LLM texte. Repli sur l'alias générique du hub (`chat`), jamais un nom de moteur concret, sauf en parlant directement à un provider (ex. Ollama local) | `chat` |
 | `OPENAI_VLM_MODEL_NAME` | | Modèle VLM (utilisé quand `OCR_SERVICE_LLM=LLM`). Même logique d'alias générique | `chat` |
+| `QA_MODEL_NAME` | | Modèle dédié aux questions/réponses. Non défini : réutilise `OPENAI_API_MODEL` | — |
+| `ENTITY_MODEL_NAME` | | Modèle dédié à l'extraction d'entités, aussi utilisé pour la passe de relations globales. Non défini : réutilise `OPENAI_API_MODEL` | — |
+| `CHUNK_MODEL_NAME` | | Modèle dédié au découpage sémantique (chunks). Non défini : réutilise `OPENAI_API_MODEL` | — |
+| `TOPIC_MODEL_NAME` | | Modèle dédié à la classification des sujets. Non défini : réutilise `OPENAI_API_MODEL` | — |
+
+Voir [document-insights.md](document-insights.md) pour le détail des extractions optionnelles.
 
 ---
 
@@ -108,12 +114,35 @@ worker** avec un message explicite, plutôt qu'à la première tâche délégué
 
 ---
 
+### Communication interne worker ↔ API
+
+Le worker enregistre les résultats des extractions optionnelles (Q&R, entités, relations, chunks, sujets) en appelant des routes **internes** de l'API (`POST /api/task/{id}/qa`, `/entities`, `/relationships/global`, `/chunks`, `/topics`). Ces routes ne sont pas destinées aux utilisateurs : elles sont protégées par un secret partagé entre l'API et le worker.
+
+| Variable | Obligatoire | Description | Valeur par défaut |
+|---|---|---|---|
+| `INTERNAL_SERVICE_TOKEN` | ✅ pour les extractions optionnelles | Secret partagé, envoyé par le worker dans l'en-tête `X-Internal-Token`. **Doit être identique côté API et côté worker.** Non défini : l'API refuse (401) tous les appels internes, et les extractions échouent | — |
+| `ABREGE_API_BASE_URL` | | URL de l'API telle que le worker l'atteint depuis le réseau interne (sans `/api`). Le défaut est le nom du service docker compose : à surcharger ailleurs (ex. `http://abrege-api` sous Kubernetes) | `http://abrege_api:5000` |
+
+---
+
+### LLM Guard (optionnel)
+
+Filtre le `custom_prompt` des requêtes de résumé. **Désactivé tant que `LLM_GUARD_URL` n'est pas défini.**
+
+| Variable | Obligatoire | Description | Valeur par défaut |
+|---|---|---|---|
+| `LLM_GUARD_URL` | | URL de l'API LLM Guard. Absente : aucun filtrage | — |
+| `LLM_GUARD_API_KEY` | | Clé d'API LLM Guard | `llm_guard` |
+
+---
+
 ### Worker Celery
 
 | Variable | Obligatoire | Description | Valeur par défaut |
 |---|---|---|---|
 | `CELERY_APP_NAME` | | Nom de l'application Celery | `default` |
 | `MAX_CONCURRENCY_LLM_CALL` | | Nombre max d'appels LLM simultanés | `5` |
+| `MAX_MODEL_TOKEN` | | Taille de contexte (en tokens) que le worker suppose pour le LLM de résumé : elle détermine la taille des fragments du map-reduce | `128000` |
 
 ---
 
@@ -137,10 +166,32 @@ worker** avec un message explicite, plutôt qu'à la première tâche délégué
 | `LANGFUSE_SECRET_KEY` | si `LANGFUSE_PUBLIC_KEY` défini | Clé secrète Langfuse | — |
 | `LANGFUSE_HOST` | si `LANGFUSE_PUBLIC_KEY` défini | URL de l'instance Langfuse | `https://cloud.langfuse.com` |
 | `LANGFUSE_ENVIRONMENT` | si `LANGFUSE_PUBLIC_KEY` défini | Environnement de tracing Langfuse | `local` |
+| `SERVICE_NAME` | | Nom de service ajouté aux logs JSON | `abrege` |
+| `POD_NAME` / `POD_NAMESPACE` / `NODE_NAME` | | Métadonnées ajoutées aux logs JSON. À fournir via la downward API de Kubernetes (`fieldRef`) ; absentes, les champs restent vides | — |
+
+---
+
+### Frontend (Vite)
+
+Lues par le client à la compilation (`import.meta.env`) ou au chargement (`window.VITE_*`). Avec le chart Helm, `frontend.viteEnv` génère un `config.js` monté dans le conteneur : les valeurs peuvent donc changer **sans reconstruire l'image**.
+
+| Variable | Obligatoire | Description | Valeur par défaut |
+|---|---|---|---|
+| `VITE_ABREGE_API_URL` | ✅ | URL de l'API **avec le préfixe `/api`** (ex. `http://localhost:5000/api`) : le front appelle `${VITE_ABREGE_API_URL}/auth/login`, `/task/...` | — |
+| `VITE_PORTAIL_URL` | | URL du portail MIrAI (liens CGU, FAQ, autres outils) | — |
+| `VITE_USER_REVIEW_URL` | | URL du bouton « Donner mon avis » | — |
+| `VITE_TCHAP_CANAL_URL` | | URL du canal Tchap de support | — |
+| `VITE_MATOMO_SITE_URL` / `VITE_MATOMO_SITE_ID` | | Instance et identifiant de site Matomo (statistiques) | — |
+| `VITE_SENTRY_FRONTEND_DSN` | | DSN Sentry du front. Absent : Sentry désactivé | — |
+| `VITE_ENVIRONMENT` | | Environnement remonté à Sentry | — |
+| `FRONT_PORT` | | Port du serveur de développement Vite (et des tests Playwright) | — |
+| `VITE_USERNAME_KEYCLOAK` / `VITE_PASSWORD_KEYCLOAK` | tests E2E uniquement | Compte de test utilisé par Playwright (`playwright/login-helper.ts`). Jamais lues par l'application | — |
 
 ---
 
 Toutes les variables peuvent être définies dans un fichier `.env` à la racine du projet. Le chargement est fait automatiquement grâce à `pydantic_settings`.
+
+En développement avec docker compose, `.env.local` (versionné) fournit des valeurs d'exemple et un `.env` optionnel (ignoré par git) les surcharge : le dernier fichier l'emporte. Les entrées `environment:` du compose passent avant les deux, et celles qui contiennent `${VAR:-défaut}` lisent `VAR` dans le shell ou dans `.env`, pas dans `.env.local`.
 
 ## Volumes Docker
 
