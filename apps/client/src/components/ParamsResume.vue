@@ -1,31 +1,38 @@
 <script lang="ts" setup>
-import { ref } from 'vue'
-import AdvancedParams from './params/AdvancedParams.vue'
+import { computed } from 'vue'
+import { useAbregeStore } from '@/stores/abrege'
+import ExtractionPicker from './params/ExtractionPicker.vue'
 import SummaryParams from './params/SummaryParams.vue'
 
-const expandedId = ref<string>()
-const activeAccordion = ref<number>(1)
-const accordionTitle = 'Plus de paramètres'
+const { paramsValue } = useAbregeStore()
+
+const DEFAULT_SIZE = 4000
+
+// Shown in the collapsed header so the current choices are visible without opening it.
+const accordionTitle = computed(() => {
+  const language = paramsValue.selectOptionSelected === 'English' ? 'Anglais' : 'Français'
+  const size = Number(paramsValue.inputValue) || DEFAULT_SIZE
+  return `Options du résumé — ${language}, ${size} mots`
+})
 </script>
 
 <template>
-  <DsfrAccordionsGroup v-model="activeAccordion">
+  <div>
     <DsfrAccordion
-      id="accordion-1"
+      id="accordion-summary-options"
+      class="summary-options"
       :title="accordionTitle"
-      :expanded="activeAccordion === 0"
-      :expanded-id="expandedId"
-      @expand="expandedId = $event"
     >
-      <div>
-        <SummaryParams />
-        <AdvancedParams />
-      </div>
+      <SummaryParams />
     </DsfrAccordion>
-  </DsfrAccordionsGroup>
+    <ExtractionPicker />
+  </div>
 </template>
 
 <style scoped>
+  .summary-options {
+    margin-top: 1.5rem;
+  }
   :deep(textarea){
     min-height: 114px;
   }
