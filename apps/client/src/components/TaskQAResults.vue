@@ -1,15 +1,10 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useAbregeStore } from '@/stores/abrege'
 
 const props = defineProps<{
-  opened: boolean
   taskId: string
   status?: string | null
-}>()
-
-const emit = defineEmits<{
-  (e: 'close'): void
 }>()
 
 const abrege = useAbregeStore()
@@ -49,32 +44,14 @@ function loadPage (page: number) {
   abrege.fetchQAItems(props.taskId, page, PAGE_SIZE)
 }
 
-function close () {
-  emit('close')
-}
-
-watch(
-  () => props.opened,
-  (opened) => {
-    if (opened) {
-      searchQuery.value = ''
-      loadPage(1)
-    }
-  },
-)
+onMounted(() => loadPage(1))
 </script>
 
 <template>
-  <DsfrModal
-    v-if="opened"
-    :opened="opened"
-    title="Questions / Réponses"
-    size="xl"
-    @close="close"
-  >
+  <div class="qa-results">
     <div class="qa-modal-subtitle-row">
       <p class="fr-text--sm fr-text-mention--grey qa-modal-subtitle">
-        Tâche {{ taskId }} — {{ abrege.qaItemsTotal }} paire(s) générée(s)
+        {{ abrege.qaItemsTotal }} paire(s) générée(s)
       </p>
       <ExtractionStatusBadge
         :status="status"
@@ -144,7 +121,7 @@ watch(
         />
       </div>
     </template>
-  </DsfrModal>
+  </div>
 </template>
 
 <style scoped>
