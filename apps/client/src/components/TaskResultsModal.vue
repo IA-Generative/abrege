@@ -24,6 +24,14 @@ const opened = ref(false)
 // Each side extraction is opt-in per task (see ParamsResume.vue): only offer what was requested.
 const sections = computed(() => {
   const result = []
+  if (props.parameters?.classify_topics) {
+    result.push({
+      title: 'Classification des sujets',
+      description: 'Les grands thèmes du document avec un score de confiance et une explication pour chacun, pour mieux classer vos documents.',
+      component: TaskTopicsResults,
+      props: { taskId: props.taskId, status: props.topicsStatus },
+    })
+  }
   if (props.parameters?.extract_qa) {
     result.push({
       title: 'Questions / réponses',
@@ -46,14 +54,6 @@ const sections = computed(() => {
       description: 'Le document découpé en passages cohérents par thème, pour retrouver l\'endroit exact d\'une information.',
       component: TaskChunksResults,
       props: { taskId: props.taskId, status: props.qaEntitiesStatus },
-    })
-  }
-  if (props.parameters?.classify_topics) {
-    result.push({
-      title: 'Classification des sujets',
-      description: 'Les grands thèmes du document avec un score de confiance et une explication pour chacun, pour mieux classer vos documents.',
-      component: TaskTopicsResults,
-      props: { taskId: props.taskId, status: props.topicsStatus },
     })
   }
   return result
