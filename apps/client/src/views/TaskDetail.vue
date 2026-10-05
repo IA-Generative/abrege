@@ -34,21 +34,28 @@ function isStillPending (): boolean {
   )
 }
 
+// After a retry the status can stay "failed" for a moment, until the worker picks the job up:
+// keep polling a few more ticks even when nothing looks pending.
+let graceTicks = 0
+
 function startStatusPolling () {
   if (statusPollTimer) { return }
   statusPollTimer = setInterval(async () => {
-    if (!isStillPending()) {
+    if (!isStillPending() && graceTicks <= 0) {
       if (statusPollTimer) { clearInterval(statusPollTimer) }
       statusPollTimer = null
       return
     }
+    graceTicks -= 1
     const refreshed = await abrege.getTask(taskId.value) as TaskModel
     task.value = refreshed
-    if (!isStillPending() && statusPollTimer) {
-      clearInterval(statusPollTimer)
-      statusPollTimer = null
-    }
   }, 3000)
+}
+
+async function onRetry () {
+  graceTicks = 5
+  task.value = await abrege.getTask(taskId.value) as TaskModel
+  startStatusPolling()
 }
 
 onBeforeUnmount(() => {
@@ -144,6 +151,7 @@ onMounted(async () => {
         <ResumeResult
           :resume-result="task"
           @re-generate="router.push({ name: 'resume-tab', params: { tab: 'tasks' } })"
+          @retry="onRetry"
         />
       </div>
 

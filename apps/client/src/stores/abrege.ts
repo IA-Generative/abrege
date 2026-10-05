@@ -579,6 +579,49 @@ export const useAbregeStore = defineStore('abrege', () => {
     }
   }
 
+  // ----- RESULTS OVERVIEW (counts per extraction + top topics, shown on the results tabs) -----
+  const resultsOverview = ref({
+    qa: 0,
+    entities: 0,
+    relationships: 0,
+    topics: 0,
+    chunks: 0,
+    topTopics: [] as TopicRow[],
+  })
+
+  async function fetchResultsOverview (taskId: string) {
+    const get = (path: string, limit: number) =>
+      http.get<{ total: number, items: any[] }>(`/task/${taskId}/${path}`, { params: { offset: 1, limit } })
+    const [qa, ents, rels, tops, chs] = await Promise.allSettled([
+      get('qa', 1),
+      get('entities', 1),
+      get('relationships', 1),
+      get('topics', 3),
+      get('chunks', 1),
+    ])
+    const total = (result: PromiseSettledResult<{ data: { total: number } }>) =>
+      result.status === 'fulfilled' ? (result.value.data.total ?? 0) : 0
+    resultsOverview.value = {
+      qa: total(qa),
+      entities: total(ents),
+      relationships: total(rels),
+      topics: total(tops),
+      chunks: total(chs),
+      topTopics: tops.status === 'fulfilled' ? (tops.value.data.items ?? []) : [],
+    }
+  }
+
+  // Re-triggers the Q&A / entities / relationships / chunks extraction of a finished task.
+  async function retryExtraction (taskId: string) {
+    try {
+      await http.post(`/task/${taskId}/extract-details`)
+      addSuccessMessage({ title: 'Analyse relancée', description: 'L\'extraction a été relancée, les résultats vont se mettre à jour.' })
+    } catch (err: any) {
+      addErrorMessage({ title: 'Relance impossible', description: `Impossible de relancer l'extraction: ${err?.message ?? err}` })
+      throw err
+    }
+  }
+
   // kept for backward compatibility (no-op stoppers)
   function startPollingUserTasks (page = 1, page_size = 100) {
     fetchUserTasks(page, page_size)
@@ -669,5 +712,9 @@ export const useAbregeStore = defineStore('abrege', () => {
     chunksPage,
     chunksPageSize,
     fetchChunks,
+    // results overview (tabs)
+    resultsOverview,
+    fetchResultsOverview,
+    retryExtraction,
   }
 })

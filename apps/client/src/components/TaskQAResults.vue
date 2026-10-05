@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useAbregeStore } from '@/stores/abrege'
 
 const props = defineProps<{
@@ -45,6 +45,13 @@ function loadPage (page: number) {
 }
 
 onMounted(() => loadPage(1))
+
+// The extraction keeps running after the summary: reload once it completes (the task is polled).
+watch(() => props.status, (status, previous) => {
+  if (status === 'completed' && previous !== 'completed') {
+    loadPage(1)
+  }
+})
 </script>
 
 <template>
