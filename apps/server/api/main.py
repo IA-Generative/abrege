@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from api.docs import API_DESCRIPTION, TAGS_METADATA, build_openapi
 from api.routes.auth import router as auth_router
 from api.routes.health import router as health_router
 from api.routes.summarize import router as summarize_router
@@ -31,13 +32,14 @@ if _sentry_settings.SENTRY_API_DSN and _environment != "testing":
 
 app = FastAPI(
     title=name,
-    description="",
+    description=API_DESCRIPTION,
+    openapi_tags=TAGS_METADATA,
     version=__version__,
     docs_url="/api/docs",
     redoc_url="/api/redocs",
     openapi_url="/api/openapi.json",
 )
-Instrumentator().instrument(app).expose(app)
+Instrumentator().instrument(app).expose(app, include_in_schema=False)
 
 
 app.add_middleware(
@@ -68,3 +70,5 @@ app.include_router(health_router, prefix="/api")
 app.include_router(summarize_router, prefix="/api")
 app.include_router(task_router, prefix="/api")
 app.include_router(doc_router, prefix="/api")
+
+app.openapi = lambda: build_openapi(app)

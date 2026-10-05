@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import BigInteger, Column, Float, ForeignKey, String, Text, func
 
 from src.internal.db import Base, get_db
@@ -23,13 +23,13 @@ class TopicRow(Base):
 
 class TopicRowModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    id: str
-    task_id: str
-    topic: str
-    confidence: float
-    explanation: Optional[str] = None
-    model_name: Optional[str] = None
-    created_at: int
+    id: str = Field(description="Identifier of the topic")
+    task_id: str = Field(description="Task the topic was assigned to")
+    topic: str = Field(description="Subject of the document")
+    confidence: float = Field(description="Confidence that this is a genuine topic, between 0 and 1")
+    explanation: Optional[str] = Field(None, description="Why the topic was assigned, grounded in the summary")
+    model_name: Optional[str] = Field(None, description="LLM that classified the document")
+    created_at: int = Field(description="Creation time, Unix timestamp (seconds)")
 
 
 class TopicTable:

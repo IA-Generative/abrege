@@ -5,30 +5,43 @@ from urllib.parse import urlencode
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response, status
 from fastapi.responses import RedirectResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from api.core.security import keycloak_client
 from api.core.security.claims import extract_identity
+from api.docs import TOO_MANY_REQUESTS, UNAUTHORIZED, ErrorResponse
 from src.utils.logger import logger_abrege as logger
 
 router = APIRouter(tags=["Auth"])
 
 
 class PasswordGrantRequest(BaseModel):
-    username: str
-    password: str
+    username: str = Field(description="Keycloak username")
+    password: str = Field(description="Keycloak password")
 
 
 class RefreshTokenRequest(BaseModel):
-    refresh_token: str
+    refresh_token: str = Field(description="Refresh token obtained from `POST /api/auth/token`")
 
 
 class PasswordGrantResponse(BaseModel):
-    access_token: str
-    expires_in: int
-    refresh_token: str
-    refresh_expires_in: int
-    token_type: str = "Bearer"
+    access_token: str = Field(description="Keycloak access token, to send as `Authorization: Bearer <access_token>`")
+    expires_in: int = Field(description="Lifetime of the access token, in seconds")
+    refresh_token: str = Field(description="Token to get a new access token with `POST /api/auth/refresh`")
+    refresh_expires_in: int = Field(description="Lifetime of the refresh token, in seconds")
+    token_type: str = Field("Bearer", description="Always `Bearer`")
+
+
+class CurrentUser(BaseModel):
+    id: str | None = Field(None, description="Identifier of the user")
+    email: str | None = Field(None, description="Email address of the user")
+    firstName: str | None = Field(None, description="First name of the user")
+    lastName: str | None = Field(None, description="Last name of the user")
+    groups: list[str] | None = Field(None, description="Groups the user belongs to")
+
+
+class LogoutResponse(BaseModel):
+    redirectUrl: str = Field(description="Keycloak end-session URL the browser should be sent to to finish logging out")
 
 _keycloak_openid = keycloak_client.keycloak_openid
 _keycloak_settings = keycloak_client.keycloak_settings
@@ -108,8 +121,22 @@ def _clear_session_cookie(response: Response) -> None:
     )
 
 
-@router.get("/login")
-async def login(request: Request, redirect: str | None = Query(default=None)):
+@router.get(
+    "/login",
+    summary="Log in (browser)",
+    description="""Start the browser login: the backend runs the OAuth2 Authorization Code + PKCE flow and redirects (`307`) to Keycloak.
+After a successful login, `GET /api/auth/callback` sets the session cookie and sends the user back to the frontend.
+
+Meant to be opened as a full page navigation, not called with `fetch`. For scripts, use `POST /api/auth/token`.""",
+    responses={
+        307: {"description": "Redirect to the Keycloak login page."},
+        **TOO_MANY_REQUESTS,
+    },
+)
+async def login(
+    request: Request,
+    redirect: str | None = Query(default=None, description="App-relative path to return to after login (e.g. `/tasks`). Absolute URLs are ignored."),
+):
     # `request.client.host` is whatever peer terminates the TCP connection - the load
     # balancer/reverse proxy in front of this service, unless it forwards the real client
     # IP some other way. Good enough to bound abuse from a single connection; not a
@@ -143,7 +170,18 @@ async def login(request: Request, redirect: str | None = Query(default=None)):
     return RedirectResponse(auth_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
 
 
-@router.post("/token", response_model=PasswordGrantResponse)
+@router.post(
+    "/token",
+    response_model=PasswordGrantResponse,
+    summary="Get an access token (scripts, SDK)",
+    description="""Exchange a username and password for a Keycloak access token (Resource Owner Password Credentials grant), entirely
+server-side: the client secret never leaves the backend. Use the returned token as `Authorization: Bearer <access_token>` on the
+other endpoints, and renew it with `POST /api/auth/refresh`. No session cookie is created.""",
+    responses={
+        401: {"model": ErrorResponse, "description": "Invalid credentials."},
+        **TOO_MANY_REQUESTS,
+    },
+)
 async def token(request: Request, body: PasswordGrantRequest):
     """Non-browser counterpart to `/login`, for the SDK/scripts: exchanges a
     username/password for a Keycloak access token via the Resource Owner Password
@@ -178,7 +216,16 @@ async def token(request: Request, body: PasswordGrantRequest):
     )
 
 
-@router.post("/refresh", response_model=PasswordGrantResponse)
+@router.post(
+    "/refresh",
+    response_model=PasswordGrantResponse,
+    summary="Refresh an access token",
+    description="Exchange the refresh token obtained from `POST /api/auth/token` for a fresh access token, entirely server-side.",
+    responses={
+        401: {"model": ErrorResponse, "description": "Invalid or expired refresh token."},
+        **TOO_MANY_REQUESTS,
+    },
+)
 async def refresh(request: Request, body: RefreshTokenRequest):
     """Exchange a refresh token (obtained from `/token`) for a fresh access token,
     entirely server-side - same trust boundary as `/token`, the SDK/scripts
@@ -203,11 +250,19 @@ async def refresh(request: Request, body: RefreshTokenRequest):
     )
 
 
-@router.get("/callback")
+@router.get(
+    "/callback",
+    summary="Login callback (Keycloak)",
+    description="""Redirect target of Keycloak after the login. Exchanges the authorization code, creates the server-side session, sets the
+`httpOnly` session cookie and redirects (`302`) to the frontend. On any failure it redirects to the frontend without a session.
+
+Called by Keycloak through the browser, not by API clients.""",
+    responses={302: {"description": "Redirect to the frontend (with the session cookie on success)."}},
+)
 async def callback(
-    code: str | None = Query(default=None),
-    state: str | None = Query(default=None),
-    error: str | None = Query(default=None),
+    code: str | None = Query(default=None, description="Authorization code issued by Keycloak."),
+    state: str | None = Query(default=None, description="Anti-CSRF `state` value generated by `GET /api/auth/login`."),
+    error: str | None = Query(default=None, description="Error code returned by Keycloak when the login failed."),
 ):
     if error or not code or not state:
         logger.warning(
@@ -255,7 +310,14 @@ async def callback(
     return response
 
 
-@router.post("/logout")
+@router.post(
+    "/logout",
+    response_model=LogoutResponse,
+    summary="Log out (browser)",
+    description="""End the browser session: revokes the Keycloak refresh token, deletes the server-side session and clears the cookie.
+Returns the Keycloak end-session URL the browser should navigate to. Only accepted from the app's own origin.""",
+    responses={403: {"model": ErrorResponse, "description": "The request does not come from the app's own origin."}},
+)
 async def logout(request: Request, response: Response):
     if not _is_same_origin(request):
         logger.warning("Rejecting cross-site logout request")
@@ -278,7 +340,13 @@ async def logout(request: Request, response: Response):
     return {"redirectUrl": _end_session_url(id_token)}
 
 
-@router.get("/me")
+@router.get(
+    "/me",
+    response_model=CurrentUser,
+    summary="Current user",
+    description="Return the user of the current browser session. Used by the frontend to know whether the user is logged in.",
+    responses={**UNAUTHORIZED},
+)
 async def me(request: Request):
     sid = request.cookies.get(_keycloak_settings.SESSION_COOKIE_NAME)
     session = _session_store.get(sid) if sid else None
