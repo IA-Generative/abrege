@@ -10,11 +10,15 @@ const props = defineProps<{
   taskId: string
   entitiesStatus?: string | null
   relationshipsStatus?: string | null
+  expanded?: boolean
+  initialTab?: number
 }>()
+
+const emit = defineEmits<{ (e: 'tabChange', tab: number): void }>()
 
 const abrege = useAbregeStore()
 
-const activeTab = ref(0)
+const activeTab = ref(props.initialTab ?? 0)
 const tabsData = [
   { label: 'Liste', slot: 'list' },
   { label: 'Graphe', slot: 'graph' },
@@ -136,13 +140,34 @@ async function renderGraph () {
   if (!graphContainer.value) { return }
   destroyGraph()
   const graph = buildGraph(filteredEntities.value, filteredRelationships.value)
+  // Relation labels overlap as soon as there are a few edges: only show those of the hovered
+  // edge, or of the edges touching the hovered node.
+  let hoveredEdge: string | null = null
+  let hoveredNode: string | null = null
   renderer = new Sigma(graph, graphContainer.value, {
     renderEdgeLabels: true,
+    enableEdgeEvents: true,
     defaultEdgeType: 'arrow',
+    edgeReducer: (edge, data) => {
+      const highlighted = hoveredEdge === edge || (hoveredNode !== null && graph.hasExtremity(edge, hoveredNode))
+      return highlighted
+        ? { ...data, forceLabel: true, color: '#000091', size: 3 }
+        : { ...data, label: '' }
+    },
   })
+  const hover = (edge: string | null, node: string | null) => {
+    hoveredEdge = edge
+    hoveredNode = node
+    renderer?.refresh()
+  }
+  renderer.on('enterEdge', ({ edge }) => hover(edge, null))
+  renderer.on('leaveEdge', () => hover(null, null))
+  renderer.on('enterNode', ({ node }) => hover(null, node))
+  renderer.on('leaveNode', () => hover(null, null))
 }
 
 watch(activeTab, (tab) => {
+  emit('tabChange', tab)
   if (tab === 1) { renderGraph() }
 })
 
@@ -150,9 +175,18 @@ watch(searchQuery, () => {
   if (activeTab.value === 1) { renderGraph() }
 })
 
-onMounted(async () => {
+async function loadEntities () {
   await abrege.fetchEntitiesAndRelationships(props.taskId)
   if (activeTab.value === 1) { renderGraph() }
+}
+
+onMounted(loadEntities)
+
+// Entities and the global relationships complete one after the other while the task is polled.
+watch(() => [props.entitiesStatus, props.relationshipsStatus], ([entitiesStatus, relationshipsStatus], [previousEntities, previousRelationships]) => {
+  const justCompleted = (entitiesStatus === 'completed' && previousEntities !== 'completed')
+    || (relationshipsStatus === 'completed' && previousRelationships !== 'completed')
+  if (justCompleted) { loadEntities() }
 })
 
 onBeforeUnmount(() => {
@@ -247,6 +281,12 @@ onBeforeUnmount(() => {
         </template>
 
         <template #graph>
+          <p
+            v-if="legendTypes.length > 0"
+            class="fr-hint-text entities-graph-hint"
+          >
+            Survolez un nœud ou une relation pour voir le détail des liens.
+          </p>
           <div
             v-if="legendTypes.length > 0"
             class="entities-graph-legend"
@@ -267,6 +307,12 @@ onBeforeUnmount(() => {
               Relation
             </span>
           </div>
+          <div
+            v-else-if="abrege.entities.length === 0"
+            class="fr-alert fr-alert--info"
+          >
+            <p>Aucune entité à afficher : l'extraction n'a rien trouvé ou n'a pas pu être enregistrée. Consultez le statut ci-dessus.</p>
+          </div>
           <p
             v-else-if="searchQuery"
             class="fr-text--sm fr-text-mention--grey"
@@ -274,8 +320,10 @@ onBeforeUnmount(() => {
             Aucun résultat pour « {{ searchQuery }} ».
           </p>
           <div
+            v-show="abrege.entities.length > 0"
             ref="graphContainer"
             class="entities-graph-container"
+            :class="{ 'entities-graph-container--expanded': expanded }"
           />
         </template>
       </CustomTabs>
@@ -322,6 +370,12 @@ onBeforeUnmount(() => {
   height: 480px;
   border: 1px solid var(--border-default-grey);
   background: #fff;
+}
+.entities-graph-container--expanded {
+  height: max(480px, calc(100vh - 420px));
+}
+.entities-graph-hint {
+  margin: 0 0 0.5rem;
 }
 .entities-graph-legend {
   display: flex;
