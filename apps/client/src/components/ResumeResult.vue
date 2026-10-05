@@ -3,7 +3,7 @@ import type { components } from '@/api/types/api.schema'
 import DOMPurify from 'dompurify'
 import { marked } from 'marked'
 import { computed, onMounted, ref } from 'vue'
-import TaskResultsModal from '@/components/TaskResultsModal.vue'
+import TaskResultsTabs from '@/components/TaskResultsTabs.vue'
 import useToaster from '@/composables/use-toaster'
 import { useAbregeStore } from '@/stores/abrege'
 
@@ -23,7 +23,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['inFocus', 'reGenerate'])
+const emit = defineEmits(['inFocus', 'reGenerate', 'retry'])
 
 const { addErrorMessage } = useToaster()
 
@@ -134,12 +134,13 @@ onMounted(() => {
         v-html="renderMarkdown(summaryOutput?.summary ?? '')"
       />
 
-      <TaskResultsModal
+      <TaskResultsTabs
         :task-id="resumeResult.id"
         :parameters="resumeResult.parameters"
         :qa-entities-status="resumeResult.qa_entities_status"
         :relationships-status="resumeResult.relationships_status"
         :topics-status="resumeResult.topics_status"
+        @retry="emit('retry')"
       />
     </div>
 
