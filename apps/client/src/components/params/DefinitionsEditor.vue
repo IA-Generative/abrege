@@ -111,18 +111,21 @@ function removeExample (item: Definition, index: number) {
           </div>
 
           <div class="definition-form">
-            <DsfrInput
-              v-model="entity.name"
-              label="Nom"
-              label-visible
-              :hint="nameHint"
-            />
-            <DsfrSelect
-              v-if="typeOptions"
-              v-model="entity.type"
-              label="Type"
-              :options="typeOptions"
-            />
+            <div>
+              <DsfrInput
+                v-model="entity.name"
+                label="Nom"
+                label-visible
+                :hint="nameHint"
+              />
+            </div>
+            <div v-if="typeOptions">
+              <DsfrSelect
+                v-model="entity.type"
+                label="Type"
+                :options="typeOptions"
+              />
+            </div>
             <div class="definition-form__wide">
               <DsfrInput
                 v-model="entity.definition"
