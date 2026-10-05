@@ -23,6 +23,8 @@ from abrege_service.modules.cache import CacheService
 from abrege_service.models.summary.parallele_summary_chain import (
     LangChainAsyncMapReduceService,
 )
+from abrege_service.models.summary.definitions import build_entities_instructions
+from abrege_service.models.summary.per_call_runnable import PerCallRunnable
 from abrege_service.models.summary.qa_chain import build_qa_runnable
 from abrege_service.models.summary.entity_chain import (
     build_entity_runnable,
@@ -118,13 +120,26 @@ entity_llm = _llm_for(openai_settings.ENTITY_MODEL_NAME)
 chunk_llm = _llm_for(openai_settings.CHUNK_MODEL_NAME)
 topic_llm = _llm_for(openai_settings.TOPIC_MODEL_NAME)
 
-qa_runnable = build_qa_runnable(qa_llm)
-entity_runnable = build_entity_runnable(entity_llm)
+def _new_llm(model_name: str | None, http_async_client) -> ChatOpenAI:
+    return ChatOpenAI(
+        model=model_name or openai_settings.OPENAI_API_MODEL,
+        temperature=0.0,
+        api_key=openai_settings.OPENAI_API_KEY,
+        base_url=openai_settings.OPENAI_API_BASE_URL,
+        http_async_client=http_async_client,
+    )
+
+
+# Side extractions run in their own `asyncio.run` per Celery task: each call gets a fresh client
+# (see PerCallRunnable) instead of the module-level `*_llm` ones, whose shared HTTP client may hold
+# connections bound to an event loop that is already closed.
+qa_runnable = PerCallRunnable(build_qa_runnable, lambda http: _new_llm(openai_settings.QA_MODEL_NAME, http))
+entity_runnable = PerCallRunnable(build_entity_runnable, lambda http: _new_llm(openai_settings.ENTITY_MODEL_NAME, http))
 # Global relationships are inferred from entities already extracted, so they follow the
 # same model as entity extraction rather than getting their own setting.
-global_relationship_runnable = build_global_relationship_runnable(entity_llm)
-topic_runnable = build_topic_runnable(topic_llm)
-chunk_runnable = build_chunk_runnable(chunk_llm)
+global_relationship_runnable = PerCallRunnable(build_global_relationship_runnable, lambda http: _new_llm(openai_settings.ENTITY_MODEL_NAME, http))
+topic_runnable = PerCallRunnable(build_topic_runnable, lambda http: _new_llm(openai_settings.TOPIC_MODEL_NAME, http))
+chunk_runnable = PerCallRunnable(build_chunk_runnable, lambda http: _new_llm(openai_settings.CHUNK_MODEL_NAME, http))
 tmp_folder = os.environ.get("CACHE_FOLDER")
 os.makedirs(tmp_folder, exist_ok=True)
 
@@ -341,7 +356,7 @@ def extract_task_details(self, task_id: str):
         language=language,
         qa_per_chunk=qa_per_chunk,
         qa_instructions=params.qa_instructions or "",
-        entities_instructions=params.entities_instructions or "",
+        entities_instructions=build_entities_instructions(params),
         chunks_instructions=params.chunks_instructions or "",
     )
 
