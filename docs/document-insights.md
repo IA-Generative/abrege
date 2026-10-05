@@ -46,11 +46,55 @@ feature's own prompt only, independently of the summary's `custom_prompt`. Unset
 default), the feature runs with no extra instruction. `entities_instructions` applies to
 both the per-chunk entity extraction and the global cross-chunk relationships pass.
 
-The frontend's "Plus de paramètres" panel exposes all four as toggles (off by default) when
-creating a task, each revealing its own instruction field once switched on (below, Q&A,
-Entities and Topics are on — Chunks stays off with no field):
+### Your own entity and topic definitions
+
+Instructions are free text. For entities and topics you can go further and tell Abrege **what
+to look for**, with structured definitions in the task parameters:
+
+| Parameter | Effect |
+|---|---|
+| `entity_definitions` | The extraction **focuses on the listed entities only**: no other entity is extracted, even an important one, and relationships only link entities that were extracted. The definition's name becomes the entity `type`. |
+| `topic_definitions` | The classification is steered towards your own subjects instead of inventing free-form ones. |
+
+Each definition has a `name`, an optional `definition` (what the model should recognize) and
+a list of `examples`. Entity definitions also have a `type` (`string`, `number`, `date`,
+`boolean` or `enum`), and an `enum` needs its `enum_values`. Names must be unique
+(case-insensitive); at most 50 definitions and 20 examples each. Without definitions the
+behavior is unchanged. Definitions are only used when the matching feature is on
+(`extract_entities` / `classify_topics`), and the free-text instruction still applies on top.
+
+```json
+{
+  "extract_entities": true,
+  "entity_definitions": [
+    {"name": "date_signature", "type": "date", "definition": "Date de signature du contrat", "examples": ["12/03/2024"]},
+    {"name": "statut", "type": "enum", "enum_values": ["ouvert", "fermé"]}
+  ],
+  "classify_topics": true,
+  "topic_definitions": [
+    {"name": "recrutement", "definition": "Offres d'emploi et entretiens", "examples": ["CDI", "fiche de poste"]}
+  ]
+}
+```
+
+They are rendered into the existing `{instructions}` slot of the entity and topic prompts
+(`abrege_service/models/summary/definitions.py`); the prompts themselves do not change.
+
+### In the frontend
+
+The "Plus de paramètres" panel holds the summary options (language, length, custom
+instruction) and a collapsible **Paramètres avancés** section. It shows one card at a time —
+Questions/réponses, Entités et relations, Chunks sémantiques, Classification des sujets —
+each with a plain-language description of what it does, and **Précédent / Suivant** buttons
+that name the next card (with its description as a tooltip). Each card has its toggle and its
+instruction field; the entities and topics cards also have a **definitions editor**: collapsible
+cards (name, type for entities, definition, examples list) that are collapsed with *Terminer*
+before moving on to the next one.
 
 ![Per-feature instruction fields](images/document-insights/10-instructions-fields.png)
+
+> The screenshots of this page predate the redesign of the advanced parameters and of the
+> results (below): the content they show is still accurate, the layout is not.
 
 Only what was requested for a given task shows up on its detail page — see below.
 
@@ -59,21 +103,24 @@ Only what was requested for a given task shows up on its detail page — see bel
 On the task detail page, once a summary is `completed`, only the features that were requested
 for that task (see above) appear at all:
 
-- **Topics**, if `classify_topics` was set, are shown directly as badges — no click needed.
-  Only the first few are shown, with a `+N autres` toggle for the rest, and a status badge
-  next to them so you can tell classification is done (or still running) without opening
-  anything. Not requested → no topics section, no badge.
-- **Q&A**, **Entities & relations** and **Chunks**, for whichever were requested, are one
-  click away behind a single **Analyse du document** button — it only lists the button(s) for
-  what was actually extracted, and disappears entirely if none of the three were requested.
+- **Topics**, if `classify_topics` was set, are shown directly in a card above the summary:
+  each topic has a confidence meter (green from 70%, blue from 40%, orange below), and its
+  explanation is one click away behind **Voir la raison**. Only the first five are shown, with
+  a link to reveal the rest, and the classification status badge sits at the top right of the
+  card. Not requested → no topics card.
+- **Q&A**, **Entities & relations**, **Chunks** and **Topics**, for whichever were requested,
+  are also reachable behind a single **Analyse du document** button. It opens one modal that
+  walks through the requested features one card at a time, with **Précédent / Suivant**
+  buttons naming the next card (and a tooltip describing it). The button disappears entirely
+  if nothing was requested.
 
 | Topics (collapsed) | Topics (expanded) | Details menu |
 |:---:|:---:|:---:|
 | ![Topic badges](images/document-insights/01-topics-badges.png) | ![Topics expanded](images/document-insights/02-topics-expanded.png) | ![Details dropdown](images/document-insights/03-details-dropdown.png) |
 
-Hovering a topic badge explains the classification and shows the confidence score:
+Each topic's reason is collapsed by default and expands on demand:
 
-![Topic tooltip](images/document-insights/09-topics-tooltip.png)
+![Topic reason](images/document-insights/09-topics-tooltip.png)
 
 ### Q&A
 
@@ -81,7 +128,8 @@ Hovering a topic badge explains the classification and shows the confidence scor
 
 ### Entities & relations
 
-Two views on the same modal: a paginated list, or a graph (built with
+Two views in the same card: a list (entities, then relations, stacked so the tables never
+overflow the modal), or a graph (built with
 [sigma.js](https://www.sigma-js.org/) + [graphology](https://graphology.github.io/)) that
 visually tells entities (colored nodes, by type) apart from relationships (labeled edges).
 
@@ -107,7 +155,7 @@ running. Every task carries three independent status columns, alongside its own 
 
 Each column is written from exactly one place in the pipeline, so concurrent chunk workers
 never race on the same field. These statuses are part of the regular `GET /task/{id}`
-response — no extra endpoint needed — and every modal shows them as a small colored badge
+response — no extra endpoint needed — and every result card shows them as a small colored badge
 (blue/pulsing while pending, green once done, red on failure). The task detail page polls
 lightly (every 3s) while anything is still pending, so the indicator updates on its own.
 
@@ -137,16 +185,21 @@ worker.tasks.abrege (main summarize task)
 
 ## API
 
-All routes are under `/task/{id}/...`, paginated (`offset`/`limit`) where they return a
-list, and scoped to the task's owner:
+All routes are under `/api/task/{id}/...` and scoped to the task's owner. Lists are paginated with
+`offset` and `limit`; despite its name, **`offset` is a 1-based page number**, `limit` the page size.
+The full, always up-to-date reference (parameters, responses, schemas) is the Swagger UI at
+`/api/docs`.
 
-| Resource | Read | Write (internal only) |
-|---|---|---|
-| Q&A | `GET /qa`, `GET /qa/{id}` | `POST /qa`, `DELETE /qa/{id}` |
-| Entities | `GET /entities`, `GET /entities/{id}` | `POST /entities`, `DELETE /entities/{id}` |
-| Relationships | `GET /relationships`, `GET /relationships/{id}` | `POST /relationships/global`, `DELETE /relationships/{id}` |
-| Topics | `GET /topics`, `GET /topics/{id}` | `POST /topics`, `DELETE /topics/{id}` |
-| Chunks | `GET /chunks`, `GET /chunks/{id}` | `POST /chunks`, `DELETE /chunks/{id}` |
+| Resource | Read | Delete (owner) | Write (internal only, worker) |
+|---|---|---|---|
+| Q&A | `GET /qa`, `GET /qa/{id}` | `DELETE /qa/{id}` | `POST /qa` |
+| Entities | `GET /entities`, `GET /entities/{id}` | `DELETE /entities/{id}` | `POST /entities` |
+| Relationships | `GET /relationships`, `GET /relationships/{id}` | `DELETE /relationships/{id}` | `POST /relationships/global` |
+| Topics | `GET /topics` | `DELETE /topics/{id}` | `POST /topics` |
+| Chunks | `GET /chunks`, `GET /chunks/{id}` | `DELETE /chunks/{id}` | `POST /chunks` |
+
+The write routes require the `X-Internal-Token` header (`INTERNAL_SERVICE_TOKEN`) and are
+not meant for end users.
 
 A task summarized without `extract_qa`/`extract_entities`/`extract_chunks` (the default, or an
 explicit choice) can still get Q&A/entities/chunks after the fact - this re-triggers all three

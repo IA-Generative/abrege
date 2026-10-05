@@ -60,5 +60,20 @@ son résultat via son `id`.
 | POST | `/task/{id}/cancel` | Annule une tâche encore en file/active | Bearer (propriétaire) |
 | DELETE | `/task/{id}` | Supprime une tâche terminée et ses fichiers associés (doit être annulée d'abord si active) | Bearer (propriétaire) |
 
+| POST | `/task/{id}/extract-details` | (Re)lance l'extraction Q&R, entités, relations et chunks d'une tâche terminée | Bearer (propriétaire) |
+
+Le code HTTP de `GET /task/{id}` reflète l'état de la tâche : `201` créée, `202` en file ou démarrée, `206` en cours,
+`200` terminée, `208` nouvelle tentative, `500` échec ou annulée, `504` délai dépassé.
+
+Dans les listes, `offset` est un **numéro de page** (à partir de 1) et `limit` la taille de page.
+
 Une tâche appartenant à un autre utilisateur renvoie `404` (pas `403`), pour ne pas révéler
 son existence.
+
+#### Résultats des extractions optionnelles (`/task/{id}/...`)
+
+Q&R (`/qa`), entités (`/entities`), relations (`/relationships`), sujets (`/topics`) et chunks (`/chunks`) :
+lecture paginée (`GET`), lecture unitaire (`GET .../{item_id}`, sauf `topics`) et suppression (`DELETE .../{item_id}`),
+toujours limitées au propriétaire de la tâche. Les routes d'écriture (`POST`) sont **internes** : réservées au worker,
+authentifiées par `X-Internal-Token`. Détail de chaque extraction dans [document-insights.md](document-insights.md) ;
+référence complète dans le Swagger (`/api/docs`).
