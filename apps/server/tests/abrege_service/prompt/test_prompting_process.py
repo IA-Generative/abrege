@@ -20,3 +20,20 @@ def test_promting_jinja():
     final_prompt = final_prompt.replace("\n", "")
     expected_final_prompt = "Vous êtes un expert en synthèse de documents. En vous basant sur les résumés suivants des différentes parties d'un document, rédigez un résumé global cohérent et fidèle au contenu original.Le résumé final doit faire moins de 300 mots.Le résumé final doit être en français.Résumés des parties :- test1- test2"
     assert final_prompt == expected_final_prompt
+
+
+def test_load_summary_template_reads_langchain_templates():
+    from abrege_service.prompts.prompting import load_summary_template
+
+    for name in ("map", "combine", "collapse"):
+        template = load_summary_template(name)
+        assert "{text}" in template
+        assert "{language}" in template
+        assert '{{"summary": "..."}}' in template
+
+
+def test_summary_templates_force_the_requested_language():
+    from abrege_service.prompts.prompting import load_summary_template
+
+    for name in ("map", "combine", "collapse"):
+        assert "MUST be written in {language}" in load_summary_template(name)
