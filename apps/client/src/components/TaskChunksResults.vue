@@ -5,6 +5,7 @@ import { useAbregeStore } from '@/stores/abrege'
 const props = defineProps<{
   taskId: string
   status?: string | null
+  errorCode?: number | null
 }>()
 
 const abrege = useAbregeStore()
@@ -57,6 +58,7 @@ watch(() => props.status, (status, previous) => {
       </p>
       <ExtractionStatusBadge
         :status="status"
+        :error-code="errorCode"
         label="Extraction"
       />
     </div>

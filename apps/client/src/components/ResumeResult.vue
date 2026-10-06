@@ -12,6 +12,9 @@ type TaskModel = components['schemas']['TaskModel'] & {
   qa_entities_status?: string | null
   relationships_status?: string | null
   topics_status?: string | null
+  qa_entities_error?: number | null
+  relationships_error?: number | null
+  topics_error?: number | null
 }
 type SummaryModel = components['schemas']['SummaryModel']
 
@@ -140,6 +143,9 @@ onMounted(() => {
         :qa-entities-status="resumeResult.qa_entities_status"
         :relationships-status="resumeResult.relationships_status"
         :topics-status="resumeResult.topics_status"
+        :qa-entities-error="resumeResult.qa_entities_error"
+        :relationships-error="resumeResult.relationships_error"
+        :topics-error="resumeResult.topics_error"
         @retry="emit('retry')"
       />
     </div>
