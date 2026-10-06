@@ -24,32 +24,12 @@ from src.utils.logger import logger_abrege
 
 from abrege_service.models.base import BaseSummaryService
 from abrege_service.models.summary.qa_chain import extract_leading_page_number
+from abrege_service.prompts.prompting import load_summary_template
 from abrege_service.utils.text import (
     split_texts_by_token_limit,
     sum_words,
     group_by_max_word_sum,
 )
-
-# Prompt pour l'étape de "map"
-map_template = """The following is a set of documents:
-{text}
-Summarize concisely and clearly in paragraph form. Highlight the main ideas and recurring themes.
-Respond ONLY with a valid JSON object matching this schema: {{"summary": "..."}}
-Helpful Answer in {language}:"""
-
-# Prompt pour l'étape de "reduce"
-combine_template = """The following is a set of summaries:
-{text}
-Consolidate them into a clear and well-organized final summary. Highlight recurring ideas, themes, and insights. {prompt_size}.{custom_prompt}
-Respond ONLY with a valid JSON object matching this schema: {{"summary": "..."}}
-Helpful Answer in {language}:"""
-
-# Prompt pour l'étape de "collapse" (intermédiaire)
-collapse_template = """The following is a set of summaries:
-{text}
-Consolidate them into a clear and well-organized intermediate summary. {prompt_size}.{custom_prompt}
-Respond ONLY with a valid JSON object matching this schema: {{"summary": "..."}}
-Helpful Answer in {language}:"""
 
 
 class MapOutput(BaseModel):
@@ -63,15 +43,15 @@ class SummaryOutput(BaseModel):
 
 
 # Définition des PromptTemplates avec les variables d'entrée appropriées
-MAP_PROMPT = PromptTemplate(template=map_template, input_variables=["text", "language"])
+MAP_PROMPT = PromptTemplate(template=load_summary_template("map"), input_variables=["text", "language"])
 
 COMBINE_PROMPT = PromptTemplate(
-    template=combine_template,
+    template=load_summary_template("combine"),
     input_variables=["text", "language", "prompt_size", "custom_prompt"],
 )
 
 COLLAPSE_PROMPT = PromptTemplate(
-    template=collapse_template,
+    template=load_summary_template("collapse"),
     input_variables=["text", "language", "prompt_size", "custom_prompt"],
 )
 
@@ -464,7 +444,7 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
             params = SummaryParameters()
 
         language = params.language if params.language else "French"
-        prompt_size = (f"in at most {params.size} words" if params.size else "",)
+        prompt_size = f"in at most {params.size} words" if params.size else ""
         custom_prompt = params.custom_prompt if params.custom_prompt else ""
 
         mapped_docs: list[Document] = await self.map_documents(

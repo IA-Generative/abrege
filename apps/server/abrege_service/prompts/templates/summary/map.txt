@@ -1,0 +1,6 @@
+The following is a set of documents:
+{text}
+Summarize concisely and clearly in paragraph form. Highlight the main ideas and recurring themes.
+The summary MUST be written in {language}, even if the source text is in another language: translate its content into {language} when needed.
+Respond ONLY with a valid JSON object matching this schema: {{"summary": "..."}}
+Helpful Answer, written in {language}:
