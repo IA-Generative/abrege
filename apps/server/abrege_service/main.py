@@ -42,6 +42,7 @@ from src.schemas.entity import entity_table
 from src.clients import celery_app, file_connector, redis_client
 from src.clients.internal_api import internal_api_client
 from src import __version__
+from src.utils.error_codes import classify_error
 from src.utils.logger import logger_abrege
 
 import sentry_sdk
@@ -209,7 +210,7 @@ def launch(self, task: str):
             form_data=TaskUpdateForm(
                 status=TaskStatus.FAILED.value,
                 updated_at=int(time.time()),
-                extras={"error": f"{e} - {traceback.format_exc()}"},
+                extras={"error_code": int(classify_error(e)), "error": f"{e} - {traceback.format_exc()}"},
             ),
         )
         logger_abrege.error(f"Task {task.id} failed: {e} - {traceback.format_exc()}")
@@ -289,7 +290,7 @@ def extract_chunk_details(self, payload: str):
             )
     except Exception as e:
         logger_abrege.error(f"Chunk details extraction failed: {e} - {traceback.format_exc()}", extra=extra_log)
-        task_table.update_task(task_id=task_id, form_data=TaskUpdateForm(qa_entities_status="failed"))
+        task_table.update_task(task_id=task_id, form_data=TaskUpdateForm(qa_entities_status="failed", qa_entities_error=int(classify_error(e))))
         raise e
 
     remaining = redis_client.decr(f"chunk_pending:{task_id}")
@@ -297,7 +298,7 @@ def extract_chunk_details(self, payload: str):
         redis_client.delete(f"chunk_pending:{task_id}")
         if want_entities:
             task_table.update_task(
-                task_id=task_id, form_data=TaskUpdateForm(qa_entities_status="completed", relationships_status="pending")
+                task_id=task_id, form_data=TaskUpdateForm(qa_entities_status="completed", qa_entities_error=None, relationships_status="pending", relationships_error=None)
             )
             celery_app.send_task(
                 "worker.tasks.compute_global_relationships",
@@ -331,7 +332,7 @@ def compute_global_relationships(self, payload: str):
         task_table.update_task(task_id=task_id, form_data=TaskUpdateForm(relationships_status="completed"))
     except Exception as e:
         logger_abrege.error(f"Global relationships computation failed: {e} - {traceback.format_exc()}", extra={"task_id": task_id})
-        task_table.update_task(task_id=task_id, form_data=TaskUpdateForm(relationships_status="failed"))
+        task_table.update_task(task_id=task_id, form_data=TaskUpdateForm(relationships_status="failed", relationships_error=int(classify_error(e))))
         raise e
 
 
@@ -349,7 +350,7 @@ def extract_task_details(self, task_id: str):
     language = params.language or "French"
 
     texts = summary_service.split_task_texts(task)
-    task_table.update_task(task_id=task.id, form_data=TaskUpdateForm(qa_entities_status="in_progress"))
+    task_table.update_task(task_id=task.id, form_data=TaskUpdateForm(qa_entities_status="in_progress", qa_entities_error=None))
     summary_service.dispatch_all_chunks(
         task_id=task.id,
         texts=texts,
@@ -379,5 +380,5 @@ def classify_topics(self, payload: str):
         task_table.update_task(task_id=task_id, form_data=TaskUpdateForm(topics_status="completed"))
     except Exception as e:
         logger_abrege.error(f"Topic classification failed: {e} - {traceback.format_exc()}", extra={"task_id": task_id})
-        task_table.update_task(task_id=task_id, form_data=TaskUpdateForm(topics_status="failed"))
+        task_table.update_task(task_id=task_id, form_data=TaskUpdateForm(topics_status="failed", topics_error=int(classify_error(e))))
         raise e

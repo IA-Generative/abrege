@@ -9,6 +9,8 @@ from typing import List, Optional
 from pydantic import BaseModel, ConfigDict
 from keycloak import KeycloakOpenID
 
+from src.utils.error_codes import OCRError
+
 
 class BaseTokenManager(ABC):
     @abstractmethod
@@ -217,7 +219,7 @@ class OCRClient(BaseBackend):
             data={"task_operation": "default", "group_id": group_id},
         )
         if response.status_code != 201:
-            raise Exception(f"Error: {response.status_code} - {response.text}")
+            raise OCRError(f"Error: {response.status_code} - {response.text}")
         data = response.json()
         return data
 
@@ -226,7 +228,7 @@ class OCRClient(BaseBackend):
         headers["Authorization"] = f"Bearer {self.token_manager.get_token()}"
         response = requests.get(f"{self.url}/tasks/{task_id}", headers=headers)
         if response.status_code != 200:
-            raise Exception(f"Error: {response.status_code} - {response.text}")
+            raise OCRError(f"Error: {response.status_code} - {response.text}")
         data = response.json()
         return data
 
@@ -235,12 +237,12 @@ class OCRClient(BaseBackend):
         headers["Authorization"] = f"Bearer {self.token_manager.get_token()}"
         response = requests.delete(f"{self.url}/tasks/{task_id}", headers=headers)
         if response.status_code not in (200, 204, 404):
-            raise Exception(f"Error: {response.status_code} - {response.text}")
+            raise OCRError(f"Error: {response.status_code} - {response.text}")
 
     def get_health(self):
         response = requests.get(f"{self.url}/health")
         if response.status_code != 200:
-            raise Exception(f"Error: {response.status_code} - {response.text}")
+            raise OCRError(f"Error: {response.status_code} - {response.text}")
         data = response.json()
         return data
 

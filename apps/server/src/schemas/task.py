@@ -44,6 +44,10 @@ class Task(Base):
     qa_entities_status = Column(String, nullable=True)  # None | in_progress | completed | failed
     relationships_status = Column(String, nullable=True)  # None | pending | completed | failed
     topics_status = Column(String, nullable=True)  # None | pending | completed | failed
+    # Numeric ErrorCode (see src/utils/error_codes.py) set alongside a "failed" status above, cleared on retry.
+    qa_entities_error = Column(Integer, nullable=True)
+    relationships_error = Column(Integer, nullable=True)
+    topics_error = Column(Integer, nullable=True)
 
 
 class TaskModel(BaseModel):
@@ -61,11 +65,14 @@ class TaskModel(BaseModel):
 
     created_at: int = Field(description="Creation time, Unix timestamp (seconds)")
     updated_at: int = Field(description="Last update time, Unix timestamp (seconds)")
-    extras: Optional[Dict[str, Any]] = Field(None, description="Free-form extra information (e.g. an `error` message when the task failed)")
+    extras: Optional[Dict[str, Any]] = Field(None, description="Free-form extra information (e.g. `error_code`, a numeric code such as `101`, and `error` when the task failed)")
     content_hash: Optional[str] = Field(None, description="Hash of the input content, used to reuse cached extraction work")
     qa_entities_status: Optional[str] = Field(None, description="Status of the Q&A, entities and chunks extraction: `null` if not requested, otherwise in_progress, completed or failed")
     relationships_status: Optional[str] = Field(None, description="Status of the cross-chunk relationships pass: `null` if not requested, otherwise pending, completed or failed")
     topics_status: Optional[str] = Field(None, description="Status of the topic classification: `null` if not requested, otherwise pending, completed or failed")
+    qa_entities_error: Optional[int] = Field(None, description="Numeric error code (e.g. `101`, model timeout) when `qa_entities_status` is `failed`")
+    relationships_error: Optional[int] = Field(None, description="Error code when `relationships_status` is `failed`")
+    topics_error: Optional[int] = Field(None, description="Error code when `topics_status` is `failed`")
 
 
 class TaskForm(BaseModel):
@@ -96,6 +103,9 @@ class TaskUpdateForm(BaseModel):
     qa_entities_status: Optional[str] = None
     relationships_status: Optional[str] = None
     topics_status: Optional[str] = None
+    qa_entities_error: Optional[int] = None
+    relationships_error: Optional[int] = None
+    topics_error: Optional[int] = None
 
 
 class TaskStatus(str, Enum):
