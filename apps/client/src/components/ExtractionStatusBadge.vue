@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { describeError } from '@/utils/error-codes'
 
 const props = defineProps<{
   status?: string | null
   label: string
+  errorCode?: number | null
 }>()
 
 type BadgeType = 'info' | 'success' | 'error' | 'warning'
@@ -16,7 +18,7 @@ const config = computed((): { type: BadgeType, text: string } | null => {
     case 'completed':
       return { type: 'success', text: 'Terminé' }
     case 'failed':
-      return { type: 'error', text: 'Échec' }
+      return { type: 'error', text: props.errorCode ? `Échec ${props.errorCode}` : 'Échec' }
     default:
       return null
   }
@@ -29,6 +31,7 @@ const config = computed((): { type: BadgeType, text: string } | null => {
     :label="`${label} : ${config.text}`"
     :type="config.type"
     small
+    :title="status === 'failed' ? describeError(errorCode) : undefined"
     class="extraction-status-badge"
     :class="{ 'extraction-status-badge--pending': status === 'in_progress' || status === 'pending' }"
   />
