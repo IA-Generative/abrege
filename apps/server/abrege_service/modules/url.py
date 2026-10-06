@@ -12,6 +12,7 @@ from src.schemas.task import TaskModel
 from src.schemas.content import URLModel
 from src.utils.url import check_url, download_file
 
+from src.utils.error_codes import FetchError
 from src.utils.logger import logger_abrege
 
 
@@ -40,7 +41,10 @@ class URLService(URLBaseService):
         assert isinstance(task.input, URLModel)
         url = task.input.url
         assert check_url(url), f"{url} is not a valid URL"
-        filename = download_file(url=url, folder_dest=os.environ.get("CACHE_FOLDER"), use_scrapling=True)
+        try:
+            filename = download_file(url=url, folder_dest=os.environ.get("CACHE_FOLDER"), use_scrapling=True)
+        except Exception as e:
+            raise FetchError(f"Could not download {url}: {e}") from e
         content_type_calculated = get_content_type_from_file(filename)
         _, ext = os.path.split(filename)
 
