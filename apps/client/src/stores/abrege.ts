@@ -27,6 +27,7 @@ import { ref } from 'vue'
 import createHttpClient from '@/api/http-client'
 import useToaster from '@/composables/use-toaster'
 import { ABREGE_API_URL } from '@/utils/constants'
+import { describeError } from '@/utils/error-codes'
 
 type TaskModel = components['schemas']['TaskModel']
 
@@ -247,7 +248,7 @@ export const useAbregeStore = defineStore('abrege', () => {
           case 'failed':
             addErrorMessage({
               title: 'Échec du traitement :',
-              description: 'Une erreur est survenue lors du traitement OCR.',
+              description: describeError(task.extras?.error_code as number | undefined) ?? 'Une erreur est survenue lors du traitement.',
             })
             error.value = 'La génération de résumé a échoué'
             isPolling.value = false

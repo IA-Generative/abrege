@@ -10,6 +10,9 @@ type TaskModel = components['schemas']['TaskModel'] & {
   qa_entities_status?: string | null
   relationships_status?: string | null
   topics_status?: string | null
+  qa_entities_error?: number | null
+  relationships_error?: number | null
+  topics_error?: number | null
 }
 
 const route = useRoute()

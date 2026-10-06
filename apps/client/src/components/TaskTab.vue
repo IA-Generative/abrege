@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAbregeStore } from '@/stores/abrege'
+import { describeError } from '@/utils/error-codes'
 
 const props = defineProps({
   active: { type: Boolean, default: true },
@@ -30,6 +31,12 @@ function MapStatusToLabel (status) {
     failed: 'Échoué',
   }
   return map[status] || status
+}
+
+// "Échoué · LLM_TIMEOUT": the code is what to quote when reporting the problem.
+function statusLabel (task) {
+  const label = MapStatusToLabel(task.status)
+  return task.status === 'failed' && task.extras?.error_code ? `${label} · ${task.extras.error_code}` : label
 }
 
 function sortBy (key) {
@@ -197,7 +204,8 @@ watch(() => props.active, (isActive) => {
         <ProgressBar
           :visible="true"
           :progress="(task.percentage ?? 0) * 100"
-          :text="MapStatusToLabel(task.status)"
+          :text="statusLabel(task)"
+          :title="task.status === 'failed' ? describeError(task.extras?.error_code) : undefined"
         />
 
         <dl class="task-tile-dates">

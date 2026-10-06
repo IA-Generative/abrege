@@ -5,10 +5,12 @@ import { computed, ref } from 'vue'
 const props = withDefaults(defineProps<{
   topics: TopicRow[]
   status?: string | null
+  errorCode?: number | null
   visibleCount?: number
   embedded?: boolean
 }>(), {
   status: null,
+  errorCode: null,
   visibleCount: 5,
   embedded: false,
 })
@@ -65,6 +67,7 @@ function percent (topic: TopicRow): number {
       </h2>
       <ExtractionStatusBadge
         :status="status"
+        :error-code="errorCode"
         label="Classification"
         class="topics-card__status"
       />

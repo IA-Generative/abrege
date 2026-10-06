@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useAbregeStore } from '@/stores/abrege'
+import { describeError } from '@/utils/error-codes'
 import TaskChunksResults from './TaskChunksResults.vue'
 import TaskEntitiesResults from './TaskEntitiesResults.vue'
 import TaskQAResults from './TaskQAResults.vue'
@@ -17,6 +18,9 @@ const props = defineProps<{
   qaEntitiesStatus?: string | null
   relationshipsStatus?: string | null
   topicsStatus?: string | null
+  qaEntitiesError?: number | null
+  relationshipsError?: number | null
+  topicsError?: number | null
 }>()
 
 const emit = defineEmits<{ (e: 'retry'): void }>()
@@ -44,6 +48,7 @@ interface ResultTab {
   count: number
   detail?: string
   phase: Phase
+  errorCode?: number | null
   retryable: boolean
   component: object
   props: Record<string, unknown>
@@ -60,9 +65,10 @@ const tabs = computed<ResultTab[]>(() => {
       description: 'Les grands thèmes du document, avec un score de confiance et la raison de chaque choix.',
       count: overview.value.topics,
       phase: phase(props.topicsStatus),
+      errorCode: props.topicsError,
       retryable: false,
       component: TaskTopicsResults,
-      props: { taskId: props.taskId, status: props.topicsStatus },
+      props: { taskId: props.taskId, status: props.topicsStatus, errorCode: props.topicsError },
     })
   }
   if (props.parameters?.extract_qa) {
@@ -73,9 +79,10 @@ const tabs = computed<ResultTab[]>(() => {
       description: 'Les questions qu\'un lecteur pourrait se poser, avec la réponse tirée du texte.',
       count: overview.value.qa,
       phase: phase(props.qaEntitiesStatus),
+      errorCode: props.qaEntitiesError,
       retryable: true,
       component: TaskQAResults,
-      props: { taskId: props.taskId, status: props.qaEntitiesStatus },
+      props: { taskId: props.taskId, status: props.qaEntitiesStatus, errorCode: props.qaEntitiesError },
     })
   }
   if (props.parameters?.extract_entities) {
@@ -87,9 +94,10 @@ const tabs = computed<ResultTab[]>(() => {
       count: overview.value.entities,
       detail: `${overview.value.relationships} relation${overview.value.relationships > 1 ? 's' : ''}`,
       phase: phase(props.qaEntitiesStatus, props.relationshipsStatus),
+      errorCode: props.qaEntitiesStatus === 'failed' ? props.qaEntitiesError : props.relationshipsError,
       retryable: true,
       component: TaskEntitiesResults,
-      props: { taskId: props.taskId, entitiesStatus: props.qaEntitiesStatus, relationshipsStatus: props.relationshipsStatus },
+      props: { taskId: props.taskId, entitiesStatus: props.qaEntitiesStatus, relationshipsStatus: props.relationshipsStatus, entitiesError: props.qaEntitiesError, relationshipsError: props.relationshipsError },
     })
   }
   if (props.parameters?.extract_chunks) {
@@ -100,9 +108,10 @@ const tabs = computed<ResultTab[]>(() => {
       description: 'Le document découpé en passages cohérents, pour retrouver d\'où vient une information.',
       count: overview.value.chunks,
       phase: phase(props.qaEntitiesStatus),
+      errorCode: props.qaEntitiesError,
       retryable: true,
       component: TaskChunksResults,
-      props: { taskId: props.taskId, status: props.qaEntitiesStatus },
+      props: { taskId: props.taskId, status: props.qaEntitiesStatus, errorCode: props.qaEntitiesError },
     })
   }
   return result
@@ -201,7 +210,8 @@ watch(
             v-if="tab.phase"
             class="tab__status"
             :class="`tab__status--${tab.phase}`"
-          >{{ phaseText[tab.phase] }}</span>
+            :title="tab.phase === 'failed' ? describeError(tab.errorCode) : undefined"
+          >{{ phaseText[tab.phase] }}<template v-if="tab.phase === 'failed' && tab.errorCode"> · {{ tab.errorCode }}</template></span>
         </span>
       </button>
     </div>
