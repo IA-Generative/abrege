@@ -210,6 +210,22 @@
 - clean code
 - clean code
 
+## [3.5.0-rc.2](https://github.com/IA-Generative/abrege/compare/v3.5.0-rc.1...v3.5.0-rc.2) (2026-10-06)
+
+
+### Features
+
+* **client:** pick the extractions with always-visible cards instead of a hidden carousel ([3d00440](https://github.com/IA-Generative/abrege/commit/3d00440358395b610386923985fd66f6f10290cf))
+* **client:** show the classification only in the analysis carousel ([77b6561](https://github.com/IA-Generative/abrege/commit/77b65610426c5d9f7178d32df107e56720b99558))
+* **client:** show the results as inline tabs with counts and statuses ([29e7bcc](https://github.com/IA-Generative/abrege/commit/29e7bcca35d5de20b493a8978b833a708adc36cf))
+
+
+### Bug Fixes
+
+* **client:** keep following the extractions after the summary on the main page ([8272a59](https://github.com/IA-Generative/abrege/commit/8272a59bb362cfd24332a38bc410e169e691a049))
+* **worker:** fail fast and name the target URL when the internal api is unreachable ([a0e18b6](https://github.com/IA-Generative/abrege/commit/a0e18b6b5f0e7f980ef61d54e350aebe5d6267a5))
+* **worker:** retry transient failures when saving extraction results through the api ([b1c44d9](https://github.com/IA-Generative/abrege/commit/b1c44d9daee000c653af4926665d9686eab0a26f))
+
 ## [3.5.0-rc.1](https://github.com/IA-Generative/abrege/compare/v3.5.0-rc...v3.5.0-rc.1) (2026-10-05)
 
 
