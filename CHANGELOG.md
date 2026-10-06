@@ -210,6 +210,14 @@
 - clean code
 - clean code
 
+## [3.5.0-rc.3](https://github.com/IA-Generative/abrege/compare/v3.5.0-rc.2...v3.5.0-rc.3) (2026-10-06)
+
+
+### Features
+
+* **client:** show the error code with a tooltip on failed tasks and extractions ([dcf8e7b](https://github.com/IA-Generative/abrege/commit/dcf8e7bd5b1ca38ee8028897638ba6d3ee2ff742))
+* **worker:** store a numeric error code on failed tasks and extractions ([c6e1117](https://github.com/IA-Generative/abrege/commit/c6e1117f4c940fdfd995e2d00465463a3d131bb0))
+
 ## [3.5.0-rc.2](https://github.com/IA-Generative/abrege/compare/v3.5.0-rc.1...v3.5.0-rc.2) (2026-10-06)
 
 
