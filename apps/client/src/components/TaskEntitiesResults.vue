@@ -10,6 +10,8 @@ const props = defineProps<{
   taskId: string
   entitiesStatus?: string | null
   relationshipsStatus?: string | null
+  entitiesError?: number | null
+  relationshipsError?: number | null
   expanded?: boolean
   initialTab?: number
 }>()
@@ -202,10 +204,12 @@ onBeforeUnmount(() => {
       </p>
       <ExtractionStatusBadge
         :status="entitiesStatus"
+        :error-code="entitiesError"
         label="Entités"
       />
       <ExtractionStatusBadge
         :status="relationshipsStatus"
+        :error-code="relationshipsError"
         label="Relations globales"
       />
     </div>

@@ -6,6 +6,7 @@ import TopicsCard from './TopicsCard.vue'
 const props = defineProps<{
   taskId: string
   status?: string | null
+  errorCode?: number | null
 }>()
 
 const abrege = useAbregeStore()
@@ -31,6 +32,7 @@ watch(() => props.status, (status, previous) => {
     v-else
     :topics="abrege.topics"
     :status="status"
+    :error-code="errorCode"
     embedded
   />
 </template>
