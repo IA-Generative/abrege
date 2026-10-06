@@ -1,32 +1,51 @@
 import httpx
-import openai
 import pytest
 
 from src.utils.error_codes import ErrorCode, FetchError, OCRError, classify_error
 
 
-def _status_error(cls, status: int, message: str):
-    request = httpx.Request("POST", "http://llm/v1/chat/completions")
-    response = httpx.Response(status, request=request)
-    return cls(message, response=response, body=None)
+# The api image does not ship the openai SDK (only the worker does), so these stand-ins mimic its
+# exceptions by name and `status_code`, which is all the classifier looks at.
+class InternalServerError(Exception):
+    status_code = 502
+
+
+class RateLimitError(Exception):
+    status_code = 429
+
+
+class AuthenticationError(Exception):
+    status_code = 401
+
+
+class BadRequestError(Exception):
+    status_code = 400
+
+
+class APITimeoutError(Exception):
+    pass
+
+
+class APIConnectionError(Exception):
+    pass
 
 
 def test_gateway_deadline_exceeded_is_a_timeout():
     # the real production failure: 502 from the gateway wrapping a client timeout
-    exc = _status_error(openai.InternalServerError, 502, "all backends failed: context deadline exceeded (Client.Timeout exceeded)")
+    exc = InternalServerError("all backends failed: context deadline exceeded (Client.Timeout exceeded)")
     assert classify_error(exc) == ErrorCode.LLM_TIMEOUT
 
 
 @pytest.mark.parametrize(
     "exc,expected",
     [
-        (_status_error(openai.InternalServerError, 502, "bad gateway"), ErrorCode.LLM_UNAVAILABLE),
-        (_status_error(openai.RateLimitError, 429, "slow down"), ErrorCode.LLM_RATE_LIMIT),
-        (_status_error(openai.AuthenticationError, 401, "nope"), ErrorCode.LLM_AUTH),
-        (_status_error(openai.BadRequestError, 400, "maximum context length is 8192 tokens"), ErrorCode.LLM_CONTEXT_TOO_LONG),
-        (_status_error(openai.BadRequestError, 400, "invalid"), ErrorCode.LLM_BAD_REQUEST),
-        (openai.APITimeoutError(request=httpx.Request("POST", "http://llm")), ErrorCode.LLM_TIMEOUT),
-        (openai.APIConnectionError(request=httpx.Request("POST", "http://llm")), ErrorCode.LLM_UNAVAILABLE),
+        (InternalServerError("bad gateway"), ErrorCode.LLM_UNAVAILABLE),
+        (RateLimitError("slow down"), ErrorCode.LLM_RATE_LIMIT),
+        (AuthenticationError("nope"), ErrorCode.LLM_AUTH),
+        (BadRequestError("maximum context length is 8192 tokens"), ErrorCode.LLM_CONTEXT_TOO_LONG),
+        (BadRequestError("invalid"), ErrorCode.LLM_BAD_REQUEST),
+        (APITimeoutError("Request timed out."), ErrorCode.LLM_TIMEOUT),
+        (APIConnectionError("Connection error."), ErrorCode.LLM_UNAVAILABLE),
         (httpx.ConnectError("refused"), ErrorCode.API_UNREACHABLE),
         (OCRError("Error: 500"), ErrorCode.OCR_ERROR),
         (FetchError("boom"), ErrorCode.FETCH_ERROR),
