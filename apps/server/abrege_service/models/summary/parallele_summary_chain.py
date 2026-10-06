@@ -283,7 +283,7 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
 
         wants_chunk_details = (extract_qa and qa_per_chunk > 0) or extract_entities or extract_chunks
         if wants_chunk_details:
-            task_table.update_task(task_id=task.id, form_data=TaskUpdateForm(qa_entities_status="in_progress"))
+            task_table.update_task(task_id=task.id, form_data=TaskUpdateForm(qa_entities_status="in_progress", qa_entities_error=None))
             self.dispatch_all_chunks(
                 task_id=task.id,
                 texts=transform_texts,
@@ -550,7 +550,7 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
 
             params = task.parameters or SummaryParameters()
             if params.classify_topics:
-                task_table.update_task(task_id=task.id, form_data=TaskUpdateForm(topics_status="pending"))
+                task_table.update_task(task_id=task.id, form_data=TaskUpdateForm(topics_status="pending", topics_error=None))
                 self.dispatch_topic_classification(
                     task_id=task.id,
                     summary=task.output.summary,
