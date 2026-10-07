@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [3.5.0-rc.4](https://github.com/IA-Generative/abrege/compare/v3.5.0-rc.3...v3.5.0-rc.4) (2026-10-07)
+
+
+### Bug Fixes
+
+* **server:** stop pre-checking url accessibility with a HEAD request ([a1ed3e1](https://github.com/IA-Generative/abrege/commit/a1ed3e1cf27f951bcc3f2f0a5a88c40a0bf01ad6))
+
 ## [3.5.0-rc.3](https://github.com/IA-Generative/abrege/compare/v3.5.0-rc.2...v3.5.0-rc.3) (2026-10-06)
 
 
