@@ -210,6 +210,26 @@
 - clean code
 - clean code
 
+## [3.5.0-rc.5](https://github.com/IA-Generative/abrege/compare/v3.5.0-rc.4...v3.5.0-rc.5) (2026-10-07)
+
+
+### Bug Fixes
+
+* **migration:** ship the logging config in the migration image ([476e3b0](https://github.com/IA-Generative/abrege/commit/476e3b080081e2596b3d1a5375b2b87f62875cbb))
+* **migration:** ship the logging config in the migration image ([1551bb0](https://github.com/IA-Generative/abrege/commit/1551bb08b67188d0c8121bb7c66e4930057c17e0))
+
+
+### Code Refactoring
+
+* **chart:** run migrations from the migration image ([f18ed40](https://github.com/IA-Generative/abrege/commit/f18ed401ad9694bc5f2db99869d73b1e4a1afa4b))
+* **chart:** run migrations from the migration image ([15b2c51](https://github.com/IA-Generative/abrege/commit/15b2c51ff2409300cb0cf60b23ca0831f587fe58))
+
+
+### Dependencies
+
+* tag the local worker image as abrege-worker ([96e63d8](https://github.com/IA-Generative/abrege/commit/96e63d81f9ec8906ed39cabb6307aca11000f4c9))
+* tag the local worker image as abrege-worker ([c5b8a99](https://github.com/IA-Generative/abrege/commit/c5b8a998c2034b85da071af7100a8e447a26c0ad))
+
 ## [3.5.0-rc.4](https://github.com/IA-Generative/abrege/compare/v3.5.0-rc.3...v3.5.0-rc.4) (2026-10-07)
 
 
