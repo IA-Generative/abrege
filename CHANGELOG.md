@@ -210,6 +210,23 @@
 - clean code
 - clean code
 
+## [3.4.1](https://github.com/IA-Generative/abrege/compare/v3.4.0...v3.4.1) (2026-10-07)
+
+
+### Bug Fixes
+
+* **migration:** ship the logging config in the migration image ([476e3b0](https://github.com/IA-Generative/abrege/commit/476e3b080081e2596b3d1a5375b2b87f62875cbb))
+
+
+### Code Refactoring
+
+* **chart:** run migrations from the migration image ([f18ed40](https://github.com/IA-Generative/abrege/commit/f18ed401ad9694bc5f2db99869d73b1e4a1afa4b))
+
+
+### Dependencies
+
+* tag the local worker image as abrege-worker ([96e63d8](https://github.com/IA-Generative/abrege/commit/96e63d81f9ec8906ed39cabb6307aca11000f4c9))
+
 ## [3.4.0](https://github.com/IA-Generative/abrege/compare/v3.3.2...v3.4.0) (2026-10-01)
 
 
