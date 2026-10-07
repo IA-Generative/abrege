@@ -10,7 +10,7 @@ from abrege_service.utils.content_type import (
 from src.schemas.task import TaskModel
 
 from src.schemas.content import URLModel
-from src.utils.url import check_url, download_file
+from src.utils.url import download_file, is_valid_url
 
 from src.utils.error_codes import FetchError
 from src.utils.logger import logger_abrege
@@ -40,7 +40,8 @@ class URLService(URLBaseService):
     def task_to_text(self, task: TaskModel, **kwargs) -> TaskModel:
         assert isinstance(task.input, URLModel)
         url = task.input.url
-        assert check_url(url), f"{url} is not a valid URL"
+        if not is_valid_url(url):
+            raise FetchError(f"{url} is not a valid URL")
         try:
             filename = download_file(url=url, folder_dest=os.environ.get("CACHE_FOLDER"), use_scrapling=True)
         except Exception as e:
