@@ -100,7 +100,7 @@ def test_summarize_content_url_error():
     input_data = {
         "user_id": "test_user",
         "content": {
-            "url": "https://22222.24",  # URL invalide
+            "url": "not-a-url",  # URL invalide
             "prompt": "Summarize this page",
             "extras": {"key": "value"},
         },
@@ -109,4 +109,4 @@ def test_summarize_content_url_error():
     client = TestClient(app)
     response = client.post("/task/text-url", json=input_data)
 
-    assert response.status_code == 500
+    assert response.status_code == 422
