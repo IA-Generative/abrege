@@ -247,6 +247,17 @@ jobs:
     with:
       RELEASE_BRANCH: ${{ needs.expose-vars.outputs.RELEASE_BRANCH }}
       PRERELEASE_BRANCH: ${{ needs.expose-vars.outputs.PRERELEASE_BRANCH }}
+      # The files release-app.yml reads: the sync records release-please's
+      # starting point in the prerelease config after a rebase over a hotfix,
+      # and resolves conflicts on the files release-please rewrites.
+      PRERELEASE_CONFIG_FILE: ${{ needs.expose-vars.outputs.PRERELEASE_CONFIG_FILE }}
+      PRERELEASE_MANIFEST_FILE: ${{ needs.expose-vars.outputs.PRERELEASE_MANIFEST_FILE }}
+      RELEASE_MANIFEST_FILE: ${{ needs.expose-vars.outputs.RELEASE_MANIFEST_FILE }}
+      # bump-chart rewrites these on main and dev's rc cycle rewrites them too.
+      # The chart sits at the repository root (CHARTS_DIR is `./`).
+      MANAGED_FILES: |
+        ${{ needs.expose-vars.outputs.CHART_NAME }}/Chart.yaml
+        ${{ needs.expose-vars.outputs.CHART_NAME }}/README.md
     # dev's ruleset rejects GITHUB_TOKEN (no merge commit in the history, a pull
     # request or required checks for every push) and only a GitHub App can be in
     # its bypass list, so this job pushes as the App, like bump-chart. The push
