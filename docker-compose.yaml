@@ -31,15 +31,16 @@ services:
         "celery",
         "-A",
         "abrege_service.main",
+        # Suppresses celery's plain-text startup banner (actual task/worker logs are
+        # unaffected) - it's the one line of non-JSON noise this doesn't route through
+        # the JSON logger, since celery prints it before logging is even configured.
+        # --quiet is a global celery option: it must come before the "worker" subcommand.
+        "--quiet",
         "worker",
         "--loglevel=info",
         "--pool=prefork",
         "--concurrency=1",
         "-E",
-        # Suppresses celery's plain-text startup banner (actual task/worker logs are
-        # unaffected) - it's the one line of non-JSON noise this doesn't route through
-        # the JSON logger, since celery prints it before logging is even configured.
-        "--quiet",
       ]
     image: abrege-worker
     mem_limit: 1g
@@ -52,29 +53,15 @@ services:
       context: .
       dockerfile: apps/server/abrege_service/Dockerfile
     environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - OPENAI_API_BASE_URL=${OPENAI_API_BASE_URL}
-      - OPENAI_API_MODEL=${OPENAI_API_MODEL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-sk-example-change-me}
+      - OPENAI_API_BASE_URL=${OPENAI_API_BASE_URL:-http://localhost:11434/v1}
+      - OPENAI_API_MODEL=${OPENAI_API_MODEL:-qwen2.5}
       - ABREGE_API_BASE_URL=http://abrege_api:5000
-      - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN}
+      - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN:-change-me}
     env_file:
-      - .env
-
-  # flower_abrege:
-  #   image: abrege-service
-  #   ports:
-  #     - "5555:5555"
-  #   command:
-  #     [
-  #       "celery",
-  #       "-A",
-  #       "abrege_service.main",
-  #       "flower",
-  #       "--address=0.0.0.0",
-  #       "--port=5555",
-  #     ]
-  #   env_file:
-  #     - .env
+      - .env.local
+      - path: .env
+        required: false
 
   abrege_api:
     image: abrege-api
@@ -88,17 +75,18 @@ services:
       - ./apps/server/src/:/app/src/
       - ./apps/server/tests/:/app/tests/
     environment:
-      DEV_MODE: "true"
       CELERY_APP_NAME: default
       VERIFY_TOKEN_MODEL: keycloak
-      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-change-me}
     depends_on:
       - redis
       - rustfs
       - db
       - keycloak
     env_file:
-      - .env
+      - .env.local
+      - path: .env
+        required: false
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.2
@@ -162,7 +150,9 @@ services:
       - ./apps/server/src/:/app/src/
       - ./apps/server/migration/:/app/migration
     env_file:
-      - .env
+      - .env.local
+      - path: .env
+        required: false
     depends_on:
       db:
         condition: service_healthy
@@ -175,7 +165,9 @@ services:
       dockerfile: Dockerfile
       target: dev
     env_file:
-      - .env
+      - .env.local
+      - path: .env
+        required: false
     ports:
       - 8082:3000
     volumes:

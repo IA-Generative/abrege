@@ -3,9 +3,7 @@ import type { components } from '@/api/types/api.schema'
 import DOMPurify from 'dompurify'
 import { marked } from 'marked'
 import { computed, onMounted, ref } from 'vue'
-import TaskChunksModal from '@/components/TaskChunksModal.vue'
-import TaskEntitiesModal from '@/components/TaskEntitiesModal.vue'
-import TaskQAModal from '@/components/TaskQAModal.vue'
+import TaskResultsTabs from '@/components/TaskResultsTabs.vue'
 import useToaster from '@/composables/use-toaster'
 import { useAbregeStore } from '@/stores/abrege'
 
@@ -13,6 +11,10 @@ import { useAbregeStore } from '@/stores/abrege'
 type TaskModel = components['schemas']['TaskModel'] & {
   qa_entities_status?: string | null
   relationships_status?: string | null
+  topics_status?: string | null
+  qa_entities_error?: number | null
+  relationships_error?: number | null
+  topics_error?: number | null
 }
 type SummaryModel = components['schemas']['SummaryModel']
 
@@ -24,7 +26,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['inFocus', 'reGenerate'])
+const emit = defineEmits(['inFocus', 'reGenerate', 'retry'])
 
 const { addErrorMessage } = useToaster()
 
@@ -35,26 +37,6 @@ function hasSummary (output: TaskModel['output']): output is SummaryModel {
 const summaryOutput = computed<SummaryModel | null>(() =>
   hasSummary(props.resumeResult.output) ? (props.resumeResult.output as SummaryModel) : null,
 )
-
-const qaModalOpened = ref(false)
-const entitiesModalOpened = ref(false)
-const chunksModalOpened = ref(false)
-
-// Each side extraction is opt-in per task (see ParamsResume.vue) - only offer a button for
-// what was actually requested, rather than one that always opens an empty modal.
-const detailsButtons = computed(() => {
-  const buttons = []
-  if (props.resumeResult.parameters?.extract_qa) {
-    buttons.push({ label: 'Questions / réponses', icon: 'ri-question-answer-line', onClick: () => { qaModalOpened.value = true } })
-  }
-  if (props.resumeResult.parameters?.extract_entities) {
-    buttons.push({ label: 'Entités & relations', icon: 'ri-node-tree', onClick: () => { entitiesModalOpened.value = true } })
-  }
-  if (props.resumeResult.parameters?.extract_chunks) {
-    buttons.push({ label: 'Chunks', icon: 'ri-file-list-3-line', onClick: () => { chunksModalOpened.value = true } })
-  }
-  return buttons
-})
 
 const tags = ref<string[]>([
   'Synthèse',
@@ -155,37 +137,16 @@ onMounted(() => {
         v-html="renderMarkdown(summaryOutput?.summary ?? '')"
       />
 
-      <div
-        v-if="detailsButtons.length > 0"
-        class="details-wrapper"
-      >
-        <DsfrDropdown
-          :main-button="{ label: 'Analyse du document', icon: 'ri-list-check-2', size: 'sm' }"
-          :buttons="detailsButtons"
-        />
-      </div>
-
-      <TaskQAModal
-        v-if="resumeResult.parameters?.extract_qa"
-        :opened="qaModalOpened"
+      <TaskResultsTabs
         :task-id="resumeResult.id"
-        :status="resumeResult.qa_entities_status"
-        @close="qaModalOpened = false"
-      />
-      <TaskEntitiesModal
-        v-if="resumeResult.parameters?.extract_entities"
-        :opened="entitiesModalOpened"
-        :task-id="resumeResult.id"
-        :entities-status="resumeResult.qa_entities_status"
+        :parameters="resumeResult.parameters"
+        :qa-entities-status="resumeResult.qa_entities_status"
         :relationships-status="resumeResult.relationships_status"
-        @close="entitiesModalOpened = false"
-      />
-      <TaskChunksModal
-        v-if="resumeResult.parameters?.extract_chunks"
-        :opened="chunksModalOpened"
-        :task-id="resumeResult.id"
-        :status="resumeResult.qa_entities_status"
-        @close="chunksModalOpened = false"
+        :topics-status="resumeResult.topics_status"
+        :qa-entities-error="resumeResult.qa_entities_error"
+        :relationships-error="resumeResult.relationships_error"
+        :topics-error="resumeResult.topics_error"
+        @retry="emit('retry')"
       />
     </div>
 
@@ -254,11 +215,6 @@ onMounted(() => {
   border: 1px solid var(--border-default-grey);
   border-radius: 12px;
   padding: 2px 8px;
-}
-.details-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
 }
 .details-body {
   display: flex;

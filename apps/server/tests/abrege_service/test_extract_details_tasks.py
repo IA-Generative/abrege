@@ -223,6 +223,38 @@ def test_extract_task_details_dispatches_chunks_for_a_completed_task(monkeypatch
     assert len(dispatched_texts) >= 1
 
 
+def test_extract_task_details_passes_entity_definitions_to_the_chunk_dispatch(monkeypatch: pytest.MonkeyPatch):
+    task = task_table.insert_new_task(
+        user_id="test",
+        form_data=TaskForm(
+            type="summary",
+            status=TaskStatus.COMPLETED.value,
+            parameters=SummaryParameters(
+                extract_entities=True,
+                entities_instructions="ignore les lieux",
+                entity_definitions=[{"name": "montant", "type": "number", "definition": "Somme en euros", "examples": ["1 200 €"]}],
+            ),
+            output=ResultModel(
+                type="flat",
+                created_at=0,
+                model_name="mock",
+                model_version="mock",
+                texts_found=["Un texte assez court pour tenir dans un seul chunk."],
+            ),
+        ),
+    )
+
+    dispatched_kwargs = []
+    monkeypatch.setattr(summary_service, "dispatch_all_chunks", lambda **kwargs: dispatched_kwargs.append(kwargs))
+
+    extract_task_details.apply(args=[task.id]).get()
+
+    assert len(dispatched_kwargs) == 1
+    entities_instructions = dispatched_kwargs[0]["entities_instructions"]
+    assert entities_instructions.startswith("ignore les lieux")
+    assert "- montant (a number): Somme en euros Examples: 1 200 €." in entities_instructions
+
+
 def test_extract_task_details_noop_when_task_has_no_source_text():
     task = task_table.insert_new_task(
         user_id="test",

@@ -23,6 +23,7 @@ from src.utils.logger import logger_abrege
 
 
 from abrege_service.models.base import BaseSummaryService
+from abrege_service.models.summary.definitions import build_entities_instructions, build_topics_instructions
 from abrege_service.models.summary.qa_chain import extract_leading_page_number
 from abrege_service.utils.text import (
     split_texts_by_token_limit,
@@ -282,7 +283,7 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
 
         wants_chunk_details = (extract_qa and qa_per_chunk > 0) or extract_entities or extract_chunks
         if wants_chunk_details:
-            task_table.update_task(task_id=task.id, form_data=TaskUpdateForm(qa_entities_status="in_progress"))
+            task_table.update_task(task_id=task.id, form_data=TaskUpdateForm(qa_entities_status="in_progress", qa_entities_error=None))
             self.dispatch_all_chunks(
                 task_id=task.id,
                 texts=transform_texts,
@@ -477,7 +478,7 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
             extract_entities=params.extract_entities,
             extract_chunks=params.extract_chunks,
             qa_instructions=params.qa_instructions or "",
-            entities_instructions=params.entities_instructions or "",
+            entities_instructions=build_entities_instructions(params),
             chunks_instructions=params.chunks_instructions or "",
         )
         texts = [doc.page_content for doc in mapped_docs]
@@ -549,12 +550,12 @@ class LangChainAsyncMapReduceService(BaseSummaryService):
 
             params = task.parameters or SummaryParameters()
             if params.classify_topics:
-                task_table.update_task(task_id=task.id, form_data=TaskUpdateForm(topics_status="pending"))
+                task_table.update_task(task_id=task.id, form_data=TaskUpdateForm(topics_status="pending", topics_error=None))
                 self.dispatch_topic_classification(
                     task_id=task.id,
                     summary=task.output.summary,
                     language=params.language if params.language else "French",
-                    instructions=params.topics_instructions or "",
+                    instructions=build_topics_instructions(params),
                 )
 
             task = self.update_result_task(

@@ -1,6 +1,6 @@
 # abrege
 
-![Version: 0.1.3](https://img.shields.io/badge/Version-0.1.3-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 3.4.1](https://img.shields.io/badge/AppVersion-3.4.1-informational?style=flat-square)
+![Version: 0.2.0-rc.4](https://img.shields.io/badge/Version-0.2.0--rc.4-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 3.5.0-rc.4](https://img.shields.io/badge/AppVersion-3.5.0--rc.4-informational?style=flat-square)
 
 A Helm chart to deploy abrege.
 
@@ -730,7 +730,7 @@ A Helm chart to deploy abrege.
 | worker.containerPort | string | `nil` | Worker container port number. Set to `null` since this component only consumes a Celery queue and never accepts traffic (see `service.enabled` below). |
 | worker.containerPortName | string | `"http"` | Worker container port name. |
 | worker.deploymentType | string | `"Deployment"` | Workload kind to deploy the app as. One of "Deployment" or "StatefulSet". |
-| worker.env | object | `{"AWS_ACCESS_KEY_ID":"rustfsadmin","AWS_BUCKET_NAME":"abrege","AWS_DEFAULT_REGION":"us-east-1","AWS_ENDPOINT_URL":"http://abrege-rustfs:9000","AWS_SECRET_ACCESS_KEY":{"valueFrom":{"secretKeyRef":{"key":"secret-key","name":"abrege-rustfs"}}},"CELERY_APP_NAME":"abrege","DATABASE_URL":{"valueFrom":{"secretKeyRef":{"key":"uri","name":"abrege-postgres"}}},"REDIS_HOST":"abrege-redis-master","UV_CACHE_DIR":"/app/.cache/"}` | Map or array of environment variables to inject into the app container (`valueFrom` supported). |
+| worker.env | object | `{"ABREGE_API_BASE_URL":"http://abrege-api","AWS_ACCESS_KEY_ID":"rustfsadmin","AWS_BUCKET_NAME":"abrege","AWS_DEFAULT_REGION":"us-east-1","AWS_ENDPOINT_URL":"http://abrege-rustfs:9000","AWS_SECRET_ACCESS_KEY":{"valueFrom":{"secretKeyRef":{"key":"secret-key","name":"abrege-rustfs"}}},"CELERY_APP_NAME":"abrege","DATABASE_URL":{"valueFrom":{"secretKeyRef":{"key":"uri","name":"abrege-postgres"}}},"REDIS_HOST":"abrege-redis-master","UV_CACHE_DIR":"/app/.cache/"}` | Map or array of environment variables to inject into the app container (`valueFrom` supported). |
 | worker.envCm | object | `{}` | Map of environment variables to inject into a configmap loaded by the app container (`valueFrom` not supported). |
 | worker.envFrom | list | `[]` | Worker container env variables loaded from configmap or secret reference. List or map (merged with `global.envFrom` above, global entries first); see `global.envFrom` for both forms. |
 | worker.envSecret | object | `{}` | Map of environment variables to inject into a secret loaded by the app container (`valueFrom` not supported). |

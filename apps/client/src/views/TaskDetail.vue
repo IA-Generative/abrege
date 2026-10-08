@@ -3,7 +3,6 @@ import type { components } from '@/api/types/api.schema'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ResumeResult from '@/components/ResumeResult.vue'
-import TopicBadges from '@/components/TopicBadges.vue'
 import { useAbregeStore } from '@/stores/abrege'
 
 // The generated schema doesn't yet know about these — the API already returns them.
@@ -11,6 +10,9 @@ type TaskModel = components['schemas']['TaskModel'] & {
   qa_entities_status?: string | null
   relationships_status?: string | null
   topics_status?: string | null
+  qa_entities_error?: number | null
+  relationships_error?: number | null
+  topics_error?: number | null
 }
 
 const route = useRoute()
@@ -35,21 +37,28 @@ function isStillPending (): boolean {
   )
 }
 
+// After a retry the status can stay "failed" for a moment, until the worker picks the job up:
+// keep polling a few more ticks even when nothing looks pending.
+let graceTicks = 0
+
 function startStatusPolling () {
   if (statusPollTimer) { return }
   statusPollTimer = setInterval(async () => {
-    if (!isStillPending()) {
+    if (!isStillPending() && graceTicks <= 0) {
       if (statusPollTimer) { clearInterval(statusPollTimer) }
       statusPollTimer = null
       return
     }
+    graceTicks -= 1
     const refreshed = await abrege.getTask(taskId.value) as TaskModel
     task.value = refreshed
-    if (!isStillPending() && statusPollTimer) {
-      clearInterval(statusPollTimer)
-      statusPollTimer = null
-    }
   }, 3000)
+}
+
+async function onRetry () {
+  graceTicks = 5
+  task.value = await abrege.getTask(taskId.value) as TaskModel
+  startStatusPolling()
 }
 
 onBeforeUnmount(() => {
@@ -79,9 +88,6 @@ onMounted(async () => {
   try {
     task.value = await abrege.getTask(taskId.value) as TaskModel
     if (task.value?.status === 'completed') {
-      if (task.value.parameters?.classify_topics) {
-        abrege.fetchTopics(taskId.value)
-      }
       if (isStillPending()) { startStatusPolling() }
     }
   } catch (e: any) {
@@ -145,24 +151,10 @@ onMounted(async () => {
       </div>
 
       <div v-if="task.status === 'completed' && task.output">
-        <div
-          v-if="task.parameters?.classify_topics && !abrege.topicsLoading && (abrege.topics.length > 0 || task.topics_status)"
-          class="task-detail-topics fr-mb-3w"
-        >
-          <span class="fr-text--sm task-detail-topics-label">Sujets détectés :</span>
-          <TopicBadges
-            v-if="abrege.topics.length > 0"
-            :topics="abrege.topics"
-          />
-          <ExtractionStatusBadge
-            :status="task.topics_status"
-            label="Classification"
-          />
-        </div>
-
         <ResumeResult
           :resume-result="task"
           @re-generate="router.push({ name: 'resume-tab', params: { tab: 'tasks' } })"
+          @retry="onRetry"
         />
       </div>
 
@@ -196,14 +188,5 @@ onMounted(async () => {
   color: var(--text-mention-grey);
   word-break: break-all;
   margin: 0;
-}
-.task-detail-topics {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-}
-.task-detail-topics-label {
-  color: var(--text-mention-grey);
 }
 </style>

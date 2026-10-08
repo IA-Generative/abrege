@@ -2,24 +2,25 @@
 import type { EntityRow, RelationshipRow } from '@/stores/abrege'
 import Graph from 'graphology'
 import Sigma from 'sigma'
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useAbregeStore } from '@/stores/abrege'
 import CustomTabs from './CustomTabs.vue'
 
 const props = defineProps<{
-  opened: boolean
   taskId: string
   entitiesStatus?: string | null
   relationshipsStatus?: string | null
+  entitiesError?: number | null
+  relationshipsError?: number | null
+  expanded?: boolean
+  initialTab?: number
 }>()
 
-const emit = defineEmits<{
-  (e: 'close'): void
-}>()
+const emit = defineEmits<{ (e: 'tabChange', tab: number): void }>()
 
 const abrege = useAbregeStore()
 
-const activeTab = ref(0)
+const activeTab = ref(props.initialTab ?? 0)
 const tabsData = [
   { label: 'Liste', slot: 'list' },
   { label: 'Graphe', slot: 'graph' },
@@ -141,13 +142,34 @@ async function renderGraph () {
   if (!graphContainer.value) { return }
   destroyGraph()
   const graph = buildGraph(filteredEntities.value, filteredRelationships.value)
+  // Relation labels overlap as soon as there are a few edges: only show those of the hovered
+  // edge, or of the edges touching the hovered node.
+  let hoveredEdge: string | null = null
+  let hoveredNode: string | null = null
   renderer = new Sigma(graph, graphContainer.value, {
     renderEdgeLabels: true,
+    enableEdgeEvents: true,
     defaultEdgeType: 'arrow',
+    edgeReducer: (edge, data) => {
+      const highlighted = hoveredEdge === edge || (hoveredNode !== null && graph.hasExtremity(edge, hoveredNode))
+      return highlighted
+        ? { ...data, forceLabel: true, color: '#000091', size: 3 }
+        : { ...data, label: '' }
+    },
   })
+  const hover = (edge: string | null, node: string | null) => {
+    hoveredEdge = edge
+    hoveredNode = node
+    renderer?.refresh()
+  }
+  renderer.on('enterEdge', ({ edge }) => hover(edge, null))
+  renderer.on('leaveEdge', () => hover(null, null))
+  renderer.on('enterNode', ({ node }) => hover(null, node))
+  renderer.on('leaveNode', () => hover(null, null))
 }
 
 watch(activeTab, (tab) => {
+  emit('tabChange', tab)
   if (tab === 1) { renderGraph() }
 })
 
@@ -155,47 +177,39 @@ watch(searchQuery, () => {
   if (activeTab.value === 1) { renderGraph() }
 })
 
-watch(
-  () => props.opened,
-  async (opened) => {
-    if (!opened) {
-      destroyGraph()
-      activeTab.value = 0
-      return
-    }
-    searchQuery.value = ''
-    await abrege.fetchEntitiesAndRelationships(props.taskId)
-    if (activeTab.value === 1) { renderGraph() }
-  },
-)
+async function loadEntities () {
+  await abrege.fetchEntitiesAndRelationships(props.taskId)
+  if (activeTab.value === 1) { renderGraph() }
+}
+
+onMounted(loadEntities)
+
+// Entities and the global relationships complete one after the other while the task is polled.
+watch(() => [props.entitiesStatus, props.relationshipsStatus], ([entitiesStatus, relationshipsStatus], [previousEntities, previousRelationships]) => {
+  const justCompleted = (entitiesStatus === 'completed' && previousEntities !== 'completed')
+    || (relationshipsStatus === 'completed' && previousRelationships !== 'completed')
+  if (justCompleted) { loadEntities() }
+})
 
 onBeforeUnmount(() => {
   destroyGraph()
 })
-
-function close () {
-  emit('close')
-}
 </script>
 
 <template>
-  <DsfrModal
-    v-if="opened"
-    :opened="opened"
-    title="Entités & relations"
-    size="xl"
-    @close="close"
-  >
+  <div class="entities-results">
     <div class="entities-modal-subtitle-row">
       <p class="fr-text--sm fr-text-mention--grey entities-modal-subtitle">
-        Tâche {{ taskId }} — {{ abrege.entities.length }} entité(s), {{ abrege.relationships.length }} relation(s)
+        {{ abrege.entities.length }} entité(s), {{ abrege.relationships.length }} relation(s)
       </p>
       <ExtractionStatusBadge
         :status="entitiesStatus"
+        :error-code="entitiesError"
         label="Entités"
       />
       <ExtractionStatusBadge
         :status="relationshipsStatus"
+        :error-code="relationshipsError"
         label="Relations globales"
       />
     </div>
@@ -271,6 +285,12 @@ function close () {
         </template>
 
         <template #graph>
+          <p
+            v-if="legendTypes.length > 0"
+            class="fr-hint-text entities-graph-hint"
+          >
+            Survolez un nœud ou une relation pour voir le détail des liens.
+          </p>
           <div
             v-if="legendTypes.length > 0"
             class="entities-graph-legend"
@@ -291,6 +311,12 @@ function close () {
               Relation
             </span>
           </div>
+          <div
+            v-else-if="abrege.entities.length === 0"
+            class="fr-alert fr-alert--info"
+          >
+            <p>Aucune entité à afficher : l'extraction n'a rien trouvé ou n'a pas pu être enregistrée. Consultez le statut ci-dessus.</p>
+          </div>
           <p
             v-else-if="searchQuery"
             class="fr-text--sm fr-text-mention--grey"
@@ -298,13 +324,15 @@ function close () {
             Aucun résultat pour « {{ searchQuery }} ».
           </p>
           <div
+            v-show="abrege.entities.length > 0"
             ref="graphContainer"
             class="entities-graph-container"
+            :class="{ 'entities-graph-container--expanded': expanded }"
           />
         </template>
       </CustomTabs>
     </template>
-  </DsfrModal>
+  </div>
 </template>
 
 <style scoped>
@@ -319,25 +347,39 @@ function close () {
   margin-bottom: 0;
 }
 .entities-list-columns {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0 1.5rem;
-  align-items: start;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+.entities-list-column {
+  min-width: 0;
+}
+.entities-list-column :deep(.fr-table),
+.entities-list-column :deep(.fr-table__wrapper),
+.entities-list-column :deep(.fr-table__container),
+.entities-list-column :deep(.fr-table__content) {
+  max-width: 100%;
+}
+.entities-list-column :deep(.fr-table__wrapper) {
+  overflow-x: auto;
 }
 .entities-list-column :deep(table) {
   width: 100%;
 }
-@media (max-width: 991px) {
-  .entities-list-columns {
-    grid-template-columns: 1fr;
-    gap: 1.5rem 0;
-  }
+.entities-list-column :deep(td) {
+  overflow-wrap: anywhere;
 }
 .entities-graph-container {
   width: 100%;
   height: 480px;
   border: 1px solid var(--border-default-grey);
   background: #fff;
+}
+.entities-graph-container--expanded {
+  height: max(480px, calc(100vh - 420px));
+}
+.entities-graph-hint {
+  margin: 0 0 0.5rem;
 }
 .entities-graph-legend {
   display: flex;

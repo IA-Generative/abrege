@@ -38,6 +38,21 @@
           "temporary": false
         }
       ]
+    }, 
+    {
+      "username": "test",
+      "email": "test2@gouv.fr",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Test",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "test",
+          "temporary": false
+        }
+      ]
     }
   ]
 }
