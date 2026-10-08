@@ -101,6 +101,14 @@ make build-abrege-worker
 
 ---
 
+## Images et chart Helm
+
+Les images sont publiées sous `ghcr.io/ia-generative/abrege/{api,worker,frontend,migration}`. Le chart `oci://ghcr.io/ia-generative/abrege/abrege` pointe sur ces images par défaut.
+
+Le job de migration utilise l'image `abrege/migration` depuis la version `0.1.3` du chart (application `3.4.1`). Les versions `0.1.1` et antérieures utilisent par défaut `abrege/api` pour la migration. Tous les tags de version de `abrege/api` ont été copiés sous `abrege/migration` avec les mêmes digests : si vous installez une ancienne version du chart, surchargez `jobs.migration.image.repository` avec `ia-generative/abrege/migration`.
+
+---
+
 ## 🧪 Testing
 
 All tests are managed via the `Makefile`. Available test commands:
