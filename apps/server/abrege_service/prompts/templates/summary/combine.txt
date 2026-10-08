@@ -1,0 +1,6 @@
+The following is a set of summaries:
+{text}
+Consolidate them into a clear and well-organized final summary. Highlight recurring ideas, themes, and insights. {prompt_size}.{custom_prompt}
+The summary MUST be written in {language}, even if the source text is in another language: translate its content into {language} when needed.
+Respond ONLY with a valid JSON object matching this schema: {{"summary": "..."}}
+Helpful Answer, written in {language}:
