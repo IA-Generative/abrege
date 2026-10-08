@@ -13,12 +13,6 @@ A Helm chart to deploy abrege.
 | oci://registry-1.docker.io/cloudpirates | redis(redis) | 0.27.9 |
 | oci://registry-1.docker.io/cloudpirates | rustfs(rustfs) | 0.10.0 |
 
-## Images
-
-Les images sont publiées sous `ghcr.io/ia-generative/abrege/{api,worker,frontend,migration}`. Le chart les utilise par défaut.
-
-Le job de migration utilise l'image `abrege/migration` depuis la version `0.1.3` du chart (application `3.4.1`). Les versions `0.1.1` et antérieures utilisent par défaut `abrege/api` pour la migration. Tous les tags de version de `abrege/api` ont été copiés sous `abrege/migration` avec les mêmes digests : si vous installez une ancienne version du chart, surchargez `jobs.migration.image.repository` avec `ia-generative/abrege/migration`.
-
 ## Values
 
 ### General
