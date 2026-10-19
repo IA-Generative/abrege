@@ -210,6 +210,13 @@
 - clean code
 - clean code
 
+## [3.4.2](https://github.com/IA-Generative/abrege/compare/v3.4.1...v3.4.2) (2026-10-19)
+
+
+### Bug Fixes
+
+* **worker:** move the summary prompts into files and respect the requested language and size ([2d20c31](https://github.com/IA-Generative/abrege/commit/2d20c31a3310a77228cfee8d9d143716aa30b699))
+
 ## [3.4.1](https://github.com/IA-Generative/abrege/compare/v3.4.0...v3.4.1) (2026-10-07)
 
 
