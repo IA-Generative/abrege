@@ -44,9 +44,10 @@ docker-build-abrege-api:
   before_script:
     - |
       SHORT_SHA=$(echo $CI_COMMIT_SHA | cut -c1-7)
-      # The DSO mirror only ever syncs branches, never tags (see dso-auto-sync.yaml),
-      # so this pipeline never runs as a GitLab tag pipeline and $CI_COMMIT_TAG is
-      # always empty here. appVersion is the app version bump/release-please already
+      # The CPiN mirror only ever syncs branch refs, never tags (every trigger
+      # in cpin-sync.yml passes a branch name, not a tag), so this pipeline
+      # never runs as a GitLab tag pipeline and $CI_COMMIT_TAG is always empty
+      # here. appVersion is the app version bump/release-please already
       # committed to Chart.yaml before the sync ran - same source of truth
       # helm-package-push below reads for the chart's own version.
       APP_VERSION=$(grep '^appVersion:' helm/Chart.yaml | awk '{print $2}' | tr -d '"')
@@ -56,6 +57,14 @@ docker-build-abrege-api:
       fi
       TAGS="abrege-api:$SHORT_SHA"
       TAGS="$TAGS abrege-api:$CI_COMMIT_REF_SLUG"
+      # Pull requests tag the images pr-<N>, matching this repository's own
+      # pr-<N> images on GHCR. GITHUB_PR_NUMBER is only set when the sync was
+      # triggered for a pull request (see .github/workflows/cpin-sync.yml);
+      # like the ref-slug tag it carries no version, so it never clobbers a
+      # released image.
+      if [ -n "$GITHUB_PR_NUMBER" ]; then
+        TAGS="$TAGS abrege-api:pr-$GITHUB_PR_NUMBER"
+      fi
       # Environments deploy the version tag (pulled with pullPolicy Always), so only
       # the branches releases are cut from may write it: a pipeline on any other
       # branch would replace a released image with unreleased code.
@@ -90,6 +99,10 @@ docker-build-abrege-worker:
       fi
       TAGS="abrege-worker:$SHORT_SHA"
       TAGS="$TAGS abrege-worker:$CI_COMMIT_REF_SLUG"
+      # See the pr-<N> tag in docker-build-abrege-api.
+      if [ -n "$GITHUB_PR_NUMBER" ]; then
+        TAGS="$TAGS abrege-worker:pr-$GITHUB_PR_NUMBER"
+      fi
       # Version tags from dev and main only, see docker-build-abrege-api.
       if [ "$CI_COMMIT_BRANCH" = "dev" ] || [ "$CI_COMMIT_BRANCH" = "main" ]; then
         TAGS="$TAGS abrege-worker:$APP_VERSION"
@@ -122,6 +135,10 @@ docker-build-abrege-migration:
       fi
       TAGS="abrege-migration:$SHORT_SHA"
       TAGS="$TAGS abrege-migration:$CI_COMMIT_REF_SLUG"
+      # See the pr-<N> tag in docker-build-abrege-api.
+      if [ -n "$GITHUB_PR_NUMBER" ]; then
+        TAGS="$TAGS abrege-migration:pr-$GITHUB_PR_NUMBER"
+      fi
       # Version tags from dev and main only, see docker-build-abrege-api.
       if [ "$CI_COMMIT_BRANCH" = "dev" ] || [ "$CI_COMMIT_BRANCH" = "main" ]; then
         TAGS="$TAGS abrege-migration:$APP_VERSION"
@@ -155,6 +172,10 @@ docker-build-abrege-frontend:
       fi
       TAGS="abrege-frontend:$SHORT_SHA"
       TAGS="$TAGS abrege-frontend:$CI_COMMIT_REF_SLUG"
+      # See the pr-<N> tag in docker-build-abrege-api.
+      if [ -n "$GITHUB_PR_NUMBER" ]; then
+        TAGS="$TAGS abrege-frontend:pr-$GITHUB_PR_NUMBER"
+      fi
       # Version tags from dev and main only, see docker-build-abrege-api.
       if [ "$CI_COMMIT_BRANCH" = "dev" ] || [ "$CI_COMMIT_BRANCH" = "main" ]; then
         TAGS="$TAGS abrege-frontend:$APP_VERSION"
