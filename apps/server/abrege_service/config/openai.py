@@ -32,7 +32,6 @@ class OpenAISettings(BaseSettings):
     ENTITY_MODEL_NAME: Optional[str] = None
     CHUNK_MODEL_NAME: Optional[str] = None
     TOPIC_MODEL_NAME: Optional[str] = None
-    MAX_CONTEXT_SIZE: Optional[int] = 128_000  # Context size that the llm can handle
 
     @model_validator(mode="before")
     @classmethod

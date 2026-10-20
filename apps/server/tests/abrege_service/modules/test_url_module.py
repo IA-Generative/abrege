@@ -4,6 +4,8 @@ from src.schemas.task import TaskModel, TaskForm, task_table, TaskStatus
 from src.schemas.content import URLModel
 import pytest
 
+from src.utils.error_codes import FetchError
+
 
 def mock_task(url) -> TaskModel:
     task = task_table.insert_new_task(
@@ -30,6 +32,13 @@ def test_task_not_implemented():
     ):
         with pytest.raises(NotImplementedError):
             url_service.task_to_text(dummy_task)
+
+
+def test_invalid_url_raises_fetch_error():
+    url_service = URLService()
+
+    with pytest.raises(FetchError):
+        url_service.task_to_text(mock_task("not-a-url"))
 
 
 def test_get_text_html():

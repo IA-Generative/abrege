@@ -1,7 +1,12 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAbregeStore } from '@/stores/abrege'
+import { describeError } from '@/utils/error-codes'
+
+const props = defineProps({
+  active: { type: Boolean, default: true },
+})
 
 const router = useRouter()
 
@@ -26,6 +31,12 @@ function MapStatusToLabel (status) {
     failed: 'Échoué',
   }
   return map[status] || status
+}
+
+// "Échoué · LLM_TIMEOUT": the code is what to quote when reporting the problem.
+function statusLabel (task) {
+  const label = MapStatusToLabel(task.status)
+  return task.status === 'failed' && task.extras?.error_code ? `${label} · ${task.extras.error_code}` : label
 }
 
 function sortBy (key) {
@@ -55,8 +66,20 @@ const sortedTasks = computed(() => {
   })
 })
 
+const refreshing = ref(false)
+const lastRefreshedAt = ref(null)
+
 async function loadAll () {
-  await abrege.fetchUserTasks(1, 1000)
+  if (refreshing.value) {
+    return
+  }
+  refreshing.value = true
+  try {
+    await abrege.fetchUserTasks(1, 1000)
+    lastRefreshedAt.value = new Date()
+  } finally {
+    refreshing.value = false
+  }
 }
 
 async function removeTask (taskId) {
@@ -109,13 +132,39 @@ function formatDate (ts) {
 onMounted(() => {
   loadAll()
 })
+
+// The tab stays mounted while hidden, so reload each time it is shown again.
+watch(() => props.active, (isActive) => {
+  if (isActive) {
+    loadAll()
+  }
+})
 </script>
 
 <template>
   <div class="task-container fr-container">
-    <h2 class="fr-h2">
-      Mes tâches
-    </h2>
+    <div class="task-header">
+      <h2 class="fr-h2 task-header__title">
+        Mes tâches
+      </h2>
+      <div class="task-header__refresh">
+        <span
+          v-if="lastRefreshedAt"
+          class="fr-text--xs task-header__updated"
+        >
+          Mis à jour à {{ lastRefreshedAt.toLocaleTimeString() }}
+        </span>
+        <DsfrButton
+          size="sm"
+          priority="secondary"
+          icon="ri-refresh-line"
+          :disabled="refreshing"
+          @click="loadAll"
+        >
+          {{ refreshing ? 'Actualisation…' : 'Actualiser' }}
+        </DsfrButton>
+      </div>
+    </div>
 
     <div class="task-sort-bar">
       <span class="fr-text--sm task-sort-label">Trier par :</span>
@@ -155,7 +204,8 @@ onMounted(() => {
         <ProgressBar
           :visible="true"
           :progress="(task.percentage ?? 0) * 100"
-          :text="MapStatusToLabel(task.status)"
+          :text="statusLabel(task)"
+          :title="task.status === 'failed' ? describeError(task.extras?.error_code) : undefined"
         />
 
         <dl class="task-tile-dates">
@@ -216,6 +266,30 @@ onMounted(() => {
 <style scoped>
 .task-container {
   padding: 20px;
+}
+
+.task-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.task-header__title {
+  margin-bottom: 0;
+}
+
+.task-header__refresh {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.task-header__updated {
+  margin: 0;
+  color: var(--text-mention-grey);
 }
 
 .task-sort-bar {

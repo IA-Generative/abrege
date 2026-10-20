@@ -3,7 +3,7 @@ import uuid
 import time
 from typing import Dict, List, Optional, Any, Union
 from enum import Enum
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import Column, String, JSON, BigInteger, select, Float, Integer, func
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -44,28 +44,35 @@ class Task(Base):
     qa_entities_status = Column(String, nullable=True)  # None | in_progress | completed | failed
     relationships_status = Column(String, nullable=True)  # None | pending | completed | failed
     topics_status = Column(String, nullable=True)  # None | pending | completed | failed
+    # Numeric ErrorCode (see src/utils/error_codes.py) set alongside a "failed" status above, cleared on retry.
+    qa_entities_error = Column(Integer, nullable=True)
+    relationships_error = Column(Integer, nullable=True)
+    topics_error = Column(Integer, nullable=True)
 
 
 class TaskModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    id: str
-    user_id: str
-    type: str
-    status: str = "queued"
-    group_id: Optional[str] = None
-    percentage: Optional[float] = None
-    input: Optional[Union[URLModel, DocumentModel, TextModel]] = None
-    output: Optional[Union[ResultModel, SummaryModel]] = None
-    parameters: Optional[SummaryParameters] = SummaryParameters()
-    position: Optional[int] = None
+    id: str = Field(description="Unique identifier of the task")
+    user_id: str = Field(description="Identifier of the user who owns the task")
+    type: str = Field(description="Kind of task (`summary`)")
+    status: str = Field("queued", description="Lifecycle status of the summary: created, queued, started, in_progress, completed, failed, retrying, canceled or timeout")
+    group_id: Optional[str] = Field(None, description="Identifier of the group the task belongs to, if any")
+    percentage: Optional[float] = Field(None, description="Progress of the summary, between 0 and 1")
+    input: Optional[Union[URLModel, DocumentModel, TextModel]] = Field(None, description="What was submitted: a URL, a document or a text")
+    output: Optional[Union[ResultModel, SummaryModel]] = Field(None, description="The result, available once `status` is `completed`")
+    parameters: Optional[SummaryParameters] = Field(SummaryParameters(), description="Summary options the task was created with")
+    position: Optional[int] = Field(None, description="Position in the processing queue while waiting, `null` otherwise")
 
-    created_at: int
-    updated_at: int
-    extras: Optional[Dict[str, Any]] = None
-    content_hash: Optional[str] = None
-    qa_entities_status: Optional[str] = None
-    relationships_status: Optional[str] = None
-    topics_status: Optional[str] = None
+    created_at: int = Field(description="Creation time, Unix timestamp (seconds)")
+    updated_at: int = Field(description="Last update time, Unix timestamp (seconds)")
+    extras: Optional[Dict[str, Any]] = Field(None, description="Free-form extra information (e.g. `error_code`, a numeric code such as `101`, and `error` when the task failed)")
+    content_hash: Optional[str] = Field(None, description="Hash of the input content, used to reuse cached extraction work")
+    qa_entities_status: Optional[str] = Field(None, description="Status of the Q&A, entities and chunks extraction: `null` if not requested, otherwise in_progress, completed or failed")
+    relationships_status: Optional[str] = Field(None, description="Status of the cross-chunk relationships pass: `null` if not requested, otherwise pending, completed or failed")
+    topics_status: Optional[str] = Field(None, description="Status of the topic classification: `null` if not requested, otherwise pending, completed or failed")
+    qa_entities_error: Optional[int] = Field(None, description="Numeric error code (e.g. `101`, model timeout) when `qa_entities_status` is `failed`")
+    relationships_error: Optional[int] = Field(None, description="Error code when `relationships_status` is `failed`")
+    topics_error: Optional[int] = Field(None, description="Error code when `topics_status` is `failed`")
 
 
 class TaskForm(BaseModel):
@@ -96,6 +103,9 @@ class TaskUpdateForm(BaseModel):
     qa_entities_status: Optional[str] = None
     relationships_status: Optional[str] = None
     topics_status: Optional[str] = None
+    qa_entities_error: Optional[int] = None
+    relationships_error: Optional[int] = None
+    topics_error: Optional[int] = None
 
 
 class TaskStatus(str, Enum):

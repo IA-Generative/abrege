@@ -91,7 +91,7 @@ const myOtherTools = ref([
           </template>
           <template #tab-3-content>
             <ResumeInfoBulle />
-            <TaskTab />
+            <TaskTab :active="activeTab === 3" />
           </template>
         </CustomTabs>
       </div>

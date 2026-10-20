@@ -27,8 +27,29 @@ import { ref } from 'vue'
 import createHttpClient from '@/api/http-client'
 import useToaster from '@/composables/use-toaster'
 import { ABREGE_API_URL } from '@/utils/constants'
+import { describeError } from '@/utils/error-codes'
 
 type TaskModel = components['schemas']['TaskModel']
+
+export type EntityDefinitionType = 'string' | 'number' | 'date' | 'boolean' | 'enum'
+
+export interface DefinitionBase {
+  id: number
+  name: string
+  definition: string
+  examples: string[]
+}
+
+export interface EntityDefinition extends DefinitionBase {
+  type: EntityDefinitionType
+  enumValues: string
+}
+
+export type TopicDefinition = DefinitionBase
+
+function splitLines (text: string): string[] {
+  return text.split('\n').map(line => line.trim()).filter(Boolean)
+}
 
 export interface QAItemRow {
   id: string
@@ -125,12 +146,44 @@ export const useAbregeStore = defineStore('abrege', () => {
     qaInstructions: null,
     extractEntities: false,
     entitiesInstructions: null,
+    entityDefinitions: [] as EntityDefinition[],
     extractChunks: false,
     chunksInstructions: null,
     classifyTopics: false,
     topicsInstructions: null,
+    topicDefinitions: [] as TopicDefinition[],
   }
   const paramsValue = ref(paramsInitialValue)
+
+  function buildEntityDefinitions () {
+    if (!paramsValue.value.extractEntities) {
+      return undefined
+    }
+    const definitions = paramsValue.value.entityDefinitions
+      .filter(entity => entity.name.trim())
+      .map(entity => ({
+        name: entity.name.trim(),
+        type: entity.type,
+        definition: entity.definition.trim() || null,
+        examples: entity.examples.map(example => example.trim()).filter(Boolean),
+        enum_values: entity.type === 'enum' ? splitLines(entity.enumValues) : [],
+      }))
+    return definitions.length > 0 ? definitions : undefined
+  }
+
+  function buildTopicDefinitions () {
+    if (!paramsValue.value.classifyTopics) {
+      return undefined
+    }
+    const definitions = paramsValue.value.topicDefinitions
+      .filter(topic => topic.name.trim())
+      .map(topic => ({
+        name: topic.name.trim(),
+        definition: topic.definition.trim() || null,
+        examples: topic.examples.map(example => example.trim()).filter(Boolean),
+      }))
+    return definitions.length > 0 ? definitions : undefined
+  }
 
   async function healthCheck (): Promise<boolean> {
     try {
@@ -195,7 +248,7 @@ export const useAbregeStore = defineStore('abrege', () => {
           case 'failed':
             addErrorMessage({
               title: 'Échec du traitement :',
-              description: 'Une erreur est survenue lors du traitement OCR.',
+              description: describeError(task.extras?.error_code as number | undefined) ?? 'Une erreur est survenue lors du traitement.',
             })
             error.value = 'La génération de résumé a échoué'
             isPolling.value = false
@@ -281,10 +334,12 @@ export const useAbregeStore = defineStore('abrege', () => {
         qa_instructions: paramsValue.value.qaInstructions,
         extract_entities: paramsValue.value.extractEntities,
         entities_instructions: paramsValue.value.entitiesInstructions,
+        entity_definitions: buildEntityDefinitions(),
         extract_chunks: paramsValue.value.extractChunks,
         chunks_instructions: paramsValue.value.chunksInstructions,
         classify_topics: paramsValue.value.classifyTopics,
         topics_instructions: paramsValue.value.topicsInstructions,
+        topic_definitions: buildTopicDefinitions(),
       },
     }
 
@@ -334,10 +389,12 @@ export const useAbregeStore = defineStore('abrege', () => {
         qa_instructions: paramsValue.value.qaInstructions,
         extract_entities: paramsValue.value.extractEntities,
         entities_instructions: paramsValue.value.entitiesInstructions,
+        entity_definitions: buildEntityDefinitions(),
         extract_chunks: paramsValue.value.extractChunks,
         chunks_instructions: paramsValue.value.chunksInstructions,
         classify_topics: paramsValue.value.classifyTopics,
         topics_instructions: paramsValue.value.topicsInstructions,
+        topic_definitions: buildTopicDefinitions(),
       }))
 
       const { data: task } = await http.post<TaskModel>(
@@ -523,6 +580,49 @@ export const useAbregeStore = defineStore('abrege', () => {
     }
   }
 
+  // ----- RESULTS OVERVIEW (counts per extraction + top topics, shown on the results tabs) -----
+  const resultsOverview = ref({
+    qa: 0,
+    entities: 0,
+    relationships: 0,
+    topics: 0,
+    chunks: 0,
+    topTopics: [] as TopicRow[],
+  })
+
+  async function fetchResultsOverview (taskId: string) {
+    const get = (path: string, limit: number) =>
+      http.get<{ total: number, items: any[] }>(`/task/${taskId}/${path}`, { params: { offset: 1, limit } })
+    const [qa, ents, rels, tops, chs] = await Promise.allSettled([
+      get('qa', 1),
+      get('entities', 1),
+      get('relationships', 1),
+      get('topics', 3),
+      get('chunks', 1),
+    ])
+    const total = (result: PromiseSettledResult<{ data: { total: number } }>) =>
+      result.status === 'fulfilled' ? (result.value.data.total ?? 0) : 0
+    resultsOverview.value = {
+      qa: total(qa),
+      entities: total(ents),
+      relationships: total(rels),
+      topics: total(tops),
+      chunks: total(chs),
+      topTopics: tops.status === 'fulfilled' ? (tops.value.data.items ?? []) : [],
+    }
+  }
+
+  // Re-triggers the Q&A / entities / relationships / chunks extraction of a finished task.
+  async function retryExtraction (taskId: string) {
+    try {
+      await http.post(`/task/${taskId}/extract-details`)
+      addSuccessMessage({ title: 'Analyse relancée', description: 'L\'extraction a été relancée, les résultats vont se mettre à jour.' })
+    } catch (err: any) {
+      addErrorMessage({ title: 'Relance impossible', description: `Impossible de relancer l'extraction: ${err?.message ?? err}` })
+      throw err
+    }
+  }
+
   // kept for backward compatibility (no-op stoppers)
   function startPollingUserTasks (page = 1, page_size = 100) {
     fetchUserTasks(page, page_size)
@@ -613,5 +713,9 @@ export const useAbregeStore = defineStore('abrege', () => {
     chunksPage,
     chunksPageSize,
     fetchChunks,
+    // results overview (tabs)
+    resultsOverview,
+    fetchResultsOverview,
+    retryExtraction,
   }
 })

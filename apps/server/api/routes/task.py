@@ -1,11 +1,29 @@
 import os
-from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Depends
+from typing import Annotated, List, Optional
+from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 from api.core.security.token import RequestContext
+from api.docs import (
+    INTERNAL_SECURITY,
+    INTERNAL_UNAUTHORIZED,
+    ITEM_NOT_FOUND,
+    TASK_NOT_FOUND,
+    TASK_NOT_FOUND_INTERNAL,
+    UNAUTHORIZED,
+    ChunkId,
+    EntityId,
+    ErrorResponse,
+    PageNumber,
+    PageSize,
+    QAItemId,
+    RelationshipId,
+    TaskId,
+    TopicId,
+    USER_SECURITY,
+)
 from api.core.security.factory import TokenVerifier
 from api.core.security.internal import verify_internal_service
 
@@ -34,13 +52,43 @@ except RuntimeError as e:
     logger_abrege.warning(f"OCR client not configured, task cancellation will not propagate to it: {e}")
     ocr_client = None
 
-router = APIRouter(tags=["Tasks"])
+router = APIRouter()
 
 
-@router.get("/task/{id}", response_model=TaskModel)
+@router.get(
+    "/task/{id}",
+    response_model=TaskModel,
+    tags=["Tasks"],
+    summary="Get a task",
+    description="""Return a task with its input, parameters and, once finished, its output (the summary is in `output.summary`).
+
+**The HTTP status code mirrors the task state**, so a client can poll without reading the body:
+
+| `status` | HTTP code |
+|---|---|
+| `created` | 201 |
+| `queued`, `started` | 202 |
+| `in_progress` | 206 |
+| `completed` | 200 |
+| `retrying` | 208 |
+| `failed`, `canceled` | 500 |
+| `timeout` | 504 |
+
+`position` is the rank in the processing queue while the task waits. The side extractions
+(Q&A, entities, chunks, topics) have their own `*_status` fields, independent of `status`.""",
+    responses={201: {"model": TaskModel, "description": "Task created, not queued yet."},
+        202: {"model": TaskModel, "description": "Task queued or started."},
+        206: {"model": TaskModel, "description": "Task in progress."},
+        208: {"model": TaskModel, "description": "Task is being retried after a failure."},
+        500: {"model": TaskModel, "description": "Task failed or was canceled."},
+        504: {"model": TaskModel, "description": "Task timed out."},
+        **UNAUTHORIZED,
+        **TASK_NOT_FOUND},
+    openapi_extra={"security": USER_SECURITY},
+)
 async def get_task(
-    id: str,
-    show_text_found: bool = False,
+    id: TaskId,
+    show_text_found: Annotated[bool, Query(description="Include the extracted source text in `output.texts_found`. Left out by default because it can be large.")] = False,
     ctx: RequestContext = Depends(TokenVerifier),
 ) -> TaskModel:
     task = task_table.get_task_by_id(task_id=id)
@@ -72,10 +120,18 @@ def read_user(user_id: str, offset: int = 1, limit: int = 10) -> List[TaskModel]
     return tasks
 
 
-@router.get("/task/user/", response_model=Pagination[TaskModel])
+@router.get(
+    "/task/user/",
+    response_model=Pagination[TaskModel],
+    tags=["Tasks"],
+    summary="List my tasks",
+    description="""List the tasks of the authenticated user. Paginated: `offset` is the page number (1-based) and `limit` the page size.""",
+    responses={**UNAUTHORIZED},
+    openapi_extra={"security": USER_SECURITY},
+)
 async def get_tasks_read_user(
-    offset: int = 1,
-    limit: int = 10,
+    offset: PageNumber = 1,
+    limit: PageSize = 10,
     ctx: RequestContext = Depends(TokenVerifier),
 ) -> Pagination[TaskModel]:
     tasks = read_user(user_id=ctx.user_id, offset=offset, limit=limit)
@@ -83,9 +139,20 @@ async def get_tasks_read_user(
     return Pagination[TaskModel](total=total, page=offset, page_size=limit, items=tasks)
 
 
-@router.post("/task/{id}/cancel", response_model=TaskModel)
+@router.post(
+    "/task/{id}/cancel",
+    response_model=TaskModel,
+    tags=["Tasks"],
+    summary="Cancel a task",
+    description="""Cancel a task that has not finished yet (`created`, `queued`, `started` or `in_progress`). Its processing is
+revoked and its status becomes `canceled`.""",
+    responses={400: {"model": ErrorResponse, "description": "The task is already finished and cannot be canceled."},
+        **UNAUTHORIZED,
+        **TASK_NOT_FOUND},
+    openapi_extra={"security": USER_SECURITY},
+)
 async def cancel_task(
-    id: str,
+    id: TaskId,
     ctx: RequestContext = Depends(TokenVerifier),
 ):
     task = task_table.get_task_by_id(task_id=id)
@@ -112,9 +179,20 @@ async def cancel_task(
     return updated
 
 
-@router.delete("/task/{id}", response_model=TaskModel)
+@router.delete(
+    "/task/{id}",
+    response_model=TaskModel,
+    tags=["Tasks"],
+    summary="Delete a task",
+    description="""Delete a finished task together with its stored file and OCR data. An active task (`created`, `queued`, `started` or
+`in_progress`) must be canceled first. Returns the deleted task.""",
+    responses={400: {"model": ErrorResponse, "description": "The task is still active: cancel it first."},
+        **UNAUTHORIZED,
+        **TASK_NOT_FOUND},
+    openapi_extra={"security": USER_SECURITY},
+)
 async def delete_task(
-    id: str,
+    id: TaskId,
     ctx: RequestContext = Depends(TokenVerifier),
 ):
     task = task_table.get_task_by_id(task_id=id)
@@ -181,16 +259,24 @@ def _get_task_or_404(task_id: str) -> TaskModel:
 
 
 class QAItemsChunkCreate(BaseModel):
-    chunk_index: int
-    qa_items: List[QAItem]
-    model_name: Optional[str] = None
+    chunk_index: int = Field(description="Index of the chunk the items belong to")
+    qa_items: List[QAItem] = Field(description="Question/answer pairs to store (replaces the chunk's previous ones)")
+    model_name: Optional[str] = Field(None, description="LLM that generated the pairs")
 
 
-@router.get("/task/{id}/qa", response_model=Pagination[QAItemRowModel])
+@router.get(
+    "/task/{id}/qa",
+    response_model=Pagination[QAItemRowModel],
+    tags=["Task results"],
+    summary="List question/answer pairs",
+    description="""Question/answer pairs generated from the task's source text (requires `extract_qa`). Paginated: `offset` is the page number (1-based) and `limit` the page size.""",
+    responses={**UNAUTHORIZED, **TASK_NOT_FOUND},
+    openapi_extra={"security": USER_SECURITY},
+)
 async def get_task_qa_items(
-    id: str,
-    offset: int = 1,
-    limit: int = 20,
+    id: TaskId,
+    offset: PageNumber = 1,
+    limit: PageSize = 20,
     ctx: RequestContext = Depends(TokenVerifier),
 ) -> Pagination[QAItemRowModel]:
     _get_owned_task(task_id=id, ctx=ctx)
@@ -201,10 +287,18 @@ async def get_task_qa_items(
     )
 
 
-@router.get("/task/{id}/qa/{qa_item_id}", response_model=QAItemRowModel)
+@router.get(
+    "/task/{id}/qa/{qa_item_id}",
+    response_model=QAItemRowModel,
+    tags=["Task results"],
+    summary="Get a question/answer pair",
+    description="""Return one question/answer pair of the task.""",
+    responses={**UNAUTHORIZED, **ITEM_NOT_FOUND},
+    openapi_extra={"security": USER_SECURITY},
+)
 async def get_task_qa_item(
-    id: str,
-    qa_item_id: str,
+    id: TaskId,
+    qa_item_id: QAItemId,
     ctx: RequestContext = Depends(TokenVerifier),
 ) -> QAItemRowModel:
     _get_owned_task(task_id=id, ctx=ctx)
@@ -214,8 +308,17 @@ async def get_task_qa_item(
     return QAItemRowModel.model_validate(row)
 
 
-@router.post("/task/{id}/qa", status_code=201, dependencies=[Depends(verify_internal_service)])
-async def create_task_qa_items(id: str, body: QAItemsChunkCreate):
+@router.post(
+    "/task/{id}/qa",
+    status_code=201,
+    tags=["Internal (worker)"],
+    summary="Store a chunk's question/answer pairs",
+    description="""Replace the question/answer pairs of one chunk. **Internal only**: called by the extraction worker, not by end users.""",
+    responses={**INTERNAL_UNAUTHORIZED, **TASK_NOT_FOUND_INTERNAL},
+    openapi_extra={"security": INTERNAL_SECURITY},
+    dependencies=[Depends(verify_internal_service)],
+)
+async def create_task_qa_items(id: TaskId, body: QAItemsChunkCreate):
     """Replace a chunk's Q&A items. Internal-only: called by the extraction worker, not end users."""
     _get_task_or_404(task_id=id)
     qa_item_table.save_chunk_qa_items(
@@ -224,10 +327,17 @@ async def create_task_qa_items(id: str, body: QAItemsChunkCreate):
     return {"task_id": id, "chunk_index": body.chunk_index, "status": "saved"}
 
 
-@router.delete("/task/{id}/qa/{qa_item_id}")
+@router.delete(
+    "/task/{id}/qa/{qa_item_id}",
+    tags=["Task results"],
+    summary="Delete a question/answer pair",
+    description="""Delete one question/answer pair of the task.""",
+    responses={**UNAUTHORIZED, **ITEM_NOT_FOUND},
+    openapi_extra={"security": USER_SECURITY},
+)
 async def delete_task_qa_item(
-    id: str,
-    qa_item_id: str,
+    id: TaskId,
+    qa_item_id: QAItemId,
     ctx: RequestContext = Depends(TokenVerifier),
 ):
     _get_owned_task(task_id=id, ctx=ctx)
@@ -243,17 +353,25 @@ async def delete_task_qa_item(
 
 
 class EntitiesChunkCreate(BaseModel):
-    chunk_index: int
-    entities: List[EntityModel]
-    relationships: List[RelationshipModel] = []
-    model_name: Optional[str] = None
+    chunk_index: int = Field(description="Index of the chunk the entities belong to")
+    entities: List[EntityModel] = Field(description="Entities to store (replaces the chunk's previous ones)")
+    relationships: List[RelationshipModel] = Field(default_factory=list, description="Local relationships between `entities`, by index")
+    model_name: Optional[str] = Field(None, description="LLM that extracted them")
 
 
-@router.get("/task/{id}/entities", response_model=Pagination[EntityRowModel])
+@router.get(
+    "/task/{id}/entities",
+    response_model=Pagination[EntityRowModel],
+    tags=["Task results"],
+    summary="List entities",
+    description="""Entities extracted from the task's source text (requires `extract_entities`). When `entity_definitions` was given, only entities matching a definition are extracted, and `type` is the definition name. Paginated: `offset` is the page number (1-based) and `limit` the page size.""",
+    responses={**UNAUTHORIZED, **TASK_NOT_FOUND},
+    openapi_extra={"security": USER_SECURITY},
+)
 async def get_task_entities(
-    id: str,
-    offset: int = 1,
-    limit: int = 20,
+    id: TaskId,
+    offset: PageNumber = 1,
+    limit: PageSize = 20,
     ctx: RequestContext = Depends(TokenVerifier),
 ) -> Pagination[EntityRowModel]:
     _get_owned_task(task_id=id, ctx=ctx)
@@ -264,10 +382,18 @@ async def get_task_entities(
     )
 
 
-@router.get("/task/{id}/entities/{entity_id}", response_model=EntityRowModel)
+@router.get(
+    "/task/{id}/entities/{entity_id}",
+    response_model=EntityRowModel,
+    tags=["Task results"],
+    summary="Get an entity",
+    description="""Return one entity of the task.""",
+    responses={**UNAUTHORIZED, **ITEM_NOT_FOUND},
+    openapi_extra={"security": USER_SECURITY},
+)
 async def get_task_entity(
-    id: str,
-    entity_id: str,
+    id: TaskId,
+    entity_id: EntityId,
     ctx: RequestContext = Depends(TokenVerifier),
 ) -> EntityRowModel:
     _get_owned_task(task_id=id, ctx=ctx)
@@ -277,8 +403,18 @@ async def get_task_entity(
     return EntityRowModel.model_validate(row)
 
 
-@router.post("/task/{id}/entities", status_code=201, dependencies=[Depends(verify_internal_service)])
-async def create_task_entities(id: str, body: EntitiesChunkCreate):
+@router.post(
+    "/task/{id}/entities",
+    status_code=201,
+    tags=["Internal (worker)"],
+    summary="Store a chunk's entities",
+    description="""Replace the entities of one chunk and their local relationships. `source_index` and `target_index` of each relationship are resolved
+server-side against `entities`, in the same order. **Internal only**: called by the extraction worker.""",
+    responses={**INTERNAL_UNAUTHORIZED, **TASK_NOT_FOUND_INTERNAL},
+    openapi_extra={"security": INTERNAL_SECURITY},
+    dependencies=[Depends(verify_internal_service)],
+)
+async def create_task_entities(id: TaskId, body: EntitiesChunkCreate):
     """Replace a chunk's entities and their local relationships (source_index/target_index
     resolved server-side against `entities`, in the same order). Internal-only."""
     _get_task_or_404(task_id=id)
@@ -292,10 +428,17 @@ async def create_task_entities(id: str, body: EntitiesChunkCreate):
     return {"task_id": id, "chunk_index": body.chunk_index, "status": "saved"}
 
 
-@router.delete("/task/{id}/entities/{entity_id}")
+@router.delete(
+    "/task/{id}/entities/{entity_id}",
+    tags=["Task results"],
+    summary="Delete an entity",
+    description="""Delete one entity of the task.""",
+    responses={**UNAUTHORIZED, **ITEM_NOT_FOUND},
+    openapi_extra={"security": USER_SECURITY},
+)
 async def delete_task_entity(
-    id: str,
-    entity_id: str,
+    id: TaskId,
+    entity_id: EntityId,
     ctx: RequestContext = Depends(TokenVerifier),
 ):
     _get_owned_task(task_id=id, ctx=ctx)
@@ -311,16 +454,24 @@ async def delete_task_entity(
 
 
 class GlobalRelationshipsCreate(BaseModel):
-    entity_ids_in_order: List[str]
-    relationships: List[RelationshipModel]
-    model_name: Optional[str] = None
+    entity_ids_in_order: List[str] = Field(description="Entity identifiers; `source_index`/`target_index` of the relationships refer to this list")
+    relationships: List[RelationshipModel] = Field(description="Cross-chunk relationships to store (replaces the previous ones)")
+    model_name: Optional[str] = Field(None, description="LLM that inferred them")
 
 
-@router.get("/task/{id}/relationships", response_model=Pagination[RelationshipRowModel])
+@router.get(
+    "/task/{id}/relationships",
+    response_model=Pagination[RelationshipRowModel],
+    tags=["Task results"],
+    summary="List relationships",
+    description="""Relationships between the task's entities (requires `extract_entities`). `chunk_index` is `null` for cross-chunk (global) relationships. Paginated: `offset` is the page number (1-based) and `limit` the page size.""",
+    responses={**UNAUTHORIZED, **TASK_NOT_FOUND},
+    openapi_extra={"security": USER_SECURITY},
+)
 async def get_task_relationships(
-    id: str,
-    offset: int = 1,
-    limit: int = 20,
+    id: TaskId,
+    offset: PageNumber = 1,
+    limit: PageSize = 20,
     ctx: RequestContext = Depends(TokenVerifier),
 ) -> Pagination[RelationshipRowModel]:
     _get_owned_task(task_id=id, ctx=ctx)
@@ -331,10 +482,18 @@ async def get_task_relationships(
     )
 
 
-@router.get("/task/{id}/relationships/{relationship_id}", response_model=RelationshipRowModel)
+@router.get(
+    "/task/{id}/relationships/{relationship_id}",
+    response_model=RelationshipRowModel,
+    tags=["Task results"],
+    summary="Get a relationship",
+    description="""Return one relationship of the task.""",
+    responses={**UNAUTHORIZED, **ITEM_NOT_FOUND},
+    openapi_extra={"security": USER_SECURITY},
+)
 async def get_task_relationship(
-    id: str,
-    relationship_id: str,
+    id: TaskId,
+    relationship_id: RelationshipId,
     ctx: RequestContext = Depends(TokenVerifier),
 ) -> RelationshipRowModel:
     _get_owned_task(task_id=id, ctx=ctx)
@@ -344,8 +503,18 @@ async def get_task_relationship(
     return RelationshipRowModel.model_validate(row)
 
 
-@router.post("/task/{id}/relationships/global", status_code=201, dependencies=[Depends(verify_internal_service)])
-async def create_task_global_relationships(id: str, body: GlobalRelationshipsCreate):
+@router.post(
+    "/task/{id}/relationships/global",
+    status_code=201,
+    tags=["Internal (worker)"],
+    summary="Store the global relationships",
+    description="""Replace the task's cross-chunk (global) relationships; `source_index` and `target_index` are resolved against `entity_ids_in_order`.
+**Internal only**: called by the extraction worker.""",
+    responses={**INTERNAL_UNAUTHORIZED, **TASK_NOT_FOUND_INTERNAL},
+    openapi_extra={"security": INTERNAL_SECURITY},
+    dependencies=[Depends(verify_internal_service)],
+)
+async def create_task_global_relationships(id: TaskId, body: GlobalRelationshipsCreate):
     """Replace the task's cross-chunk ("global") relationships — `source_index`/`target_index`
     resolved against `entity_ids_in_order`. Internal-only."""
     _get_task_or_404(task_id=id)
@@ -358,10 +527,17 @@ async def create_task_global_relationships(id: str, body: GlobalRelationshipsCre
     return {"task_id": id, "status": "saved"}
 
 
-@router.delete("/task/{id}/relationships/{relationship_id}")
+@router.delete(
+    "/task/{id}/relationships/{relationship_id}",
+    tags=["Task results"],
+    summary="Delete a relationship",
+    description="""Delete one relationship of the task.""",
+    responses={**UNAUTHORIZED, **ITEM_NOT_FOUND},
+    openapi_extra={"security": USER_SECURITY},
+)
 async def delete_task_relationship(
-    id: str,
-    relationship_id: str,
+    id: TaskId,
+    relationship_id: RelationshipId,
     ctx: RequestContext = Depends(TokenVerifier),
 ):
     _get_owned_task(task_id=id, ctx=ctx)
@@ -377,15 +553,23 @@ async def delete_task_relationship(
 
 
 class TopicsCreate(BaseModel):
-    topics: List[TopicModel]
-    model_name: Optional[str] = None
+    topics: List[TopicModel] = Field(description="Topics to store (replaces every previous topic of the task)")
+    model_name: Optional[str] = Field(None, description="LLM that classified the document")
 
 
-@router.get("/task/{id}/topics", response_model=Pagination[TopicRowModel])
+@router.get(
+    "/task/{id}/topics",
+    response_model=Pagination[TopicRowModel],
+    tags=["Task results"],
+    summary="List topics",
+    description="""Topics the document was classified into, most confident first (requires `classify_topics`). When `topic_definitions` was given, the classification is steered towards them. Paginated: `offset` is the page number (1-based) and `limit` the page size.""",
+    responses={**UNAUTHORIZED, **TASK_NOT_FOUND},
+    openapi_extra={"security": USER_SECURITY},
+)
 async def get_task_topics(
-    id: str,
-    offset: int = 1,
-    limit: int = 20,
+    id: TaskId,
+    offset: PageNumber = 1,
+    limit: PageSize = 20,
     ctx: RequestContext = Depends(TokenVerifier),
 ) -> Pagination[TopicRowModel]:
     _get_owned_task(task_id=id, ctx=ctx)
@@ -396,18 +580,34 @@ async def get_task_topics(
     )
 
 
-@router.post("/task/{id}/topics", status_code=201, dependencies=[Depends(verify_internal_service)])
-async def create_task_topics(id: str, body: TopicsCreate):
+@router.post(
+    "/task/{id}/topics",
+    status_code=201,
+    tags=["Internal (worker)"],
+    summary="Store the topics",
+    description="""Replace every topic of the task. **Internal only**: called by the classification worker.""",
+    responses={**INTERNAL_UNAUTHORIZED, **TASK_NOT_FOUND_INTERNAL},
+    openapi_extra={"security": INTERNAL_SECURITY},
+    dependencies=[Depends(verify_internal_service)],
+)
+async def create_task_topics(id: TaskId, body: TopicsCreate):
     """Replace every topic for the task. Internal-only: called by the classification worker."""
     _get_task_or_404(task_id=id)
     topic_table.save_topics(task_id=id, topics=body.topics, model_name=body.model_name)
     return {"task_id": id, "status": "saved"}
 
 
-@router.delete("/task/{id}/topics/{topic_id}")
+@router.delete(
+    "/task/{id}/topics/{topic_id}",
+    tags=["Task results"],
+    summary="Delete a topic",
+    description="""Delete one topic of the task.""",
+    responses={**UNAUTHORIZED, **ITEM_NOT_FOUND},
+    openapi_extra={"security": USER_SECURITY},
+)
 async def delete_task_topic(
-    id: str,
-    topic_id: str,
+    id: TaskId,
+    topic_id: TopicId,
     ctx: RequestContext = Depends(TokenVerifier),
 ):
     _get_owned_task(task_id=id, ctx=ctx)
@@ -423,17 +623,25 @@ async def delete_task_topic(
 
 
 class ChunksCreate(BaseModel):
-    chunk_index: int
-    page: Optional[int] = None
-    chunks: List[str]
-    model_name: Optional[str] = None
+    chunk_index: int = Field(description="Index of the map-step window the chunks belong to")
+    page: Optional[int] = Field(None, description="Source page, when known")
+    chunks: List[str] = Field(description="Texts of the semantic chunks, in order")
+    model_name: Optional[str] = Field(None, description="LLM that produced the chunking")
 
 
-@router.get("/task/{id}/chunks", response_model=Pagination[ChunkRowModel])
+@router.get(
+    "/task/{id}/chunks",
+    response_model=Pagination[ChunkRowModel],
+    tags=["Task results"],
+    summary="List semantic chunks",
+    description="""Semantic sub-chunks the source text was split into while summarizing (requires `extract_chunks`), in reading order. Paginated: `offset` is the page number (1-based) and `limit` the page size.""",
+    responses={**UNAUTHORIZED, **TASK_NOT_FOUND},
+    openapi_extra={"security": USER_SECURITY},
+)
 async def get_task_chunks(
-    id: str,
-    offset: int = 1,
-    limit: int = 20,
+    id: TaskId,
+    offset: PageNumber = 1,
+    limit: PageSize = 20,
     ctx: RequestContext = Depends(TokenVerifier),
 ) -> Pagination[ChunkRowModel]:
     _get_owned_task(task_id=id, ctx=ctx)
@@ -444,10 +652,18 @@ async def get_task_chunks(
     )
 
 
-@router.get("/task/{id}/chunks/{chunk_id}", response_model=ChunkRowModel)
+@router.get(
+    "/task/{id}/chunks/{chunk_id}",
+    response_model=ChunkRowModel,
+    tags=["Task results"],
+    summary="Get a chunk",
+    description="""Return one semantic chunk of the task.""",
+    responses={**UNAUTHORIZED, **ITEM_NOT_FOUND},
+    openapi_extra={"security": USER_SECURITY},
+)
 async def get_task_chunk(
-    id: str,
-    chunk_id: str,
+    id: TaskId,
+    chunk_id: ChunkId,
     ctx: RequestContext = Depends(TokenVerifier),
 ) -> ChunkRowModel:
     _get_owned_task(task_id=id, ctx=ctx)
@@ -457,8 +673,17 @@ async def get_task_chunk(
     return ChunkRowModel.model_validate(row)
 
 
-@router.post("/task/{id}/chunks", status_code=201, dependencies=[Depends(verify_internal_service)])
-async def create_task_chunks(id: str, body: ChunksCreate):
+@router.post(
+    "/task/{id}/chunks",
+    status_code=201,
+    tags=["Internal (worker)"],
+    summary="Store a window's semantic chunks",
+    description="""Replace the semantic sub-chunks of one map-step window. **Internal only**: called by the extraction worker.""",
+    responses={**INTERNAL_UNAUTHORIZED, **TASK_NOT_FOUND_INTERNAL},
+    openapi_extra={"security": INTERNAL_SECURITY},
+    dependencies=[Depends(verify_internal_service)],
+)
+async def create_task_chunks(id: TaskId, body: ChunksCreate):
     """Replace the semantic sub-chunks for one map-step window. Internal-only: called by the
     extraction worker right as it sends that window's text to the chunking model."""
     _get_task_or_404(task_id=id)
@@ -468,10 +693,17 @@ async def create_task_chunks(id: str, body: ChunksCreate):
     return {"task_id": id, "chunk_index": body.chunk_index, "status": "saved"}
 
 
-@router.delete("/task/{id}/chunks/{chunk_id}")
+@router.delete(
+    "/task/{id}/chunks/{chunk_id}",
+    tags=["Task results"],
+    summary="Delete a chunk",
+    description="""Delete one semantic chunk of the task.""",
+    responses={**UNAUTHORIZED, **ITEM_NOT_FOUND},
+    openapi_extra={"security": USER_SECURITY},
+)
 async def delete_task_chunk(
-    id: str,
-    chunk_id: str,
+    id: TaskId,
+    chunk_id: ChunkId,
     ctx: RequestContext = Depends(TokenVerifier),
 ):
     _get_owned_task(task_id=id, ctx=ctx)
@@ -486,9 +718,21 @@ async def delete_task_chunk(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/task/{id}/extract-details", status_code=202)
+@router.post(
+    "/task/{id}/extract-details",
+    status_code=202,
+    tags=["Tasks"],
+    summary="(Re)trigger the extractions",
+    description="""Trigger, or re-trigger, the Q&A, entities, relationships and chunks extraction for a task that is already `completed`,
+for instance a task summarized before these extractions existed or without them requested. Runs in the background:
+follow `qa_entities_status` and `relationships_status` on the task, then read the results.""",
+    responses={400: {"model": ErrorResponse, "description": "The task is not completed yet, or has no source text to extract from."},
+        **UNAUTHORIZED,
+        **TASK_NOT_FOUND},
+    openapi_extra={"security": USER_SECURITY},
+)
 async def extract_task_details(
-    id: str,
+    id: TaskId,
     ctx: RequestContext = Depends(TokenVerifier),
 ):
     """Trigger (or retrigger) Q&A/entities/relationships extraction for a task, e.g. for

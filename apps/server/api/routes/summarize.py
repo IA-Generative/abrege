@@ -2,11 +2,10 @@ import json
 from datetime import datetime
 
 from fastapi import APIRouter, status, HTTPException, Depends
-from fastapi.responses import JSONResponse
 
 from api.schemas.content import UrlContent, TextContent
 
-from api.utils.url import check_url, get_status_code_and_code
+from api.utils.url import is_valid_url
 
 from src.clients import celery_app
 from src.schemas.content import URLModel, TextModel
@@ -20,6 +19,7 @@ from api.clients.llm_guard import (
 )
 from api.core.security.token import RequestContext
 from api.core.security.factory import TokenVerifier
+from api.docs import USER_SECURITY, UNAUTHORIZED, ErrorResponse
 
 router = APIRouter(tags=["Text & Url"])
 
@@ -41,12 +41,8 @@ def summarize_content(input: InputModel):
             extras=content.extras,
             url=content.url,
         )
-        if not check_url(url=model_to_send.url):
-            status_code, error_content = get_status_code_and_code(url=model_to_send.url)
-            return JSONResponse(
-                status_code=status_code,
-                content={"msg": f"L'url {model_to_send.url} n'est pas accessible par le systeme detail : {error_content}"},
-            )
+        if not is_valid_url(model_to_send.url):
+            raise HTTPException(status_code=422, detail=f"{model_to_send.url} is not a valid URL")
 
     elif isinstance(content, TextContent):
         model_to_send = TextModel(
@@ -84,6 +80,19 @@ def summarize_content(input: InputModel):
     "/task/text-url",
     status_code=status.HTTP_201_CREATED,
     response_model=TaskModel,
+    summary="Summarize a text or a URL",
+    description="""Create a summarization task from a text or from a URL and queue it. The task is returned right away in `created`
+state: poll `GET /api/task/{id}` until it is `completed`.
+
+The body is JSON: `content` holds either `{"text": "..."}` or `{"url": "..."}`, and `parameters` the summary
+options (language, size, optional Q&A / entities / chunks / topics extractions, with their instructions and definitions).
+For a file, use `POST /api/task/document` instead.""",
+    responses={
+        400: {"model": ErrorResponse, "description": "The prompt was rejected by the guard (bad request)."},
+        422: {"model": ErrorResponse, "description": "Invalid body, unsupported content, or suspicious prompt."},
+        **UNAUTHORIZED,
+    },
+    openapi_extra={"security": USER_SECURITY},
 )
 async def new_summarize_content(
     input: Input,

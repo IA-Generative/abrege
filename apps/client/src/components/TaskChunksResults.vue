@@ -1,15 +1,11 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useAbregeStore } from '@/stores/abrege'
 
 const props = defineProps<{
-  opened: boolean
   taskId: string
   status?: string | null
-}>()
-
-const emit = defineEmits<{
-  (e: 'close'): void
+  errorCode?: number | null
 }>()
 
 const abrege = useAbregeStore()
@@ -44,35 +40,25 @@ function loadPage (page: number) {
   abrege.fetchChunks(props.taskId, page, PAGE_SIZE)
 }
 
-function close () {
-  emit('close')
-}
+onMounted(() => loadPage(1))
 
-watch(
-  () => props.opened,
-  (opened) => {
-    if (opened) {
-      searchQuery.value = ''
-      loadPage(1)
-    }
-  },
-)
+// The extraction keeps running after the summary: reload once it completes (the task is polled).
+watch(() => props.status, (status, previous) => {
+  if (status === 'completed' && previous !== 'completed') {
+    loadPage(1)
+  }
+})
 </script>
 
 <template>
-  <DsfrModal
-    v-if="opened"
-    :opened="opened"
-    title="Chunks"
-    size="xl"
-    @close="close"
-  >
+  <div class="chunks-results">
     <div class="chunks-modal-subtitle-row">
       <p class="fr-text--sm fr-text-mention--grey chunks-modal-subtitle">
-        Tâche {{ taskId }} — {{ abrege.chunksTotal }} chunk(s) sémantique(s)
+        {{ abrege.chunksTotal }} chunk(s) sémantique(s)
       </p>
       <ExtractionStatusBadge
         :status="status"
+        :error-code="errorCode"
         label="Extraction"
       />
     </div>
@@ -139,7 +125,7 @@ watch(
         />
       </div>
     </template>
-  </DsfrModal>
+  </div>
 </template>
 
 <style scoped>

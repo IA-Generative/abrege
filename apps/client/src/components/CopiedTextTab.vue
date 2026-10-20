@@ -3,6 +3,7 @@ import type { components } from '@/api/types/api.schema'
 import { useForm } from 'vee-validate'
 import { watch } from 'vue'
 import * as yup from 'yup'
+import useExtractionFollow from '@/composables/use-extraction-follow'
 import useToaster from '@/composables/use-toaster'
 import { useAbregeStore } from '@/stores/abrege'
 import ParamsResume from './ParamsResume.vue'
@@ -18,6 +19,7 @@ const abregeStore = useAbregeStore()
 const { addErrorMessage } = useToaster()
 
 const resumeResult = ref<TaskModel>()
+const { follow } = useExtractionFollow(resumeResult)
 const isGenerating = ref(false)
 const percentage = computed<number>(() =>
   abregeStore.taskData && abregeStore.taskData.percentage != null
@@ -45,6 +47,7 @@ const onSubmit = handleSubmit(async () => {
     await abregeStore.sendContentAndPoll('text')
     if (abregeStore.taskData && abregeStore.taskData.id) {
       resumeResult.value = await abregeStore.downloadContentSummary(abregeStore.taskData.id)
+      void follow()
     } else {
       throw new Error('Aucune tâche valide trouvée pour le résumé.')
     }
@@ -76,6 +79,7 @@ function newSearch () {
       v-if="resumeResult"
       :resume-result="resumeResult"
       @re-generate="newSearch"
+      @retry="follow(6)"
     />
     <div>
       <DsfrInputGroup

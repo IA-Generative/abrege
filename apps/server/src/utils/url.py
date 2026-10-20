@@ -2,6 +2,8 @@ import os
 import re
 import requests
 
+from src.utils.error_codes import FetchError
+
 
 def is_valid_url(url: str) -> bool:
     regex = re.compile(
@@ -9,18 +11,6 @@ def is_valid_url(url: str) -> bool:
         r"(\S+)$"
     )
     return re.match(regex, url) is not None
-
-
-def is_accessible_url(url: str, timeout: int = 5) -> bool:
-    try:
-        response = requests.head(url, timeout=timeout, allow_redirects=True)
-        return response.status_code < 400
-    except requests.RequestException:
-        return False
-
-
-def check_url(url: str) -> bool:
-    return is_valid_url(url) and is_accessible_url(url)
 
 
 def get_content_type(url: str) -> str:
@@ -51,6 +41,8 @@ def download_file(url: str, folder_dest: str | None = None, use_scrapling: bool 
         from scrapling.fetchers import Fetcher
 
         page = Fetcher.get(url)
+        if page.status >= 400:
+            raise FetchError(f"{url} answered with status {page.status}")
         with open(dest_path, "wb") as f:
             f.write(page.body)
         return dest_path
