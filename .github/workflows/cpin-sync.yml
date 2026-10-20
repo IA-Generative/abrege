@@ -1,4 +1,4 @@
-name: Trigger dso sync
+name: Trigger CPiN sync
 
 # Mirrors a branch to the CPiN GitLab instance, which is what actually builds
 # the Harbor images and packages the chart the clusters deploy.
@@ -14,21 +14,46 @@ name: Trigger dso sync
 # thing for releases, plus pointless GitLab pipelines for every push that
 # is not one (a workflow-only change, a hotfix, docs).
 #
-# Kept as a manual escape hatch for whatever `sync-cpin` cannot cover on its
-# own - re-running a sync that failed, or forcing one outside a release.
+# Kept as a manual escape hatch for whatever the shared `sync-cpin.yml`
+# reusable cannot cover on its own - re-running a sync that failed, or
+# forcing one outside a release.
+#
+# One opt-in automatic case: a pull request carrying the `sync-cpin` label
+# syncs its HEAD branch on labeling and on every push while labeled. That
+# builds the four Harbor images tagged `pr-<N>` (see .gitlab-ci-dso.yml) and
+# nothing else - `helm-package-push` runs on tags/main/dev only, so a PR
+# branch never packages or pushes a chart, and the version/`latest` image
+# writes are gated to dev/main in every before_script.
 on:
   workflow_dispatch:
+  # `labeled` picks up the first labelling, `synchronize` every push while
+  # the label is present - including a server-side "Rebase" button on the PR,
+  # which is just a force-push of the head branch and fires `synchronize`.
+  # The `sync` job's `if:` filters by label, so an unlabeled PR costs nothing.
+  pull_request:
+    types:
+    - labeled
+    - synchronize
 
-# One pipeline per branch on the GitLab side; a second trigger for the same
-# branch would race the first. Superseded runs are safe to drop here - the
-# newest push carries everything the older one did.
+# One pipeline per branch or pull request on the GitLab side; a second
+# trigger for the same ref would race the first. Superseded runs are safe to
+# drop here - the newest push carries everything the older one did.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   sync:
     uses: dnum-mi/fabnum-cicd/.github/workflows/sync-cpin.yml@v0
+    # Manual runs always proceed. Pull requests only when they carry the
+    # opt-in label and are not drafts - ci.yml gates every other job on
+    # drafts the same way.
+    if: >
+      github.event_name == 'workflow_dispatch'
+      || (
+        !github.event.pull_request.draft
+        && contains(github.event.pull_request.labels.*.name, 'sync-cpin')
+      )
     # Posts to the GitLab mirror API and touches nothing on GitHub.
     permissions: {}
     with:
@@ -45,8 +70,19 @@ jobs:
       # variables, from the previous ArnaudTA/actions implementation.
       GIT_MIRROR_PROJECT_ID: ${{ vars.GITLAB_MIRROR_ID }}
       REPOSITORY_NAME: ${{ vars.GILTAB_PROJECT_NAME }}
-      BRANCH_TO_SYNC: ${{ github.ref_name }}
+      # Pull requests sync the head branch, manual runs the dispatched
+      # branch. The branch, not $GITHUB_SHA, is the meaningful reference
+      # here: on a pull request $GITHUB_SHA is the PR's merge commit, and
+      # the mirror's pipeline derives its branch and ref-slug from the
+      # synced ref.
+      BRANCH_TO_SYNC: ${{ github.event.pull_request.head.ref || github.ref_name }}
       SYNC_ALL: false
+      # Set only on pull requests: lets .gitlab-ci-dso.yml tag every image
+      # `pr-<N>` as well, matching this repository's own pr-<N> images on
+      # GHCR. Empty on manual runs, which stay on the plain sha/ref-slug
+      # tags. Concats, not format(): GitHub's format() follows .NET string
+      # syntax, where the literal JSON braces would need {{ }} escaping, and
+      # an escaped }} would truncate the enclosing ${{ }} expression.
+      ADDITIONAL_VARIABLES: ${{ github.event.pull_request.number > 0 && '{"GITHUB_PR_NUMBER":"' || '' }}${{ github.event.pull_request.number > 0 && github.event.pull_request.number || '' }}${{ github.event.pull_request.number > 0 && '"}' || '' }}
     secrets:
       GIT_MIRROR_TOKEN: ${{ secrets.GITLAB_TRIGGER_TOKEN }}
-

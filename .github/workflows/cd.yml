@@ -207,9 +207,11 @@ jobs:
     - release
     - bump-chart
     if: ${{ needs.release.outputs.release-created == 'true' }}
-    # The only automatic CPiN sync left: dso-auto-sync.yaml is manual-only
-    # precisely because this job already covers every push that matters - and
-    # only fires once bump-chart has actually landed the version bump.
+    # The only automatic CPiN sync left for releases: cpin-sync.yml (see that
+    # file) is manual and labeled-PR only, precisely because this job already
+    # covers every release push - and does so correctly, since it only fires
+    # once bump-chart has actually landed the version bump, instead of racing
+    # it the way a plain per-push trigger would.
     permissions: {}
     with:
       GITLAB_URL: ${{ vars.GITLAB_URL }}
