@@ -41,6 +41,7 @@ from src.clients import celery_app, file_connector, redis_client
 from src.clients.internal_api import internal_api_client
 from src import __version__
 from src.utils.logger import logger_abrege
+from src.utils.environment import resolve_environment
 
 import sentry_sdk
 from sentry_sdk.integrations.celery import CeleryIntegration
@@ -53,7 +54,7 @@ if _sentry_settings.SENTRY_WORKER_DSN:
         sentry_sdk.init(
             dsn=_sentry_settings.SENTRY_WORKER_DSN,
             send_default_pii=_sentry_settings.SEND_DEFAULT_PII,
-            environment=os.getenv("ENVIRONMENT", "development"),
+            environment=resolve_environment(),
             integrations=[CeleryIntegration()],
         )
     except Exception as e:

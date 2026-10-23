@@ -1,5 +1,5 @@
 import os
-from src.utils.url import get_content_type, download_file
+from src.utils.url import get_content_type, download_file, sanitize_broker_url
 
 
 def test_get_content_type():
@@ -50,3 +50,20 @@ def test_download_type():
     download_file(url=url_audio)
     assert os.path.exists("sample-3s.wav")
     os.remove("sample-3s.wav")
+
+
+def test_sanitize_broker_url_masks_password():
+    assert sanitize_broker_url("redis://:secret@redis-host:6379/0") == "redis://:***@redis-host:6379/0"
+    assert sanitize_broker_url("rediss://user:secret@redis-host:6379/0") == "rediss://user:***@redis-host:6379/0"
+
+
+def test_sanitize_broker_url_masks_every_sentinel_url():
+    url = "sentinel://:secret@s1:26379/0;sentinel://:secret@s2:26379/0"
+    assert sanitize_broker_url(url) == "sentinel://:***@s1:26379/0;sentinel://:***@s2:26379/0"
+    assert "secret" not in sanitize_broker_url(url)
+
+
+def test_sanitize_broker_url_leaves_unauthenticated_url_intact():
+    """Sans authentification, l'URL doit rester lisible telle quelle : c'est ce
+    qui rend le probleme visible dans les logs de demarrage."""
+    assert sanitize_broker_url("redis://redis-host:6379/0") == "redis://redis-host:6379/0"
