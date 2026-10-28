@@ -33,6 +33,15 @@ def test_rejects_wrong_token(client, monkeypatch: pytest.MonkeyPatch):
     assert response.status_code == 401
 
 
+def test_rejects_token_sharing_a_prefix_with_the_secret(client, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(internal_module, "INTERNAL_SERVICE_TOKEN", "secret")
+
+    for candidate in ("secre", "secret!", "secreT"):
+        response = client.get("/protected", headers={"x-internal-token": candidate})
+
+        assert response.status_code == 401, candidate
+
+
 def test_accepts_correct_token(client, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(internal_module, "INTERNAL_SERVICE_TOKEN", "secret")
 
