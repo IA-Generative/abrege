@@ -1,7 +1,7 @@
 #######################
 # Step 1: Base target #
 #######################
-FROM python:3.11.9-slim AS base
+FROM python:3.11-slim AS base
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 RUN apt-get update -y && \
