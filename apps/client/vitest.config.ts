@@ -7,7 +7,8 @@ export default mergeConfig(
   defineConfig({
     test: {
       environment: 'jsdom',
-      exclude: [...configDefaults.exclude, 'e2e/*'],
+      // Playwright specs live under playwright/e2e and need a browser plus a running stack: they run through `test:e2e-ci`, not Vitest.
+      exclude: [...configDefaults.exclude, 'playwright/**'],
       root: fileURLToPath(new URL('./', import.meta.url)),
       setupFiles: [
         fileURLToPath(new URL('./vitest-setup.ts', import.meta.url)),
