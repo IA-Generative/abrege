@@ -29,7 +29,9 @@ def test_api_has_a_real_description_and_tag_descriptions(spec):
 def test_every_operation_has_a_summary_and_a_description(spec):
     missing = [f"{m} {p}" for m, p, op in _operations(spec) if not op.get("description")]
     assert not missing, f"operations without description: {missing}"
-    default_summaries = [f"{m} {p}" for m, p, op in _operations(spec) if op.get("summary") == op["operationId"].split("_api_")[0].replace("_", " ").title()]
+    default_summaries = [
+        f"{m} {p}" for m, p, op in _operations(spec) if op.get("summary") == op["operationId"].split("_api_")[0].replace("_", " ").title()
+    ]
     assert not default_summaries, f"operations still using the auto-generated summary: {default_summaries}"
 
 

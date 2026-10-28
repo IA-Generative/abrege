@@ -71,4 +71,3 @@ def test_cause_chain_is_followed():
             raise RuntimeError("wrapper") from e
     except RuntimeError as exc:
         assert classify_error(exc) == ErrorCode.API_UNREACHABLE
-

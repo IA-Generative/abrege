@@ -43,6 +43,7 @@ class CurrentUser(BaseModel):
 class LogoutResponse(BaseModel):
     redirectUrl: str = Field(description="Keycloak end-session URL the browser should be sent to to finish logging out")
 
+
 _keycloak_openid = keycloak_client.keycloak_openid
 _keycloak_settings = keycloak_client.keycloak_settings
 _session_store = keycloak_client.session_store

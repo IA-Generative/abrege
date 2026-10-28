@@ -69,9 +69,7 @@ class InternalApiClient:
     def save_topics(self, task_id: str, topics: list[dict], model_name: str | None = None) -> None:
         self._post(f"/api/task/{task_id}/topics", {"topics": topics, "model_name": model_name})
 
-    def save_chunks(
-        self, task_id: str, chunk_index: int, page: int | None, chunks: list[str], model_name: str | None = None
-    ) -> None:
+    def save_chunks(self, task_id: str, chunk_index: int, page: int | None, chunks: list[str], model_name: str | None = None) -> None:
         self._post(
             f"/api/task/{task_id}/chunks",
             {"chunk_index": chunk_index, "page": page, "chunks": chunks, "model_name": model_name},

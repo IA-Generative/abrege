@@ -68,14 +68,7 @@ class QAItemTable:
     def get_qa_items_by_task_paginated(self, task_id: str, page: int = 1, page_size: int = 20) -> List[QAItemRow]:
         offset = (page - 1) * page_size
         with get_db() as db:
-            rows = (
-                db.query(QAItemRow)
-                .filter(QAItemRow.task_id == task_id)
-                .order_by(QAItemRow.chunk_index)
-                .offset(offset)
-                .limit(page_size)
-                .all()
-            )
+            rows = db.query(QAItemRow).filter(QAItemRow.task_id == task_id).order_by(QAItemRow.chunk_index).offset(offset).limit(page_size).all()
             db.expunge_all()
             return rows
 

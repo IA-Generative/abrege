@@ -2,6 +2,9 @@
 
 declare const __APP_VERSION__: string
 
+// Side-effect stylesheet entry of the DSFR Vue package, which ships no type declaration for it.
+declare module '@gouvminint/vue-dsfr/styles'
+
 declare module 'virtual:pwa-register/vue' {
   import type { Ref } from 'vue'
 

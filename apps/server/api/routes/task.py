@@ -76,19 +76,23 @@ router = APIRouter()
 
 `position` is the rank in the processing queue while the task waits. The side extractions
 (Q&A, entities, chunks, topics) have their own `*_status` fields, independent of `status`.""",
-    responses={201: {"model": TaskModel, "description": "Task created, not queued yet."},
+    responses={
+        201: {"model": TaskModel, "description": "Task created, not queued yet."},
         202: {"model": TaskModel, "description": "Task queued or started."},
         206: {"model": TaskModel, "description": "Task in progress."},
         208: {"model": TaskModel, "description": "Task is being retried after a failure."},
         500: {"model": TaskModel, "description": "Task failed or was canceled."},
         504: {"model": TaskModel, "description": "Task timed out."},
         **UNAUTHORIZED,
-        **TASK_NOT_FOUND},
+        **TASK_NOT_FOUND,
+    },
     openapi_extra={"security": USER_SECURITY},
 )
 async def get_task(
     id: TaskId,
-    show_text_found: Annotated[bool, Query(description="Include the extracted source text in `output.texts_found`. Left out by default because it can be large.")] = False,
+    show_text_found: Annotated[
+        bool, Query(description="Include the extracted source text in `output.texts_found`. Left out by default because it can be large.")
+    ] = False,
     ctx: RequestContext = Depends(TokenVerifier),
 ) -> TaskModel:
     task = task_table.get_task_by_id(task_id=id)
@@ -146,9 +150,11 @@ async def get_tasks_read_user(
     summary="Cancel a task",
     description="""Cancel a task that has not finished yet (`created`, `queued`, `started` or `in_progress`). Its processing is
 revoked and its status becomes `canceled`.""",
-    responses={400: {"model": ErrorResponse, "description": "The task is already finished and cannot be canceled."},
+    responses={
+        400: {"model": ErrorResponse, "description": "The task is already finished and cannot be canceled."},
         **UNAUTHORIZED,
-        **TASK_NOT_FOUND},
+        **TASK_NOT_FOUND,
+    },
     openapi_extra={"security": USER_SECURITY},
 )
 async def cancel_task(
@@ -186,9 +192,7 @@ async def cancel_task(
     summary="Delete a task",
     description="""Delete a finished task together with its stored file and OCR data. An active task (`created`, `queued`, `started` or
 `in_progress`) must be canceled first. Returns the deleted task.""",
-    responses={400: {"model": ErrorResponse, "description": "The task is still active: cancel it first."},
-        **UNAUTHORIZED,
-        **TASK_NOT_FOUND},
+    responses={400: {"model": ErrorResponse, "description": "The task is still active: cancel it first."}, **UNAUTHORIZED, **TASK_NOT_FOUND},
     openapi_extra={"security": USER_SECURITY},
 )
 async def delete_task(
@@ -282,9 +286,7 @@ async def get_task_qa_items(
     _get_owned_task(task_id=id, ctx=ctx)
     rows = qa_item_table.get_qa_items_by_task_paginated(task_id=id, page=offset, page_size=limit)
     total = qa_item_table.count_qa_items_by_task(task_id=id)
-    return Pagination[QAItemRowModel](
-        total=total, page=offset, page_size=limit, items=[QAItemRowModel.model_validate(row) for row in rows]
-    )
+    return Pagination[QAItemRowModel](total=total, page=offset, page_size=limit, items=[QAItemRowModel.model_validate(row) for row in rows])
 
 
 @router.get(
@@ -321,9 +323,7 @@ async def get_task_qa_item(
 async def create_task_qa_items(id: TaskId, body: QAItemsChunkCreate):
     """Replace a chunk's Q&A items. Internal-only: called by the extraction worker, not end users."""
     _get_task_or_404(task_id=id)
-    qa_item_table.save_chunk_qa_items(
-        task_id=id, chunk_index=body.chunk_index, qa_items=body.qa_items, model_name=body.model_name
-    )
+    qa_item_table.save_chunk_qa_items(task_id=id, chunk_index=body.chunk_index, qa_items=body.qa_items, model_name=body.model_name)
     return {"task_id": id, "chunk_index": body.chunk_index, "status": "saved"}
 
 
@@ -377,9 +377,7 @@ async def get_task_entities(
     _get_owned_task(task_id=id, ctx=ctx)
     rows = entity_table.get_entities_by_task_paginated(task_id=id, page=offset, page_size=limit)
     total = entity_table.count_entities_by_task(task_id=id)
-    return Pagination[EntityRowModel](
-        total=total, page=offset, page_size=limit, items=[EntityRowModel.model_validate(row) for row in rows]
-    )
+    return Pagination[EntityRowModel](total=total, page=offset, page_size=limit, items=[EntityRowModel.model_validate(row) for row in rows])
 
 
 @router.get(
@@ -575,9 +573,7 @@ async def get_task_topics(
     _get_owned_task(task_id=id, ctx=ctx)
     rows = topic_table.get_topics_by_task_paginated(task_id=id, page=offset, page_size=limit)
     total = topic_table.count_topics_by_task(task_id=id)
-    return Pagination[TopicRowModel](
-        total=total, page=offset, page_size=limit, items=[TopicRowModel.model_validate(row) for row in rows]
-    )
+    return Pagination[TopicRowModel](total=total, page=offset, page_size=limit, items=[TopicRowModel.model_validate(row) for row in rows])
 
 
 @router.post(
@@ -647,9 +643,7 @@ async def get_task_chunks(
     _get_owned_task(task_id=id, ctx=ctx)
     rows = chunk_table.get_chunks_by_task_paginated(task_id=id, page=offset, page_size=limit)
     total = chunk_table.count_chunks_by_task(task_id=id)
-    return Pagination[ChunkRowModel](
-        total=total, page=offset, page_size=limit, items=[ChunkRowModel.model_validate(row) for row in rows]
-    )
+    return Pagination[ChunkRowModel](total=total, page=offset, page_size=limit, items=[ChunkRowModel.model_validate(row) for row in rows])
 
 
 @router.get(
@@ -687,9 +681,7 @@ async def create_task_chunks(id: TaskId, body: ChunksCreate):
     """Replace the semantic sub-chunks for one map-step window. Internal-only: called by the
     extraction worker right as it sends that window's text to the chunking model."""
     _get_task_or_404(task_id=id)
-    chunk_table.save_chunk_group(
-        task_id=id, chunk_index=body.chunk_index, page=body.page, chunks=body.chunks, model_name=body.model_name
-    )
+    chunk_table.save_chunk_group(task_id=id, chunk_index=body.chunk_index, page=body.page, chunks=body.chunks, model_name=body.model_name)
     return {"task_id": id, "chunk_index": body.chunk_index, "status": "saved"}
 
 
@@ -726,9 +718,11 @@ async def delete_task_chunk(
     description="""Trigger, or re-trigger, the Q&A, entities, relationships and chunks extraction for a task that is already `completed`,
 for instance a task summarized before these extractions existed or without them requested. Runs in the background:
 follow `qa_entities_status` and `relationships_status` on the task, then read the results.""",
-    responses={400: {"model": ErrorResponse, "description": "The task is not completed yet, or has no source text to extract from."},
+    responses={
+        400: {"model": ErrorResponse, "description": "The task is not completed yet, or has no source text to extract from."},
         **UNAUTHORIZED,
-        **TASK_NOT_FOUND},
+        **TASK_NOT_FOUND,
+    },
     openapi_extra={"security": USER_SECURITY},
 )
 async def extract_task_details(

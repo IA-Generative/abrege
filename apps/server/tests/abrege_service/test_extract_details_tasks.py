@@ -322,7 +322,10 @@ def test_compute_global_relationships_marks_relationships_completed(monkeypatch:
     entity_table.save_chunk_entities(
         task_id=task_id,
         chunk_index=0,
-        entities=[EntityModel(type="PERSON", text="Alice", contexts=[], pages=[1]), EntityModel(type="ORGANIZATION", text="Acme", contexts=[], pages=[1])],
+        entities=[
+            EntityModel(type="PERSON", text="Alice", contexts=[], pages=[1]),
+            EntityModel(type="ORGANIZATION", text="Acme", contexts=[], pages=[1]),
+        ],
         relationships=[],
     )
     monkeypatch.setattr(
@@ -348,7 +351,10 @@ def test_compute_global_relationships_marks_relationships_failed_on_error(monkey
     entity_table.save_chunk_entities(
         task_id=task_id,
         chunk_index=0,
-        entities=[EntityModel(type="PERSON", text="Alice", contexts=[], pages=[1]), EntityModel(type="ORGANIZATION", text="Acme", contexts=[], pages=[1])],
+        entities=[
+            EntityModel(type="PERSON", text="Alice", contexts=[], pages=[1]),
+            EntityModel(type="ORGANIZATION", text="Acme", contexts=[], pages=[1]),
+        ],
         relationships=[],
     )
     monkeypatch.setattr(main, "global_relationship_runnable", SimpleNamespace(ainvoke=AsyncMock(side_effect=RuntimeError("llm down"))))
@@ -439,7 +445,10 @@ def test_extract_task_details_marks_qa_entities_in_progress(monkeypatch: pytest.
             status=TaskStatus.COMPLETED.value,
             parameters=SummaryParameters(extract_qa=False, qa_per_chunk=3, language="French"),
             output=ResultModel(
-                type="flat", created_at=0, model_name="mock", model_version="mock",
+                type="flat",
+                created_at=0,
+                model_name="mock",
+                model_version="mock",
                 texts_found=["Un texte assez court pour tenir dans un seul chunk."],
             ),
         ),

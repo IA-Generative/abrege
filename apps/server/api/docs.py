@@ -59,7 +59,10 @@ not a row offset, and `limit` is the page size. Responses carry `total`, `page`,
 """
 
 TAGS_METADATA = [
-    {"name": "Auth", "description": "Browser login (OAuth2 + PKCE through the backend), token exchange for scripts and the SDK, and the current user."},
+    {
+        "name": "Auth",
+        "description": "Browser login (OAuth2 + PKCE through the backend), token exchange for scripts and the SDK, and the current user.",
+    },
     {"name": "Text & Url", "description": "Submit a text or a URL to summarize."},
     {"name": "Document", "description": "Upload a document (PDF, Word, image…) to summarize."},
     {"name": "Tasks", "description": "Follow, list, cancel and delete tasks, and (re)trigger the optional extractions."},
@@ -68,7 +71,10 @@ TAGS_METADATA = [
         "description": "Read (and delete) the optional extraction results of a task: Q&A, entities, relationships, chunks and topics. "
         "Each is only populated if it was requested in the task `parameters`.",
     },
-    {"name": "Internal (worker)", "description": "Endpoints called by the Celery worker to store extraction results. Not for end users: they require the `X-Internal-Token` header."},
+    {
+        "name": "Internal (worker)",
+        "description": "Endpoints called by the Celery worker to store extraction results. Not for end users: they require the `X-Internal-Token` header.",
+    },
     {"name": "Health", "description": "Service and dependency health."},
 ]
 

@@ -1,7 +1,8 @@
 FROM python:3.11-slim AS deps
 
 # Copier les binaires uv - only needed to build the venv, not to run the app afterwards.
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+# Pinned to the uv release that wrote uv.lock, so image builds and local `uv sync` runs resolve alike.
+COPY --from=ghcr.io/astral-sh/uv:0.13.1 /uv /uvx /bin/
 
 # Réduction des interactions lors de l'installation
 ENV DEBIAN_FRONTEND=noninteractive

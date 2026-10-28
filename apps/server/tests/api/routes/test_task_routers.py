@@ -577,9 +577,7 @@ def test_create_task_chunks_saves(internal_client):
 
     assert response.status_code == 201
     assert response.json() == {"task_id": "123", "chunk_index": 0, "status": "saved"}
-    chunk_table.save_chunk_group.assert_called_once_with(
-        task_id="123", chunk_index=0, page=1, chunks=["A", "B"], model_name="gpt-4"
-    )
+    chunk_table.save_chunk_group.assert_called_once_with(task_id="123", chunk_index=0, page=1, chunks=["A", "B"], model_name="gpt-4")
 
 
 def test_create_task_chunks_requires_internal_auth(client):

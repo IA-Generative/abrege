@@ -1,7 +1,11 @@
 # dev
 FROM docker.io/node:24.22.1-slim AS dev
 
-RUN npm install --ignore-scripts --location=global pnpm@10.17.1
+# Matches `packageManager` in package.json. Declared inside the stage: an ARG placed before
+# `FROM` is not visible to the stage's own instructions.
+ARG PNPM_VERSION=11.24.0
+
+RUN npm install --ignore-scripts --location=global pnpm@${PNPM_VERSION}
 
 WORKDIR /app
 # Single, non-recursive chown of the empty directory: switching to `node` before
@@ -11,8 +15,11 @@ RUN chown node:node /app
 
 USER node
 
-COPY --chown=node:node ./package.json ./
-RUN pnpm install --ignore-scripts
+# The lockfile and pnpm-workspace.yaml have to land *before* the install, not with the
+# rest of the sources: installing from package.json alone re-resolves every range, so
+# the image would ignore the committed lockfile and the workspace's supply-chain policy.
+COPY --chown=node:node ./package.json ./pnpm-lock.yaml ./pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile --ignore-scripts
 COPY --chown=node:node . .
 CMD ["pnpm", "run", "dev"]
 
@@ -24,7 +31,7 @@ RUN pnpm run build
 
 
 # prod
-FROM docker.io/nginxinc/nginx-unprivileged:1.28.0-alpine AS prod
+FROM docker.io/nginxinc/nginx-unprivileged:1.31.6-alpine AS prod
 
 # The base image's CA bundle still trusts the eMudhra emSign ECC Root CA - G3, whose
 # intermediates have publicly recoverable private keys. Alpine's ca-certificates

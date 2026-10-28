@@ -196,9 +196,7 @@ class EntityTable:
 
     def delete_relationship_by_id(self, task_id: str, relationship_id: str) -> bool:
         with get_db() as db:
-            deleted = db.query(RelationshipRow).filter(
-                RelationshipRow.task_id == task_id, RelationshipRow.id == relationship_id
-            ).delete()
+            deleted = db.query(RelationshipRow).filter(RelationshipRow.task_id == task_id, RelationshipRow.id == relationship_id).delete()
             db.commit()
             return deleted > 0
 

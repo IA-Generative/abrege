@@ -312,7 +312,9 @@ class SyncAbregeClient:
     def get_task_relationships(self, task_id: str, page: int = 1, page_size: int = 20) -> Pagination[RelationshipRow]:
         """Get a page of relationships between entities (local + cross-chunk "global" ones,
         the latter with `chunk_index=None`) - only if `extract_entities` was requested."""
-        response = self._request("GET", f"/api/task/{task_id}/relationships", params={"offset": page, "limit": page_size})
+        response = self._request(
+            "GET", f"/api/task/{task_id}/relationships", params={"offset": page, "limit": page_size}
+        )
         return Pagination[RelationshipRow](**response.json())
 
     def get_task_relationship(self, task_id: str, relationship_id: str) -> RelationshipRow:

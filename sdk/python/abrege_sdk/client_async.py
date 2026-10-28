@@ -312,7 +312,9 @@ class AsyncAbregeClient:
 
     async def get_task_entities(self, task_id: str, page: int = 1, page_size: int = 20) -> Pagination[EntityRow]:
         """Get a page of entities extracted for a task (only if `extract_entities` was requested)."""
-        response = await self._request("GET", f"/api/task/{task_id}/entities", params={"offset": page, "limit": page_size})
+        response = await self._request(
+            "GET", f"/api/task/{task_id}/entities", params={"offset": page, "limit": page_size}
+        )
         return Pagination[EntityRow](**response.json())
 
     async def get_task_entity(self, task_id: str, entity_id: str) -> EntityRow:
@@ -322,10 +324,14 @@ class AsyncAbregeClient:
     async def delete_task_entity(self, task_id: str, entity_id: str) -> None:
         await self._request("DELETE", f"/api/task/{task_id}/entities/{entity_id}")
 
-    async def get_task_relationships(self, task_id: str, page: int = 1, page_size: int = 20) -> Pagination[RelationshipRow]:
+    async def get_task_relationships(
+        self, task_id: str, page: int = 1, page_size: int = 20
+    ) -> Pagination[RelationshipRow]:
         """Get a page of relationships between entities (local + cross-chunk "global" ones,
         the latter with `chunk_index=None`) - only if `extract_entities` was requested."""
-        response = await self._request("GET", f"/api/task/{task_id}/relationships", params={"offset": page, "limit": page_size})
+        response = await self._request(
+            "GET", f"/api/task/{task_id}/relationships", params={"offset": page, "limit": page_size}
+        )
         return Pagination[RelationshipRow](**response.json())
 
     async def get_task_relationship(self, task_id: str, relationship_id: str) -> RelationshipRow:
@@ -338,7 +344,9 @@ class AsyncAbregeClient:
     async def get_task_topics(self, task_id: str, page: int = 1, page_size: int = 20) -> Pagination[TopicRow]:
         """Get a page of free-form topics classified for a task (only if `classify_topics` was
         requested), ordered by descending confidence."""
-        response = await self._request("GET", f"/api/task/{task_id}/topics", params={"offset": page, "limit": page_size})
+        response = await self._request(
+            "GET", f"/api/task/{task_id}/topics", params={"offset": page, "limit": page_size}
+        )
         return Pagination[TopicRow](**response.json())
 
     async def delete_task_topic(self, task_id: str, topic_id: str) -> None:
@@ -347,7 +355,9 @@ class AsyncAbregeClient:
     async def get_task_chunks(self, task_id: str, page: int = 1, page_size: int = 20) -> Pagination[ChunkRow]:
         """Get a page of semantic sub-chunks a task was summarized from (only if
         `extract_chunks` was requested)."""
-        response = await self._request("GET", f"/api/task/{task_id}/chunks", params={"offset": page, "limit": page_size})
+        response = await self._request(
+            "GET", f"/api/task/{task_id}/chunks", params={"offset": page, "limit": page_size}
+        )
         return Pagination[ChunkRow](**response.json())
 
     async def get_task_chunk(self, task_id: str, chunk_id: str) -> ChunkRow:

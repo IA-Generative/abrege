@@ -163,7 +163,7 @@ extractions with their instructions and definitions). `extras` is a JSON object 
 )
 async def new_summarize_doc(
     file: UploadFile = File(..., description="The document to summarize."),
-    prompt: Optional[str] = Form(None, description="Extra instruction appended after the summary request, e.g. \"use a formal tone\"."),
+    prompt: Optional[str] = Form(None, description='Extra instruction appended after the summary request, e.g. "use a formal tone".'),
     parameters: Optional[str] = Form(
         default="",
         description="Summary options as a JSON string (language, size, extract_qa, extract_entities, entity_definitions, classify_topics, topic_definitions…). "
