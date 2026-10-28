@@ -3,13 +3,19 @@ import zipfile
 from fastapi import UploadFile
 
 
+# libmagic 5.46+ reports a bare `application/octet-stream` for the first kilobyte of an
+# Office Open XML file, where earlier releases reported `application/zip`: both are
+# inspected as archives.
+ZIP_CANDIDATE_MIME_TYPES = ("application/zip", "application/octet-stream")
+
+
 def get_content_type(file: UploadFile) -> str:
     mime = magic.Magic(mime=True)
 
     content = file.file.read(1024)
     mime_type = mime.from_buffer(content)
 
-    if mime_type == "application/zip":
+    if mime_type in ZIP_CANDIDATE_MIME_TYPES:
         try:
             with zipfile.ZipFile(file.file, "r") as archive:
                 files = archive.namelist()
