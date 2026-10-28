@@ -2,7 +2,8 @@
 # Step 1: Base target #
 #######################
 FROM python:3.11-slim AS base
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+# Pinned to the uv release that wrote uv.lock, so image builds and local `uv sync` runs resolve alike.
+COPY --from=ghcr.io/astral-sh/uv:0.13.1 /uv /uvx /bin/
 
 RUN apt-get update -y && \
     apt-get install -y --no-install-recommends libmagic1 && \

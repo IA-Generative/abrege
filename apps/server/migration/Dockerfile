@@ -1,5 +1,6 @@
 FROM python:3.11-slim
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+# Pinned to the uv release that wrote uv.lock, so image builds and local `uv sync` runs resolve alike.
+COPY --from=ghcr.io/astral-sh/uv:0.13.1 /uv /uvx /bin/
 ENV UV_CACHE_DIR=/app/.cache
 WORKDIR /app
 COPY apps/server/migration/alembic.ini /app/
