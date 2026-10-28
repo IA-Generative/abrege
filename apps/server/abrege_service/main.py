@@ -103,6 +103,8 @@ summary_service = LangChainAsyncMapReduceService(
     max_token=int(os.getenv("MAX_MODEL_TOKEN", 128_000)),
     max_concurrency=int(os.getenv("MAX_CONCURRENCY_LLM_CALL", 5)),
 )
+
+
 def _llm_for(model_name: str | None) -> ChatOpenAI:
     """The side extractions (Q&A, entities, chunking, topics) can each be pinned to their
     own model via env vars; unset (the default) reuses the summary's own `llm` instance."""
@@ -120,6 +122,7 @@ qa_llm = _llm_for(openai_settings.QA_MODEL_NAME)
 entity_llm = _llm_for(openai_settings.ENTITY_MODEL_NAME)
 chunk_llm = _llm_for(openai_settings.CHUNK_MODEL_NAME)
 topic_llm = _llm_for(openai_settings.TOPIC_MODEL_NAME)
+
 
 def _new_llm(model_name: str | None, http_async_client) -> ChatOpenAI:
     return ChatOpenAI(
@@ -263,10 +266,7 @@ def extract_chunk_details(self, payload: str):
             internal_api_client.save_chunk_qa_items(
                 task_id=task_id,
                 chunk_index=chunk_index,
-                qa_items=[
-                    {"page": page, "source_text": data["text"], "question": item.question, "answer": item.answer}
-                    for item in qa_output.items
-                ],
+                qa_items=[{"page": page, "source_text": data["text"], "question": item.question, "answer": item.answer} for item in qa_output.items],
                 model_name=qa_llm.model_name,
             )
         if want_entities:
@@ -298,7 +298,10 @@ def extract_chunk_details(self, payload: str):
         redis_client.delete(f"chunk_pending:{task_id}")
         if want_entities:
             task_table.update_task(
-                task_id=task_id, form_data=TaskUpdateForm(qa_entities_status="completed", qa_entities_error=None, relationships_status="pending", relationships_error=None)
+                task_id=task_id,
+                form_data=TaskUpdateForm(
+                    qa_entities_status="completed", qa_entities_error=None, relationships_status="pending", relationships_error=None
+                ),
             )
             celery_app.send_task(
                 "worker.tasks.compute_global_relationships",

@@ -63,13 +63,21 @@ def test_definitions_are_capped():
 def test_parameters_serialize_the_way_the_api_expects():
     params = SummaryParameters(
         extract_entities=True,
-        entity_definitions=[EntityDefinition(name="montant", type="number", definition="Somme en euros", examples=["1 200 €"])],
+        entity_definitions=[
+            EntityDefinition(name="montant", type="number", definition="Somme en euros", examples=["1 200 €"])
+        ],
         classify_topics=True,
         topic_definitions=[TopicDefinition(name="finance")],
     )
     dumped = params.model_dump(mode="json")
     assert dumped["entity_definitions"] == [
-        {"name": "montant", "definition": "Somme en euros", "examples": ["1 200 €"], "type": "number", "enum_values": []}
+        {
+            "name": "montant",
+            "definition": "Somme en euros",
+            "examples": ["1 200 €"],
+            "type": "number",
+            "enum_values": [],
+        }
     ]
     assert dumped["topic_definitions"] == [{"name": "finance", "definition": None, "examples": []}]
     assert SummaryParameters.model_validate_json(params.model_dump_json()) == params

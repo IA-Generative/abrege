@@ -55,7 +55,10 @@ class TaskModel(BaseModel):
     id: str = Field(description="Unique identifier of the task")
     user_id: str = Field(description="Identifier of the user who owns the task")
     type: str = Field(description="Kind of task (`summary`)")
-    status: str = Field("queued", description="Lifecycle status of the summary: created, queued, started, in_progress, completed, failed, retrying, canceled or timeout")
+    status: str = Field(
+        "queued",
+        description="Lifecycle status of the summary: created, queued, started, in_progress, completed, failed, retrying, canceled or timeout",
+    )
     group_id: Optional[str] = Field(None, description="Identifier of the group the task belongs to, if any")
     percentage: Optional[float] = Field(None, description="Progress of the summary, between 0 and 1")
     input: Optional[Union[URLModel, DocumentModel, TextModel]] = Field(None, description="What was submitted: a URL, a document or a text")
@@ -65,11 +68,19 @@ class TaskModel(BaseModel):
 
     created_at: int = Field(description="Creation time, Unix timestamp (seconds)")
     updated_at: int = Field(description="Last update time, Unix timestamp (seconds)")
-    extras: Optional[Dict[str, Any]] = Field(None, description="Free-form extra information (e.g. `error_code`, a numeric code such as `101`, and `error` when the task failed)")
+    extras: Optional[Dict[str, Any]] = Field(
+        None, description="Free-form extra information (e.g. `error_code`, a numeric code such as `101`, and `error` when the task failed)"
+    )
     content_hash: Optional[str] = Field(None, description="Hash of the input content, used to reuse cached extraction work")
-    qa_entities_status: Optional[str] = Field(None, description="Status of the Q&A, entities and chunks extraction: `null` if not requested, otherwise in_progress, completed or failed")
-    relationships_status: Optional[str] = Field(None, description="Status of the cross-chunk relationships pass: `null` if not requested, otherwise pending, completed or failed")
-    topics_status: Optional[str] = Field(None, description="Status of the topic classification: `null` if not requested, otherwise pending, completed or failed")
+    qa_entities_status: Optional[str] = Field(
+        None, description="Status of the Q&A, entities and chunks extraction: `null` if not requested, otherwise in_progress, completed or failed"
+    )
+    relationships_status: Optional[str] = Field(
+        None, description="Status of the cross-chunk relationships pass: `null` if not requested, otherwise pending, completed or failed"
+    )
+    topics_status: Optional[str] = Field(
+        None, description="Status of the topic classification: `null` if not requested, otherwise pending, completed or failed"
+    )
     qa_entities_error: Optional[int] = Field(None, description="Numeric error code (e.g. `101`, model timeout) when `qa_entities_status` is `failed`")
     relationships_error: Optional[int] = Field(None, description="Error code when `relationships_status` is `failed`")
     topics_error: Optional[int] = Field(None, description="Error code when `topics_status` is `failed`")

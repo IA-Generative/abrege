@@ -175,9 +175,7 @@ async def test_get_user_tasks():
             assert isinstance(result, Pagination)
             assert result.total == 1
             assert result.items[0].id == "tid"
-            mock_instance.request.assert_called_once_with(
-                "GET", "/api/task/user/", params={"offset": 2, "limit": 5}
-            )
+            mock_instance.request.assert_called_once_with("GET", "/api/task/user/", params={"offset": 2, "limit": 5})
 
 
 @pytest.mark.asyncio
@@ -218,13 +216,13 @@ async def test_delete_task():
             mock_instance.request.assert_called_once_with("DELETE", "/api/task/tid")
 
 
-
-
 @pytest.mark.asyncio
 async def test_extract_task_details():
     with patch("abrege_sdk.client_async.httpx.AsyncClient") as mock_client:
         mock_instance = mock_client.return_value
-        mock_instance.request = AsyncMock(return_value=_mock_response({"task_id": "tid", "status": "extraction_queued"}))
+        mock_instance.request = AsyncMock(
+            return_value=_mock_response({"task_id": "tid", "status": "extraction_queued"})
+        )
         mock_instance.aclose = AsyncMock()
         async with AsyncAbregeClient(BASE_URL, API_KEY) as client:
             result = await client.extract_task_details("tid")
@@ -235,12 +233,22 @@ async def test_extract_task_details():
 @pytest.mark.asyncio
 async def test_get_task_qa_items():
     page_data = {
-        "total": 1, "page": 1, "page_size": 20,
-        "items": [{
-            "id": "qa1", "task_id": "tid", "chunk_index": 0, "page": 1,
-            "source_text": "src", "question": "Q?", "answer": "A.",
-            "model_name": "gpt-4", "created_at": 0,
-        }],
+        "total": 1,
+        "page": 1,
+        "page_size": 20,
+        "items": [
+            {
+                "id": "qa1",
+                "task_id": "tid",
+                "chunk_index": 0,
+                "page": 1,
+                "source_text": "src",
+                "question": "Q?",
+                "answer": "A.",
+                "model_name": "gpt-4",
+                "created_at": 0,
+            }
+        ],
     }
     with patch("abrege_sdk.client_async.httpx.AsyncClient") as mock_client:
         mock_instance = mock_client.return_value
@@ -250,17 +258,21 @@ async def test_get_task_qa_items():
             result = await client.get_task_qa_items("tid", page=2, page_size=5)
             assert isinstance(result.items[0], QAItemRow)
             assert result.items[0].question == "Q?"
-            mock_instance.request.assert_called_once_with(
-                "GET", "/api/task/tid/qa", params={"offset": 2, "limit": 5}
-            )
+            mock_instance.request.assert_called_once_with("GET", "/api/task/tid/qa", params={"offset": 2, "limit": 5})
 
 
 @pytest.mark.asyncio
 async def test_get_task_qa_item():
     item_data = {
-        "id": "qa1", "task_id": "tid", "chunk_index": 0, "page": None,
-        "source_text": "src", "question": "Q?", "answer": "A.",
-        "model_name": None, "created_at": 0,
+        "id": "qa1",
+        "task_id": "tid",
+        "chunk_index": 0,
+        "page": None,
+        "source_text": "src",
+        "question": "Q?",
+        "answer": "A.",
+        "model_name": None,
+        "created_at": 0,
     }
     with patch("abrege_sdk.client_async.httpx.AsyncClient") as mock_client:
         mock_instance = mock_client.return_value
@@ -287,11 +299,22 @@ async def test_delete_task_qa_item():
 @pytest.mark.asyncio
 async def test_get_task_entities():
     page_data = {
-        "total": 1, "page": 1, "page_size": 20,
-        "items": [{
-            "id": "e1", "task_id": "tid", "chunk_index": 0, "type": "PERSON", "text": "Alice",
-            "contexts": ["ctx"], "pages": [1], "model_name": "gpt-4", "created_at": 0,
-        }],
+        "total": 1,
+        "page": 1,
+        "page_size": 20,
+        "items": [
+            {
+                "id": "e1",
+                "task_id": "tid",
+                "chunk_index": 0,
+                "type": "PERSON",
+                "text": "Alice",
+                "contexts": ["ctx"],
+                "pages": [1],
+                "model_name": "gpt-4",
+                "created_at": 0,
+            }
+        ],
     }
     with patch("abrege_sdk.client_async.httpx.AsyncClient") as mock_client:
         mock_instance = mock_client.return_value
@@ -321,13 +344,22 @@ async def test_delete_task_entity():
 @pytest.mark.asyncio
 async def test_get_task_relationships():
     page_data = {
-        "total": 1, "page": 1, "page_size": 20,
-        "items": [{
-            "id": "r1", "task_id": "tid", "chunk_index": None,
-            "source_entity_id": "e1", "target_entity_id": "e2",
-            "relationship_type": "WORKS_AT", "description": "link",
-            "model_name": "gpt-4", "created_at": 0,
-        }],
+        "total": 1,
+        "page": 1,
+        "page_size": 20,
+        "items": [
+            {
+                "id": "r1",
+                "task_id": "tid",
+                "chunk_index": None,
+                "source_entity_id": "e1",
+                "target_entity_id": "e2",
+                "relationship_type": "WORKS_AT",
+                "description": "link",
+                "model_name": "gpt-4",
+                "created_at": 0,
+            }
+        ],
     }
     with patch("abrege_sdk.client_async.httpx.AsyncClient") as mock_client:
         mock_instance = mock_client.return_value
@@ -357,11 +389,20 @@ async def test_delete_task_relationship():
 @pytest.mark.asyncio
 async def test_get_task_topics():
     page_data = {
-        "total": 1, "page": 1, "page_size": 20,
-        "items": [{
-            "id": "t1", "task_id": "tid", "topic": "finance", "confidence": 0.9,
-            "explanation": "exp", "model_name": "gpt-4", "created_at": 0,
-        }],
+        "total": 1,
+        "page": 1,
+        "page_size": 20,
+        "items": [
+            {
+                "id": "t1",
+                "task_id": "tid",
+                "topic": "finance",
+                "confidence": 0.9,
+                "explanation": "exp",
+                "model_name": "gpt-4",
+                "created_at": 0,
+            }
+        ],
     }
     with patch("abrege_sdk.client_async.httpx.AsyncClient") as mock_client:
         mock_instance = mock_client.return_value
@@ -391,11 +432,21 @@ async def test_delete_task_topic():
 @pytest.mark.asyncio
 async def test_get_task_chunks():
     page_data = {
-        "total": 1, "page": 1, "page_size": 20,
-        "items": [{
-            "id": "c1", "task_id": "tid", "chunk_index": 0, "position": 0, "page": 1,
-            "text": "chunk text", "model_name": "gpt-4", "created_at": 0,
-        }],
+        "total": 1,
+        "page": 1,
+        "page_size": 20,
+        "items": [
+            {
+                "id": "c1",
+                "task_id": "tid",
+                "chunk_index": 0,
+                "position": 0,
+                "page": 1,
+                "text": "chunk text",
+                "model_name": "gpt-4",
+                "created_at": 0,
+            }
+        ],
     }
     with patch("abrege_sdk.client_async.httpx.AsyncClient") as mock_client:
         mock_instance = mock_client.return_value
@@ -413,8 +464,14 @@ async def test_get_task_chunks():
 @pytest.mark.asyncio
 async def test_get_task_chunk():
     chunk_data = {
-        "id": "c1", "task_id": "tid", "chunk_index": 0, "position": 0, "page": None,
-        "text": "chunk text", "model_name": None, "created_at": 0,
+        "id": "c1",
+        "task_id": "tid",
+        "chunk_index": 0,
+        "position": 0,
+        "page": None,
+        "text": "chunk text",
+        "model_name": None,
+        "created_at": 0,
     }
     with patch("abrege_sdk.client_async.httpx.AsyncClient") as mock_client:
         mock_instance = mock_client.return_value
@@ -496,21 +553,27 @@ async def test_request_auto_refreshes_near_expiry_token():
     with patch("abrege_sdk.client_async.httpx.AsyncClient") as mock_client:
         mock_instance = mock_client.return_value
         mock_instance.headers = {}
-        mock_instance.request = AsyncMock(side_effect=[
-            _mock_response({
-                "access_token": "initial-token",
-                "expires_in": 300,
-                "refresh_token": "initial-refresh",
-                "refresh_expires_in": 1800,
-            }),
-            _mock_response({
-                "access_token": "refreshed-token",
-                "expires_in": 300,
-                "refresh_token": "rotated-refresh",
-                "refresh_expires_in": 1800,
-            }),
-            _mock_response({"status": "healthy", "version": "1.0.0", "up_time": "1", "name": "abrege"}),
-        ])
+        mock_instance.request = AsyncMock(
+            side_effect=[
+                _mock_response(
+                    {
+                        "access_token": "initial-token",
+                        "expires_in": 300,
+                        "refresh_token": "initial-refresh",
+                        "refresh_expires_in": 1800,
+                    }
+                ),
+                _mock_response(
+                    {
+                        "access_token": "refreshed-token",
+                        "expires_in": 300,
+                        "refresh_token": "rotated-refresh",
+                        "refresh_expires_in": 1800,
+                    }
+                ),
+                _mock_response({"status": "healthy", "version": "1.0.0", "up_time": "1", "name": "abrege"}),
+            ]
+        )
         mock_instance.aclose = AsyncMock()
 
         async with AsyncAbregeClient(BASE_URL) as client:

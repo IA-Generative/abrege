@@ -14,7 +14,9 @@ class PartialSummary(Text):
 
 
 class EntityModel(BaseModel):
-    type: str = Field(description="Category of the entity (the name of the matching entity definition when `entity_definitions` was given, otherwise freely chosen, e.g. PERSON, DATE, ORGANIZATION)")
+    type: str = Field(
+        description="Category of the entity (the name of the matching entity definition when `entity_definitions` was given, otherwise freely chosen, e.g. PERSON, DATE, ORGANIZATION)"
+    )
     text: str = Field(description="Normalized value of the entity (e.g. full name, ISO date)")
     contexts: List[str] = Field(default_factory=list, description="Sentences or phrases of the source where the entity was found")
     pages: List[int] = Field(default_factory=list, description="Page numbers where the entity appears, when known")
@@ -87,11 +89,15 @@ class ResultModel(BaseModel):
     model_name: str = Field(description="Name of the LLM that produced the result")
     model_version: str = Field(description="Version of the LLM that produced the result")
     updated_at: Optional[int] = Field(None, description="Last update time, Unix timestamp (seconds)")
-    texts_found: Optional[List[str]] = Field(default_factory=list, description="Source text extracted from the input, split in pages or sections (empty unless `show_text_found=true`)")
+    texts_found: Optional[List[str]] = Field(
+        default_factory=list, description="Source text extracted from the input, split in pages or sections (empty unless `show_text_found=true`)"
+    )
     ocr_pages: Optional[List[OcrPage]] = Field(default_factory=list, description="OCR details per page, for scanned documents and images")
     percentage: float = Field(0.0, description="Progress of the task, between 0 and 1")
     extras: Optional[Dict[str, Any]] = Field(None, description="Free-form extra information")
-    partial_summaries: Optional[List[Union[PartialSummary, Text]]] = Field(default_factory=list, description="Intermediate summaries built while merging the document (map-reduce)")
+    partial_summaries: Optional[List[Union[PartialSummary, Text]]] = Field(
+        default_factory=list, description="Intermediate summaries built while merging the document (map-reduce)"
+    )
     qa_items: Optional[List[QAItem]] = Field(default_factory=list, description="Question/answer pairs, when `extract_qa` was requested")
 
 
@@ -101,4 +107,6 @@ class SummaryModel(ResultModel):
     nb_llm_calls: Optional[int] = Field(0, description="Number of LLM calls spent producing the summary")
     type: str = Field("summary", description="Always `summary`")
     entities: List[EntityModel] = Field(default_factory=list, description="Entities found, when `extract_entities` was requested")
-    relationships: List[RelationshipModel] = Field(default_factory=list, description="Relationships between the entities, when `extract_entities` was requested")
+    relationships: List[RelationshipModel] = Field(
+        default_factory=list, description="Relationships between the entities, when `extract_entities` was requested"
+    )

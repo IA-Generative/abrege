@@ -39,11 +39,7 @@ class TopicTable:
         with get_db() as db:
             db.query(TopicRow).filter(TopicRow.task_id == task_id).delete()
             for t in topics or []:
-                db.add(
-                    TopicRow(
-                        task_id=task_id, topic=t.topic, confidence=t.confidence, explanation=t.explanation, model_name=model_name
-                    )
-                )
+                db.add(TopicRow(task_id=task_id, topic=t.topic, confidence=t.confidence, explanation=t.explanation, model_name=model_name))
             db.commit()
 
     def get_topics_by_task(self, task_id: str) -> List[TopicRow]:
@@ -56,14 +52,7 @@ class TopicTable:
     def get_topics_by_task_paginated(self, task_id: str, page: int = 1, page_size: int = 20) -> List[TopicRow]:
         offset = (page - 1) * page_size
         with get_db() as db:
-            rows = (
-                db.query(TopicRow)
-                .filter(TopicRow.task_id == task_id)
-                .order_by(TopicRow.confidence.desc())
-                .offset(offset)
-                .limit(page_size)
-                .all()
-            )
+            rows = db.query(TopicRow).filter(TopicRow.task_id == task_id).order_by(TopicRow.confidence.desc()).offset(offset).limit(page_size).all()
             db.expunge_all()
             return rows
 

@@ -79,9 +79,7 @@ def test_get_qa_items_by_task_paginated_slices_and_counts():
     table = QAItemTable()
     task_id = _task_id()
     for i in range(5):
-        table.save_chunk_qa_items(
-            task_id=task_id, chunk_index=i, qa_items=[QAItem(page=i, source_text="s", question=f"Q{i}", answer=f"A{i}")]
-        )
+        table.save_chunk_qa_items(task_id=task_id, chunk_index=i, qa_items=[QAItem(page=i, source_text="s", question=f"Q{i}", answer=f"A{i}")])
 
     assert table.count_qa_items_by_task(task_id) == 5
 

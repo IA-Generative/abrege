@@ -44,9 +44,7 @@ def test_chunk_entities_output_defaults_to_empty_lists():
 def test_chunk_entities_output_accepts_entities_and_relationships():
     output = ChunkEntitiesOutput(
         entities=[ChunkEntityOutput(type="PERSON", text="Alice", contexts=["ctx"])],
-        relationships=[
-            ChunkRelationshipOutput(source_index=0, target_index=0, relationship_type="SELF", description="desc")
-        ],
+        relationships=[ChunkRelationshipOutput(source_index=0, target_index=0, relationship_type="SELF", description="desc")],
     )
     assert len(output.entities) == 1
     assert output.entities[0].text == "Alice"

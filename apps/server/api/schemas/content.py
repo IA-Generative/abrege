@@ -5,7 +5,7 @@ from src.schemas.parameters import SummaryParameters
 
 
 class Content(BaseModel):
-    prompt: Optional[str] = Field(None, description="Extra instruction appended after the summary request, e.g. \"use a formal tone\"")
+    prompt: Optional[str] = Field(None, description='Extra instruction appended after the summary request, e.g. "use a formal tone"')
     extras: Optional[Dict[str, Any]] = Field(None, description="Free-form extra information stored with the task")
 
 
@@ -24,5 +24,9 @@ class InputModel(BaseModel):
 
 
 class Input(BaseModel):
-    content: Optional[Union[UrlContent, TextContent, Content]] = Field(Content(), description="What to summarize: a URL (`{\"url\": ...}`) or a text (`{\"text\": ...}`)")
-    parameters: Optional[SummaryParameters] = Field(SummaryParameters(), description="Summary options, including the optional extractions (Q&A, entities, chunks, topics)")
+    content: Optional[Union[UrlContent, TextContent, Content]] = Field(
+        Content(), description='What to summarize: a URL (`{"url": ...}`) or a text (`{"text": ...}`)'
+    )
+    parameters: Optional[SummaryParameters] = Field(
+        SummaryParameters(), description="Summary options, including the optional extractions (Q&A, entities, chunks, topics)"
+    )

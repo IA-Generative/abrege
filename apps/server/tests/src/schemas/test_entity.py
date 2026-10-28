@@ -79,8 +79,12 @@ def test_save_chunk_entities_keeps_other_chunks_untouched():
     table = EntityTable()
     task_id = _task_id()
 
-    table.save_chunk_entities(task_id=task_id, chunk_index=0, entities=[EntityModel(type="PERSON", text="Alice", contexts=[], pages=[1])], relationships=[])
-    table.save_chunk_entities(task_id=task_id, chunk_index=1, entities=[EntityModel(type="PERSON", text="Bob", contexts=[], pages=[2])], relationships=[])
+    table.save_chunk_entities(
+        task_id=task_id, chunk_index=0, entities=[EntityModel(type="PERSON", text="Alice", contexts=[], pages=[1])], relationships=[]
+    )
+    table.save_chunk_entities(
+        task_id=task_id, chunk_index=1, entities=[EntityModel(type="PERSON", text="Bob", contexts=[], pages=[2])], relationships=[]
+    )
 
     table.save_chunk_entities(task_id=task_id, chunk_index=0, entities=[], relationships=[])
 
@@ -113,9 +117,7 @@ def test_save_global_relationships_resolves_entity_ids_in_order():
     table.save_global_relationships(
         task_id=task_id,
         entity_ids_in_order=entity_ids_in_order,
-        relationships=[
-            RelationshipModel(source_index=0, target_index=1, relationship_type="WORKS_AT", description="Cross-chunk link")
-        ],
+        relationships=[RelationshipModel(source_index=0, target_index=1, relationship_type="WORKS_AT", description="Cross-chunk link")],
     )
 
     relationships = table.get_relationships_by_task(task_id)

@@ -47,7 +47,9 @@ class _Definition(BaseModel):
 
 class EntityDefinition(_Definition):
     type: EntityValueType = Field("string", description="Expected value type of the entity")
-    enum_values: list[str] = Field(default_factory=list, max_length=MAX_DEFINITIONS, description="Allowed values, for the 'enum' type")
+    enum_values: list[str] = Field(
+        default_factory=list, max_length=MAX_DEFINITIONS, description="Allowed values, for the 'enum' type"
+    )
 
     @field_validator("enum_values", mode="after")
     @classmethod
@@ -80,16 +82,30 @@ class SummaryParameters(BaseParameters):
     method: MethodType | None = "map_reduce"
     custom_prompt: str | None = Field(None, description="Custom prompt you want after the sumup")
     extract_qa: bool = Field(False, description="Also generate question/answer pairs per chunk while summarizing")
-    qa_per_chunk: int = Field(3, ge=0, le=10, description="Max number of question/answer pairs to generate per chunk when extract_qa is enabled")
-    qa_instructions: str | None = Field(None, description="Extra instruction for the Q&A generation, used only when extract_qa is enabled")
-    extract_entities: bool = Field(False, description="Also extract entities and relationships (per chunk, then cross-chunk) while summarizing")
+    qa_per_chunk: int = Field(
+        3,
+        ge=0,
+        le=10,
+        description="Max number of question/answer pairs to generate per chunk when extract_qa is enabled",
+    )
+    qa_instructions: str | None = Field(
+        None, description="Extra instruction for the Q&A generation, used only when extract_qa is enabled"
+    )
+    extract_entities: bool = Field(
+        False, description="Also extract entities and relationships (per chunk, then cross-chunk) while summarizing"
+    )
     entities_instructions: str | None = Field(
-        None, description="Extra instruction for entity/relationship extraction, used only when extract_entities is enabled"
+        None,
+        description="Extra instruction for entity/relationship extraction, used only when extract_entities is enabled",
     )
     extract_chunks: bool = Field(False, description="Also persist the semantic sub-chunks produced while summarizing")
-    chunks_instructions: str | None = Field(None, description="Extra instruction for the semantic chunking, used only when extract_chunks is enabled")
+    chunks_instructions: str | None = Field(
+        None, description="Extra instruction for the semantic chunking, used only when extract_chunks is enabled"
+    )
     classify_topics: bool = Field(False, description="Classify the final summary into free-form topics")
-    topics_instructions: str | None = Field(None, description="Extra instruction for topic classification, used only when classify_topics is enabled")
+    topics_instructions: str | None = Field(
+        None, description="Extra instruction for topic classification, used only when classify_topics is enabled"
+    )
     entity_definitions: list[EntityDefinition] | None = Field(
         None,
         max_length=MAX_DEFINITIONS,

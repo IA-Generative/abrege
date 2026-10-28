@@ -242,9 +242,7 @@ def test_get_user_tasks():
             assert isinstance(result, Pagination)
             assert result.total == 1
             assert result.items[0].id == "tid"
-            mock_instance.request.assert_called_once_with(
-                "GET", "/api/task/user/", params={"offset": 2, "limit": 5}
-            )
+            mock_instance.request.assert_called_once_with("GET", "/api/task/user/", params={"offset": 2, "limit": 5})
 
 
 def test_cancel_task():
@@ -292,12 +290,22 @@ def test_extract_task_details():
 
 def test_get_task_qa_items():
     page_data = {
-        "total": 1, "page": 1, "page_size": 20,
-        "items": [{
-            "id": "qa1", "task_id": "tid", "chunk_index": 0, "page": 1,
-            "source_text": "src", "question": "Q?", "answer": "A.",
-            "model_name": "gpt-4", "created_at": 0,
-        }],
+        "total": 1,
+        "page": 1,
+        "page_size": 20,
+        "items": [
+            {
+                "id": "qa1",
+                "task_id": "tid",
+                "chunk_index": 0,
+                "page": 1,
+                "source_text": "src",
+                "question": "Q?",
+                "answer": "A.",
+                "model_name": "gpt-4",
+                "created_at": 0,
+            }
+        ],
     }
     with patch("abrege_sdk.client_sync.httpx.Client") as mock_client:
         mock_instance = mock_client.return_value
@@ -308,16 +316,20 @@ def test_get_task_qa_items():
             assert isinstance(result, Pagination)
             assert isinstance(result.items[0], QAItemRow)
             assert result.items[0].question == "Q?"
-            mock_instance.request.assert_called_once_with(
-                "GET", "/api/task/tid/qa", params={"offset": 2, "limit": 5}
-            )
+            mock_instance.request.assert_called_once_with("GET", "/api/task/tid/qa", params={"offset": 2, "limit": 5})
 
 
 def test_get_task_qa_item():
     item_data = {
-        "id": "qa1", "task_id": "tid", "chunk_index": 0, "page": None,
-        "source_text": "src", "question": "Q?", "answer": "A.",
-        "model_name": None, "created_at": 0,
+        "id": "qa1",
+        "task_id": "tid",
+        "chunk_index": 0,
+        "page": None,
+        "source_text": "src",
+        "question": "Q?",
+        "answer": "A.",
+        "model_name": None,
+        "created_at": 0,
     }
     with patch("abrege_sdk.client_sync.httpx.Client") as mock_client:
         mock_instance = mock_client.return_value
@@ -340,11 +352,22 @@ def test_delete_task_qa_item():
 
 def test_get_task_entities():
     page_data = {
-        "total": 1, "page": 1, "page_size": 20,
-        "items": [{
-            "id": "e1", "task_id": "tid", "chunk_index": 0, "type": "PERSON", "text": "Alice",
-            "contexts": ["ctx"], "pages": [1], "model_name": "gpt-4", "created_at": 0,
-        }],
+        "total": 1,
+        "page": 1,
+        "page_size": 20,
+        "items": [
+            {
+                "id": "e1",
+                "task_id": "tid",
+                "chunk_index": 0,
+                "type": "PERSON",
+                "text": "Alice",
+                "contexts": ["ctx"],
+                "pages": [1],
+                "model_name": "gpt-4",
+                "created_at": 0,
+            }
+        ],
     }
     with patch("abrege_sdk.client_sync.httpx.Client") as mock_client:
         mock_instance = mock_client.return_value
@@ -370,13 +393,22 @@ def test_delete_task_entity():
 
 def test_get_task_relationships():
     page_data = {
-        "total": 1, "page": 1, "page_size": 20,
-        "items": [{
-            "id": "r1", "task_id": "tid", "chunk_index": None,
-            "source_entity_id": "e1", "target_entity_id": "e2",
-            "relationship_type": "WORKS_AT", "description": "link",
-            "model_name": "gpt-4", "created_at": 0,
-        }],
+        "total": 1,
+        "page": 1,
+        "page_size": 20,
+        "items": [
+            {
+                "id": "r1",
+                "task_id": "tid",
+                "chunk_index": None,
+                "source_entity_id": "e1",
+                "target_entity_id": "e2",
+                "relationship_type": "WORKS_AT",
+                "description": "link",
+                "model_name": "gpt-4",
+                "created_at": 0,
+            }
+        ],
     }
     with patch("abrege_sdk.client_sync.httpx.Client") as mock_client:
         mock_instance = mock_client.return_value
@@ -402,11 +434,20 @@ def test_delete_task_relationship():
 
 def test_get_task_topics():
     page_data = {
-        "total": 1, "page": 1, "page_size": 20,
-        "items": [{
-            "id": "t1", "task_id": "tid", "topic": "finance", "confidence": 0.9,
-            "explanation": "exp", "model_name": "gpt-4", "created_at": 0,
-        }],
+        "total": 1,
+        "page": 1,
+        "page_size": 20,
+        "items": [
+            {
+                "id": "t1",
+                "task_id": "tid",
+                "topic": "finance",
+                "confidence": 0.9,
+                "explanation": "exp",
+                "model_name": "gpt-4",
+                "created_at": 0,
+            }
+        ],
     }
     with patch("abrege_sdk.client_sync.httpx.Client") as mock_client:
         mock_instance = mock_client.return_value
@@ -432,11 +473,21 @@ def test_delete_task_topic():
 
 def test_get_task_chunks():
     page_data = {
-        "total": 1, "page": 1, "page_size": 20,
-        "items": [{
-            "id": "c1", "task_id": "tid", "chunk_index": 0, "position": 0, "page": 1,
-            "text": "chunk text", "model_name": "gpt-4", "created_at": 0,
-        }],
+        "total": 1,
+        "page": 1,
+        "page_size": 20,
+        "items": [
+            {
+                "id": "c1",
+                "task_id": "tid",
+                "chunk_index": 0,
+                "position": 0,
+                "page": 1,
+                "text": "chunk text",
+                "model_name": "gpt-4",
+                "created_at": 0,
+            }
+        ],
     }
     with patch("abrege_sdk.client_sync.httpx.Client") as mock_client:
         mock_instance = mock_client.return_value
@@ -453,8 +504,14 @@ def test_get_task_chunks():
 
 def test_get_task_chunk():
     chunk_data = {
-        "id": "c1", "task_id": "tid", "chunk_index": 0, "position": 0, "page": None,
-        "text": "chunk text", "model_name": None, "created_at": 0,
+        "id": "c1",
+        "task_id": "tid",
+        "chunk_index": 0,
+        "position": 0,
+        "page": None,
+        "text": "chunk text",
+        "model_name": None,
+        "created_at": 0,
     }
     with patch("abrege_sdk.client_sync.httpx.Client") as mock_client:
         mock_instance = mock_client.return_value
@@ -527,18 +584,22 @@ def test_request_auto_refreshes_near_expiry_token():
         mock_instance = mock_client.return_value
         mock_instance.headers = {}
         mock_instance.request.side_effect = [
-            _mock_response({
-                "access_token": "initial-token",
-                "expires_in": 300,
-                "refresh_token": "initial-refresh",
-                "refresh_expires_in": 1800,
-            }),
-            _mock_response({
-                "access_token": "refreshed-token",
-                "expires_in": 300,
-                "refresh_token": "rotated-refresh",
-                "refresh_expires_in": 1800,
-            }),
+            _mock_response(
+                {
+                    "access_token": "initial-token",
+                    "expires_in": 300,
+                    "refresh_token": "initial-refresh",
+                    "refresh_expires_in": 1800,
+                }
+            ),
+            _mock_response(
+                {
+                    "access_token": "refreshed-token",
+                    "expires_in": 300,
+                    "refresh_token": "rotated-refresh",
+                    "refresh_expires_in": 1800,
+                }
+            ),
             _mock_response({"status": "healthy", "version": "1.0.0", "up_time": "1", "name": "abrege"}),
         ]
 
