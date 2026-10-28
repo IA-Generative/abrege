@@ -1,12 +1,25 @@
 minimumReleaseAgeExcludePrune: true
+
 trustPolicy: no-downgrade
+# Long-standing transitive packages that predate npm provenance, so a newer
+# signed release makes them look like a downgrade. Both are reached through
+# workbox-build (vite-plugin-pwa) and babel.
+trustPolicyExclude:
+  - rollup@2.80.0
+  - semver@6.3.1
+  - '@trickfilm400/rollup-plugin-off-main-thread@3.0.0-pre1'
+
 shellEmulator: true
 
 overrides:
   serialize-javascript: ^7.0.5
 
-onlyBuiltDependencies:
-  - '@tailwindcss/oxide'
-  - esbuild
-  - unrs-resolver
-  - vue-demi
+# pnpm 11 merges onlyBuiltDependencies / ignoredBuiltDependencies into a single
+# allow-list: true runs the package's install scripts, false skips them.
+allowBuilds:
+  # `preinstall` guard script; nothing the Vite build needs.
+  '@gouvfr/dsfr': false
+  '@tailwindcss/oxide': true
+  esbuild: true
+  unrs-resolver: true
+  vue-demi: true
