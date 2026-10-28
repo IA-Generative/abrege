@@ -43,19 +43,19 @@ install-local: ## Installation des dépendances systèmes
 		@echo "Installation automatique non supportée sur cette plateforme"
 	endif
 
-lint: ## Lint le code du dépôt
+lint: ## Lint le code backend (règles ruff et formatage, comme le hook pre-commit)
 	cd apps/server && \
-		uv run ruff check --exclude '**/*.ipynb' . && \
-		uv run ruff check .
+		uv run ruff check . && \
+		uv run ruff format --check .
 
-lint-sdk: ## Lint le code du dépôt
+lint-sdk: ## Lint le code du SDK Python (règles ruff et formatage)
 	cd sdk/python && \
-		uv run ruff check --exclude '**/*.ipynb' . && \
-		uv run ruff check .
+		uv run ruff check . && \
+		uv run ruff format --check .
 
 lint-fix: ## Lint et correction automatique du code backend
 	cd apps/server && \
-		uv run ruff check --exclude '**/*.ipynb' . --fix && \
+		uv run ruff check . --fix && \
 		uv run ruff format .
 
 up: ## Lance l'environnement de développement en conteneurs
