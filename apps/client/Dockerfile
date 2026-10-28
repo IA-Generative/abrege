@@ -1,5 +1,5 @@
 # dev
-FROM docker.io/node:22.20.0-slim AS dev
+FROM docker.io/node:24.22.1-slim AS dev
 
 RUN npm install --ignore-scripts --location=global pnpm@10.17.1
 
@@ -25,6 +25,15 @@ RUN pnpm run build
 
 # prod
 FROM docker.io/nginxinc/nginx-unprivileged:1.28.0-alpine AS prod
+
+# The base image's CA bundle still trusts the eMudhra emSign ECC Root CA - G3, whose
+# intermediates have publicly recoverable private keys. Alpine's ca-certificates
+# 20261020-r0 removes it; both packages are upgraded because the `ca-certificates` trigger
+# regenerates the bundle from its own copy. `USER 101` restores the numeric user the base
+# image ends on.
+USER root
+RUN apk upgrade --no-cache ca-certificates ca-certificates-bundle
+USER 101
 
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx/50x.html /usr/share/nginx/html
