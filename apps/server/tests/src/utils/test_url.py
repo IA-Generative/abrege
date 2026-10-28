@@ -4,7 +4,7 @@ from src.utils.url import get_content_type, download_file
 
 def test_get_content_type():
     assert get_content_type("https://google.com").split(";")[0] == "text/html"
-    assert get_content_type("https://www.osureunion.fr/wp-content/uploads/2022/03/pdf-exemple.pdf") == "application/pdf"
+    assert get_content_type("https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf").split(";")[0] == "application/pdf"
     assert get_content_type("https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png") == "image/png"
     assert (
         get_content_type("https://www.youtube.com/watch?v=Ggq0c4e2hjA&list=PL8egiwZE1Lk5TPhNuXHprwMSCbMHTbOjz&index=3").split(";")[0] == "text/html"
@@ -22,10 +22,10 @@ def test_download_type():
     os.remove("google.com")
 
     # Test download pdf
-    url_pdf = "https://www.osureunion.fr/wp-content/uploads/2022/03/pdf-exemple.pdf"
+    url_pdf = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
     download_file(url=url_pdf)
-    assert os.path.exists("pdf-exemple.pdf")
-    os.remove("pdf-exemple.pdf")
+    assert os.path.exists("dummy.pdf")
+    os.remove("dummy.pdf")
 
     # Test png :
     url_png = "https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png"
